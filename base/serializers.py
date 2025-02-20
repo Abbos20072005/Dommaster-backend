@@ -1,4 +1,7 @@
 from rest_framework import serializers
-from .models import 
+from .models import Banner
 
-class
+class BannerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Banner
+        fields = ['id', 'title', 'short_description', 'image', 'link']
