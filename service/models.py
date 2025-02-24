@@ -8,6 +8,10 @@ class ProductCategory(BaseModel):
     def __str__(self):
         return self.name
 
+    class Meta:
+        verbose_name = ""
+        verbose_name_plural = ""
+
 class ProductSubCategory(BaseModel):
     product_category = models.ForeignKey(ProductCategory, on_delete=models.CASCADE, verbose_name="")
     name = models.CharField(max_length=255, verbose_name="")
