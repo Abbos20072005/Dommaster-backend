@@ -109,7 +109,7 @@ DATABASES = {
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'authorization.custom_JWT.CustomJWTAuthentication',
+        'authorization.custom_jwt.CustomJWTAuthentication',
     ),
 
 }
