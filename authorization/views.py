@@ -75,3 +75,12 @@ class AuthViewSet(ViewSet):
         customer = Customer.objects.filter(id=request.user.id).first()
         serializer = CustomerSerializer(customer, context={'request': request})
         return Response(data={'result': serializer.data, 'ok': True}, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        operation_summary="",
+        operation_description="",
+        request_body="",
+        responses={200:}
+    )
+    def something(self, request):
+        pass
