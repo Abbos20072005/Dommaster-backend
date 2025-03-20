@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     #apps
     "authorization",
     "service",
+    "base",
 
     #packages
     "rest_framework",
@@ -109,7 +110,7 @@ DATABASES = {
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'authorization.custom_jwt.CustomJWTAuthentication',
+        'authorization.custom_jwt.CustomJwtAuthentication',
     ),
 
 }
