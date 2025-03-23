@@ -4,4 +4,4 @@ from .models import Banner
 class BannerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Banner
-        fields = ['id', 'title', 'short_description', 'image', 'link']
+        fields = ("id", "title", "short_description", "image", "link")

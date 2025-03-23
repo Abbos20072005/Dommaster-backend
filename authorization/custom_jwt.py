@@ -16,5 +16,5 @@ class CustomJwtAuthentication(JWTAuthentication):
 
         if user_id:
             return Customer.objects.filter(id=user_id).first()
-        return CustomApiException(error_code=ErrorCodes.USER_DOES_NOT_EXIST)
+        raise CustomApiException(error_code=ErrorCodes.USER_DOES_NOT_EXIST)
 

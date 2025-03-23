@@ -76,11 +76,11 @@ class AuthViewSet(ViewSet):
         serializer = CustomerSerializer(customer, context={'request': request})
         return Response(data={'result': serializer.data, 'ok': True}, status=status.HTTP_200_OK)
 
-    @swagger_auto_schema(
-        operation_summary="",
-        operation_description="",
-        request_body="",
-        responses={200:}
-    )
-    def something(self, request):
-        pass
+    # @swagger_auto_schema(
+    #     operation_summary="",
+    #     operation_description="",
+    #     request_body="",
+    #     responses={200:}
+    # )
+    # def something(self, request):
+    #     pass

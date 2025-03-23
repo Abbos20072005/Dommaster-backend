@@ -223,6 +223,8 @@ TINYMCE_DEFAULT_CONFIG = {
             input.click(); \
         } \
     }',
+    'entity_encoding': 'raw',  # Prevents encoding of special characters
+    'valid_elements': '*[*]',  # Allows all elements and attributes (optional)
 }
 DATA_UPLOAD_MAX_MEMORY_SIZE = 5242880
 FILE_UPLOAD_MAX_MEMORY_SIZE = 5242880

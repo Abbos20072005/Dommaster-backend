@@ -9,7 +9,7 @@ class LoginSerializer(serializers.Serializer):
 class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = Customer
-        fields = ['id', 'full_name', 'email', 'phone_number', 'password']
+        fields = ("id", "full_name", "email", "phone_number", "password")
         extra_kwargs = {
             'password': {'write_only': True}
         }
@@ -17,4 +17,4 @@ class RegisterSerializer(serializers.ModelSerializer):
 class CustomerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Customer
-        fields = ['id', "full_name", "phone_number", "email"]
+        fields = ("id", "full_name", "phone_number", "email")
