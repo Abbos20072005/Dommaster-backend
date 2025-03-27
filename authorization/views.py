@@ -12,7 +12,9 @@ from datetime import datetime
 from django.contrib.auth.hashers import check_password
 from rest_framework_simplejwt.tokens import RefreshToken
 
-
+#TODO: Resend otp
+#TODO: Reset password
+#TODO: Send otp
 class AuthViewSet(ViewSet):
     @swagger_auto_schema(
         operation_summary="Customer login",
