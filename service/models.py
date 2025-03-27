@@ -4,8 +4,9 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from authorization.models import Customer
 
 ORDER_STATUS = (
-    (1, "InProcess"),
-    (2, "Finished")
+    (1, "Collecting"),
+    (2, "Delivering"),
+    (3, "Delivered")
 )
 
 
@@ -121,3 +122,15 @@ class CommentReply(BaseModel):
     class Meta:
         verbose_name = "Ответ коментарию"
         verbose_name_plural = "Ответы коментариям"
+
+class Service(BaseModel):
+    name = models.CharField(max_length=250, verbose_name="Название")
+    icon = models.ImageField(upload_to="service/", verbose_name="Иконка")
+    description = models.TextField(verbose_name="Описание")
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name = "Сервис"
+        verbose_name_plural = "Сервисы"
