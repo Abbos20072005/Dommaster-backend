@@ -1,5 +1,7 @@
 from django.db import models
 from abstract_model.base_model import BaseModel
+from authorization.models import Customer
+
 
 class Banner(BaseModel):
     title = models.CharField(max_length=255, verbose_name="Заголовок")
@@ -34,6 +36,19 @@ class District(BaseModel):
     class Meta:
         verbose_name = "Область"
         verbose_name_plural = "Областя"
+
+class Chat(BaseModel):
+    customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, verbose_name="Клиент")
+    message = models.TextField(verbose_name="Сообщение")
+    is_answer = models.BooleanField(default=False, verbose_name="Ответ")
+    is_checked = models.BooleanField(default=True, verbose_name="Просмотрено")
+
+    def __str__(self):
+        return str(self.id)
+
+    class Meta:
+        verbose_name = "Чат"
+        verbose_name_plural = "Чаты"
 
 
 
