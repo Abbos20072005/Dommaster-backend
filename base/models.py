@@ -50,5 +50,27 @@ class Chat(BaseModel):
         verbose_name = "Чат"
         verbose_name_plural = "Чаты"
 
+class LoyaltyCard(BaseModel):
+    customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, verbose_name="Клиент")
+    full_name = models.CharField(max_length=250, verbose_name="Полное имя")
+    card_number = models.IntegerField(max_length=16, default=0, verbose_name="Номер карты")
+    is_active = models.BooleanField(default=True, verbose_name="Активен")
 
+    def __str__(self):
+        return self.full_name
+
+    class Meta:
+        verbose_name = "Карта лояльности"
+        verbose_name_plural = "Карты лояльности"
+
+class Notification(BaseModel):
+    title = models.CharField(max_length=150, verbose_name="Заголовок")
+    description = models.TextField(verbose_name="Описание")
+
+    def __str__(self):
+        return self.title
+
+    class Meta:
+        verbose_name = "Уведомление"
+        verbose_name_plural = "Уведомления"
 
