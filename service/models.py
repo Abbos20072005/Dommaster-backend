@@ -32,7 +32,8 @@ class ProductCategory(BaseModel):
 
 
 class ProductSubCategory(BaseModel):
-    product_category = models.ForeignKey(ProductCategory, on_delete=models.CASCADE, verbose_name="Категория продукта")
+    product_category = models.ForeignKey(ProductCategory, on_delete=models.CASCADE, related_name="product_category",
+                                         verbose_name="Категория продукта")
     name = models.CharField(max_length=255, verbose_name="Название")
 
     def __str__(self):
@@ -45,6 +46,7 @@ class ProductSubCategory(BaseModel):
 
 class ProductItemCategory(BaseModel):
     product_sub_category = models.ForeignKey(ProductSubCategory, on_delete=models.CASCADE,
+                                             related_name="product_sub_category",
                                              verbose_name="Подкатегория продукта")
     name = models.CharField(max_length=255, verbose_name="Название")
 
@@ -58,6 +60,7 @@ class ProductItemCategory(BaseModel):
 
 class Product(BaseModel):
     product_item_category = models.ForeignKey(ProductItemCategory, on_delete=models.CASCADE,
+                                              related_name="product_item_category",
                                               verbose_name="Предметная категория продуктов")
     code = models.CharField(max_length=9, verbose_name="Код продукта")
     name = models.CharField(max_length=500, verbose_name="Название")
@@ -71,6 +74,7 @@ class Product(BaseModel):
     class Meta:
         verbose_name = "Продукт"
         verbose_name_plural = "Продукты"
+
 
 class OrderItem(BaseModel):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, verbose_name="Заказ")
@@ -111,6 +115,7 @@ class Comment(BaseModel):
         verbose_name = "Коментарий"
         verbose_name_plural = "Коментарии"
 
+
 class CommentReply(BaseModel):
     comment = models.ForeignKey(Comment, on_delete=models.CASCADE, verbose_name="Коментарий")
     defendant_name = models.CharField(max_length=150, verbose_name="Имя ответчика")
@@ -122,6 +127,7 @@ class CommentReply(BaseModel):
     class Meta:
         verbose_name = "Ответ коментарию"
         verbose_name_plural = "Ответы коментариям"
+
 
 class Service(BaseModel):
     name = models.CharField(max_length=250, verbose_name="Название")
