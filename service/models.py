@@ -1,6 +1,21 @@
 from django.db import models
 from abstract_model.base_model import BaseModel
 from django.core.validators import MinValueValidator, MaxValueValidator
+from authorization.models import Customer
+
+ORDER_STATUS = (
+    (1, "InProcess"),
+    (2, "Finished")
+)
+
+
+class Order(BaseModel):
+    customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, verbose_name="Покупатель")
+    status = models.IntegerField(choices=ORDER_STATUS, default=1, verbose_name="Статус")
+    total_price = models.FloatField(default=0.0, verbose_name="Общая стоимость")
+
+    def __str__(self):
+        return str(self.id)
 
 
 class ProductCategory(BaseModel):
@@ -55,6 +70,18 @@ class Product(BaseModel):
     class Meta:
         verbose_name = "Продукт"
         verbose_name_plural = "Продукты"
+
+class OrderItem(BaseModel):
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, verbose_name="Заказ")
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, verbose_name="Продукт")
+    quantity = models.IntegerField(default=0, verbose_name="Количество")
+
+    def __str__(self):
+        return str(self.id)
+
+    class Meta:
+        verbose_name = "Заказ продукта"
+        verbose_name_plural = "Заказы продуктов"
 
 
 class ProductImage(BaseModel):

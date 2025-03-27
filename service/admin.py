@@ -1,5 +1,7 @@
 from django.contrib import admin
-from .models import Product, ProductCategory, ProductSubCategory, ProductItemCategory, Comment, CommentReply
+from .models import Product, ProductCategory, ProductSubCategory, ProductItemCategory, Comment, CommentReply, Order, \
+    OrderItem
+
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
@@ -8,11 +10,13 @@ class ProductAdmin(admin.ModelAdmin):
     search_fields = ("name", "code")
     list_filter = ("price", "rating")
 
+
 @admin.register(ProductCategory)
 class ProductCategoryAdmin(admin.ModelAdmin):
     list_display = ("id", "name")
     list_display_links = ("id", "name")
     search_fields = ("name",)
+
 
 @admin.register(ProductSubCategory)
 class ProductSubCategoryAdmin(admin.ModelAdmin):
@@ -20,11 +24,13 @@ class ProductSubCategoryAdmin(admin.ModelAdmin):
     list_display_links = ("id", "name")
     search_fields = ("name",)
 
+
 @admin.register(ProductItemCategory)
 class ProductItemCategoryAdmin(admin.ModelAdmin):
     list_display = ("id", "name", "product_sub_category")
     list_display_links = ("id", "name")
     search_fields = ("name",)
+
 
 @admin.register(Comment)
 class CommentAdmin(admin.ModelAdmin):
@@ -33,9 +39,20 @@ class CommentAdmin(admin.ModelAdmin):
     search_fields = ("commentator_name",)
     list_filter = ("product_rating",)
 
+
 @admin.register(CommentReply)
 class CommentReplyAdmin(admin.ModelAdmin):
     list_display = ("id", "defendant_name", "comment")
     list_display_links = ("id", "defendant_name")
     search_fields = ("defendant_name",)
 
+@admin.register(Order)
+class OrderAdmin(admin.ModelAdmin):
+    list_display = ("id", "customer", "status", "total_price")
+    list_display_links = ("id", "customer")
+    list_filter = ("status",)
+
+@admin.register(OrderItem)
+class OrderItemAdmin(admin.ModelAdmin):
+    list_display = ("id", "order", "product", "quantity")
+    list_display_links = ("id", "order")
