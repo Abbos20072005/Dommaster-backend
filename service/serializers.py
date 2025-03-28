@@ -6,12 +6,17 @@ from .models import Product, ProductCategory, ProductItemCategory, ProductSubCat
 class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
-        fields = ("id", "product_item_category", "code", "name", "price")
+        fields = ("id", "product_item_category", "code", "name", "description", "price")
 
 
-class ProductCategoryListSerializer(serializers.Serializer):
-    name = serializers.CharField(max_length=150, required=True)
-    image = serializers.ImageField(required=True)
+class ProductCategoryListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductCategory
+        fields = (
+            "id",
+            "name",
+            "image"
+        )
 
 
 class ProductItemCategorySerializer(serializers.ModelSerializer):
@@ -47,13 +52,24 @@ class ProductImageSerializer(serializers.ModelSerializer):
 class CommentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comment
-        fields = ("id", "product", "commentator_name", "product_rating", "comment")
+        fields = (
+            "id",
+            "product",
+            "commentator_name",
+            "product_rating",
+            "comment"
+        )
 
 
 class CommentReplySerializer(serializers.ModelSerializer):
     class Meta:
         model = CommentReply
-        fields = ("id", "comment", "defendant_name", "reply")
+        fields = (
+            "id",
+            "comment",
+            "defendant_name",
+            "reply"
+        )
 
 
 class OrderSerializer(serializers.ModelSerializer):

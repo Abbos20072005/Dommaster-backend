@@ -64,6 +64,7 @@ class Product(BaseModel):
                                               verbose_name="Предметная категория продуктов")
     code = models.CharField(max_length=9, verbose_name="Код продукта")
     name = models.CharField(max_length=500, verbose_name="Название")
+    description = models.TextField(verbose_name="Описание")
     price = models.FloatField(default=0, verbose_name="Цена")
     rating = models.FloatField(default=0.0, validators=[MinValueValidator(0.0), MaxValueValidator(5.0)],
                                verbose_name="Рейтинг")

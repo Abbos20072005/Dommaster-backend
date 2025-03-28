@@ -5,8 +5,8 @@ from drf_yasg.utils import swagger_auto_schema
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from .serializers import ProductCategorySerializer, ProductCategoryListSerializer, ProductSubCategorySerializer, \
-    ProductItemCategorySerializer
-from .models import ProductCategory, ProductSubCategory, ProductItemCategory
+    ProductItemCategorySerializer, ProductSerializer
+from .models import ProductCategory, ProductSubCategory, ProductItemCategory, Product
 from rest_framework import status
 
 
@@ -63,4 +63,18 @@ class ProductViewSet(ViewSet):
             raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
 
         serializer = ProductItemCategorySerializer(item_category, context={"request": request})
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        operation_summary="Product detail",
+        operation_description="Product detail",
+        responses={200: ProductSerializer()},
+        tags=["Product"]
+    )
+    def product_detail(self, request, pk):
+        product = Product.objects.filter(id=pk).first()
+        if not product:
+            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
+
+        serializer = ProductSerializer(product, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)

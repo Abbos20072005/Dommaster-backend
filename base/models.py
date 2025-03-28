@@ -53,7 +53,7 @@ class Chat(BaseModel):
 class LoyaltyCard(BaseModel):
     customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, verbose_name="Клиент")
     full_name = models.CharField(max_length=250, verbose_name="Полное имя")
-    card_number = models.IntegerField(max_length=16, default=0, verbose_name="Номер карты")
+    card_number = models.IntegerField(default=0, verbose_name="Номер карты")
     is_active = models.BooleanField(default=True, verbose_name="Активен")
 
     def __str__(self):
