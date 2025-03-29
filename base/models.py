@@ -39,7 +39,7 @@ class District(BaseModel):
 
 class Chat(BaseModel):
     customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, verbose_name="Клиент")
-    message = models.TextField(verbose_name="Сообщение")
+    message = models.TextField(blank=True, null=True, verbose_name="Сообщение")
     is_answer = models.BooleanField(default=False, verbose_name="Ответ")
     is_checked = models.BooleanField(default=True, verbose_name="Просмотрено")
 
