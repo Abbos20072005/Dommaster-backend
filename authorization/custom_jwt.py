@@ -11,7 +11,6 @@ class CustomJwtAuthentication(JWTAuthentication):
         self.customer_model = Customer
 
     def get_user(self, validated_token):
-        user_role = get_role(f"Bearer {validated_token}")
         user_id = validated_token['user_id']
 
         if user_id:
