@@ -9,7 +9,7 @@ from rest_framework import permissions
 
 admin.site.site_header = 'Dommaster Admin'
 admin.site.site_title = 'Dommaster Admin'
-admin.site.index_title = 'Welcome to dashboard'
+admin.site.index_title = 'Welcome to Dommaster dashboard'
 
 schema_view = get_schema_view(
     openapi.Info(
