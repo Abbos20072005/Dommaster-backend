@@ -5,10 +5,12 @@ from drf_yasg.utils import swagger_auto_schema
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from .serializers import ProductCategorySerializer, ProductCategoryListSerializer, ProductSubCategorySerializer, \
-    ProductItemCategorySerializer, ProductSerializer
-from .models import ProductCategory, ProductSubCategory, ProductItemCategory, Product
+    ProductItemCategorySerializer, ProductSerializer, CommentSerializer
+from .models import ProductCategory, ProductSubCategory, ProductItemCategory, Product, Comment
 from rest_framework import status
 
+
+# TODO: need to add comment create and check if user already write comment to this project one user could write only one comment.
 
 class ProductViewSet(ViewSet):
     @swagger_auto_schema(
@@ -50,7 +52,7 @@ class ProductViewSet(ViewSet):
         serializer = ProductSubCategorySerializer(sub_category, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
-    #TODO: need to add filter to this function
+    # TODO: need to add filter to this function
     @swagger_auto_schema(
         operation_summary="Product item detail and Products list",
         operation_description="Product item detail and Products list",
@@ -78,3 +80,30 @@ class ProductViewSet(ViewSet):
 
         serializer = ProductSerializer(product, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+
+#TODO: finish the comment logic
+class CommentViewSet(ViewSet):
+    @swagger_auto_schema(
+        operation_summary="Write comment to product, pk receive product id",
+        operation_description="Write comment to product, pk receive product id",
+        request_body=CommentSerializer(),
+        responses={201: CommentSerializer()},
+        tags=["Product"]
+    )
+    def comment_create(self, request, pk):
+        product = Product.objects.filter(id=pk).first()
+        if not product:
+            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
+
+        comment = Comment.objects.filter(customer_id=request.user.id).first()
+        if not comment:
+            pass
+
+        data = request.data
+        data["product"] = pk
+        serializer = CommentSerializer(data=data, context={"request": request})
+        if not serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
+
+        serializer.save()
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_201_CREATED)
