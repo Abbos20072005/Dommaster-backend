@@ -10,6 +10,18 @@ ORDER_STATUS = (
 )
 
 
+class Brand(BaseModel):
+    name = models.CharField(max_length=150, verbose_name="Название")
+    image = models.ImageField(upload_to="brand/", verbose_name="Изображение")
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name = "Бренд"
+        verbose_name_plural = "Бренды"
+
+
 class Order(BaseModel):
     customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, verbose_name="Покупатель")
     status = models.IntegerField(choices=ORDER_STATUS, default=1, verbose_name="Статус")
@@ -20,6 +32,7 @@ class Order(BaseModel):
 
 
 class ProductCategory(BaseModel):
+    brand = models.ForeignKey(Brand, on_delete=models.SET_NULL, null=True, verbose_name="Бренд")
     name = models.CharField(max_length=150, verbose_name="Название")
     image = models.ImageField(upload_to='product_category', verbose_name="Изображение")
 
@@ -32,6 +45,7 @@ class ProductCategory(BaseModel):
 
 
 class ProductSubCategory(BaseModel):
+    brand = models.ForeignKey(Brand, on_delete=models.SET_NULL, null=True, verbose_name="Бренд")
     product_category = models.ForeignKey(ProductCategory, on_delete=models.CASCADE, related_name="product_category",
                                          verbose_name="Категория продукта")
     name = models.CharField(max_length=255, verbose_name="Название")
@@ -45,6 +59,7 @@ class ProductSubCategory(BaseModel):
 
 
 class ProductItemCategory(BaseModel):
+    brand = models.ForeignKey(Brand, on_delete=models.SET_NULL, null=True, verbose_name="Бренд")
     product_sub_category = models.ForeignKey(ProductSubCategory, on_delete=models.CASCADE,
                                              related_name="product_sub_category",
                                              verbose_name="Подкатегория продукта")
@@ -58,7 +73,21 @@ class ProductItemCategory(BaseModel):
         verbose_name_plural = "Предметные категории продуктов"
 
 
+class Tag(BaseModel):
+    name = models.CharField(max_length=150, verbose_name="Название")
+    is_active = models.BooleanField(default=True, verbose_name="Активен")
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name = "Тег"
+        verbose_name_plural = "Теги"
+
+
 class Product(BaseModel):
+    brand = models.ForeignKey(Brand, on_delete=models.SET_NULL, null=True, verbose_name="Бренд")
+    tag = models.ManyToManyField(Tag, blank=True, verbose_name="Тег")
     product_item_category = models.ForeignKey(ProductItemCategory, on_delete=models.CASCADE,
                                               related_name="product_item_category",
                                               verbose_name="Предметная категория продуктов")
@@ -68,6 +97,7 @@ class Product(BaseModel):
     price = models.FloatField(default=0, verbose_name="Цена")
     rating = models.FloatField(default=0.0, validators=[MinValueValidator(0.0), MaxValueValidator(5.0)],
                                verbose_name="Рейтинг")
+    is_viewed = models.BooleanField(default=False, verbose_name="Просмотрен")
 
     def __str__(self):
         return self.name
@@ -75,6 +105,19 @@ class Product(BaseModel):
     class Meta:
         verbose_name = "Продукт"
         verbose_name_plural = "Продукты"
+
+
+class Announcements(BaseModel):
+    title = models.CharField(max_length=150, verbose_name="Заголовок")
+    image = models.ImageField(upload_to="sales/", verbose_name="Изображение")
+    description = models.TextField(verbose_name="Описание")
+
+    def __str__(self):
+        return self.title
+
+    class Meta:
+        verbose_name = "Объявление"
+        verbose_name_plural = "Объявления"
 
 
 class OrderItem(BaseModel):
@@ -103,11 +146,13 @@ class ProductImage(BaseModel):
 
 
 class Comment(BaseModel):
-    product = models.ForeignKey(Product, on_delete=models.CASCADE, verbose_name="Продукт")
-    commentator_name = models.CharField(max_length=150, verbose_name="Имя коментатора")
+    customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, verbose_name="Клиент")
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="product_comment",
+                                verbose_name="Продукт")
     product_rating = models.IntegerField(default=0, validators=[MinValueValidator(1), MaxValueValidator(5)],
                                          verbose_name="Рейтинг продукта")
     comment = models.TextField(verbose_name="Коментарий")
+    is_visible = models.BooleanField(default=True, verbose_name="Виден")
 
     def __str__(self):
         return self.commentator_name

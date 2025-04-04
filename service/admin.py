@@ -1,6 +1,14 @@
 from django.contrib import admin
 from .models import Product, ProductCategory, ProductSubCategory, ProductItemCategory, Comment, CommentReply, Order, \
-    OrderItem
+    OrderItem, Tag
+
+
+@admin.register(Tag)
+class TagAdmin(admin.ModelAdmin):
+    list_display = ("id", "name", "is_active")
+    list_display_links = ("id", "name")
+    search_fields = ("name",)
+    list_filter = ("is_active",)
 
 
 @admin.register(Product)
@@ -34,9 +42,8 @@ class ProductItemCategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Comment)
 class CommentAdmin(admin.ModelAdmin):
-    list_display = ("id", "commentator_name", "product_rating", "product")
-    list_display_links = ("id", "commentator_name")
-    search_fields = ("commentator_name",)
+    list_display = ("id", "customer", "product_rating", "product")
+    list_display_links = ("id", "customer")
     list_filter = ("product_rating",)
 
 
