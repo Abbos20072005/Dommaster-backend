@@ -21,14 +21,18 @@ class ChatSerializer(serializers.ModelSerializer):
             "id",
             "customer",
             "message",
-            "is_answer",
-            "is_checked"
+            "is_answer"
         )
 
 
-class ChatMessageCreateSerializer(serializers.Serializer):
-    customer = serializers.IntegerField(required=True)
-    message = serializers.CharField(required=True)
+class ChatMessageCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Chat
+        fields = (
+            "id",
+            "customer",
+            "message"
+        )
 
 class LoyaltyCardSerializer(serializers.ModelSerializer):
     class Meta:

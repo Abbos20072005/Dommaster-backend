@@ -40,8 +40,8 @@ class District(BaseModel):
 class Chat(BaseModel):
     customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, verbose_name="Клиент")
     message = models.TextField(blank=True, null=True, verbose_name="Сообщение")
+    file = models.FileField(upload_to="chat/", blank=True, null=True, verbose_name="Файл")
     is_answer = models.BooleanField(default=False, verbose_name="Ответ")
-    is_checked = models.BooleanField(default=True, verbose_name="Просмотрено")
 
     def __str__(self):
         return str(self.id)
@@ -74,3 +74,12 @@ class Notification(BaseModel):
         verbose_name = "Уведомление"
         verbose_name_plural = "Уведомления"
 
+class AboutUs(BaseModel):
+    description = models.TextField(verbose_name="Описание")
+
+    def __str__(self):
+        return str(self.id)
+
+    class Meta:
+        verbose_name = "О нас"
+        verbose_name_plural = "О нас"
