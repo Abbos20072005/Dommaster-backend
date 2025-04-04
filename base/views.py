@@ -29,9 +29,9 @@ class ChatViewSet(ViewSet):
         tags=["Chat"]
     )
     def message_list(self, request):
-        chat = Chat.objects.filter(user_id=request.user.id)
+        chat = Chat.objects.filter(customer_id=request.user.id)
         if not chat:
-            create_serializer = ChatSerializer(data={"user": request.user.id}, context={"request": request})
+            create_serializer = ChatSerializer(data={"customer": request.user.id}, context={"request": request})
             if not create_serializer.is_valid():
                 raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=create_serializer.errors)
 
