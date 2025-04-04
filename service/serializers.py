@@ -3,10 +3,32 @@ from .models import Product, ProductCategory, ProductItemCategory, ProductSubCat
     CommentReply, Order, OrderItem
 
 
+
+class CommentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Comment
+        fields = (
+            "id",
+            "customer",
+            "product",
+            "product_rating",
+            "comment"
+        )
+
 class ProductSerializer(serializers.ModelSerializer):
+    comments = CommentSerializer(source="product_comment", many=True, read_only=True)
+
     class Meta:
         model = Product
-        fields = ("id", "product_item_category", "code", "name", "description", "price")
+        fields = (
+            "id",
+            "product_item_category",
+            "code",
+            "name",
+            "description",
+            "price",
+            "comments"
+        )
 
 
 class ProductCategoryListSerializer(serializers.ModelSerializer):
@@ -47,18 +69,6 @@ class ProductImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductImage
         fields = ("id", "product", "image")
-
-
-class CommentSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Comment
-        fields = (
-            "id",
-            "product",
-            "commentator_name",
-            "product_rating",
-            "comment"
-        )
 
 
 class CommentReplySerializer(serializers.ModelSerializer):
