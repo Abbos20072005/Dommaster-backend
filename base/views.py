@@ -4,8 +4,8 @@ from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
-from .serializers import BannerSerializer, ChatSerializer, ChatMessageCreateSerializer
-from .models import Banner, Chat
+from .serializers import BannerSerializer, ChatSerializer, ChatMessageCreateSerializer, AboutUsSerializer
+from .models import Banner, Chat, AboutUs
 
 
 class BannerViewSet(ViewSet):
@@ -54,4 +54,17 @@ class ChatViewSet(ViewSet):
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
 
         serializer.save()
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+
+
+class AboutUsViewSet(ViewSet):
+    @swagger_auto_schema(
+        operation_summary="About Us",
+        operation_description="About Us",
+        responses={200: AboutUsSerializer()},
+        tags=["Base"]
+    )
+    def about_us(self, request):
+        about_us = AboutUs.objects.last()
+        serializer = AboutUsSerializer(about_us, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)

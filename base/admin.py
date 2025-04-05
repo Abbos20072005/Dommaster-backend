@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Banner, Chat
+from .models import Banner, Chat, AboutUs
 
 @admin.register(Banner)
 class BannerAdmin(admin.ModelAdmin):
@@ -19,3 +19,6 @@ class ChatAdmin(admin.ModelAdmin):
         obj.is_answer = True
         obj.save()
 
+@admin.register(AboutUs)
+class AboutUsAdmin(admin.ModelAdmin):
+    list_display = ("id",)

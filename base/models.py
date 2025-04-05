@@ -1,6 +1,8 @@
 from django.db import models
 from abstract_model.base_model import BaseModel
 from authorization.models import Customer
+from ckeditor.fields import RichTextField
+from ckeditor_uploader.fields import RichTextUploadingField
 
 
 class Banner(BaseModel):
@@ -75,7 +77,8 @@ class Notification(BaseModel):
         verbose_name_plural = "Уведомления"
 
 class AboutUs(BaseModel):
-    description = models.TextField(verbose_name="Описание")
+    description = RichTextUploadingField(verbose_name="Описание")
+
 
     def __str__(self):
         return str(self.id)
