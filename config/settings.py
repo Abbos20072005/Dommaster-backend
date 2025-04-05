@@ -42,7 +42,9 @@ INSTALLED_APPS = [
     "corsheaders",
     "tinymce",
     "rest_framework_simplejwt",
-    "modeltranslation"
+    "modeltranslation",
+    'ckeditor',
+    'ckeditor_uploader' #For image/file upload suppert
 
 ]
 
@@ -176,6 +178,11 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# CKEditor upload path
+CKEDITOR_UPLOAD_PATH = "uploads/"
+# CKEDITOR_IMAGE_BACKEND = "pillow"
+# CKEDITOR_ALLOW_NONIMAGE_FILES = True
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
@@ -200,31 +207,52 @@ SWAGGER_SETTINGS = {
     "DEFAULT_MODEL_RENDERING": "example"
 }
 
-TINYMCE_DEFAULT_CONFIG = {
-    'height': 500,
-    'width': '100%',
-    'plugins': 'advlist autolink lists link image charmap preview anchor '
-               'searchreplace visualblocks code fullscreen insertdatetime media table paste help',
-    'toolbar': 'undo redo | styleselect | bold italic | link image media | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | help',
-    'image_advtab': True,  # Enables advanced image options
-    'file_picker_callback': 'function(callback, value, meta) { \
-        if (meta.filetype === "image") { \
-            var input = document.createElement("input"); \
-            input.setAttribute("type", "file"); \
-            input.setAttribute("accept", "image/*"); \
-            input.onchange = function() { \
-                var file = this.files[0]; \
-                var reader = new FileReader(); \
-                reader.onload = function() { \
-                    callback(reader.result, { alt: file.name }); \
-                }; \
-                reader.readAsDataURL(file); \
-            }; \
-            input.click(); \
-        } \
-    }',
-    'entity_encoding': 'raw',  # Prevents encoding of special characters
-    'valid_elements': '*[*]',  # Allows all elements and attributes (optional)
+
+CKEDITOR_CONFIGS = {
+    'default': {
+        'toolbar': 'Full',
+        'height': 400,
+        'width': '100%',
+        'tabSpaces': 4,
+
+        # Enable content embedding (YouTube, Vimeo, etc.)
+        'extraPlugins': ','.join([
+            'uploadimage',      # allow image uploads
+            'uploadfile',       # allow file uploads
+            'embed',            # for oEmbed videos
+            'autoembed',        # automatically embed URLs
+            'image2',           # enhanced image plugin
+            'codesnippet',      # code blocks with syntax highlighting
+            'autogrow',         # auto-resize editor
+            'clipboard',        # copy/paste features
+            'justify',          # text alignment
+            'colorbutton',      # text color
+            'font',             # font options
+            'video',            # optional video plugin
+        ]),
+
+        'toolbar_Full': [
+            {'name': 'document', 'items': ['Source', '-', 'Preview', 'Print']},
+            {'name': 'clipboard', 'items': ['Cut', 'Copy', 'Paste', 'PasteText', 'PasteFromWord', '-', 'Undo', 'Redo']},
+            {'name': 'editing', 'items': ['Find', 'Replace', '-', 'SelectAll']},
+            {'name': 'styles', 'items': ['Format', 'Font', 'FontSize']},
+            {'name': 'basicstyles', 'items': ['Bold', 'Italic', 'Underline', 'Strike', '-', 'RemoveFormat']},
+            {'name': 'colors', 'items': ['TextColor', 'BGColor']},
+            {'name': 'paragraph', 'items': ['NumberedList', 'BulletedList', '-', 'Outdent', 'Indent', '-', 'Blockquote', '-', 'JustifyLeft', 'JustifyCenter', 'JustifyRight', 'JustifyBlock']},
+            {'name': 'links', 'items': ['Link', 'Unlink', 'Anchor']},
+            {'name': 'insert', 'items': ['Image', 'UploadImage', 'Table', 'HorizontalRule', 'Smiley', 'SpecialChar', 'Embed', 'CodeSnippet']},
+            {'name': 'tools', 'items': ['Maximize', 'ShowBlocks']},
+        ],
+
+        'codeSnippet_theme': 'monokai_sublime',
+        'autoGrow_minHeight': 200,
+        'autoGrow_maxHeight': 800,
+        'autoGrow_bottomSpace': 50,
+
+        # Optional: limit allowed content to avoid security issues
+        'allowedContent': True,
+        'removePlugins': 'stylesheetparser',
+        'forcePasteAsPlainText': False,
+        'embed_provider': '//ckeditor.iframe.ly/api/oembed?url={url}&callback={callback}',
+    }
 }
-DATA_UPLOAD_MAX_MEMORY_SIZE = 5242880
-FILE_UPLOAD_MAX_MEMORY_SIZE = 5242880
