@@ -12,3 +12,10 @@ class ChatAdmin(admin.ModelAdmin):
     list_display = ("id", "customer", "is_answer")
     list_display_links = ("id", "customer")
     list_filter = ("is_answer",)
+    readonly_fields = ("is_answer",)
+
+
+    def save_model(self, request, obj, form, change):
+        obj.is_answer = True
+        obj.save()
+
