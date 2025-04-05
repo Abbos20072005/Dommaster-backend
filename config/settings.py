@@ -150,7 +150,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'ru-ru'
 
 get_text = lambda x: x
 LANGUAGES = {
@@ -218,7 +218,7 @@ CKEDITOR_CONFIGS = {
         # Enable content embedding (YouTube, Vimeo, etc.)
         'extraPlugins': ','.join([
             'uploadimage',      # allow image uploads
-            'uploadfile',       # allow file uploads
+            # 'uploadfile',       # allow file uploads
             'embed',            # for oEmbed videos
             'autoembed',        # automatically embed URLs
             'image2',           # enhanced image plugin
@@ -228,7 +228,7 @@ CKEDITOR_CONFIGS = {
             'justify',          # text alignment
             'colorbutton',      # text color
             'font',             # font options
-            'video',            # optional video plugin
+            # 'video',            # optional video plugin
         ]),
 
         'toolbar_Full': [
