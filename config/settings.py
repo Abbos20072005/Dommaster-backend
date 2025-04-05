@@ -188,6 +188,11 @@ CKEDITOR_UPLOAD_PATH = "uploads/"
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+TELEGRAM_BOT_TOKEN = "6380957235:AAHOgqvvnffZL4deU_pY79mieYdBJYr0J-w"
+TELEGRAM_CHANNEL_ID = "-1002522360493"
+TELEGRAM_API_URL = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage?chat_id={TELEGRAM_CHANNEL_ID}&text="
+
+
 SWAGGER_SETTINGS = {
     'SECURITY_DEFINITIONS': {
         'jwt': {

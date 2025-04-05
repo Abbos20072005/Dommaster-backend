@@ -1,6 +1,7 @@
 from django.contrib import admin
-from .models import Customer
+from .models import Customer, OTP, FcmToken
 from django.contrib.auth.hashers import make_password
+
 
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):
@@ -14,3 +15,18 @@ class CustomerAdmin(admin.ModelAdmin):
             obj.password = make_password(password)
         super().save_model(request, obj, form, change)
 
+
+@admin.register(OTP)
+class OTPAdmin(admin.ModelAdmin):
+    list_display = ("id", "customer", "resend", "count_attempts", "expire_at")
+    list_display_links = ("id", "customer")
+    search_fields = ("customer",)
+    list_filter = ("resend",)
+
+
+@admin.register(FcmToken)
+class FcmTokenAdmin(admin.ModelAdmin):
+    list_display = ("id", "customer", "status")
+    list_display_links = ("id", "customer")
+    list_filter = ("status",)
+    search_fields = ("customer",)

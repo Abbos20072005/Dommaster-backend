@@ -12,6 +12,8 @@ class ErrorCodes(Enum):
     USER_DOES_NOT_EXIST = 7
     INCORRECT_PASSWORD = 8
     USER_BLOCKED = 9
+    ATTEMPT_ALREADY_EXISTS = 10
+
 
 
 error_messages = {
@@ -24,6 +26,8 @@ error_messages = {
     7: {"result": "User Does not exist", "http_status": status.HTTP_400_BAD_REQUEST},
     8: {"result": "Incorrect password", "http_status": status.HTTP_400_BAD_REQUEST},
     9: {"result": "User Blocked, Contact admins", "http_status": status.HTTP_400_BAD_REQUEST},
+    10: {"result": "You already have 3 attempts, please return after 12 times",
+        "http_status": status.HTTP_400_BAD_REQUEST},
 
 }
 
