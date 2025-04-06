@@ -4,19 +4,17 @@ from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from utils.send_notification import send_notification
 from .models import Customer, OTP, FcmToken
-from .serializers import CustomerSerializer, LoginSerializer, RegisterSerializer, OTPVerifySerializer, \
-    OTPResendSerializer, ChangePasswordSerializer, ForgotPasswordSerializer
 from rest_framework.response import Response
 from rest_framework import status
-from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from datetime import datetime, timedelta
 from django.contrib.auth.hashers import check_password, make_password
 from rest_framework_simplejwt.tokens import RefreshToken
 from .utils import otp_code_generator, generate_random_password
+from .serializers import CustomerSerializer, LoginSerializer, RegisterSerializer, OTPVerifySerializer, \
+    OTPResendSerializer, ChangePasswordSerializer, ForgotPasswordSerializer
 
 
-# TODO: Reset password
 class AuthViewSet(ViewSet):
     @swagger_auto_schema(
         operation_summary="Customer login",
