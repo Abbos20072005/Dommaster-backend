@@ -19,26 +19,6 @@ class Banner(BaseModel):
         verbose_name = "Баннер"
         verbose_name_plural = "Баннеры"
 
-class Region(BaseModel):
-    name = models.CharField(max_length=150, verbose_name="Название")
-
-    def __str__(self):
-        return self.name
-
-    class Meta:
-        verbose_name = "Регион"
-        verbose_name_plural = "Регионы"
-
-class District(BaseModel):
-    name = models.CharField(max_length=150, verbose_name="Название")
-
-    def __str__(self):
-        return self.name
-
-    class Meta:
-        verbose_name = "Область"
-        verbose_name_plural = "Областя"
-
 class Chat(BaseModel):
     customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, verbose_name="Клиент")
     message = models.TextField(blank=True, null=True, verbose_name="Сообщение")
@@ -86,3 +66,74 @@ class AboutUs(BaseModel):
     class Meta:
         verbose_name = "О нас"
         verbose_name_plural = "О нас"
+
+class News(BaseModel):
+    title = models.CharField(max_length=450, verbose_name="Заголовок")
+    description = RichTextField(verbose_name="Описание")
+    image = models.ImageField(upload_to="news/", verbose_name="Изображение")
+
+    def __str__(self):
+        return str(self.id)
+
+    class Meta:
+        verbose_name = "Новость"
+        verbose_name_plural = "Новости"
+
+
+class Articles(BaseModel):
+    title = models.CharField(max_length=450, verbose_name="Заголовок")
+    short_description = models.TextField(verbose_name="Краткое описание")
+    description = RichTextUploadingField(verbose_name="Описание")
+
+    def __str__(self):
+        return str(self.id)
+
+    class Meta:
+        verbose_name = "Статья"
+        verbose_name_plural = "Статьи"
+
+class Reviews(BaseModel):
+    title = models.CharField(max_length=450, verbose_name="Заголовок")
+    short_description = models.TextField(verbose_name="Краткое описание")
+    description = RichTextUploadingField(verbose_name="Описание")
+
+    def __str__(self):
+        return str(self.id)
+
+    class Meta:
+        verbose_name = "Обзор"
+        verbose_name_plural = "Обзоры"
+
+class Video(BaseModel):
+    url = models.URLField(verbose_name="Cсылка")
+    name = models.CharField(max_length=150, verbose_name="Название")
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name = "Видео"
+        verbose_name_plural = "Видео"
+
+
+
+
+# class Region(BaseModel):
+#     name = models.CharField(max_length=150, verbose_name="Название")
+#
+#     def __str__(self):
+#         return self.name
+#
+#     class Meta:
+#         verbose_name = "Регион"
+#         verbose_name_plural = "Регионы"
+#
+# class District(BaseModel):
+#     name = models.CharField(max_length=150, verbose_name="Название")
+#
+#     def __str__(self):
+#         return self.name
+#
+#     class Meta:
+#         verbose_name = "Область"
+#         verbose_name_plural = "Областя"
