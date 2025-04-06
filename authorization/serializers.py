@@ -4,6 +4,25 @@ from .utils import validate_number
 from django.contrib.auth.hashers import make_password
 
 
+class ForgotPasswordSerializer(serializers.Serializer):
+    phone_number = serializers.CharField(required=True, validators=[validate_number])
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    old_password = serializers.CharField(required=True)
+    new_password = serializers.CharField(required=True)
+    confirm_new_password = serializers.CharField(required=True)
+
+
+class OTPResendSerializer(serializers.Serializer):
+    otp_key = serializers.UUIDField()
+
+
+class OTPVerifySerializer(serializers.Serializer):
+    otp_key = serializers.UUIDField()
+    otp_code = serializers.IntegerField()
+
+
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField(required=False)
     phone_number = serializers.CharField(max_length=14, required=False, validators=[validate_number])
