@@ -85,6 +85,22 @@ class Tag(BaseModel):
         verbose_name_plural = "Теги"
 
 
+class Sale(BaseModel):
+    products = models.ManyToManyField("Product", verbose_name="Продукты")
+    name = models.CharField(max_length=150, verbose_name="Название")
+    bg_image = models.ImageField(upload_to="sale/", verbose_name="Изображение фона")
+    discount_from = models.DateField()
+    discount_to = models.DateField()
+    is_visible = models.BooleanField(default=True, verbose_name="Виден")
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name = "Распродажа"
+        verbose_name_plural = "Распродажи"
+
+
 class Product(BaseModel):
     brand = models.ForeignKey(Brand, on_delete=models.SET_NULL, null=True, verbose_name="Бренд")
     tag = models.ManyToManyField(Tag, blank=True, verbose_name="Тег")
@@ -97,6 +113,7 @@ class Product(BaseModel):
     price = models.FloatField(default=0, verbose_name="Цена")
     rating = models.FloatField(default=0.0, validators=[MinValueValidator(0.0), MaxValueValidator(5.0)],
                                verbose_name="Рейтинг")
+    discount = models.IntegerField(blank=True, null=True, verbose_name="Скидка")
     is_viewed = models.BooleanField(default=False, verbose_name="Просмотрен")
 
     def __str__(self):
