@@ -11,6 +11,9 @@ from rest_framework import status
 
 
 # TODO: need to add comment create and check if user already write comment to this project one user could write only one comment.
+#TODO: add the most salled products list api
+#TODO: add the new products list
+
 
 class ProductViewSet(ViewSet):
     @swagger_auto_schema(
