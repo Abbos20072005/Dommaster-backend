@@ -2,12 +2,29 @@ from django.db import models
 from abstract_model.base_model import BaseModel
 from django.core.validators import MinValueValidator, MaxValueValidator
 from authorization.models import Customer
+from ckeditor.fields import RichTextField
 
 ORDER_STATUS = (
     (1, "Collecting"),
     (2, "Delivering"),
     (3, "Delivered")
 )
+
+class AddsBrands(BaseModel):
+    name = models.CharField(max_length=450, verbose_name="Название")
+    title = models.CharField(max_length=350, verbose_name="Заголовок")
+    description = RichTextField(verbose_name="Описание")
+    brand = models.OneToOneField(to="Brand", on_delete=models.SET_NULL, null=True, verbose_name="Бренд")
+    products = models.ManyToManyField(to="Product", verbose_name="Продукты")
+    is_visible = models.BooleanField(default=True, verbose_name="Виден")
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name = "Реклама бренда"
+        verbose_name_plural = "Рекламы брендов"
+
 
 
 class Brand(BaseModel):
@@ -30,6 +47,10 @@ class Order(BaseModel):
 
     def __str__(self):
         return str(self.id)
+
+    class Meta:
+        verbose_name = "Заказ"
+        verbose_name_plural = "Заказы"
 
 
 class ProductCategory(BaseModel):
