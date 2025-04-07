@@ -12,7 +12,8 @@ ORDER_STATUS = (
 
 class Brand(BaseModel):
     name = models.CharField(max_length=150, verbose_name="Название")
-    image = models.ImageField(upload_to="brand/", verbose_name="Изображение")
+    image = models.ImageField(upload_to="brand/image/", verbose_name="Изображение")
+    is_visible = models.BooleanField(default=True, verbose_name="Виден")
 
     def __str__(self):
         return self.name
@@ -32,7 +33,7 @@ class Order(BaseModel):
 
 
 class ProductCategory(BaseModel):
-    brand = models.ForeignKey(Brand, on_delete=models.SET_NULL, null=True, verbose_name="Бренд")
+    brand = models.ForeignKey(Brand, on_delete=models.SET_NULL, null=True, related_name="brand_categories", verbose_name="Бренд")
     name = models.CharField(max_length=150, verbose_name="Название")
     image = models.ImageField(upload_to='product_category', verbose_name="Изображение")
 
@@ -102,7 +103,7 @@ class Sale(BaseModel):
 
 
 class Product(BaseModel):
-    brand = models.ForeignKey(Brand, on_delete=models.SET_NULL, null=True, verbose_name="Бренд")
+    brand = models.ForeignKey(Brand, on_delete=models.SET_NULL, null=True, related_name="product_brand", verbose_name="Бренд")
     tag = models.ManyToManyField(Tag, blank=True, verbose_name="Тег")
     product_item_category = models.ForeignKey(ProductItemCategory, on_delete=models.CASCADE,
                                               related_name="product_item_category",
