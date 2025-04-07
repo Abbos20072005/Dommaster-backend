@@ -5,14 +5,18 @@ from drf_yasg.utils import swagger_auto_schema
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from .serializers import ProductCategorySerializer, ProductCategoryListSerializer, ProductSubCategorySerializer, \
-    ProductItemCategorySerializer, ProductSerializer, CommentSerializer
-from .models import ProductCategory, ProductSubCategory, ProductItemCategory, Product, Comment
+    ProductItemCategorySerializer, ProductSerializer, CommentSerializer, BrandSerializer, FilterSerializer, \
+    PaginationSerializer, BrandDetailSerializer, SaleSerializer
+from .models import ProductCategory, ProductSubCategory, ProductItemCategory, Product, Comment, Brand, Sale
 from rest_framework import status
+from django.db.models import Q
+from .paginations.get_products_pagination import get_products_paginator
+from django.db.models import Count
 
 
 # TODO: need to add comment create and check if user already write comment to this project one user could write only one comment.
-#TODO: add the most salled products list api
-#TODO: add the new products list
+# TODO: add the most salled products list api
+# TODO: add the new products list
 
 
 class ProductViewSet(ViewSet):
@@ -84,7 +88,39 @@ class ProductViewSet(ViewSet):
         serializer = ProductSerializer(product, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
-#TODO: finish the comment logic
+    @swagger_auto_schema(
+        operation_summary="Products filter",
+        operation_description="Products filter",
+        request_body=FilterSerializer(),
+        responses={200: FilterSerializer(many=True)},
+        tags=["Product"]
+    )
+    def product_filter(self, request):
+        data = request.data
+        serializer = FilterSerializer(data=data)
+        if not serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
+
+        page = serializer.validated_data.get('page')
+        page_size = serializer.validated_data.get('page_size')
+        q = serializer.validated_data.get('q')
+        price_from = serializer.validated_data.get('price_from', 0)
+        price_to = serializer.validated_data.get('price_to', 0)
+
+        filters = Q()
+        if q:
+            pass
+        if price_from or price_to:
+            filters &= Q(price__gte=price_from)
+            filters &= Q(price__lte=price_to)
+
+        products = Product.objects.filter(filters)
+        return Response(data={"result": get_products_paginator(response_data=products, page=page, page_size=page_size,
+                                                               context={"request": request}), "ok": True},
+                        status=status.HTTP_200_OK)
+
+
+# TODO: finish the comment logic
 class CommentViewSet(ViewSet):
     @swagger_auto_schema(
         operation_summary="Write comment to product, pk receive product id",
@@ -110,3 +146,67 @@ class CommentViewSet(ViewSet):
 
         serializer.save()
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_201_CREATED)
+
+
+class BrandViewSet(ViewSet):
+    @swagger_auto_schema(
+        operation_summary="Brands list",
+        operation_description="Brands list",
+        responses={200: BrandSerializer(many=True)},
+        tags=["Brand"]
+    )
+    def brand_list(self, request):
+        brands = Brand.objects.filter(is_visible=True)
+        serializer = BrandSerializer(brands, many=True, context={"request": request})
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        operation_summary="Brand detail",
+        operation_description="Brand detail",
+        responses={200: BrandDetailSerializer()},
+        tags=["Brand"]
+    )
+    def brand_detail(self, request, pk):
+        brand = Brand.objects.annotate(products_count=Count("product_brand")).filter(id=pk).first()
+        if not brand:
+            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
+
+        serializer = BrandDetailSerializer(brand, context={"request": request})
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        operation_summary="Brand products, pk receive brand id",
+        operation_description="Brand products, pk receive brand id",
+        manual_parameters=[
+            openapi.Parameter(
+                name='page', in_=openapi.IN_QUERY, description='Page', type=openapi.TYPE_INTEGER),
+            openapi.Parameter(
+                name='page_size', in_=openapi.IN_QUERY, description='Page size', type=openapi.TYPE_INTEGER),
+        ],
+        responses={200: ProductSerializer(many=True)},
+        tags=["Brand"]
+    )
+    def brand_products(self, request, pk):
+        params = request.query_params
+        param_serializer = PaginationSerializer(data=params)
+        if not param_serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=param_serializer.errors)
+
+        products = Product.objects.filter(brand_id=pk)
+        return Response(data={
+            "result": get_products_paginator(response_data=products, page=param_serializer.validated_data.get("page"),
+                                             page_size=param_serializer.validated_data.get("page_size"),
+                                             context={"request": request}), "ok": True},
+            status=status.HTTP_200_OK)
+
+class SaleViewSet(ViewSet):
+    @swagger_auto_schema(
+        operation_summary="Sale products list",
+        operation_description="Sale products list",
+        responses={200: SaleSerializer()},
+        tags=["Sale"]
+    )
+    def sale_products(self, request):
+        sale = Sale.objects.filter(is_visible=True).prefetch_related("products").order_by("-created_at").first()
+        serializer = SaleSerializer(sale, context={"request": request})
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
