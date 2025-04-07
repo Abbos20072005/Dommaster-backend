@@ -1,7 +1,53 @@
 from rest_framework import serializers
 from .models import Product, ProductCategory, ProductItemCategory, ProductSubCategory, ProductImage, Comment, \
-    CommentReply, Order, OrderItem
+    CommentReply, Order, OrderItem, Brand, Sale
+from exceptions.error_exception import CustomApiException
+from exceptions.error_messages import ErrorCodes
 
+class PaginationSerializer(serializers.Serializer):
+    page = serializers.IntegerField(
+        required=False,
+        default=1
+    )
+    page_size = serializers.IntegerField(
+        required=False,
+        default=10
+    )
+
+    def validate(self, attrs):
+        page = attrs.get('page')
+        page_size = attrs.get('page_size')
+        if page < 0 or page_size < 0:
+            raise CustomApiException(ErrorCodes.INVALID_INPUT, message="page or page_size is invalid")
+        return super().validate(attrs)
+
+
+class FilterSerializer(PaginationSerializer):
+    q = serializers.CharField(required=False)
+    sort_by = serializers.CharField(required=False)
+    price_from = serializers.FloatField(required=False)
+    price_to = serializers.FloatField(required=False)
+    colors = serializers.IntegerField(required=False)
+    size = serializers.IntegerField(required=False)
+    categories = serializers.IntegerField(required=False)
+
+    def validate(self, attrs):
+        price_from = attrs.get("price_from")
+        price_to = attrs.get("price_to")
+        if price_from and price_to and price_from > price_to:
+            raise CustomApiException(error_code=ErrorCodes.INVALID_INPUT,
+                                     message="Price_from could not be more than price_to")
+        return attrs
+
+
+class BrandSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Brand
+        fields = (
+            "id",
+            "name",
+            "image"
+        )
 
 
 class CommentSerializer(serializers.ModelSerializer):
@@ -14,6 +60,7 @@ class CommentSerializer(serializers.ModelSerializer):
             "product_rating",
             "comment"
         )
+
 
 class ProductSerializer(serializers.ModelSerializer):
     comments = CommentSerializer(source="product_comment", many=True, read_only=True)
@@ -30,6 +77,20 @@ class ProductSerializer(serializers.ModelSerializer):
             "comments"
         )
 
+class SaleSerializer(serializers.ModelSerializer):
+    products = ProductSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Sale
+        fields = (
+            "id",
+            "name",
+            "discount_from",
+            "discount_to",
+            "products"
+        )
+
+
 
 class ProductCategoryListSerializer(serializers.ModelSerializer):
     class Meta:
@@ -38,6 +99,21 @@ class ProductCategoryListSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "image"
+        )
+
+
+class BrandDetailSerializer(serializers.ModelSerializer):
+    categories = ProductCategoryListSerializer(source="brand_categories", many=True, read_only=True)
+    products_count = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = Brand
+        fields = (
+            "id",
+            "name",
+            "image",
+            "categories",
+            "products_count"
         )
 
 
