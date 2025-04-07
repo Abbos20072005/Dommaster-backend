@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import ProductViewSet, BrandViewSet, SaleViewSet
+from .views import ProductViewSet, BrandViewSet, SaleViewSet, AddsBrandsViewSet
 
 urlpatterns = [
     path("categories/", ProductViewSet.as_view({"get": "categories_list"}), name="categories list"),
@@ -12,5 +12,7 @@ urlpatterns = [
     path("brands/", BrandViewSet.as_view({"get": "brand_list"}), name="brand list"),
     path("brands/<int:pk>/", BrandViewSet.as_view({"get": "brand_detail"}), name="brand detail"),
     path("brands/products/<int:pk>/", BrandViewSet.as_view({"get": "brand_products"}), name="brand products"),
-    path("sale/", SaleViewSet.as_view({"get": "sale_products"}), name="sale products")
+    path("sale/", SaleViewSet.as_view({"get": "sale_products"}), name="sale products"),
+    path("adds/brands/", AddsBrandsViewSet.as_view({"get": "adds_brands"}), name="adds brands"),
+    path("adds/brands/<int:pk>/", AddsBrandsViewSet.as_view({"get": "adds_brands_detail"}), name="adds brands detail")
 ]
