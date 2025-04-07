@@ -1,8 +1,19 @@
 from rest_framework import serializers
 from .models import Product, ProductCategory, ProductItemCategory, ProductSubCategory, ProductImage, Comment, \
-    CommentReply, Order, OrderItem, Brand, Sale
+    CommentReply, Order, OrderItem, Brand, Sale, AddsBrands
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
+
+
+class AddsBrandsDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AddsBrands
+        fields = (
+            "id",
+            "title",
+            "description"
+        )
+
 
 class PaginationSerializer(serializers.Serializer):
     page = serializers.IntegerField(
@@ -77,6 +88,20 @@ class ProductSerializer(serializers.ModelSerializer):
             "comments"
         )
 
+
+class AddsBrandsSerializer(serializers.ModelSerializer):
+    products = ProductSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = AddsBrands
+        fields = (
+            "id",
+            "name",
+            "brand",
+            "products"
+        )
+
+
 class SaleSerializer(serializers.ModelSerializer):
     products = ProductSerializer(many=True, read_only=True)
 
@@ -89,7 +114,6 @@ class SaleSerializer(serializers.ModelSerializer):
             "discount_to",
             "products"
         )
-
 
 
 class ProductCategoryListSerializer(serializers.ModelSerializer):
