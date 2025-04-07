@@ -7,7 +7,6 @@ load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
@@ -18,8 +17,8 @@ SHOW_SWAGGER = int(os.getenv('DJANGO_SHOW_SWAGGER', 1))
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = int(os.getenv('DEBUG', 1))
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '127.0.0.1').split(',')
-
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '127.0.0.1').split(",")
+CSRF_TRUSTED_ORIGINS = os.getenv("CSRF_TRUSTED_ORIGINS").split(",")
 
 # Application definition
 
@@ -31,12 +30,12 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
-    #apps
+    # apps
     "authorization",
     "service",
     "base",
 
-    #packages
+    # packages
     "rest_framework",
     "drf_yasg",
     "corsheaders",
@@ -44,7 +43,7 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "modeltranslation",
     'ckeditor',
-    'ckeditor_uploader' #For image/file upload suppert
+    'ckeditor_uploader'  # For image/file upload suppert
 
 ]
 
@@ -87,7 +86,6 @@ CORS_ALLOW_HEADERS = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
@@ -108,7 +106,6 @@ DATABASES = {
         'PORT': os.getenv('DB_PORT', 5432),
     }
 }
-
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -146,7 +143,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
 
@@ -167,7 +163,6 @@ TIME_ZONE = 'Asia/Tashkent'
 USE_I18N = True
 
 USE_TZ = False
-
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
@@ -192,7 +187,6 @@ TELEGRAM_BOT_TOKEN = "6380957235:AAHOgqvvnffZL4deU_pY79mieYdBJYr0J-w"
 TELEGRAM_CHANNEL_ID = "-1002522360493"
 TELEGRAM_API_URL = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage?chat_id={TELEGRAM_CHANNEL_ID}&text="
 
-
 SWAGGER_SETTINGS = {
     'SECURITY_DEFINITIONS': {
         'jwt': {
@@ -212,7 +206,6 @@ SWAGGER_SETTINGS = {
     "DEFAULT_MODEL_RENDERING": "example"
 }
 
-
 CKEDITOR_CONFIGS = {
     'default': {
         'toolbar': 'Full',
@@ -222,17 +215,17 @@ CKEDITOR_CONFIGS = {
 
         # Enable content embedding (YouTube, Vimeo, etc.)
         'extraPlugins': ','.join([
-            'uploadimage',      # allow image uploads
+            'uploadimage',  # allow image uploads
             # 'uploadfile',       # allow file uploads
-            'embed',            # for oEmbed videos
-            'autoembed',        # automatically embed URLs
-            'image2',           # enhanced image plugin
-            'codesnippet',      # code blocks with syntax highlighting
-            'autogrow',         # auto-resize editor
-            'clipboard',        # copy/paste features
-            'justify',          # text alignment
-            'colorbutton',      # text color
-            'font',             # font options
+            'embed',  # for oEmbed videos
+            'autoembed',  # automatically embed URLs
+            'image2',  # enhanced image plugin
+            'codesnippet',  # code blocks with syntax highlighting
+            'autogrow',  # auto-resize editor
+            'clipboard',  # copy/paste features
+            'justify',  # text alignment
+            'colorbutton',  # text color
+            'font',  # font options
             # 'video',            # optional video plugin
         ]),
 
@@ -243,9 +236,13 @@ CKEDITOR_CONFIGS = {
             {'name': 'styles', 'items': ['Format', 'Font', 'FontSize']},
             {'name': 'basicstyles', 'items': ['Bold', 'Italic', 'Underline', 'Strike', '-', 'RemoveFormat']},
             {'name': 'colors', 'items': ['TextColor', 'BGColor']},
-            {'name': 'paragraph', 'items': ['NumberedList', 'BulletedList', '-', 'Outdent', 'Indent', '-', 'Blockquote', '-', 'JustifyLeft', 'JustifyCenter', 'JustifyRight', 'JustifyBlock']},
+            {'name': 'paragraph',
+             'items': ['NumberedList', 'BulletedList', '-', 'Outdent', 'Indent', '-', 'Blockquote', '-', 'JustifyLeft',
+                       'JustifyCenter', 'JustifyRight', 'JustifyBlock']},
             {'name': 'links', 'items': ['Link', 'Unlink', 'Anchor']},
-            {'name': 'insert', 'items': ['Image', 'UploadImage', 'Table', 'HorizontalRule', 'Smiley', 'SpecialChar', 'Embed', 'CodeSnippet']},
+            {'name': 'insert',
+             'items': ['Image', 'UploadImage', 'Table', 'HorizontalRule', 'Smiley', 'SpecialChar', 'Embed',
+                       'CodeSnippet']},
             {'name': 'tools', 'items': ['Maximize', 'ShowBlocks']},
         ],
 
