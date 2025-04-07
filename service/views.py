@@ -6,8 +6,8 @@ from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from .serializers import ProductCategorySerializer, ProductCategoryListSerializer, ProductSubCategorySerializer, \
     ProductItemCategorySerializer, ProductSerializer, CommentSerializer, BrandSerializer, FilterSerializer, \
-    PaginationSerializer, BrandDetailSerializer, SaleSerializer
-from .models import ProductCategory, ProductSubCategory, ProductItemCategory, Product, Comment, Brand, Sale
+    PaginationSerializer, BrandDetailSerializer, SaleSerializer, AddsBrandsSerializer, AddsBrandsDetailSerializer
+from .models import ProductCategory, ProductSubCategory, ProductItemCategory, Product, Comment, Brand, Sale, AddsBrands
 from rest_framework import status
 from django.db.models import Q
 from .paginations.get_products_pagination import get_products_paginator
@@ -210,3 +210,30 @@ class SaleViewSet(ViewSet):
         sale = Sale.objects.filter(is_visible=True).prefetch_related("products").order_by("-created_at").first()
         serializer = SaleSerializer(sale, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+
+class AddsBrandsViewSet(ViewSet):
+    @swagger_auto_schema(
+        operation_summary="Adds brands list",
+        operation_description="Adds brands list",
+        responses={200: AddsBrandsSerializer(many=True)},
+        tags=["AddsBrands"]
+    )
+    def adds_brands(self, request):
+        adds_brands = AddsBrands.objects.filter(is_visible=True).prefetch_related("products")
+        serializer = AddsBrandsSerializer(adds_brands, many=True, context={"request": request})
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        operation_summary="Adds brands detail, pk receive adds brands id",
+        operation_description="Adds brands detail, pk receive adds brands id",
+        responses={200: AddsBrandsDetailSerializer()},
+        tags=["AddsBrands"]
+    )
+    def adds_brands_detail(self, request, pk):
+        adds_brands = AddsBrands.objects.filter(id=pk).first()
+        serializer = AddsBrandsDetailSerializer(adds_brands, context={"request": request})
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+
+
+
+
