@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Banner, Chat, AboutUs
+from .models import Banner, Chat, AboutUs, Messages
 
 @admin.register(Banner)
 class BannerAdmin(admin.ModelAdmin):
@@ -7,10 +7,10 @@ class BannerAdmin(admin.ModelAdmin):
     list_display_links = ('id', 'title')
     search_fields = ('title', 'short_description')
 
-@admin.register(Chat)
+@admin.register(Messages)
 class ChatAdmin(admin.ModelAdmin):
-    list_display = ("id", "customer", "is_answer")
-    list_display_links = ("id", "customer")
+    list_display = ("id", "chat", "is_answer")
+    list_display_links = ("id", "chat")
     list_filter = ("is_answer",)
     readonly_fields = ("is_answer",)
 

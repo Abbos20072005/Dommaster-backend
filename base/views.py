@@ -4,8 +4,9 @@ from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
-from .serializers import BannerSerializer, ChatSerializer, ChatMessageCreateSerializer, AboutUsSerializer
-from .models import Banner, Chat, AboutUs
+from .serializers import BannerSerializer, MessageSerializer, MessageCreateSerializer, AboutUsSerializer, \
+    ChatCreateSerializer
+from .models import Banner, Chat, AboutUs, Messages
 
 
 class BannerViewSet(ViewSet):
@@ -25,31 +26,38 @@ class ChatViewSet(ViewSet):
     @swagger_auto_schema(
         operation_summary="Chat messages list",
         operation_description="Chat messages list",
-        responses={200: ChatSerializer(many=True)},
+        responses={200: MessageSerializer(many=True)},
         tags=["Chat"]
     )
     def message_list(self, request):
-        chat = Chat.objects.filter(customer_id=request.user.id)
+        chat = Chat.objects.filter(customer_id=request.user.id).first()
         if not chat:
-            create_serializer = ChatSerializer(data={"customer": request.user.id}, context={"request": request})
+            create_serializer = ChatCreateSerializer(data={"customer": request.user.id},
+                                                     context={"request": request})
             if not create_serializer.is_valid():
                 raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=create_serializer.errors)
 
             create_serializer.save()
             return Response(data={"result": create_serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
-        serializer = ChatSerializer(chat, many=True, context={"request": request})
+        messages = Messages.objects.filter(chat=chat.id)
+        serializer = MessageSerializer(messages, many=True, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
         operation_summary="Chat message create",
         operation_description="Chat message create",
-        request_body=ChatMessageCreateSerializer(),
-        responses={201: ChatSerializer()},
+        request_body=MessageCreateSerializer(),
+        responses={201: MessageSerializer()},
         tags=["Chat"]
     )
     def message_create(self, request):
-        serializer = ChatMessageCreateSerializer(data=request.data)
+        chat = Chat.objects.filter(customer_id=request.user.id).first()
+        if not chat:
+            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
+
+        serializer = MessageCreateSerializer(data={"chat": chat.id, **request.data},
+                                             context={"request": request})
         if not serializer.is_valid():
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
 

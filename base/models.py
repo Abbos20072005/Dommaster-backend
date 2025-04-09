@@ -21,6 +21,16 @@ class Banner(BaseModel):
 
 class Chat(BaseModel):
     customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, verbose_name="Клиент")
+
+    def __str__(self):
+        return str(self.id)
+
+    class Meta:
+        verbose_name = "Чат"
+        verbose_name_plural = "Чаты"
+
+class Messages(BaseModel):
+    chat = models.ForeignKey(Chat, on_delete=models.CASCADE, related_name="chat_messages", verbose_name="Чат")
     message = models.TextField(blank=True, null=True, verbose_name="Сообщение")
     file = models.FileField(upload_to="chat/", blank=True, null=True, verbose_name="Файл")
     is_answer = models.BooleanField(default=False, verbose_name="Ответ")
@@ -29,8 +39,8 @@ class Chat(BaseModel):
         return str(self.id)
 
     class Meta:
-        verbose_name = "Чат"
-        verbose_name_plural = "Чаты"
+        verbose_name = "Сообщение"
+        verbose_name_plural = "Сообщения"
 
 class LoyaltyCard(BaseModel):
     customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, verbose_name="Клиент")
