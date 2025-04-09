@@ -115,8 +115,8 @@ class AuthViewSet(ViewSet):
             f'\nReset: {otp.resend}'
             f'\nexpires: {otp.expire_at}')
         send_notification(message)
-        fcm_token = FcmToken.objects.create(cusomer=customer_none, fcm_token=request.data.get("device_id", ""))
-        fcm_token.save()
+        # fcm_token = FcmToken.objects.create(cusomer=customer_none, fcm_token=request.data.get("device_id", ""))
+        # fcm_token.save()
         return Response(data={'result': {"otp_key": otp.otp_key}, 'ok': True}, status=status.HTTP_201_CREATED)
 
     @swagger_auto_schema(
