@@ -34,9 +34,9 @@ class TagAdmin(admin.ModelAdmin):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ("id", "name", "code", "price", "rating", "product_item_category")
+    list_display = ("id", "name", "price", "rating", "product_item_category")
     list_display_links = ("id", "name")
-    search_fields = ("name", "code")
+    search_fields = ("name",)
     list_filter = ("price", "rating")
     readonly_fields = ("discount_price",)
 

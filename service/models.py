@@ -97,7 +97,7 @@ class ProductItemCategory(BaseModel):
 
 class Tag(BaseModel):
     name = models.CharField(max_length=150, verbose_name="Название")
-    product = models.ManyToManyField(to="Product", blank=True, null=True, verbose_name="")
+    product = models.ManyToManyField(to="Product", blank=True, verbose_name="")
     is_active = models.BooleanField(default=True, verbose_name="Активен")
 
     def __str__(self):
