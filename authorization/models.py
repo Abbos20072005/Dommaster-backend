@@ -37,7 +37,7 @@ class OTP(BaseModel):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, verbose_name="Клиент")
     resend = models.BooleanField(default=False, verbose_name="Переотправить")
     otp_code = models.IntegerField(verbose_name="ОТП код")
-    otp_key = models.CharField(default=uuid.uuid4(), max_length=250, unique=True, verbose_name="ОТП ключ")
+    otp_key = models.CharField(default=uuid.uuid4, max_length=250, editable=False, unique=True, verbose_name="ОТП ключ")
     count_attempts = models.IntegerField(default=0, verbose_name="Количество попыток")
     expire_at = models.DateTimeField(blank=True, null=True, verbose_name="Истекает в")
 
