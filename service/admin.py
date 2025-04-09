@@ -38,6 +38,12 @@ class ProductAdmin(admin.ModelAdmin):
     list_display_links = ("id", "name")
     search_fields = ("name", "code")
     list_filter = ("price", "rating")
+    readonly_fields = ("discount_price",)
+
+    def save_model(self, request, obj, form, change):
+        if obj.discount and not obj.discount_price:
+            obj.discount_price = obj.price * (1 - (obj.discount / 100))
+            obj.save()
 
 
 @admin.register(ProductCategory)
