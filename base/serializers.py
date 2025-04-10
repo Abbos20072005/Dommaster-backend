@@ -29,7 +29,8 @@ class MessageSerializer(serializers.ModelSerializer):
             "chat",
             "file",
             "message",
-            "is_answer"
+            "is_answer",
+            "created_at"
         )
 
 
@@ -40,7 +41,7 @@ class MessageCreateSerializer(serializers.ModelSerializer):
             "id",
             "chat",
             "message",
-            "file",
+            "file"
         )
 
 class LoyaltyCardSerializer(serializers.ModelSerializer):
