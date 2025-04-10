@@ -145,7 +145,9 @@ class ProductViewSet(ViewSet):
 
         filters = Q()
         if q:
-            pass
+            filters &= Q(name__icontains=q) | Q(name_uz__icontains=q) | Q(name_ru__icontains=q) | Q(
+                name_en__icontains=q)
+
         if price_from or price_to:
             filters &= Q(price__gte=price_from)
             filters &= Q(price__lte=price_to)
