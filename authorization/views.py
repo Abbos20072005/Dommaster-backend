@@ -117,7 +117,7 @@ class AuthViewSet(ViewSet):
         send_notification(message)
         # fcm_token = FcmToken.objects.create(cusomer=customer_none, fcm_token=request.data.get("device_id", ""))
         # fcm_token.save()
-        return Response(data={'result': {"otp_key": otp.otp_key}, 'ok': True}, status=status.HTTP_201_CREATED)
+        return Response(data={"result": {"otp_key": otp.otp_key}, 'ok': True}, status=status.HTTP_201_CREATED)
 
     @swagger_auto_schema(
         operation_summary="Auth me",

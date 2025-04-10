@@ -10,7 +10,7 @@ from .serializers import ProductCategorySerializer, ProductCategoryListSerialize
     SearchByNameSerializer, CommentUpdateSerializer
 from .models import ProductCategory, ProductSubCategory, ProductItemCategory, Product, Comment, Brand, Sale, AddsBrands
 from rest_framework import status
-from django.db.models import Q
+from django.db.models import Q, Sum
 from .paginations.get_products_pagination import get_products_paginator
 from django.db.models import Count
 from django.core.cache import cache
@@ -18,10 +18,7 @@ from django.contrib.postgres.search import TrigramSimilarity
 from django.db.models.functions import Greatest
 
 
-# TODO: need to add comment create and check if user already write comment to this project one user could write only one comment.
 # TODO: add the most salled products list api
-# TODO: add the new products list
-
 
 class ProductViewSet(ViewSet):
     @swagger_auto_schema(
@@ -54,6 +51,17 @@ class ProductViewSet(ViewSet):
             cache.set(cache_key, product, timeout=300)
 
         return Response(data={"result": cache.get(cache_key), "ok": True}, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        operation_summary="Most sold products",
+        operation_description="Most sold products",
+        responses={200: ProductSerializer(many=True)},
+        tags=["Product"]
+    )
+    def most_sold(self, request):
+        products = Product.objects.annotate(most_solds=Sum("product_order_item__quantity")).order_by("-most_solds")[:20]
+        serializer = ProductSerializer(products, many=True, context={"request": request})
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
         operation_summary="Product categories list",
