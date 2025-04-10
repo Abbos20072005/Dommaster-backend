@@ -34,7 +34,11 @@ class ProductViewSet(ViewSet):
         tags=["Product"]
     )
     def search_by_name(self, request):
-        param_data = request.query_params.get("q").strip().lower()
+        param = request.query_params.get("q")
+        if not param:
+            return Response(data={"result": [], "ok": True}, status=status.HTTP_200_OK)
+
+        param_data = param.strip().lower()
         cache_key = f"{param_data}"
 
         query = cache.get(cache_key)
