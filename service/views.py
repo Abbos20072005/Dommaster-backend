@@ -142,17 +142,22 @@ class ProductViewSet(ViewSet):
         q = serializer.validated_data.get('q')
         price_from = serializer.validated_data.get('price_from', 0)
         price_to = serializer.validated_data.get('price_to', 0)
+        sort_by = serializer.validated_data.get("sort_by")
 
         filters = Q()
         if q:
             filters &= Q(name__icontains=q) | Q(name_uz__icontains=q) | Q(name_ru__icontains=q) | Q(
                 name_en__icontains=q)
 
+        sort = 'created_at'
+        if sort_by:
+            sort = {'newest': '-created_at'}.get(sort_by, 'created_at')
+
         if price_from or price_to:
             filters &= Q(price__gte=price_from)
             filters &= Q(price__lte=price_to)
 
-        products = Product.objects.filter(filters)
+        products = Product.objects.filter(filters).order_by(sort)
         return Response(data={"result": get_products_paginator(response_data=products, page=page, page_size=page_size,
                                                                context={"request": request}), "ok": True},
                         status=status.HTTP_200_OK)

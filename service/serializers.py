@@ -43,9 +43,6 @@ class FilterSerializer(PaginationSerializer):
     sort_by = serializers.CharField(required=False)
     price_from = serializers.FloatField(required=False)
     price_to = serializers.FloatField(required=False)
-    colors = serializers.IntegerField(required=False)
-    size = serializers.IntegerField(required=False)
-    categories = serializers.IntegerField(required=False)
 
     def validate(self, attrs):
         price_from = attrs.get("price_from")
