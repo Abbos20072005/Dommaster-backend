@@ -3,12 +3,14 @@ from abstract_model.base_model import BaseModel
 from django.core.validators import MinValueValidator, MaxValueValidator
 from authorization.models import Customer
 from ckeditor.fields import RichTextField
+from django.contrib.postgres.indexes import GinIndex
 
 ORDER_STATUS = (
     (1, "Collecting"),
     (2, "Delivering"),
     (3, "Delivered")
 )
+
 
 class AddsBrands(BaseModel):
     name = models.CharField(max_length=450, verbose_name="Название")
@@ -24,7 +26,6 @@ class AddsBrands(BaseModel):
     class Meta:
         verbose_name = "Реклама бренда"
         verbose_name_plural = "Рекламы брендов"
-
 
 
 class Brand(BaseModel):
@@ -54,7 +55,8 @@ class Order(BaseModel):
 
 
 class ProductCategory(BaseModel):
-    brand = models.ForeignKey(Brand, on_delete=models.SET_NULL, null=True, blank=True, related_name="brand_categories", verbose_name="Бренд")
+    brand = models.ForeignKey(Brand, on_delete=models.SET_NULL, null=True, blank=True, related_name="brand_categories",
+                              verbose_name="Бренд")
     name = models.CharField(max_length=150, verbose_name="Название")
     image = models.ImageField(upload_to='product_category', verbose_name="Изображение")
 
@@ -97,7 +99,7 @@ class ProductItemCategory(BaseModel):
 
 class Tag(BaseModel):
     name = models.CharField(max_length=150, verbose_name="Название")
-    product = models.ManyToManyField(to="Product", blank=True, verbose_name="")
+    product = models.ManyToManyField(to="Product", blank=True, verbose_name="Продукты")
     is_active = models.BooleanField(default=True, verbose_name="Активен")
 
     def __str__(self):
@@ -125,12 +127,13 @@ class Sale(BaseModel):
 
 
 class Product(BaseModel):
-    brand = models.ForeignKey(Brand, on_delete=models.SET_NULL, null=True, blank=True, related_name="product_brand", verbose_name="Бренд")
+    brand = models.ForeignKey(Brand, on_delete=models.SET_NULL, null=True, blank=True, related_name="product_brand",
+                              verbose_name="Бренд")
     product_item_category = models.ForeignKey(ProductItemCategory, on_delete=models.CASCADE,
                                               related_name="product_item_category",
                                               verbose_name="Предметная категория продуктов")
     name = models.CharField(max_length=500, verbose_name="Название")
-    description = models.TextField(verbose_name="Описание")
+    description = RichTextField(verbose_name="Описание")
     price = models.FloatField(default=0, verbose_name="Цена")
     discount_price = models.FloatField(blank=True, null=True, verbose_name="Скидочная цена")
     rating = models.FloatField(default=0.0, validators=[MinValueValidator(0.0), MaxValueValidator(5.0)],
@@ -143,6 +146,12 @@ class Product(BaseModel):
     class Meta:
         verbose_name = "Продукт"
         verbose_name_plural = "Продукты"
+        indexes = [
+            GinIndex(fields=['name'], opclasses=['gin_trgm_ops'], name='idx_product_name_trgm'),
+            GinIndex(fields=['name_uz'], opclasses=['gin_trgm_ops'], name='idx_product_name_uz_trgm'),
+            GinIndex(fields=['name_ru'], opclasses=['gin_trgm_ops'], name='idx_product_name_ru_trgm'),
+            GinIndex(fields=['name_en'], opclasses=['gin_trgm_ops'], name='idx_product_name_en_trgm'),
+        ]
 
 
 class Announcements(BaseModel):

@@ -3,7 +3,12 @@ from .models import Product, ProductCategory, ProductItemCategory, ProductSubCat
     CommentReply, Order, OrderItem, Brand, Sale, AddsBrands
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
+from config import settings
 
+
+
+class SearchByNameSerializer(serializers.Serializer):
+    name = serializers.CharField(required=False)
 
 class AddsBrandsDetailSerializer(serializers.ModelSerializer):
     class Meta:
@@ -74,6 +79,15 @@ class CommentSerializer(serializers.ModelSerializer):
 
 
 class ProductSerializer(serializers.ModelSerializer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        request = self.context.get('request')
+        language = 'ru'
+        if request and request.META.get('HTTP_ACCEPT_LANGUAGE') in settings.MODELTRANSLATION_LANGUAGES:
+            language = request.META.get('HTTP_ACCEPT_LANGUAGE')
+        self.fields["name"] = serializers.CharField(source=f'name_{language}')
+        self.fields["description"] = serializers.CharField(source=f'description_{language}')
+
     comments = CommentSerializer(source="product_comment", many=True, read_only=True)
 
     class Meta:

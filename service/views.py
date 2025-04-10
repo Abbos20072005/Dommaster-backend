@@ -6,12 +6,16 @@ from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from .serializers import ProductCategorySerializer, ProductCategoryListSerializer, ProductSubCategorySerializer, \
     ProductItemCategorySerializer, ProductSerializer, CommentSerializer, BrandSerializer, FilterSerializer, \
-    PaginationSerializer, BrandDetailSerializer, SaleSerializer, AddsBrandsSerializer, AddsBrandsDetailSerializer
+    PaginationSerializer, BrandDetailSerializer, SaleSerializer, AddsBrandsSerializer, AddsBrandsDetailSerializer, \
+    SearchByNameSerializer
 from .models import ProductCategory, ProductSubCategory, ProductItemCategory, Product, Comment, Brand, Sale, AddsBrands
 from rest_framework import status
 from django.db.models import Q
 from .paginations.get_products_pagination import get_products_paginator
 from django.db.models import Count
+from django.core.cache import cache
+from django.contrib.postgres.search import TrigramSimilarity
+from django.db.models.functions import Greatest
 
 
 # TODO: need to add comment create and check if user already write comment to this project one user could write only one comment.
@@ -20,6 +24,34 @@ from django.db.models import Count
 
 
 class ProductViewSet(ViewSet):
+    @swagger_auto_schema(
+        operation_summary="Search products by name",
+        operation_description="Search products by name",
+        manual_parameters=[
+            openapi.Parameter(name="q", in_=openapi.IN_QUERY, type=openapi.TYPE_STRING, description="Search param")
+        ],
+        responses={200: SearchByNameSerializer(many=True)},
+        tags=["Product"]
+    )
+    def search_by_name(self, request):
+        param_data = request.query_params.get("q").strip().lower()
+        cache_key = f"{param_data}"
+
+        query = cache.get(cache_key)
+        if not query:
+            product = Product.objects.annotate(
+                similarity=Greatest(
+                    TrigramSimilarity("name", param_data),
+                    TrigramSimilarity("name_uz", param_data),
+                    TrigramSimilarity("name_ru", param_data),
+                    TrigramSimilarity("name_en", param_data)
+            )
+            ).filter(similarity__gt=0.1).order_by('-similarity').values_list("name", flat=True)
+            cache.set(cache_key, product, timeout=300)
+
+        return Response(data={"result": cache.get(cache_key), "ok": True}, status=status.HTTP_200_OK)
+
+
     @swagger_auto_schema(
         operation_summary="Product categories list",
         operation_description="Product categories list",
