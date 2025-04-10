@@ -1,14 +1,14 @@
 from rest_framework import serializers
 from .models import Product, ProductCategory, ProductItemCategory, ProductSubCategory, ProductImage, Comment, \
-    CommentReply, Order, OrderItem, Brand, Sale, AddsBrands
+    Order, OrderItem, Brand, Sale, AddsBrands
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from config import settings
 
 
-
 class SearchByNameSerializer(serializers.Serializer):
     name = serializers.CharField(required=False)
+
 
 class AddsBrandsDetailSerializer(serializers.ModelSerializer):
     class Meta:
@@ -74,6 +74,22 @@ class CommentSerializer(serializers.ModelSerializer):
             "comment"
         )
 
+class CommentUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Comment
+        fields = (
+            "id",
+            "product_rating",
+            "comment"
+        )
+
+
+
+class ProductImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductImage
+        fields = ("id", "product", "image")
+
 
 class ProductSerializer(serializers.ModelSerializer):
     def __init__(self, *args, **kwargs):
@@ -86,6 +102,7 @@ class ProductSerializer(serializers.ModelSerializer):
         self.fields["description"] = serializers.CharField(source=f'description_{language}')
 
     comments = CommentSerializer(source="product_comment", many=True, read_only=True)
+    images = ProductImageSerializer(source="product_image", many=True, read_only=True)
 
     class Meta:
         model = Product
@@ -95,6 +112,8 @@ class ProductSerializer(serializers.ModelSerializer):
             "name",
             "description",
             "price",
+            "quantity",
+            "images",
             "comments"
         )
 
@@ -173,23 +192,6 @@ class ProductCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductCategory
         fields = ("id", "name", "image", "sub_category")
-
-
-class ProductImageSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ProductImage
-        fields = ("id", "product", "image")
-
-
-class CommentReplySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = CommentReply
-        fields = (
-            "id",
-            "comment",
-            "defendant_name",
-            "reply"
-        )
 
 
 class OrderSerializer(serializers.ModelSerializer):

@@ -1,6 +1,7 @@
 from django.contrib import admin
-from .models import Product, ProductCategory, ProductSubCategory, ProductItemCategory, Comment, CommentReply, Order, \
+from .models import Product, ProductCategory, ProductSubCategory, ProductItemCategory, Comment, Order, \
     OrderItem, Tag, Brand, Sale, AddsBrands
+
 
 @admin.register(AddsBrands)
 class AddsBrandsAdmin(admin.ModelAdmin):
@@ -9,12 +10,14 @@ class AddsBrandsAdmin(admin.ModelAdmin):
     search_fields = ("name",)
     list_filter = ("is_visible",)
 
+
 @admin.register(Sale)
 class SaleAdmin(admin.ModelAdmin):
     list_display = ("id", "name", "discount_from", "discount_to", "is_visible")
     list_display_links = ("id", "name")
     search_fields = ("name",)
     list_filter = ("is_visible",)
+
 
 @admin.register(Brand)
 class BrandAdmin(admin.ModelAdmin):
@@ -74,17 +77,12 @@ class CommentAdmin(admin.ModelAdmin):
     list_filter = ("product_rating",)
 
 
-@admin.register(CommentReply)
-class CommentReplyAdmin(admin.ModelAdmin):
-    list_display = ("id", "defendant_name", "comment")
-    list_display_links = ("id", "defendant_name")
-    search_fields = ("defendant_name",)
-
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
     list_display = ("id", "customer", "status", "total_price")
     list_display_links = ("id", "customer")
     list_filter = ("status",)
+
 
 @admin.register(OrderItem)
 class OrderItemAdmin(admin.ModelAdmin):

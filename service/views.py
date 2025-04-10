@@ -7,7 +7,7 @@ from exceptions.error_messages import ErrorCodes
 from .serializers import ProductCategorySerializer, ProductCategoryListSerializer, ProductSubCategorySerializer, \
     ProductItemCategorySerializer, ProductSerializer, CommentSerializer, BrandSerializer, FilterSerializer, \
     PaginationSerializer, BrandDetailSerializer, SaleSerializer, AddsBrandsSerializer, AddsBrandsDetailSerializer, \
-    SearchByNameSerializer
+    SearchByNameSerializer, CommentUpdateSerializer
 from .models import ProductCategory, ProductSubCategory, ProductItemCategory, Product, Comment, Brand, Sale, AddsBrands
 from rest_framework import status
 from django.db.models import Q
@@ -49,12 +49,11 @@ class ProductViewSet(ViewSet):
                     TrigramSimilarity("name_uz", param_data),
                     TrigramSimilarity("name_ru", param_data),
                     TrigramSimilarity("name_en", param_data)
-            )
+                )
             ).filter(similarity__gt=0.1).order_by('-similarity').values_list("name", flat=True)
             cache.set(cache_key, product, timeout=300)
 
         return Response(data={"result": cache.get(cache_key), "ok": True}, status=status.HTTP_200_OK)
-
 
     @swagger_auto_schema(
         operation_summary="Product categories list",
@@ -170,7 +169,7 @@ class CommentViewSet(ViewSet):
         operation_description="Write comment to product, pk receive product id",
         request_body=CommentSerializer(),
         responses={201: CommentSerializer()},
-        tags=["Product"]
+        tags=["Comment"]
     )
     def comment_create(self, request, pk):
         product = Product.objects.filter(id=pk).first()
@@ -178,10 +177,11 @@ class CommentViewSet(ViewSet):
             raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
 
         comment = Comment.objects.filter(customer_id=request.user.id).first()
-        if not comment:
-            pass
+        if comment:
+            raise CustomApiException(error_code=ErrorCodes.INVALID_INPUT, message="Your comment already exist")
 
         data = request.data
+        data["customer"] = request.user.id
         data["product"] = pk
         serializer = CommentSerializer(data=data, context={"request": request})
         if not serializer.is_valid():
@@ -189,6 +189,46 @@ class CommentViewSet(ViewSet):
 
         serializer.save()
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_201_CREATED)
+
+    @swagger_auto_schema(
+        operation_summary="Comment update",
+        operation_description="Comment update",
+        request_body=CommentUpdateSerializer(),
+        responses={200: CommentSerializer()},
+        tags=["Comment"]
+    )
+    def comment_update(self, request, pk):
+        comment = Comment.objects.filter(id=pk).first()
+        if not comment:
+            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
+
+        if comment.customer != request.user.id:
+            raise CustomApiException(error_code=ErrorCodes.INVALID_INPUT, message="You could not update this comment")
+
+        serializer = CommentUpdateSerializer(comment, data=request.data, partial=True, context={"request": request})
+        if not serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
+
+        serializer.save()
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        operation_summary="Comment delete",
+        operation_description="Comment delete",
+        responses={204: "Your comment successfully deleted"},
+        tags=["Comment"]
+    )
+    def comment_delete(self, request, pk):
+        comment = Comment.objects.filter(id=pk).first()
+        if not comment:
+            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
+
+        if comment.customer != request.user.id:
+            raise CustomApiException(error_code=ErrorCodes.INVALID_INPUT, message="You could not delete the comment")
+
+        comment.delete()
+        return Response(data={"result": "Your comment successfully deleted", "ok": True},
+                        status=status.HTTP_204_NO_CONTENT)
 
 
 class BrandViewSet(ViewSet):
@@ -242,6 +282,7 @@ class BrandViewSet(ViewSet):
                                              context={"request": request}), "ok": True},
             status=status.HTTP_200_OK)
 
+
 class SaleViewSet(ViewSet):
     @swagger_auto_schema(
         operation_summary="Sale products list",
@@ -253,6 +294,7 @@ class SaleViewSet(ViewSet):
         sale = Sale.objects.filter(is_visible=True).prefetch_related("products").order_by("-created_at").first()
         serializer = SaleSerializer(sale, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+
 
 class AddsBrandsViewSet(ViewSet):
     @swagger_auto_schema(
@@ -276,7 +318,3 @@ class AddsBrandsViewSet(ViewSet):
         adds_brands = AddsBrands.objects.filter(id=pk).first()
         serializer = AddsBrandsDetailSerializer(adds_brands, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
-
-
-
-

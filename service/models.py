@@ -129,7 +129,7 @@ class Sale(BaseModel):
 class Product(BaseModel):
     brand = models.ForeignKey(Brand, on_delete=models.SET_NULL, null=True, blank=True, related_name="product_brand",
                               verbose_name="Бренд")
-    product_item_category = models.ForeignKey(ProductItemCategory, on_delete=models.CASCADE,
+    product_item_category = models.ForeignKey(ProductItemCategory, on_delete=models.CASCADE, blank=True, null=True,
                                               related_name="product_item_category",
                                               verbose_name="Предметная категория продуктов")
     name = models.CharField(max_length=500, verbose_name="Название")
@@ -139,6 +139,7 @@ class Product(BaseModel):
     rating = models.FloatField(default=0.0, validators=[MinValueValidator(0.0), MaxValueValidator(5.0)],
                                verbose_name="Рейтинг")
     discount = models.IntegerField(blank=True, null=True, verbose_name="Скидка")
+    quantity = models.IntegerField(default=0, verbose_name="Количество")
 
     def __str__(self):
         return self.name
@@ -181,7 +182,7 @@ class OrderItem(BaseModel):
 
 
 class ProductImage(BaseModel):
-    product = models.ForeignKey(Product, on_delete=models.CASCADE, verbose_name="Продукт")
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="product_image", verbose_name="Продукт")
     image = models.ImageField(upload_to="product_image", verbose_name="Изображение")
 
     def __str__(self):
@@ -207,19 +208,6 @@ class Comment(BaseModel):
     class Meta:
         verbose_name = "Коментарий"
         verbose_name_plural = "Коментарии"
-
-
-class CommentReply(BaseModel):
-    comment = models.ForeignKey(Comment, on_delete=models.CASCADE, verbose_name="Коментарий")
-    defendant_name = models.CharField(max_length=150, verbose_name="Имя ответчика")
-    reply = models.TextField(verbose_name="Ответ")
-
-    def __str__(self):
-        return self.defendant_name
-
-    class Meta:
-        verbose_name = "Ответ коментарию"
-        verbose_name_plural = "Ответы коментариям"
 
 
 class Service(BaseModel):
