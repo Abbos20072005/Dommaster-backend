@@ -131,6 +131,26 @@ class AuthViewSet(ViewSet):
         return Response(data={'result': serializer.data, 'ok': True}, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
+        operation_summary="Update user information",
+        operation_description="Update user information",
+        request_body=CustomerSerializer(),
+        responses={202: CustomerSerializer()},
+        tags=["Auth"]
+    )
+    def update_customer_info(self, request):
+        data = request.data
+        customer = Customer.objects.filter(id=request.user.id).first()
+        if not customer:
+            raise CustomApiException(error_code=ErrorCodes.FORBIDDEN)
+
+        serializer = CustomerSerializer(customer, data=data, partial=True, context={"request": request})
+        if not serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
+
+        serializer.save()
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_202_ACCEPTED)
+
+    @swagger_auto_schema(
         operation_summary="Change password",
         operation_description="Change password",
         request_body=ChangePasswordSerializer(),
