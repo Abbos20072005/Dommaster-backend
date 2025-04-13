@@ -43,6 +43,7 @@ class FilterSerializer(PaginationSerializer):
     sort_by = serializers.CharField(required=False)
     price_from = serializers.FloatField(required=False)
     price_to = serializers.FloatField(required=False)
+    brand = serializers.IntegerField(required=False)
 
     def validate(self, attrs):
         price_from = attrs.get("price_from")
@@ -141,6 +142,7 @@ class SaleSerializer(serializers.ModelSerializer):
             "name",
             "discount_from",
             "discount_to",
+            "is_main",
             "products"
         )
 
@@ -151,6 +153,7 @@ class ProductCategoryListSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "name",
+            "icon",
             "image"
         )
 
@@ -171,27 +174,25 @@ class BrandDetailSerializer(serializers.ModelSerializer):
 
 
 class ProductItemCategorySerializer(serializers.ModelSerializer):
-    products = ProductSerializer(source="product_item_category", many=True, read_only=True)
-
     class Meta:
         model = ProductItemCategory
-        fields = ("id", "product_sub_category", "name", "products")
+        fields = ("id", "name")
 
 
 class ProductSubCategorySerializer(serializers.ModelSerializer):
-    product_item_category = ProductItemCategorySerializer(source="product_sub_category", many=True, read_only=True)
+    product_item_categories = ProductItemCategorySerializer(source="product_sub_category", many=True, read_only=True)
 
     class Meta:
         model = ProductSubCategory
-        fields = ("id", "product_category", "name", "product_item_category")
+        fields = ("id", "name", "product_item_categories")
 
 
 class ProductCategorySerializer(serializers.ModelSerializer):
-    sub_category = ProductSubCategorySerializer(source="product_category", many=True, read_only=True)
+    sub_categories = ProductSubCategorySerializer(source="product_category", many=True, read_only=True)
 
     class Meta:
         model = ProductCategory
-        fields = ("id", "name", "image", "sub_category")
+        fields = ("id", "name", "image", "sub_categories")
 
 
 class OrderSerializer(serializers.ModelSerializer):

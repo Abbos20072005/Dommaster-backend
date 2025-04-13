@@ -58,7 +58,8 @@ class ProductCategory(BaseModel):
     brand = models.ForeignKey(Brand, on_delete=models.SET_NULL, null=True, blank=True, related_name="brand_categories",
                               verbose_name="Бренд")
     name = models.CharField(max_length=150, verbose_name="Название")
-    image = models.ImageField(upload_to='product_category', verbose_name="Изображение")
+    icon = models.ImageField(upload_to="product_category/icon/")
+    image = models.ImageField(upload_to='product_category/', verbose_name="Изображение")
 
     def __str__(self):
         return self.name
@@ -116,6 +117,7 @@ class Sale(BaseModel):
     bg_image = models.ImageField(upload_to="sale/", verbose_name="Изображение фона")
     discount_from = models.DateField()
     discount_to = models.DateField()
+    is_main = models.BooleanField(default=False, verbose_name="Основной")
     is_visible = models.BooleanField(default=True, verbose_name="Виден")
 
     def __str__(self):
@@ -213,7 +215,7 @@ class Comment(BaseModel):
 class Service(BaseModel):
     name = models.CharField(max_length=250, verbose_name="Название")
     icon = models.ImageField(upload_to="service/", verbose_name="Иконка")
-    description = models.TextField(verbose_name="Описание")
+    description = RichTextField(verbose_name="Описание")
 
     def __str__(self):
         return self.name
@@ -221,3 +223,15 @@ class Service(BaseModel):
     class Meta:
         verbose_name = "Сервис"
         verbose_name_plural = "Сервисы"
+
+class ProductCharacteristics(BaseModel):
+    name = models.CharField(max_length=150, verbose_name="Название")
+    unit = models.CharField(max_length=150, verbose_name="Еденица измерения")
+    value = models.CharField(max_length=150, verbose_name="Значение")
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name = "Харктеристика продукта"
+        verbose_name_plural = "Характеристики продуктов"

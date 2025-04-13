@@ -18,8 +18,6 @@ from django.contrib.postgres.search import TrigramSimilarity
 from django.db.models.functions import Greatest
 
 
-# TODO: add the most salled products list api
-
 class ProductViewSet(ViewSet):
     @swagger_auto_schema(
         operation_summary="Search products by name",
@@ -102,21 +100,6 @@ class ProductViewSet(ViewSet):
         serializer = ProductSubCategorySerializer(sub_category, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
-    # TODO: need to add filter to this function
-    @swagger_auto_schema(
-        operation_summary="Product item detail and Products list",
-        operation_description="Product item detail and Products list",
-        responses={200: ProductItemCategorySerializer()},
-        tags=["Product"]
-    )
-    def categories_product_list(self, request, pk):
-        item_category = ProductItemCategory.objects.filter(id=pk).first()
-        if not item_category:
-            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
-
-        serializer = ProductItemCategorySerializer(item_category, context={"request": request})
-        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
-
     @swagger_auto_schema(
         operation_summary="Product detail",
         operation_description="Product detail",
@@ -144,25 +127,33 @@ class ProductViewSet(ViewSet):
         if not serializer.is_valid():
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
 
-        page = serializer.validated_data.get('page')
-        page_size = serializer.validated_data.get('page_size')
-        q = serializer.validated_data.get('q')
-        price_from = serializer.validated_data.get('price_from', 0)
-        price_to = serializer.validated_data.get('price_to', 0)
+        page = serializer.validated_data.get("page")
+        page_size = serializer.validated_data.get("page_size")
+        q = serializer.validated_data.get("q")
+        price_from = serializer.validated_data.get("price_from", 0)
+        price_to = serializer.validated_data.get("price_to", 0)
         sort_by = serializer.validated_data.get("sort_by")
+        brand = serializer.validated_data.get("brand")
 
         filters = Q()
         if q:
             filters &= Q(name__icontains=q) | Q(name_uz__icontains=q) | Q(name_ru__icontains=q) | Q(
                 name_en__icontains=q)
 
-        sort = 'created_at'
+        sort = "created_at"
         if sort_by:
-            sort = {'newest': '-created_at'}.get(sort_by, 'created_at')
+            sort = {
+                "newest": "-created_at",
+                "price": "-price",
+                "rating": "-rating"
+            }.get(sort_by, "created_at")
 
         if price_from or price_to:
             filters &= Q(price__gte=price_from)
             filters &= Q(price__lte=price_to)
+
+        if brand:
+            filters &= Q(brand=brand)
 
         products = Product.objects.filter(filters).order_by(sort)
         return Response(data={"result": get_products_paginator(response_data=products, page=page, page_size=page_size,
@@ -170,7 +161,6 @@ class ProductViewSet(ViewSet):
                         status=status.HTTP_200_OK)
 
 
-# TODO: finish the comment logic
 class CommentViewSet(ViewSet):
     @swagger_auto_schema(
         operation_summary="Write comment to product, pk receive product id",
@@ -265,42 +255,17 @@ class BrandViewSet(ViewSet):
         serializer = BrandDetailSerializer(brand, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
-    @swagger_auto_schema(
-        operation_summary="Brand products, pk receive brand id",
-        operation_description="Brand products, pk receive brand id",
-        manual_parameters=[
-            openapi.Parameter(
-                name='page', in_=openapi.IN_QUERY, description='Page', type=openapi.TYPE_INTEGER),
-            openapi.Parameter(
-                name='page_size', in_=openapi.IN_QUERY, description='Page size', type=openapi.TYPE_INTEGER),
-        ],
-        responses={200: ProductSerializer(many=True)},
-        tags=["Brand"]
-    )
-    def brand_products(self, request, pk):
-        params = request.query_params
-        param_serializer = PaginationSerializer(data=params)
-        if not param_serializer.is_valid():
-            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=param_serializer.errors)
-
-        products = Product.objects.filter(brand_id=pk)
-        return Response(data={
-            "result": get_products_paginator(response_data=products, page=param_serializer.validated_data.get("page"),
-                                             page_size=param_serializer.validated_data.get("page_size"),
-                                             context={"request": request}), "ok": True},
-            status=status.HTTP_200_OK)
-
 
 class SaleViewSet(ViewSet):
     @swagger_auto_schema(
         operation_summary="Sale products list",
         operation_description="Sale products list",
-        responses={200: SaleSerializer()},
+        responses={200: SaleSerializer(many=True)},
         tags=["Sale"]
     )
     def sale_products(self, request):
-        sale = Sale.objects.filter(is_visible=True).prefetch_related("products").order_by("-created_at").first()
-        serializer = SaleSerializer(sale, context={"request": request})
+        sale = Sale.objects.filter(is_visible=True).prefetch_related("products")
+        serializer = SaleSerializer(sale, many=True, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
 
@@ -326,3 +291,11 @@ class AddsBrandsViewSet(ViewSet):
         adds_brands = AddsBrands.objects.filter(id=pk).first()
         serializer = AddsBrandsDetailSerializer(adds_brands, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+
+
+class OrderViewSet(ViewSet):
+    pass
+
+
+class ServiceViewSet(ViewSet):
+    pass
