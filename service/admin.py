@@ -46,7 +46,7 @@ class ProductAdmin(admin.ModelAdmin):
     def save_model(self, request, obj, form, change):
         if obj.discount and not obj.discount_price:
             obj.discount_price = obj.price * (1 - (obj.discount / 100))
-            obj.save()
+        obj.save()
 
 
 @admin.register(ProductCategory)
