@@ -1,6 +1,12 @@
 from django.contrib import admin
 from .models import Product, ProductCategory, ProductSubCategory, ProductItemCategory, Comment, Order, \
-    OrderItem, Tag, Brand, Sale, AddsBrands
+    OrderItem, Tag, Brand, Sale, AddsBrands, ProductImage
+
+
+@admin.register(ProductImage)
+class ProductImageAdmin(admin.ModelAdmin):
+    list_display = ("id", "product")
+    list_display_links = ("id", "product")
 
 
 @admin.register(AddsBrands)
