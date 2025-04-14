@@ -1,10 +1,19 @@
 from rest_framework import serializers
 from .models import Product, ProductCategory, ProductItemCategory, ProductSubCategory, ProductImage, Comment, \
-    Order, OrderItem, Brand, Sale, AddsBrands
+    Order, OrderItem, Brand, Sale, AddsBrands, Favourites
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from config import settings
 
+
+class FavouriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Favourites
+        fields = (
+            "id",
+            "customer",
+            "product",
+        )
 
 class SearchByNameSerializer(serializers.Serializer):
     name = serializers.CharField(required=False)
@@ -111,6 +120,7 @@ class ProductSerializer(serializers.ModelSerializer):
             "id",
             "product_item_category",
             "name",
+            "is_favourite",
             "description",
             "price",
             "quantity",

@@ -1,6 +1,12 @@
 from django.contrib import admin
 from .models import Product, ProductCategory, ProductSubCategory, ProductItemCategory, Comment, Order, \
-    OrderItem, Tag, Brand, Sale, AddsBrands, ProductImage
+    OrderItem, Tag, Brand, Sale, AddsBrands, ProductImage, Favourites
+
+
+@admin.register(Favourites)
+class FavouriteAdmin(admin.ModelAdmin):
+    list_display = ("id", "customer", "product")
+    list_display_links = ("id", "customer")
 
 
 @admin.register(ProductImage)

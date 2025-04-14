@@ -142,6 +142,7 @@ class Product(BaseModel):
                                verbose_name="Рейтинг")
     discount = models.IntegerField(blank=True, null=True, verbose_name="Скидка")
     quantity = models.IntegerField(default=0, verbose_name="Количество")
+    is_favourite = models.BooleanField(default=False, verbose_name="Избранный")
 
     def __str__(self):
         return self.name
@@ -155,6 +156,18 @@ class Product(BaseModel):
             GinIndex(fields=['name_ru'], opclasses=['gin_trgm_ops'], name='idx_product_name_ru_trgm'),
             GinIndex(fields=['name_en'], opclasses=['gin_trgm_ops'], name='idx_product_name_en_trgm'),
         ]
+
+
+class Favourites(BaseModel):
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, verbose_name="Клиент")
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, verbose_name="Продукт")
+
+    def __str__(self):
+        return str(self.id)
+
+    class Meta:
+        verbose_name = "Избранный"
+        verbose_name_plural = "Избранные"
 
 
 class Announcements(BaseModel):
@@ -172,7 +185,8 @@ class Announcements(BaseModel):
 
 class OrderItem(BaseModel):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, verbose_name="Заказ")
-    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="product_order_item", verbose_name="Продукт")
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="product_order_item",
+                                verbose_name="Продукт")
     quantity = models.IntegerField(default=0, verbose_name="Количество")
 
     def __str__(self):
@@ -223,6 +237,7 @@ class Service(BaseModel):
     class Meta:
         verbose_name = "Сервис"
         verbose_name_plural = "Сервисы"
+
 
 class ProductCharacteristics(BaseModel):
     name = models.CharField(max_length=150, verbose_name="Название")

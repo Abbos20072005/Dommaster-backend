@@ -2,13 +2,16 @@ from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
+
+from authorization.models import Customer
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from .serializers import ProductCategorySerializer, ProductCategoryListSerializer, ProductSubCategorySerializer, \
     ProductItemCategorySerializer, ProductSerializer, CommentSerializer, BrandSerializer, FilterSerializer, \
     PaginationSerializer, BrandDetailSerializer, SaleSerializer, AddsBrandsSerializer, AddsBrandsDetailSerializer, \
-    SearchByNameSerializer, CommentUpdateSerializer
-from .models import ProductCategory, ProductSubCategory, ProductItemCategory, Product, Comment, Brand, Sale, AddsBrands
+    SearchByNameSerializer, CommentUpdateSerializer, FavouriteSerializer
+from .models import ProductCategory, ProductSubCategory, ProductItemCategory, Product, Comment, Brand, Sale, AddsBrands, \
+    Favourites
 from rest_framework import status
 from django.db.models import Q, Sum
 from .paginations.get_products_pagination import get_products_paginator
@@ -290,6 +293,50 @@ class AddsBrandsViewSet(ViewSet):
     def adds_brands_detail(self, request, pk):
         adds_brands = AddsBrands.objects.filter(id=pk).first()
         serializer = AddsBrandsDetailSerializer(adds_brands, context={"request": request})
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+
+
+class FavouriteViewSet(ViewSet):
+    @swagger_auto_schema(
+        operation_summary="",
+        operation_description="",
+        request_body=FavouriteSerializer(),
+        responses={201: FavouriteSerializer(), 204: "Product successfully removed from favourite"},
+        tags=["Favourite"]
+    )
+    def create_favourite(self, request):
+        data = request.data
+        data["customer"] = request.user.id
+        serializer = FavouriteSerializer(data=data, context={"request": request})
+        if not serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
+
+        product = Product.objects.filter(id=serializer.validated_data.get("product").id).first()
+        favourite = Favourites.objects.filter(customer=serializer.validated_data.get("customer").id,
+                                              product=serializer.validated_data.get("product").id).first()
+
+        if favourite:
+            product.is_favourite = False
+            product.save(update_fields=["is_favourite"])
+            favourite.delete()
+            return Response(data={"result": "Product successfully removed from favourite", "ok": True},
+                            status=status.HTTP_204_NO_CONTENT)
+
+        product.is_favourite = True
+        product.save(update_fields=["is_favourite"])
+
+        serializer.save()
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_201_CREATED)
+
+    @swagger_auto_schema(
+        operation_summary="",
+        operation_description="",
+        responses={200: FavouriteSerializer(many=True)},
+        tags=["Favourite"]
+    )
+    def favourite_list(self, request):
+        favourite = Favourites.objects.filter(customer=request.user.id)
+        serializer = FavouriteSerializer(favourite, many=True, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
 

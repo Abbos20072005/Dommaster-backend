@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import ProductViewSet, BrandViewSet, SaleViewSet, AddsBrandsViewSet, CommentViewSet
+from .views import ProductViewSet, BrandViewSet, SaleViewSet, AddsBrandsViewSet, CommentViewSet, FavouriteViewSet
 
 urlpatterns = [
     path("categories/", ProductViewSet.as_view({"get": "categories_list"}), name="categories list"),
@@ -17,5 +17,8 @@ urlpatterns = [
     path("comment/create/<int:pk>/", CommentViewSet.as_view({"post": "comment_create"}), name="comment create"),
     path("comment/update/<int:pk>/", CommentViewSet.as_view({"patch": "comment_update"}), name="comment update"),
     path("comment/delete/<int:pk>/", CommentViewSet.as_view({"delete": "comment_delete"}), name="comment delete"),
-    path("most/sold/", ProductViewSet.as_view({"get": "most_sold"}), name="most sold")
+    path("most/sold/", ProductViewSet.as_view({"get": "most_sold"}), name="most sold"),
+    path("favourite/create/", FavouriteViewSet.as_view({"post": "create_favourite"}), name="create favourite"),
+    path("favourite/list/", FavouriteViewSet.as_view({"get": "favourite_list"}), name="favourite list")
+
 ]
