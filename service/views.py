@@ -298,8 +298,8 @@ class AddsBrandsViewSet(ViewSet):
 
 class FavouriteViewSet(ViewSet):
     @swagger_auto_schema(
-        operation_summary="",
-        operation_description="",
+        operation_summary="Create favourite product or delete it from favourite",
+        operation_description="Create favourite product or delete it from favourite",
         request_body=FavouriteSerializer(),
         responses={201: FavouriteSerializer(), 204: "Product successfully removed from favourite"},
         tags=["Favourite"]
@@ -329,8 +329,8 @@ class FavouriteViewSet(ViewSet):
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_201_CREATED)
 
     @swagger_auto_schema(
-        operation_summary="",
-        operation_description="",
+        operation_summary="Favourite products list",
+        operation_description="Favourite products list",
         responses={200: FavouriteSerializer(many=True)},
         tags=["Favourite"]
     )
