@@ -15,6 +15,7 @@ class FavouriteSerializer(serializers.ModelSerializer):
             "product",
         )
 
+
 class SearchByNameSerializer(serializers.Serializer):
     name = serializers.CharField(required=False)
 
@@ -84,6 +85,7 @@ class CommentSerializer(serializers.ModelSerializer):
             "comment"
         )
 
+
 class CommentUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comment
@@ -92,7 +94,6 @@ class CommentUpdateSerializer(serializers.ModelSerializer):
             "product_rating",
             "comment"
         )
-
 
 
 class ProductImageSerializer(serializers.ModelSerializer):
@@ -126,6 +127,18 @@ class ProductSerializer(serializers.ModelSerializer):
             "quantity",
             "images",
             "comments"
+        )
+
+
+class FavouriteListSerializer(serializers.ModelSerializer):
+    product = ProductSerializer(read_only=True)
+
+    class Meta:
+        model = Favourites
+        fields = (
+            "id",
+            "customer",
+            "product",
         )
 
 

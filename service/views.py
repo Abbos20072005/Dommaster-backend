@@ -9,7 +9,7 @@ from exceptions.error_messages import ErrorCodes
 from .serializers import ProductCategorySerializer, ProductCategoryListSerializer, ProductSubCategorySerializer, \
     ProductItemCategorySerializer, ProductSerializer, CommentSerializer, BrandSerializer, FilterSerializer, \
     PaginationSerializer, BrandDetailSerializer, SaleSerializer, AddsBrandsSerializer, AddsBrandsDetailSerializer, \
-    SearchByNameSerializer, CommentUpdateSerializer, FavouriteSerializer
+    SearchByNameSerializer, CommentUpdateSerializer, FavouriteSerializer, FavouriteListSerializer
 from .models import ProductCategory, ProductSubCategory, ProductItemCategory, Product, Comment, Brand, Sale, AddsBrands, \
     Favourites
 from rest_framework import status
@@ -331,12 +331,12 @@ class FavouriteViewSet(ViewSet):
     @swagger_auto_schema(
         operation_summary="Favourite products list",
         operation_description="Favourite products list",
-        responses={200: FavouriteSerializer(many=True)},
+        responses={200: FavouriteListSerializer(many=True)},
         tags=["Favourite"]
     )
     def favourite_list(self, request):
         favourite = Favourites.objects.filter(customer=request.user.id)
-        serializer = FavouriteSerializer(favourite, many=True, context={"request": request})
+        serializer = FavouriteListSerializer(favourite, many=True, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
 
