@@ -125,25 +125,5 @@ class Video(BaseModel):
         verbose_name = "Видео"
         verbose_name_plural = "Видео"
 
-
-
-
-# class Region(BaseModel):
-#     name = models.CharField(max_length=150, verbose_name="Название")
-#
-#     def __str__(self):
-#         return self.name
-#
-#     class Meta:
-#         verbose_name = "Регион"
-#         verbose_name_plural = "Регионы"
-#
-# class District(BaseModel):
-#     name = models.CharField(max_length=150, verbose_name="Название")
-#
-#     def __str__(self):
-#         return self.name
-#
-#     class Meta:
-#         verbose_name = "Область"
-#         verbose_name_plural = "Областя"
+class Promocode(BaseModel):
+    pass

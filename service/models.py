@@ -55,8 +55,6 @@ class Order(BaseModel):
 
 
 class ProductCategory(BaseModel):
-    brand = models.ForeignKey(Brand, on_delete=models.SET_NULL, null=True, blank=True, related_name="brand_categories",
-                              verbose_name="Бренд")
     name = models.CharField(max_length=150, verbose_name="Название")
     icon = models.ImageField(upload_to="product_category/icon/")
     image = models.ImageField(upload_to='product_category/', verbose_name="Изображение")
@@ -70,7 +68,6 @@ class ProductCategory(BaseModel):
 
 
 class ProductSubCategory(BaseModel):
-    brand = models.ForeignKey(Brand, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Бренд")
     product_category = models.ForeignKey(ProductCategory, on_delete=models.CASCADE, related_name="product_category",
                                          verbose_name="Категория продукта")
     name = models.CharField(max_length=255, verbose_name="Название")
@@ -84,7 +81,6 @@ class ProductSubCategory(BaseModel):
 
 
 class ProductItemCategory(BaseModel):
-    brand = models.ForeignKey(Brand, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Бренд")
     product_sub_category = models.ForeignKey(ProductSubCategory, on_delete=models.CASCADE,
                                              related_name="product_sub_category",
                                              verbose_name="Подкатегория продукта")
@@ -206,7 +202,7 @@ class ProductImage(BaseModel):
 
     class Meta:
         verbose_name = "Изображение продукта"
-        verbose_name_plural = "Изображения продуктов",
+        verbose_name_plural = "Изображения продуктов"
 
 
 class Comment(BaseModel):

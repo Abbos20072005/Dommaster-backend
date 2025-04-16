@@ -182,7 +182,6 @@ class ProductCategoryListSerializer(serializers.ModelSerializer):
 
 
 class BrandDetailSerializer(serializers.ModelSerializer):
-    categories = ProductCategoryListSerializer(source="brand_categories", many=True, read_only=True)
     products_count = serializers.IntegerField(read_only=True)
 
     class Meta:
@@ -191,7 +190,6 @@ class BrandDetailSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "image",
-            "categories",
             "products_count"
         )
 
