@@ -43,7 +43,8 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "modeltranslation",
     'ckeditor',
-    'ckeditor_uploader'  # For image/file upload suppert
+    'ckeditor_uploader',  # For image/file upload suppert
+    'payment'
 
 ]
 
@@ -258,3 +259,10 @@ CKEDITOR_CONFIGS = {
         'embed_provider': '//ckeditor.iframe.ly/api/oembed?url={url}&callback={callback}',
     }
 }
+
+# click_settings
+CLICK_SERVICE_ID = int(os.getenv('CLICK_SERVICE_ID'))
+CLICK_MERCHANT_ID = int(os.getenv('CLICK_MERCHANT_ID'))
+CLICK_SECRET_KEY = os.getenv('CLICK_SECRET_KEY')
+CLICK_ACCOUNT_MODEL = os.getenv('CLICK_ACCOUNT_MODEL')
+CLICK_AMOUNT_FIELD = os.getenv('CLICK_AMOUNT_FIELD')

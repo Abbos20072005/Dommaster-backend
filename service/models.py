@@ -6,9 +6,11 @@ from ckeditor.fields import RichTextField
 from django.contrib.postgres.indexes import GinIndex
 
 ORDER_STATUS = (
+    (0, "Pending"),
     (1, "Collecting"),
     (2, "Delivering"),
-    (3, "Delivered")
+    (3, "Delivered"),
+    (4, "Canceled")
 )
 
 
@@ -43,7 +45,7 @@ class Brand(BaseModel):
 
 class Order(BaseModel):
     customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, verbose_name="Покупатель")
-    status = models.IntegerField(choices=ORDER_STATUS, default=1, verbose_name="Статус")
+    status = models.IntegerField(choices=ORDER_STATUS, default=0, verbose_name="Статус")
     total_price = models.FloatField(default=0.0, verbose_name="Общая стоимость")
 
     def __str__(self):

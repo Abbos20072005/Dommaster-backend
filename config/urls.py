@@ -30,6 +30,7 @@ urlpatterns = [
     path("api/v1/auth/", include("authorization.urls")),
     path("api/v1/base/", include("base.urls")),
     path("api/v1/", include("service.urls")),
+    path("click/", include("payment.urls")),
 
     re_path(r'static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT}),
     re_path(r'media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
