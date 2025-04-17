@@ -9,16 +9,19 @@ from exceptions.error_messages import ErrorCodes
 from .serializers import ProductCategorySerializer, ProductCategoryListSerializer, ProductSubCategorySerializer, \
     ProductItemCategorySerializer, ProductSerializer, CommentSerializer, BrandSerializer, FilterSerializer, \
     PaginationSerializer, BrandDetailSerializer, SaleSerializer, AddsBrandsSerializer, AddsBrandsDetailSerializer, \
-    SearchByNameSerializer, CommentUpdateSerializer, FavouriteSerializer, FavouriteListSerializer
+    SearchByNameSerializer, CommentUpdateSerializer, FavouriteSerializer, FavouriteListSerializer, CartSerializer, \
+    CartItemSerializer, CartItemUpdateSerializer
 from .models import ProductCategory, ProductSubCategory, ProductItemCategory, Product, Comment, Brand, Sale, AddsBrands, \
-    Favourites
+    Favourites, Cart, CartItem
 from rest_framework import status
-from django.db.models import Q, Sum
+from django.db.models import Q, Sum, Exists, OuterRef, Value, BooleanField
 from .paginations.get_products_pagination import get_products_paginator
 from django.db.models import Count
 from django.core.cache import cache
 from django.contrib.postgres.search import TrigramSimilarity
 from django.db.models.functions import Greatest
+import secrets
+from django.db import transaction
 
 
 class ProductViewSet(ViewSet):
@@ -137,6 +140,7 @@ class ProductViewSet(ViewSet):
         price_to = serializer.validated_data.get("price_to", 0)
         sort_by = serializer.validated_data.get("sort_by")
         brand = serializer.validated_data.get("brand")
+        item_category = serializer.validated_data.get("item_category")
 
         filters = Q()
         if q:
@@ -158,7 +162,19 @@ class ProductViewSet(ViewSet):
         if brand:
             filters &= Q(brand=brand)
 
+        if item_category:
+            filters &= Q(product_item_category=item_category)
+
+        customer = request.user.id
+
         products = Product.objects.filter(filters).order_by(sort)
+        token = request.COOKIES.get("cart_token")
+        if not customer:
+            products = products.annotate(
+                in_cart=Exists(CartItem.objects.filter(cart__cart_token=token, product=OuterRef("pk"))))
+        else:
+            cart_item_subquery = CartItem.objects.filter(cart__customer=customer, product=OuterRef("pk"))
+            products = products.annotate(in_cart=Exists(cart_item_subquery))
         return Response(data={"result": get_products_paginator(response_data=products, page=page, page_size=page_size,
                                                                context={"request": request}), "ok": True},
                         status=status.HTTP_200_OK)
@@ -338,6 +354,120 @@ class FavouriteViewSet(ViewSet):
         favourite = Favourites.objects.filter(customer=request.user.id)
         serializer = FavouriteListSerializer(favourite, many=True, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+
+
+# Set cockie is set only for http requests.
+class CartViewSet(ViewSet):
+    @swagger_auto_schema(
+        operation_summary="Get cart",
+        operation_description="Get cart",
+        responses={200: CartSerializer(many=True)},
+        tags=["Cart"]
+    )
+    def get_cart(self, request):
+        customer = request.user.id
+        if not customer:
+            token = request.COOKIES.get("cart_token")
+            if not token:
+                token = secrets.token_hex(16)
+
+            cart = Cart.objects.filter(cart_token=token).first()
+            if not cart:
+                cart = Cart.objects.create(cart_token=token)
+
+            resp = Response(data={"result": "Customer cart created", "ok": True},
+                            status=status.HTTP_200_OK)
+
+            resp.set_cookie("cart_token", cart.cart_token, httponly=False,
+                            secure=True, samesite="Lax")
+
+            return resp
+
+        cart = Cart.objects.filter(customer_id=customer).first()
+        if not cart:
+            cart = Cart.objects.create(customer_id=customer)
+
+        token = request.COOKIES.get("cart_token")
+        guest_cart = None
+        if token:
+            guest_cart = Cart.objects.filter(cart_token=token, customer__isnull=True).first()
+
+        if guest_cart:
+            with transaction.atomic():
+                for item in guest_cart.cart_item.all():
+                    cart_item = CartItem.objects.filter(cart_id=cart.id, product=item.product).first()
+
+                    if not cart_item:
+                        CartItem.objects.create(cart_id=cart.id, product=item.product,
+                                                quantity=item.quantity)
+                        item.delete()
+                        continue
+
+                    cart_item.quantity += item.quantity
+                    cart_item.save(update_fields=["quantity"])
+                    item.delete()
+
+                guest_cart.delete()
+
+        resp = Response(data={"result": CartSerializer(cart, context={"request": request}).data, "ok": True},
+                        status=status.HTTP_200_OK)
+
+        resp.delete_cookie("cart_token")
+        return resp
+
+    @swagger_auto_schema(
+        operation_summary="Create cart item",
+        operation_description="Create cart item",
+        request_body=CartItemSerializer(),
+        responses={200: CartSerializer()},
+        tags=["Cart"]
+    )
+    def create_cart_item(self, request):
+        data = request.data
+        customer = request.user.id
+        if not customer:
+            token = request.COOKIES.get("cart_token")
+            cart = Cart.objects.filter(cart_token=token).first()
+        else:
+            cart = Cart.objects.filter(customer=customer).first()
+
+        data["cart"] = cart.id
+        serializer = CartItemSerializer(data=data, context={"request": request})
+        if not serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
+
+        serializer.save()
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        operation_summary="Update cart item",
+        operation_description="Update cart item",
+        request_body=CartItemUpdateSerializer(),
+        responses={202: CartItemSerializer()},
+        tags=["Cart"]
+    )
+    def update_cart_item(self, request):
+        data = request.data
+        data_serializer = CartItemUpdateSerializer(data=data, context={"request": request})
+        if not data_serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=data_serializer.errors)
+
+        customer = request.user.id
+        if not customer:
+            token = request.COOKIES.get("cart_token")
+            cart_item = CartItem.objects.filter(cart__cart_token=token,
+                                                product=data_serializer.validated_data.get("product").id).first()
+        else:
+            cart_item = CartItem.objects.filter(cart__customer=customer,
+                                                product=data_serializer.validated_data.get("product").id).first()
+
+        data["cart"] = cart_item.cart.id
+        serializer = CartItemSerializer(cart_item, data=data, partial=True, context={"request": request})
+        if not serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
+
+        serializer.save()
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_202_ACCEPTED)
 
 
 class OrderViewSet(ViewSet):
