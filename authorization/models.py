@@ -10,6 +10,9 @@ class Customer(BaseModel):
                                     verbose_name="Номер телефона")
     email = models.EmailField(verbose_name="Электронная почта")
     password = models.CharField(verbose_name="Пароль")
+    location_name = models.CharField(max_length=255, blank=True, null=True, verbose_name="Название локации")
+    latitude = models.CharField(max_length=100, blank=True, null=True, verbose_name='Широта')
+    longitude = models.CharField(max_length=100, blank=True, null=True, verbose_name='Долгота')
     verified = models.BooleanField(default=False, verbose_name="Подтвержден")
 
     def __str__(self):
