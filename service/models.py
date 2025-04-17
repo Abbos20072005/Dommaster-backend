@@ -4,6 +4,7 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from authorization.models import Customer
 from ckeditor.fields import RichTextField
 from django.contrib.postgres.indexes import GinIndex
+import secrets
 
 ORDER_STATUS = (
     (0, "Pending"),
@@ -238,6 +239,7 @@ class Service(BaseModel):
 
 
 class ProductCharacteristics(BaseModel):
+    product = models.ForeignKey(Product, blank=True, null=True, on_delete=models.CASCADE, verbose_name="Продукт")
     name = models.CharField(max_length=150, verbose_name="Название")
     unit = models.CharField(max_length=150, verbose_name="Еденица измерения")
     value = models.CharField(max_length=150, verbose_name="Значение")
@@ -248,3 +250,41 @@ class ProductCharacteristics(BaseModel):
     class Meta:
         verbose_name = "Харктеристика продукта"
         verbose_name_plural = "Характеристики продуктов"
+
+
+class Cart(BaseModel):
+    customer = models.ForeignKey(Customer, blank=True, null=True, on_delete=models.CASCADE, verbose_name="Клиент")
+    cart_token = models.CharField(max_length=64, unique=True, blank=True, null=True, verbose_name="Токен карзины")
+
+    def total_items(self):
+        return sum(item.quantity for item in self.cart_item.all())
+
+    def total_price(self):
+        return sum(item.product.price * item.quantity for item in self.cart_item.all())
+
+    def save(self, *args, force_insert=False, force_update=False, using=None, update_fields=None):
+        if not self.cart_token:
+            self.cart_token = secrets.token_hex(16)
+        return super().save(*args, force_insert=False, force_update=False, using=None, update_fields=None)
+
+    def __str__(self):
+        return str(self.id)
+
+    class Meta:
+        verbose_name = "Карзина"
+        verbose_name_plural = "Карзины"
+
+
+class CartItem(BaseModel):
+    cart = models.ForeignKey(Cart, related_name="cart_item", on_delete=models.CASCADE, verbose_name="Карзина")
+    product = models.ForeignKey(Product, related_name="cart_product", on_delete=models.SET_NULL, null=True,
+                                verbose_name="Продукт")
+    quantity = models.IntegerField(default=1, verbose_name="Количество")
+
+    def __str__(self):
+        return self.product.name
+
+    class Meta:
+        unique_together = ("cart", "product")
+        verbose_name = "Вещь в корзине"
+        verbose_name_plural = "Вещи в корзине"
