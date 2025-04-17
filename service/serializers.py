@@ -1,10 +1,43 @@
 from rest_framework import serializers
 from .models import Product, ProductCategory, ProductItemCategory, ProductSubCategory, ProductImage, Comment, \
-    Order, OrderItem, Brand, Sale, AddsBrands, Favourites
+    Order, OrderItem, Brand, Sale, AddsBrands, Favourites, Cart, CartItem
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from config import settings
 
+class CartSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Cart
+        fields = (
+            "id",
+            "customer",
+            "cart_token"
+        )
+
+class CartItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CartItem
+        fields = (
+            "id",
+            "cart",
+            "product",
+            "quantity"
+        )
+
+    def validate(self, attrs):
+        product = Product.objects.filter(id=attrs.get("product").id).first()
+        if product.quantity == 0:
+            raise CustomApiException(error_code=ErrorCodes.INVALID_INPUT, message="Product is not exist in warehouse")
+        return attrs
+
+class CartItemUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CartItem
+        fields = (
+            "id",
+            "product",
+            "quantity"
+        )
 
 class FavouriteSerializer(serializers.ModelSerializer):
     class Meta:
@@ -54,6 +87,7 @@ class FilterSerializer(PaginationSerializer):
     price_from = serializers.FloatField(required=False)
     price_to = serializers.FloatField(required=False)
     brand = serializers.IntegerField(required=False)
+    item_category = serializers.IntegerField(required=False)
 
     def validate(self, attrs):
         price_from = attrs.get("price_from")
@@ -114,6 +148,7 @@ class ProductSerializer(serializers.ModelSerializer):
 
     comments = CommentSerializer(source="product_comment", many=True, read_only=True)
     images = ProductImageSerializer(source="product_image", many=True, read_only=True)
+    in_cart = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = Product
@@ -122,10 +157,12 @@ class ProductSerializer(serializers.ModelSerializer):
             "product_item_category",
             "name",
             "is_favourite",
+            "in_cart",
             "description",
             "price",
             "quantity",
             "images",
+            "rating",
             "comments"
         )
 
