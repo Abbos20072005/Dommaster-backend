@@ -1,4 +1,4 @@
-from .models import Customer
+from .models import Customer, CustomerAddresses
 from rest_framework import serializers
 from .utils import validate_number
 from django.contrib.auth.hashers import make_password
@@ -52,3 +52,25 @@ class CustomerSerializer(serializers.ModelSerializer):
             "email"
         )
 
+class CustomerAddressesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomerAddresses
+        fields = (
+            "id",
+            "customer",
+            "name",
+            "location_name",
+            "latitude",
+            "longitude"
+        )
+
+class CustomerAddressesUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomerAddresses
+        fields = (
+            "id",
+            "name",
+            "location_name",
+            "latitude",
+            "longitude"
+        )

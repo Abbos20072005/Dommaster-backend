@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Customer, OTP, FcmToken
+from .models import Customer, OTP, FcmToken, CustomerAddresses
 from django.contrib.auth.hashers import make_password
 
 
@@ -30,3 +30,10 @@ class FcmTokenAdmin(admin.ModelAdmin):
     list_display_links = ("id", "customer")
     list_filter = ("status",)
     search_fields = ("customer",)
+
+@admin.register(CustomerAddresses)
+class CustomerAddressesAdmin(admin.ModelAdmin):
+    list_display = ("id", "customer", "name")
+    list_display_links = ("id", "customer")
+    search_fields = ("name", "location_name")
+

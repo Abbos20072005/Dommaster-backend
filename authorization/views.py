@@ -3,7 +3,7 @@ from django.db.models import Q
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from utils.send_notification import send_notification
-from .models import Customer, OTP, FcmToken
+from .models import Customer, OTP, FcmToken, CustomerAddresses
 from rest_framework.response import Response
 from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
@@ -12,7 +12,8 @@ from django.contrib.auth.hashers import check_password, make_password
 from rest_framework_simplejwt.tokens import RefreshToken
 from .utils import otp_code_generator, generate_random_password
 from .serializers import CustomerSerializer, LoginSerializer, RegisterSerializer, OTPVerifySerializer, \
-    OTPResendSerializer, ChangePasswordSerializer, ForgotPasswordSerializer
+    OTPResendSerializer, ChangePasswordSerializer, ForgotPasswordSerializer, CustomerAddressesSerializer, \
+    CustomerAddressesUpdateSerializer
 
 
 class AuthViewSet(ViewSet):
@@ -212,6 +213,68 @@ class AuthViewSet(ViewSet):
         send_notification(message)
         return Response(data={"result": "Password successfully changed", "ok": True}, status=status.HTTP_202_ACCEPTED)
 
+    @swagger_auto_schema(
+        operation_summary="Get customer address",
+        operation_description="Get customer address",
+        responses={200: CustomerAddressesSerializer(many=True)},
+        tags=["Auth"]
+    )
+    def addresses_list(self, request):
+        addresses = CustomerAddresses.objects.filter(customer=request.user.id)
+        serializer = CustomerAddressesSerializer(addresses, many=True, context={"request": request})
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        operation_summary="Update customer address",
+        operation_description="Update customer address",
+        request_body=CustomerAddressesUpdateSerializer(),
+        responses={202: CustomerAddressesUpdateSerializer()},
+        tags=["Auth"]
+    )
+    def addresses_update(self, request, pk):
+        data = request.data
+        addresses = CustomerAddresses.objects.filter(id=pk, customer=request.user.id).first()
+        if not addresses:
+            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
+
+        serializer = CustomerAddressesUpdateSerializer(addresses, data=data, partial=True, context={"request": request})
+        if not serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
+
+        serializer.save()
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_202_ACCEPTED)
+
+    @swagger_auto_schema(
+        operation_summary="Delete customer address",
+        operation_description="Delete customer address",
+        responses={204: "Customer address successfully deleted"},
+        tags=["Auth"]
+    )
+    def delete_address(self, request, pk):
+        address = CustomerAddresses.objects.filter(id=pk, customer=request.user.id).first()
+        if not address:
+            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
+
+        address.delete()
+        return Response(data={"result": "Customer address successfully deleted", "ok": True},
+                        status=status.HTTP_204_NO_CONTENT)
+
+    @swagger_auto_schema(
+        operation_summary="Create customer address",
+        operation_description="Create customer address",
+        request_body=CustomerAddressesSerializer(),
+        responses={201: CustomerAddressesSerializer()},
+        tags=["Auth"]
+    )
+    def address_create(self, request):
+        data = request.data
+        data["customer"] = request.user.id
+        serializer = CustomerAddressesSerializer(data=data, context={"request": request})
+        if not serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
+
+        serializer.save()
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_201_CREATED)
 
 class OTPViewSet(ViewSet):
     @swagger_auto_schema(
