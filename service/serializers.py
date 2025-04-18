@@ -5,14 +5,6 @@ from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from config import settings
 
-class CartSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Cart
-        fields = (
-            "id",
-            "customer",
-            "cart_token"
-        )
 
 class CartItemSerializer(serializers.ModelSerializer):
     class Meta:
@@ -21,7 +13,8 @@ class CartItemSerializer(serializers.ModelSerializer):
             "id",
             "cart",
             "product",
-            "quantity"
+            "quantity",
+            "is_checked"
         )
 
     def validate(self, attrs):
@@ -30,14 +23,34 @@ class CartItemSerializer(serializers.ModelSerializer):
             raise CustomApiException(error_code=ErrorCodes.INVALID_INPUT, message="Product is not exist in warehouse")
         return attrs
 
+
+class CartSerializer(serializers.ModelSerializer):
+    cart_items = CartItemSerializer(source="cart_item", many=True, read_only=True)
+
+    class Meta:
+        model = Cart
+        fields = (
+            "id",
+            "customer",
+            "cart_token",
+            "cart_items"
+        )
+
+
 class CartItemUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = CartItem
         fields = (
             "id",
             "product",
-            "quantity"
+            "quantity",
+            "is_checked"
         )
+
+
+class CartItemBulkUpdateSerializer(serializers.Serializer):
+    is_checked = serializers.BooleanField()
+
 
 class FavouriteSerializer(serializers.ModelSerializer):
     class Meta:
