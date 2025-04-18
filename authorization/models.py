@@ -24,8 +24,8 @@ class CustomerAddresses(BaseModel):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, verbose_name="Клиент")
     name = models.CharField(max_length=150, verbose_name="Название")
     location_name = models.CharField(max_length=255, blank=True, null=True, verbose_name="Название локации")
-    latitude = models.CharField(max_length=100, blank=True, null=True, verbose_name='Широта')
-    longitude = models.CharField(max_length=100, blank=True, null=True, verbose_name='Долгота')
+    latitude = models.FloatField(default=0.0, verbose_name='Широта')
+    longitude = models.FloatField(default=0.0, verbose_name='Долгота')
 
     def __str__(self):
         return self.name
