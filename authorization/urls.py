@@ -12,6 +12,6 @@ urlpatterns = [
     path("customer/update/", AuthViewSet.as_view({"patch": "update_customer_info"}), name="update customer info"),
     path("customer/address/", AuthViewSet.as_view({"get": "addresses_list"}), name="addresses list"),
     path("customer/address/create/", AuthViewSet.as_view({"post": "address_create"}), name="address create"),
-    path("customer/address/update/", AuthViewSet.as_view({"patch": "addresses_update"}), name="address update"),
-    path("customer/address/delete/", AuthViewSet.as_view({"delete": "delete_address"}), name="delete address")
+    path("customer/address/update/<int:pk>/", AuthViewSet.as_view({"patch": "addresses_update"}), name="address update"),
+    path("customer/address/delete/<int:pk>/", AuthViewSet.as_view({"delete": "delete_address"}), name="delete address")
 ]
