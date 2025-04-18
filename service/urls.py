@@ -23,6 +23,6 @@ urlpatterns = [
     path("favourite/list/", FavouriteViewSet.as_view({"get": "favourite_list"}), name="favourite list"),
     path("cart/", CartViewSet.as_view({"get": "get_cart"}), name="get cart"),
     path("cart/item/create/", CartViewSet.as_view({"post": "create_cart_item"}), name="create cart item"),
-    path("cart/item/update/", CartViewSet.as_view({"patch": "update_cart_item"}), name="update cart item")
-
+    path("cart/item/update/", CartViewSet.as_view({"patch": "update_cart_item"}), name="update cart item"),
+    path("cart/item/update/bulk/", CartViewSet.as_view({"post": "cart_bulk_update"}), name="cart bulk update")
 ]
