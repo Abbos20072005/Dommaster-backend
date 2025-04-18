@@ -479,8 +479,8 @@ class CartViewSet(ViewSet):
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_202_ACCEPTED)
 
     @swagger_auto_schema(
-        operation_summary="",
-        operation_description="",
+        operation_summary="Cart item bulk update",
+        operation_description="Cart item bulk update",
         request_body=CartItemBulkUpdateSerializer(),
         responses={200: CartItemSerializer()},
         tags=["Cart"]
