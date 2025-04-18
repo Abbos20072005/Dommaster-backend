@@ -49,9 +49,6 @@ class CustomerSerializer(serializers.ModelSerializer):
             "id",
             "full_name",
             "phone_number",
-            "email",
-            "location_name",
-            "latitude",
-            "longitude"
+            "email"
         )
 
