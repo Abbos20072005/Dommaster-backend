@@ -10,7 +10,7 @@ from .serializers import ProductCategorySerializer, ProductCategoryListSerialize
     ProductItemCategorySerializer, ProductSerializer, CommentSerializer, BrandSerializer, FilterSerializer, \
     PaginationSerializer, BrandDetailSerializer, SaleSerializer, AddsBrandsSerializer, AddsBrandsDetailSerializer, \
     SearchByNameSerializer, CommentUpdateSerializer, FavouriteSerializer, FavouriteListSerializer, CartSerializer, \
-    CartItemSerializer, CartItemUpdateSerializer
+    CartItemSerializer, CartItemUpdateSerializer, CartItemBulkUpdateSerializer
 from .models import ProductCategory, ProductSubCategory, ProductItemCategory, Product, Comment, Brand, Sale, AddsBrands, \
     Favourites, Cart, CartItem
 from rest_framework import status
@@ -24,6 +24,9 @@ import secrets
 from django.db import transaction
 
 
+# TODO: in cart product quantity
+
+# TODO: need to do sale function
 class ProductViewSet(ViewSet):
     @swagger_auto_schema(
         operation_summary="Search products by name",
@@ -151,7 +154,7 @@ class ProductViewSet(ViewSet):
         if sort_by:
             sort = {
                 "newest": "-created_at",
-                "price": "-price",
+                "price": "price",
                 "rating": "-rating"
             }.get(sort_by, "created_at")
 
@@ -375,7 +378,7 @@ class CartViewSet(ViewSet):
             if not cart:
                 cart = Cart.objects.create(cart_token=token)
 
-            resp = Response(data={"result": "Customer cart created", "ok": True},
+            resp = Response(data={"result": CartSerializer(cart, context={"request": request}).data, "ok": True},
                             status=status.HTTP_200_OK)
 
             resp.set_cookie("cart_token", cart.cart_token, httponly=False,
@@ -414,6 +417,12 @@ class CartViewSet(ViewSet):
 
         resp.delete_cookie("cart_token")
         return resp
+
+    # @swagger_auto_schema(
+    #     operation_summary="",
+    #     operation_description="",
+    #     responses={200: CartItemSerializer()}
+    # )
 
     @swagger_auto_schema(
         operation_summary="Create cart item",
@@ -468,6 +477,33 @@ class CartViewSet(ViewSet):
 
         serializer.save()
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_202_ACCEPTED)
+
+    @swagger_auto_schema(
+        operation_summary="",
+        operation_description="",
+        request_body=CartItemBulkUpdateSerializer(),
+        responses={200: CartItemSerializer()},
+        tags=["Cart"]
+    )
+    def cart_bulk_update(self, request):
+        data = request.data
+        bulk_serializer = CartItemBulkUpdateSerializer(data=data)
+        if not bulk_serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=bulk_serializer.errors)
+
+        customer = request.user.id
+        if not customer:
+            token = request.COOKIES.get("cart_token")
+            cart_items = CartItem.objects.filter(cart__cart_token=token)
+        else:
+            cart_items = CartItem.objects.filter(cart__customer=customer)
+
+        for cart_item in cart_items:
+            cart_item.is_checked = bulk_serializer.validated_data.get("is_checked")
+            cart_item.save(update_fields=["is_checked"])
+
+        return Response(data={"result": "All products is_checked status successfully updated", "ok": True},
+                        status=status.HTTP_202_ACCEPTED)
 
 
 class OrderViewSet(ViewSet):
