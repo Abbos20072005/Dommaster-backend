@@ -10,9 +10,6 @@ class Customer(BaseModel):
                                     verbose_name="Номер телефона")
     email = models.EmailField(verbose_name="Электронная почта")
     password = models.CharField(verbose_name="Пароль")
-    location_name = models.CharField(max_length=255, blank=True, null=True, verbose_name="Название локации")
-    latitude = models.CharField(max_length=100, blank=True, null=True, verbose_name='Широта')
-    longitude = models.CharField(max_length=100, blank=True, null=True, verbose_name='Долгота')
     verified = models.BooleanField(default=False, verbose_name="Подтвержден")
 
     def __str__(self):
@@ -21,6 +18,21 @@ class Customer(BaseModel):
     class Meta:
         verbose_name = "Клиент"
         verbose_name_plural = "Клиенты"
+
+
+class CustomerAddresses(BaseModel):
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, verbose_name="Клиент")
+    name = models.CharField(max_length=150, verbose_name="Название")
+    location_name = models.CharField(max_length=255, blank=True, null=True, verbose_name="Название локации")
+    latitude = models.CharField(max_length=100, blank=True, null=True, verbose_name='Широта')
+    longitude = models.CharField(max_length=100, blank=True, null=True, verbose_name='Долгота')
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name = "Адрес клиента"
+        verbose_name_plural = "Адрес клиентов"
 
 
 class FcmToken(BaseModel):
@@ -50,4 +62,3 @@ class OTP(BaseModel):
     class Meta:
         verbose_name = "ОТП"
         verbose_name_plural = "ОТП"
-
