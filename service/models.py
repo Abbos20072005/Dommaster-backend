@@ -14,6 +14,7 @@ ORDER_STATUS = (
     (4, "Canceled")
 )
 
+#TODO: questions
 
 class AddsBrands(BaseModel):
     name = models.CharField(max_length=450, verbose_name="Название")
@@ -280,6 +281,7 @@ class CartItem(BaseModel):
     product = models.ForeignKey(Product, related_name="cart_product", on_delete=models.SET_NULL, null=True,
                                 verbose_name="Продукт")
     quantity = models.IntegerField(default=1, verbose_name="Количество")
+    is_checked = models.BooleanField(default=True, verbose_name="Вабран")
 
     def __str__(self):
         return self.product.name
