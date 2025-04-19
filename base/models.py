@@ -4,6 +4,8 @@ from authorization.models import Customer
 from ckeditor.fields import RichTextField
 from ckeditor_uploader.fields import RichTextUploadingField
 
+from service.models import Product
+
 
 class Banner(BaseModel):
     title = models.CharField(max_length=255, verbose_name="Заголовок")
@@ -19,6 +21,7 @@ class Banner(BaseModel):
         verbose_name = "Баннер"
         verbose_name_plural = "Баннеры"
 
+
 class Chat(BaseModel):
     customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, verbose_name="Клиент")
 
@@ -28,6 +31,7 @@ class Chat(BaseModel):
     class Meta:
         verbose_name = "Чат"
         verbose_name_plural = "Чаты"
+
 
 class Messages(BaseModel):
     chat = models.ForeignKey(Chat, on_delete=models.CASCADE, related_name="chat_messages", verbose_name="Чат")
@@ -42,6 +46,7 @@ class Messages(BaseModel):
         verbose_name = "Сообщение"
         verbose_name_plural = "Сообщения"
 
+
 class LoyaltyCard(BaseModel):
     customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, verbose_name="Клиент")
     full_name = models.CharField(max_length=250, verbose_name="Полное имя")
@@ -55,6 +60,7 @@ class LoyaltyCard(BaseModel):
         verbose_name = "Карта лояльности"
         verbose_name_plural = "Карты лояльности"
 
+
 class Notification(BaseModel):
     title = models.CharField(max_length=150, verbose_name="Заголовок")
     description = models.TextField(verbose_name="Описание")
@@ -66,9 +72,9 @@ class Notification(BaseModel):
         verbose_name = "Уведомление"
         verbose_name_plural = "Уведомления"
 
+
 class AboutUs(BaseModel):
     description = RichTextUploadingField(verbose_name="Описание")
-
 
     def __str__(self):
         return str(self.id)
@@ -76,6 +82,7 @@ class AboutUs(BaseModel):
     class Meta:
         verbose_name = "О нас"
         verbose_name_plural = "О нас"
+
 
 class News(BaseModel):
     title = models.CharField(max_length=450, verbose_name="Заголовок")
@@ -102,6 +109,7 @@ class Articles(BaseModel):
         verbose_name = "Статья"
         verbose_name_plural = "Статьи"
 
+
 class Reviews(BaseModel):
     title = models.CharField(max_length=450, verbose_name="Заголовок")
     short_description = models.TextField(verbose_name="Краткое описание")
@@ -114,6 +122,7 @@ class Reviews(BaseModel):
         verbose_name = "Обзор"
         verbose_name_plural = "Обзоры"
 
+
 class Video(BaseModel):
     url = models.URLField(verbose_name="Cсылка")
     name = models.CharField(max_length=150, verbose_name="Название")
@@ -125,5 +134,22 @@ class Video(BaseModel):
         verbose_name = "Видео"
         verbose_name_plural = "Видео"
 
+
 class Promocode(BaseModel):
     pass
+
+
+class Questions(BaseModel):
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="customer_question",
+                                 verbose_name="Клиент")
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="product_question",
+                                verbose_name="Продукт")
+    question = models.TextField(verbose_name="Вопрос")
+    is_visible = models.BooleanField(default=True, verbose_name="Виден")
+
+    def __str__(self):
+        return self.product.name
+
+    class Meta:
+        verbose_name = "Вопрос"
+        verbose_name_plural = "Вопросы"

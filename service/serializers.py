@@ -165,8 +165,8 @@ class ProductSerializer(serializers.ModelSerializer):
             "description",
             "price",
             "quantity",
-            "images",
             "rating",
+            "images",
             "comments"
         )
 

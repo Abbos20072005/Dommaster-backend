@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Banner, Chat, LoyaltyCard, AboutUs, Messages
+from .models import Banner, Chat, LoyaltyCard, AboutUs, Messages, Questions
 
 
 class BannerSerializer(serializers.ModelSerializer):
@@ -61,4 +61,14 @@ class AboutUsSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "description"
+        )
+
+class QuestionsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Questions
+        fields = (
+            "id",
+            "customer",
+            "product",
+            "question"
         )
