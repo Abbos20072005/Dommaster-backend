@@ -26,6 +26,7 @@ class CustomerAddresses(BaseModel):
     location_name = models.CharField(max_length=255, blank=True, null=True, verbose_name="Название локации")
     latitude = models.FloatField(default=0.0, verbose_name='Широта')
     longitude = models.FloatField(default=0.0, verbose_name='Долгота')
+    is_default = models.BooleanField(default=False, verbose_name="Основной")
 
     def __str__(self):
         return self.name

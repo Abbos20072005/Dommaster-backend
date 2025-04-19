@@ -61,7 +61,8 @@ class CustomerAddressesSerializer(serializers.ModelSerializer):
             "name",
             "location_name",
             "latitude",
-            "longitude"
+            "longitude",
+            "is_default"
         )
 
 class CustomerAddressesUpdateSerializer(serializers.ModelSerializer):
@@ -72,5 +73,6 @@ class CustomerAddressesUpdateSerializer(serializers.ModelSerializer):
             "name",
             "location_name",
             "latitude",
-            "longitude"
+            "longitude",
+            "is_default"
         )
