@@ -4,6 +4,7 @@ from .models import Product, ProductCategory, ProductItemCategory, ProductSubCat
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from config import settings
+from django.db.models import Exists, OuterRef
 
 
 class CartItemSerializer(serializers.ModelSerializer):
@@ -24,17 +25,7 @@ class CartItemSerializer(serializers.ModelSerializer):
         return attrs
 
 
-class CartSerializer(serializers.ModelSerializer):
-    cart_items = CartItemSerializer(source="cart_item", many=True, read_only=True)
 
-    class Meta:
-        model = Cart
-        fields = (
-            "id",
-            "customer",
-            "cart_token",
-            "cart_items"
-        )
 
 
 class CartItemUpdateSerializer(serializers.ModelSerializer):
@@ -179,6 +170,17 @@ class ProductSerializer(serializers.ModelSerializer):
             "comments"
         )
 
+class CartSerializer(serializers.ModelSerializer):
+    cart_items = CartItemSerializer(source="cart_item", many=True, read_only=True)
+
+    class Meta:
+        model = Cart
+        fields = (
+            "id",
+            "customer",
+            "cart_token",
+            "cart_items"
+        )
 
 class FavouriteListSerializer(serializers.ModelSerializer):
     product = ProductSerializer(read_only=True)
@@ -193,7 +195,7 @@ class FavouriteListSerializer(serializers.ModelSerializer):
 
 
 class AddsBrandsSerializer(serializers.ModelSerializer):
-    products = ProductSerializer(many=True, read_only=True)
+    products = serializers.SerializerMethodField()
 
     class Meta:
         model = AddsBrands
@@ -203,6 +205,34 @@ class AddsBrandsSerializer(serializers.ModelSerializer):
             "brand",
             "products"
         )
+
+    def get_products(self, obj):
+        request = self.context.get("request")
+        if not request:
+            return []
+
+        customer_id = getattr(request.user, "id", None)
+        token = request.COOKIES.get("cart_token")
+
+        products_qs = Product.objects.filter(brand_id=obj.brand.id).order_by("id")
+        print(products_qs)
+
+        if customer_id:
+            cart_filter = CartItem.objects.filter(
+                cart__customer_id=customer_id,
+                product=OuterRef("pk")
+            )
+        else:
+            cart_filter = CartItem.objects.filter(
+                cart__cart_token=token,
+                product=OuterRef("pk")
+            )
+
+        products_qs = products_qs.annotate(
+            in_cart=Exists(cart_filter)
+        )
+
+        return ProductSerializer(products_qs, many=True, context={"request": request}).data
 
 
 class SaleSerializer(serializers.ModelSerializer):
