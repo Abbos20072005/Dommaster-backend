@@ -10,8 +10,8 @@ urlpatterns = [
     path("otp/verify/", OTPViewSet.as_view({"post": "otp_verify"}), name="otp verify"),
     path("otp/resend/", OTPViewSet.as_view({"post": "otp_resend"}), name="otp resend"),
     path("customer/update/", AuthViewSet.as_view({"patch": "update_customer_info"}), name="update customer info"),
-    path("customer/address/", AuthViewSet.as_view({"get": "addresses_list"}), name="addresses list"),
-    path("customer/address/create/", AuthViewSet.as_view({"post": "address_create"}), name="address create"),
-    path("customer/address/update/<int:pk>/", AuthViewSet.as_view({"patch": "addresses_update"}), name="address update"),
-    path("customer/address/delete/<int:pk>/", AuthViewSet.as_view({"delete": "delete_address"}), name="delete address")
+    path("customer/addresses/", AuthViewSet.as_view({"get": "addresses_list"}), name="addresses list"),
+    path("customer/addresses/", AuthViewSet.as_view({"post": "address_create"}), name="address create"),
+    path("customer/addresses/<int:pk>/", AuthViewSet.as_view({"patch": "addresses_update"}), name="address update"),
+    path("customer/addresses/<int:pk>/", AuthViewSet.as_view({"delete": "delete_address"}), name="delete address")
 ]
