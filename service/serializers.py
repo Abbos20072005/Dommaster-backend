@@ -1,4 +1,6 @@
 from rest_framework import serializers
+
+from authorization.serializers import CustomerSerializer
 from .models import Product, ProductCategory, ProductItemCategory, ProductSubCategory, ProductImage, Comment, \
     Order, OrderItem, Brand, Sale, AddsBrands, Favourites, Cart, CartItem, ProductCharacteristics
 from exceptions.error_exception import CustomApiException
@@ -123,6 +125,8 @@ class BrandSerializer(serializers.ModelSerializer):
 
 
 class CommentSerializer(serializers.ModelSerializer):
+    customer = CustomerSerializer(read_only=True)
+
     class Meta:
         model = Comment
         fields = (
@@ -161,7 +165,6 @@ class ProductSerializer(serializers.ModelSerializer):
         self.fields["name"] = serializers.CharField(source=f'name_{language}')
         self.fields["description"] = serializers.CharField(source=f'description_{language}')
 
-    comments = CommentSerializer(source="product_comment", many=True, read_only=True)
     images = ProductImageSerializer(source="product_image", many=True, read_only=True)
     in_cart = serializers.BooleanField(read_only=True)
     characteristics = ProductCharacteristicsSerializer(source="product_characteristics", many=True, read_only=True)
@@ -182,7 +185,6 @@ class ProductSerializer(serializers.ModelSerializer):
             "discount_price",
             "characteristics",
             "images",
-            "comments"
         )
 
 
