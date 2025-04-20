@@ -16,6 +16,7 @@ from .models import ProductCategory, ProductSubCategory, ProductItemCategory, Pr
 from rest_framework import status
 from django.db.models import Q, Sum, Exists, OuterRef, Value, BooleanField
 from .paginations.get_products_pagination import get_products_paginator
+from .paginations.get_comments import get_comments_paginator
 from django.db.models import Count
 from django.core.cache import cache
 from django.contrib.postgres.search import TrigramSimilarity
@@ -183,8 +184,31 @@ class ProductViewSet(ViewSet):
                         status=status.HTTP_200_OK)
 
 
-
 class CommentViewSet(ViewSet):
+    @swagger_auto_schema(
+        operation_summary="Get product comments",
+        operation_description="Get product comments",
+        manual_parameters=[
+            openapi.Parameter(
+                name='page', in_=openapi.IN_QUERY, description='Page', type=openapi.TYPE_INTEGER),
+            openapi.Parameter(
+                name='page_size', in_=openapi.IN_QUERY, description='Page size', type=openapi.TYPE_INTEGER),
+        ],
+        responses={200: CommentSerializer(many=True)},
+        tags=["Comment"]
+    )
+    def product_comments(self, request, pk):
+        params = request.query_params
+        param_serializer = PaginationSerializer(data=params)
+        if not param_serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=param_serializer.errors)
+
+        comments = Comment.objects.filter(product=pk)
+        return Response(data={
+            "result": get_comments_paginator(response_data=comments, page=param_serializer.validated_data.get("page"),
+                                             page_size=param_serializer.validated_data.get("page_size"),
+                                             context={"request": request}), "ok": True}, status=status.HTTP_200_OK)
+
     @swagger_auto_schema(
         operation_summary="Write comment to product, pk receive product id",
         operation_description="Write comment to product, pk receive product id",

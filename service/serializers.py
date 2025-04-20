@@ -109,7 +109,8 @@ class CommentSerializer(serializers.ModelSerializer):
             "customer",
             "product",
             "product_rating",
-            "comment"
+            "comment",
+            "created_at"
         )
 
 
