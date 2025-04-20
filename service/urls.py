@@ -15,14 +15,14 @@ urlpatterns = [
     path("adds/brands/<int:pk>/", AddsBrandsViewSet.as_view({"get": "adds_brands_detail"}), name="adds brands detail"),
     path("search/", ProductViewSet.as_view({"get": "search_by_name"}), name="search by name"),
     path("product/filter/", ProductViewSet.as_view({"post": "product_filter"}), name="product filter"),
-    path("comment/create/<int:pk>/", CommentViewSet.as_view({"post": "comment_create"}), name="comment create"),
-    path("comment/update/<int:pk>/", CommentViewSet.as_view({"patch": "comment_update"}), name="comment update"),
-    path("comment/delete/<int:pk>/", CommentViewSet.as_view({"delete": "comment_delete"}), name="comment delete"),
+    path("comment/<int:pk>/",
+         CommentViewSet.as_view({"post": "comment_create", "patch": "comment_update", "delete": "comment_delete"}),
+         name="comment create"),
     path("most/sold/", ProductViewSet.as_view({"get": "most_sold"}), name="most sold"),
-    path("favourite/create/", FavouriteViewSet.as_view({"post": "create_favourite"}), name="create favourite"),
-    path("favourite/list/", FavouriteViewSet.as_view({"get": "favourite_list"}), name="favourite list"),
+    path("favourite/", FavouriteViewSet.as_view({"get": "favourite_list", "post": "create_favourite"}),
+         name="create favourite"),
     path("cart/", CartViewSet.as_view({"get": "get_cart"}), name="get cart"),
-    path("cart/item/create/", CartViewSet.as_view({"post": "create_cart_item"}), name="create cart item"),
-    path("cart/item/update/", CartViewSet.as_view({"patch": "update_cart_item"}), name="update cart item"),
-    path("cart/item/update/bulk/", CartViewSet.as_view({"post": "cart_bulk_update"}), name="cart bulk update")
+    path("cart/item/", CartViewSet.as_view({"post": "create_cart_item", "patch": "update_cart_item"}),
+         name="create cart item"),
+    path("cart/item/bulk/", CartViewSet.as_view({"post": "cart_bulk_update"}), name="cart bulk update")
 ]
