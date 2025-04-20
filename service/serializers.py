@@ -73,6 +73,27 @@ class PaginationSerializer(serializers.Serializer):
             raise CustomApiException(ErrorCodes.INVALID_INPUT, message="page or page_size is invalid")
         return super().validate(attrs)
 
+class CommentParamSerializer(serializers.Serializer):
+    page = serializers.IntegerField(
+        required=False,
+        default=1
+    )
+    page_size = serializers.IntegerField(
+        required=False,
+        default=10
+    )
+    product_id = serializers.IntegerField(
+        required=True
+    )
+
+    def validate(self, attrs):
+        page = attrs.get('page')
+        page_size = attrs.get('page_size')
+        if page < 0 or page_size < 0:
+            raise CustomApiException(ErrorCodes.INVALID_INPUT, message="page or page_size is invalid")
+        return super().validate(attrs)
+
+
 
 class FilterSerializer(PaginationSerializer):
     q = serializers.CharField(required=False)

@@ -10,7 +10,7 @@ from .serializers import ProductCategorySerializer, ProductCategoryListSerialize
     ProductItemCategorySerializer, ProductSerializer, CommentSerializer, BrandSerializer, FilterSerializer, \
     PaginationSerializer, BrandDetailSerializer, SaleSerializer, AddsBrandsSerializer, AddsBrandsDetailSerializer, \
     SearchByNameSerializer, CommentUpdateSerializer, FavouriteSerializer, FavouriteListSerializer, CartSerializer, \
-    CartItemSerializer, CartItemUpdateSerializer, CartItemBulkUpdateSerializer
+    CartItemSerializer, CartItemUpdateSerializer, CartItemBulkUpdateSerializer, CommentParamSerializer
 from .models import ProductCategory, ProductSubCategory, ProductItemCategory, Product, Comment, Brand, Sale, AddsBrands, \
     Favourites, Cart, CartItem
 from rest_framework import status
@@ -193,17 +193,20 @@ class CommentViewSet(ViewSet):
                 name='page', in_=openapi.IN_QUERY, description='Page', type=openapi.TYPE_INTEGER),
             openapi.Parameter(
                 name='page_size', in_=openapi.IN_QUERY, description='Page size', type=openapi.TYPE_INTEGER),
+            openapi.Parameter(
+                name='product_id', in_=openapi.IN_QUERY, description='Product id', type=openapi.TYPE_INTEGER),
         ],
         responses={200: CommentSerializer(many=True)},
         tags=["Comment"]
     )
-    def product_comments(self, request, pk):
+    def product_comments(self, request):
         params = request.query_params
-        param_serializer = PaginationSerializer(data=params)
+        param_serializer = CommentParamSerializer(data=params)
         if not param_serializer.is_valid():
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=param_serializer.errors)
 
-        comments = Comment.objects.filter(product=pk)
+        comments = Comment.objects.filter(product=param_serializer.validated_data.get("product_id"))
+        print(param_serializer.validated_data, "hrerererer")
         return Response(data={
             "result": get_comments_paginator(response_data=comments, page=param_serializer.validated_data.get("page"),
                                              page_size=param_serializer.validated_data.get("page_size"),
