@@ -14,7 +14,7 @@ urlpatterns = [
     path("adds/brands/", AddsBrandsViewSet.as_view({"get": "adds_brands"}), name="adds brands"),
     path("adds/brands/<int:pk>/", AddsBrandsViewSet.as_view({"get": "adds_brands_detail"}), name="adds brands detail"),
     path("search/", ProductViewSet.as_view({"get": "search_by_name"}), name="search by name"),
-    path("products/filter/", ProductViewSet.as_view({"post": "product_filter"}), name="product filter"),
+    path("product/filter/", ProductViewSet.as_view({"post": "product_filter"}), name="product filter"),
     path("comments/<int:pk>/",
          CommentViewSet.as_view({"post": "comment_create", "patch": "comment_update", "delete": "comment_delete"}),
          name="comment create"),
