@@ -148,6 +148,12 @@ class Product(BaseModel):
     def __str__(self):
         return self.name
 
+    def update_rating(self):
+        from django.db.models import Avg
+        avg = self.product_comment.aggregate(avg_rating=Avg("product_rating"))["avg_rating"]
+        self.rating = avg if avg else 0.0
+        self.save()
+
     class Meta:
         verbose_name = "Продукт"
         verbose_name_plural = "Продукты"
@@ -220,7 +226,7 @@ class Comment(BaseModel):
     is_visible = models.BooleanField(default=True, verbose_name="Виден")
 
     def __str__(self):
-        return self.commentator_name
+        return self.customer.full_name
 
     class Meta:
         verbose_name = "Коментарий"
