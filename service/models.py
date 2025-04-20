@@ -14,7 +14,8 @@ ORDER_STATUS = (
     (4, "Canceled")
 )
 
-#TODO: questions
+
+# TODO: questions
 
 class AddsBrands(BaseModel):
     name = models.CharField(max_length=450, verbose_name="Название")
@@ -240,7 +241,8 @@ class Service(BaseModel):
 
 
 class ProductCharacteristics(BaseModel):
-    product = models.ForeignKey(Product, blank=True, null=True, on_delete=models.CASCADE, verbose_name="Продукт")
+    product = models.ForeignKey(Product, blank=True, null=True, related_name="product_characteristics",
+                                on_delete=models.CASCADE, verbose_name="Продукт")
     name = models.CharField(max_length=150, verbose_name="Название")
     unit = models.CharField(max_length=150, verbose_name="Еденица измерения")
     value = models.CharField(max_length=150, verbose_name="Значение")

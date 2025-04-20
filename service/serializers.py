@@ -1,10 +1,20 @@
 from rest_framework import serializers
 from .models import Product, ProductCategory, ProductItemCategory, ProductSubCategory, ProductImage, Comment, \
-    Order, OrderItem, Brand, Sale, AddsBrands, Favourites, Cart, CartItem
+    Order, OrderItem, Brand, Sale, AddsBrands, Favourites, Cart, CartItem, ProductCharacteristics
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from config import settings
 from django.db.models import Exists, OuterRef
+
+class ProductCharacteristicsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductCharacteristics
+        fields = (
+            "id",
+            "name",
+            "unit",
+            "value"
+        )
 
 
 class CartItemSerializer(serializers.ModelSerializer):
@@ -153,6 +163,7 @@ class ProductSerializer(serializers.ModelSerializer):
     comments = CommentSerializer(source="product_comment", many=True, read_only=True)
     images = ProductImageSerializer(source="product_image", many=True, read_only=True)
     in_cart = serializers.BooleanField(read_only=True)
+    characteristics = ProductCharacteristicsSerializer(source="product_characteristics", many=True, read_only=True)
 
     class Meta:
         model = Product
@@ -168,6 +179,7 @@ class ProductSerializer(serializers.ModelSerializer):
             "rating",
             "discount",
             "discount_price",
+            "characteristics",
             "images",
             "comments"
         )
