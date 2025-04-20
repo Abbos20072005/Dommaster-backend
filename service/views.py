@@ -183,6 +183,7 @@ class ProductViewSet(ViewSet):
                         status=status.HTTP_200_OK)
 
 
+
 class CommentViewSet(ViewSet):
     @swagger_auto_schema(
         operation_summary="Write comment to product, pk receive product id",
