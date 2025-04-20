@@ -143,15 +143,20 @@ class Product(BaseModel):
                                verbose_name="Рейтинг")
     discount = models.IntegerField(blank=True, null=True, verbose_name="Скидка")
     quantity = models.IntegerField(default=0, verbose_name="Количество")
+    comments_quantity = models.IntegerField(default=0, verbose_name="Количество коментариев")
     is_favourite = models.BooleanField(default=False, verbose_name="Избранный")
 
     def __str__(self):
         return self.name
 
     def update_rating(self):
-        from django.db.models import Avg
-        avg = self.product_comment.aggregate(avg_rating=Avg("product_rating"))["avg_rating"]
-        self.rating = avg if avg else 0.0
+        from django.db.models import Avg, Count
+        agg_data = self.product_comment.aggregate(
+            avg_rating=Avg("product_rating"),
+            count_comments=Count("id")
+        )
+        self.rating = round(agg_data["avg_rating"], 1) or 0.0
+        self.comments_quantity = agg_data["count_comments"] or 0
         self.save()
 
     class Meta:
