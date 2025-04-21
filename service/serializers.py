@@ -2,11 +2,12 @@ from rest_framework import serializers
 
 from authorization.serializers import CustomerSerializer
 from .models import Product, ProductCategory, ProductItemCategory, ProductSubCategory, ProductImage, Comment, \
-    Order, OrderItem, Brand, Sale, AddsBrands, Favourites, Cart, CartItem, ProductCharacteristics
+    Order, OrderItem, Brand, Sale, AddsBrands, Favourites, Cart, CartItem, ProductCharacteristics, Questions
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from config import settings
 from django.db.models import Exists, OuterRef
+
 
 
 class ProductCharacteristicsSerializer(serializers.ModelSerializer):
@@ -410,3 +411,22 @@ class OrderItemSerializer(serializers.ModelSerializer):
             "product",
             "quantity"
         )
+
+class QuestionsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Questions
+        fields = (
+            "id",
+            "customer",
+            "product",
+            "question"
+        )
+
+class QuestionsUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Questions
+        fields = (
+            "id",
+            "question"
+        )
+

@@ -304,3 +304,18 @@ class CartItem(BaseModel):
         unique_together = ("cart", "product")
         verbose_name = "Вещь в корзине"
         verbose_name_plural = "Вещи в корзине"
+
+class Questions(BaseModel):
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="customer_question",
+                                 verbose_name="Клиент")
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="product_question",
+                                verbose_name="Продукт")
+    question = models.TextField(verbose_name="Вопрос")
+    is_visible = models.BooleanField(default=True, verbose_name="Виден")
+
+    def __str__(self):
+        return self.product.name
+
+    class Meta:
+        verbose_name = "Вопрос"
+        verbose_name_plural = "Вопросы"

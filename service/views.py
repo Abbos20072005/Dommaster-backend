@@ -11,13 +11,14 @@ from .serializers import ProductCategorySerializer, ProductCategoryListSerialize
     PaginationSerializer, BrandDetailSerializer, SaleSerializer, AddsBrandsSerializer, AddsBrandsDetailSerializer, \
     SearchByNameSerializer, CommentUpdateSerializer, FavouriteSerializer, FavouriteListSerializer, CartSerializer, \
     CartItemSerializer, CartItemUpdateSerializer, CartItemBulkUpdateSerializer, CommentParamSerializer, \
-    CommentCreateSerializer, CartItemCreateSerializer
+    CommentCreateSerializer, CartItemCreateSerializer, QuestionsSerializer, QuestionsUpdateSerializer
 from .models import ProductCategory, ProductSubCategory, ProductItemCategory, Product, Comment, Brand, Sale, AddsBrands, \
-    Favourites, Cart, CartItem
+    Favourites, Cart, CartItem, Questions
 from rest_framework import status
 from django.db.models import Q, Sum, Exists, OuterRef, Value, BooleanField
 from .paginations.get_products_pagination import get_products_paginator
 from .paginations.get_comments import get_comments_paginator
+from .paginations.get_question import get_questions_paginator
 from django.db.models import Count
 from django.core.cache import cache
 from django.contrib.postgres.search import TrigramSimilarity
@@ -548,3 +549,82 @@ class OrderViewSet(ViewSet):
 
 class ServiceViewSet(ViewSet):
     pass
+
+class QuestionsViewSet(ViewSet):
+    @swagger_auto_schema(
+        operation_summary="Product questions list",
+        operation_description="Product questions list",
+        manual_parameters=[
+            openapi.Parameter(
+                name='page', in_=openapi.IN_QUERY, description='Page', type=openapi.TYPE_INTEGER),
+            openapi.Parameter(
+                name='page_size', in_=openapi.IN_QUERY, description='Page size', type=openapi.TYPE_INTEGER),
+            openapi.Parameter(
+                name='product_id', in_=openapi.IN_QUERY, description='Product id', type=openapi.TYPE_INTEGER),
+        ],
+        responses={200: QuestionsSerializer(many=True)},
+        tags=["Question"]
+    )
+    def questions_list(self, request):
+        param = request.query_params
+        param_serializer = CommentParamSerializer(data=param)
+        if not param_serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=param_serializer.errors)
+
+        questions = Questions.objects.filter(product=param_serializer.validated_data.get("product_id"))
+        return Response(data={
+            "result": get_questions_paginator(response_data=questions, page=param_serializer.validated_data.get("page"),
+                                              page_size=param_serializer.validated_data.get("page_size"),
+                                              context={"request": request}), "ok": True}, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        operation_summary="Create product question",
+        operation_description="Create product question",
+        request_body=QuestionsSerializer(),
+        responses={201: QuestionsSerializer()},
+        tags=["Question"]
+    )
+    def question_create(self, request, pk):
+        data = request.data
+        data["customer"] = request.user.id
+        data["product"] = pk
+        serializer = QuestionsSerializer(data=data, context={"reqeust": request})
+        if not serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
+
+        serializer.save()
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_201_CREATED)
+
+    @swagger_auto_schema(
+        operation_summary="Update product question",
+        operation_description="Update product question",
+        request_body=QuestionsUpdateSerializer(),
+        responses={204: QuestionsUpdateSerializer()},
+        tags=["Question"]
+    )
+    def update_question(self, request, pk):
+        data = request.data
+        question = Questions.objects.filter(id=pk, customer_id=request.user.id).first()
+        if not question:
+            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
+
+        serializer = QuestionsUpdateSerializer(question, data=data, partial=True, context={"request": request})
+        if not serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
+
+        serializer.save()
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_202_ACCEPTED)
+
+    @swagger_auto_schema(
+        operation_summary="Delete product question",
+        operation_description="Delete product question",
+        responses={204: "Question successfully deleted"},
+        tags=["Question"]
+    )
+    def delete_question(self, request, pk):
+        question = Questions.objects.filter(id=pk, customer=request.user.id).first()
+        if not question:
+            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
+
+        question.delete()
+        return Response(data={"result": "Question successfully deleted", "ok": True}, status=status.HTTP_204_NO_CONTENT)

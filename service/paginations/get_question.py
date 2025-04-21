@@ -1,4 +1,4 @@
-from base.serializers import QuestionsSerializer
+from service.serializers import QuestionsSerializer
 from django.core.paginator import Paginator
 from django.db.models import Count
 

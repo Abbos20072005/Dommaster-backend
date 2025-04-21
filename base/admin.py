@@ -1,11 +1,5 @@
 from django.contrib import admin
-from .models import Banner, Chat, AboutUs, Messages, Questions
-
-@admin.register(Questions)
-class QuestionsAdmin(admin.ModelAdmin):
-    list_display = ("id", "customer", "product", "is_visible")
-    list_display_links = ("id", "customer")
-    search_fields = ("message",)
+from .models import Banner, Chat, AboutUs, Messages
 
 @admin.register(Banner)
 class BannerAdmin(admin.ModelAdmin):
