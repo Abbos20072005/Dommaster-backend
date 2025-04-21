@@ -72,3 +72,12 @@ class QuestionsSerializer(serializers.ModelSerializer):
             "product",
             "question"
         )
+
+class QuestionsUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Questions
+        fields = (
+            "id",
+            "question"
+        )
+
