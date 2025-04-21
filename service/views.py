@@ -174,6 +174,7 @@ class ProductViewSet(ViewSet):
 
         products = Product.objects.filter(filters).order_by(sort)
         token = request.COOKIES.get("cart_token")
+        fav_token = request.COOKIES.get("favourite_token")
         if not customer:
             products = products.annotate(
                 in_cart=Exists(CartItem.objects.filter(cart__cart_token=token, product=OuterRef("pk"))))
@@ -365,7 +366,6 @@ class FavouriteViewSet(ViewSet):
         if not serializer.is_valid():
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
 
-        product = Product.objects.filter(id=serializer.validated_data.get("product").id).first()
         favourite = Favourites.objects.filter(customer=serializer.validated_data.get("customer").id,
                                               product=serializer.validated_data.get("product").id).first()
 
