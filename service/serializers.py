@@ -186,6 +186,7 @@ class ProductSerializer(serializers.ModelSerializer):
 
     images = ProductImageSerializer(source="product_image", many=True, read_only=True)
     in_cart = serializers.BooleanField(read_only=True)
+    is_favourite = serializers.BooleanField(read_only=True)
     characteristics = ProductCharacteristicsSerializer(source="product_characteristics", many=True, read_only=True)
 
     class Meta:

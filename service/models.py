@@ -146,7 +146,6 @@ class Product(BaseModel):
     discount = models.IntegerField(blank=True, null=True, verbose_name="Скидка")
     quantity = models.IntegerField(default=0, verbose_name="Количество")
     comments_quantity = models.IntegerField(default=0, verbose_name="Количество коментариев")
-    is_favourite = models.BooleanField(default=False, verbose_name="Избранный")
 
     def __str__(self):
         return self.name

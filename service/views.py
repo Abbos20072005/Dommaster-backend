@@ -209,7 +209,6 @@ class CommentViewSet(ViewSet):
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=param_serializer.errors)
 
         comments = Comment.objects.filter(product=param_serializer.validated_data.get("product_id"))
-        print(param_serializer.validated_data, "hrerererer")
         return Response(data={
             "result": get_comments_paginator(response_data=comments, page=param_serializer.validated_data.get("page"),
                                              page_size=param_serializer.validated_data.get("page_size"),
