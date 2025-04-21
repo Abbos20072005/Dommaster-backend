@@ -9,7 +9,6 @@ from config import settings
 from django.db.models import Exists, OuterRef
 
 
-
 class ProductCharacteristicsSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductCharacteristics
@@ -19,6 +18,7 @@ class ProductCharacteristicsSerializer(serializers.ModelSerializer):
             "unit",
             "value"
         )
+
 
 class CartItemCreateSerializer(serializers.ModelSerializer):
     class Meta:
@@ -36,6 +36,7 @@ class CartItemCreateSerializer(serializers.ModelSerializer):
         if product.quantity == 0:
             raise CustomApiException(error_code=ErrorCodes.INVALID_INPUT, message="Product is not exist in warehouse")
         return attrs
+
 
 class CartItemUpdateSerializer(serializers.ModelSerializer):
     class Meta:
@@ -64,7 +65,17 @@ class FavouriteSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "customer",
+            "favourite_token",
             "product",
+        )
+
+
+class FavouriteCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Favourites
+        fields = (
+            "id",
+            "product"
         )
 
 
@@ -161,6 +172,7 @@ class CommentSerializer(serializers.ModelSerializer):
             "comment",
             "created_at"
         )
+
 
 class CommentCreateSerializer(serializers.ModelSerializer):
     class Meta:
@@ -412,6 +424,7 @@ class OrderItemSerializer(serializers.ModelSerializer):
             "quantity"
         )
 
+
 class QuestionsSerializer(serializers.ModelSerializer):
     customer = CustomerSerializer(read_only=True)
 
@@ -425,6 +438,7 @@ class QuestionsSerializer(serializers.ModelSerializer):
             "created_at"
         )
 
+
 class QuestionsCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Questions
@@ -435,6 +449,7 @@ class QuestionsCreateSerializer(serializers.ModelSerializer):
             "question"
         )
 
+
 class QuestionsUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Questions
@@ -442,4 +457,3 @@ class QuestionsUpdateSerializer(serializers.ModelSerializer):
             "id",
             "question"
         )
-

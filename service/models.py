@@ -172,11 +172,17 @@ class Product(BaseModel):
 
 
 class Favourites(BaseModel):
-    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, verbose_name="Клиент")
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, blank=True, null=True, verbose_name="Клиент")
+    favourite_token = models.CharField(max_length=64, unique=True, blank=True, null=True, verbose_name="Токен карзины")
     product = models.ForeignKey(Product, on_delete=models.CASCADE, verbose_name="Продукт")
 
     def __str__(self):
         return str(self.id)
+
+    def save(self, *args, force_insert=False, force_update=False, using=None, update_fields=None):
+        if not self.favourite_token:
+            self.favourite_token = secrets.token_hex(16)
+        return super().save(*args, force_insert=False, force_update=False, using=None, update_fields=None)
 
     class Meta:
         verbose_name = "Избранный"
@@ -304,6 +310,7 @@ class CartItem(BaseModel):
         unique_together = ("cart", "product")
         verbose_name = "Вещь в корзине"
         verbose_name_plural = "Вещи в корзине"
+
 
 class Questions(BaseModel):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="customer_question",
