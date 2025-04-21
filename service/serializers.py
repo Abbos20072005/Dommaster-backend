@@ -421,7 +421,8 @@ class QuestionsSerializer(serializers.ModelSerializer):
             "id",
             "customer",
             "product",
-            "question"
+            "question",
+            "created_at"
         )
 
 class QuestionsCreateSerializer(serializers.ModelSerializer):
