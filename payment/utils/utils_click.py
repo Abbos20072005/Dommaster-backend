@@ -31,8 +31,8 @@ def _serialize_request(data, prepare):
 def generate_sign(data, prepare):
     sign_data = "".join([
         str(data["click_trans_id"]),
-        str(settings.SERVICE_ID),
-        settings.SECRET_KEY,
+        str(settings.CLICK_SERVICE_ID),
+        settings.CLICK_SECRET_KEY,
         str(data["merchant_trans_id"]),
         str(data["merchant_prepare_id"]) if not prepare else '',
         str(data["amount"]),
