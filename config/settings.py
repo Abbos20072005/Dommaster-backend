@@ -266,3 +266,7 @@ CLICK_MERCHANT_ID = int(os.getenv('CLICK_MERCHANT_ID', 1))
 CLICK_SECRET_KEY = os.getenv('CLICK_SECRET_KEY', "")
 CLICK_ACCOUNT_MODEL = os.getenv('CLICK_ACCOUNT_MODEL', "")
 CLICK_AMOUNT_FIELD = os.getenv('CLICK_AMOUNT_FIELD', "")
+
+# payme_settings
+PAYME_ID = int(os.getenv('PAYME_ID', 1))
+PAYME_KEY = os.getenv('PAYME_KEY', "")
