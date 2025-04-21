@@ -496,6 +496,12 @@ class CartViewSet(ViewSet):
         if not data_serializer.is_valid():
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=data_serializer.errors)
 
+        if data_serializer.validated_data.get("quantity") == 0:
+            cart_item = CartItem.objects.filter(product_id=data_serializer.validated_data.get("product")).first()
+            cart_item.delete()
+            return Response(data={"result": "Product successfully deleted from cart", "ok": True}, status=status.HTTP_204_NO_CONTENT)
+
+
         customer = request.user.id
         if not customer:
             token = request.COOKIES.get("cart_token")
