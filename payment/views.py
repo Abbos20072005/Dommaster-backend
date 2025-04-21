@@ -90,8 +90,8 @@ class CompletePaymentView(APIView):
             logged("CompletePaymentView: already paid -> response: {}".format(response.data), "warning")
             return Response(response, status=status.HTTP_400_BAD_REQUEST)
 
-        txn.state = ClickTransaction.SUCCESSFULLY if params["error"] == 0 else ClickTransaction.CANCELLED
-        order.status = 1 if params["error"] == 0 else 0
+        txn.state = ClickTransaction.SUCCESSFULLY if int(params["error"]) == 0 else ClickTransaction.CANCELLED
+        order.status = 1 if int(params["error"]) == 0 else 0
         order.save()
         txn.save()
 
