@@ -268,5 +268,5 @@ CLICK_ACCOUNT_MODEL = os.getenv('CLICK_ACCOUNT_MODEL', "")
 CLICK_AMOUNT_FIELD = os.getenv('CLICK_AMOUNT_FIELD', "")
 
 # payme_settings
-PAYME_ID = int(os.getenv('PAYME_ID', 1))
+PAYME_ID = os.getenv('PAYME_ID', 1)
 PAYME_KEY = os.getenv('PAYME_KEY', "")
