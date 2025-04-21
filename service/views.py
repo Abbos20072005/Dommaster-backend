@@ -10,7 +10,8 @@ from .serializers import ProductCategorySerializer, ProductCategoryListSerialize
     ProductItemCategorySerializer, ProductSerializer, CommentSerializer, BrandSerializer, FilterSerializer, \
     PaginationSerializer, BrandDetailSerializer, SaleSerializer, AddsBrandsSerializer, AddsBrandsDetailSerializer, \
     SearchByNameSerializer, CommentUpdateSerializer, FavouriteSerializer, FavouriteListSerializer, CartSerializer, \
-    CartItemSerializer, CartItemUpdateSerializer, CartItemBulkUpdateSerializer, CommentParamSerializer
+    CartItemSerializer, CartItemUpdateSerializer, CartItemBulkUpdateSerializer, CommentParamSerializer, \
+    CommentCreateSerializer
 from .models import ProductCategory, ProductSubCategory, ProductItemCategory, Product, Comment, Brand, Sale, AddsBrands, \
     Favourites, Cart, CartItem
 from rest_framework import status
@@ -221,8 +222,8 @@ class CommentViewSet(ViewSet):
             openapi.Parameter(name="product_id", in_=openapi.IN_QUERY, type=openapi.TYPE_INTEGER,
                               description="Product id")
         ],
-        request_body=CommentSerializer(),
-        responses={201: CommentSerializer()},
+        request_body=CommentCreateSerializer(),
+        responses={201: CommentCreateSerializer()},
         tags=["Comment"]
     )
     def comment_create(self, request):
@@ -238,7 +239,7 @@ class CommentViewSet(ViewSet):
         data = request.data
         data["customer"] = request.user.id
         data["product"] = param.get("product_id")
-        serializer = CommentSerializer(data=data, context={"request": request})
+        serializer = CommentCreateSerializer(data=data, context={"request": request})
         if not serializer.is_valid():
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
 

@@ -233,7 +233,7 @@ class Comment(BaseModel):
     is_visible = models.BooleanField(default=True, verbose_name="Виден")
 
     def __str__(self):
-        return self.customer.full_name
+        return str(self.id)
 
     class Meta:
         verbose_name = "Коментарий"

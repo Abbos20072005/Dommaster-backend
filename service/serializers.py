@@ -145,6 +145,18 @@ class CommentSerializer(serializers.ModelSerializer):
             "created_at"
         )
 
+class CommentCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Comment
+        fields = (
+            "id",
+            "customer",
+            "product",
+            "product_rating",
+            "comment",
+            "created_at"
+        )
+
 
 class CommentUpdateSerializer(serializers.ModelSerializer):
     class Meta:
