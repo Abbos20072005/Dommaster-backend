@@ -8,6 +8,7 @@ from exceptions.error_messages import ErrorCodes
 from config import settings
 from django.db.models import Exists, OuterRef
 
+
 class ProductCharacteristicsSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductCharacteristics
@@ -81,6 +82,7 @@ class PaginationSerializer(serializers.Serializer):
             raise CustomApiException(ErrorCodes.INVALID_INPUT, message="page or page_size is invalid")
         return super().validate(attrs)
 
+
 class CommentParamSerializer(serializers.Serializer):
     page = serializers.IntegerField(
         required=False,
@@ -100,7 +102,6 @@ class CommentParamSerializer(serializers.Serializer):
         if page < 0 or page_size < 0:
             raise CustomApiException(ErrorCodes.INVALID_INPUT, message="page or page_size is invalid")
         return super().validate(attrs)
-
 
 
 class FilterSerializer(PaginationSerializer):
@@ -228,6 +229,7 @@ class CartSerializer(serializers.ModelSerializer):
             "cart_items"
         )
 
+
 class FavouriteListSerializer(serializers.ModelSerializer):
     product = ProductSerializer(read_only=True)
 
@@ -296,17 +298,6 @@ class SaleSerializer(serializers.ModelSerializer):
         )
 
 
-class ProductCategoryListSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ProductCategory
-        fields = (
-            "id",
-            "name",
-            "icon",
-            "image"
-        )
-
-
 class BrandDetailSerializer(serializers.ModelSerializer):
     products_count = serializers.IntegerField(read_only=True)
 
@@ -340,6 +331,20 @@ class ProductCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductCategory
         fields = ("id", "name", "image", "sub_categories")
+
+
+class ProductCategoryListSerializer(serializers.ModelSerializer):
+    sub_categories = ProductSubCategorySerializer(source="product_category", many=True, read_only=True)
+
+    class Meta:
+        model = ProductCategory
+        fields = (
+            "id",
+            "name",
+            "icon",
+            "image",
+            "sub_categories"
+        )
 
 
 class OrderSerializer(serializers.ModelSerializer):
