@@ -119,11 +119,23 @@ class ProductViewSet(ViewSet):
         tags=["Product"]
     )
     def product_detail(self, request, pk):
-        product = Product.objects.filter(id=pk).first()
-        if not product:
-            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
+        token = request.COOKIES.get("cart_token")
+        customer = request.user.id
+        if not customer:
+            products = Product.objects.filter(id=pk).annotate(
+                in_cart=Exists(CartItem.objects.filter(cart__cart_token=token, product=pk))).first()
+            if not products:
+                raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
+        else:
+            cart_item_subquery = CartItem.objects.filter(cart__customer=customer, product=pk)
+            products = Product.objects.filter(id=pk).annotate(in_cart=Exists(cart_item_subquery),
+                                         is_favourite=Exists(
+                                             Favourites.objects.filter(customer=customer, product=pk))).first()
 
-        serializer = ProductSerializer(product, context={"request": request})
+            if not products:
+                raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
+
+        serializer = ProductSerializer(products, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
@@ -580,14 +592,19 @@ class QuestionsViewSet(ViewSet):
     @swagger_auto_schema(
         operation_summary="Create product question",
         operation_description="Create product question",
+        manual_parameters=[
+            openapi.Parameter(name="product_id", in_=openapi.IN_QUERY, type=openapi.TYPE_INTEGER,
+                              description="Product id")
+        ],
         request_body=QuestionsSerializer(),
         responses={201: QuestionsSerializer()},
         tags=["Question"]
     )
-    def question_create(self, request, pk):
+    def question_create(self, request):
+        param = request.query_params
         data = request.data
         data["customer"] = request.user.id
-        data["product"] = pk
+        data["product"] = param.get("product_id")
         serializer = QuestionsSerializer(data=data, context={"reqeust": request})
         if not serializer.is_valid():
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)

@@ -26,8 +26,8 @@ urlpatterns = [
     path("cart/item/", CartViewSet.as_view({"post": "create_cart_item", "patch": "update_cart_item"}),
          name="create cart item"),
     path("cart/item/bulk/", CartViewSet.as_view({"post": "cart_bulk_update"}), name="cart bulk update"),
-    path("questions/", QuestionsViewSet.as_view({"get": "questions_list"}), name="question list"),
+    path("questions/", QuestionsViewSet.as_view({"post": "question_create", "get": "questions_list"}), name="question list"),
     path("questions/<int:pk>/",
-         QuestionsViewSet.as_view({"post": "question_create", "patch": "update_question", "delete": "delete_question"}),
+         QuestionsViewSet.as_view({"patch": "update_question", "delete": "delete_question"}),
          name="create question")
 ]
