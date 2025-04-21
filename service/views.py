@@ -370,14 +370,9 @@ class FavouriteViewSet(ViewSet):
                                               product=serializer.validated_data.get("product").id).first()
 
         if favourite:
-            product.is_favourite = False
-            product.save(update_fields=["is_favourite"])
             favourite.delete()
             return Response(data={"result": "Product successfully removed from favourite", "ok": True},
                             status=status.HTTP_204_NO_CONTENT)
-
-        product.is_favourite = True
-        product.save(update_fields=["is_favourite"])
 
         serializer.save()
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_201_CREATED)
@@ -487,7 +482,7 @@ class CartViewSet(ViewSet):
         operation_summary="Update cart item",
         operation_description="Update cart item",
         request_body=CartItemUpdateSerializer(),
-        responses={202: CartItemSerializer()},
+        responses={202: CartItemSerializer(), 204: "Product successfully deleted from cart"},
         tags=["Cart"]
     )
     def update_cart_item(self, request):
