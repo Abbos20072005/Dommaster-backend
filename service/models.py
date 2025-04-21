@@ -15,8 +15,6 @@ ORDER_STATUS = (
 )
 
 
-# TODO: questions
-
 class AddsBrands(BaseModel):
     name = models.CharField(max_length=450, verbose_name="Название")
     title = models.CharField(max_length=350, verbose_name="Заголовок")

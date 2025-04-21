@@ -12,7 +12,7 @@ from .serializers import ProductCategorySerializer, ProductCategoryListSerialize
     SearchByNameSerializer, CommentUpdateSerializer, FavouriteSerializer, FavouriteListSerializer, CartSerializer, \
     CartItemSerializer, CartItemUpdateSerializer, CartItemBulkUpdateSerializer, CommentParamSerializer, \
     CommentCreateSerializer, CartItemCreateSerializer, QuestionsSerializer, QuestionsUpdateSerializer, \
-    QuestionsCreateSerializer, FavouriteCreateSerializer
+    QuestionsCreateSerializer, FavouriteCreateSerializer, FavouriteResponseSerializer
 from .models import ProductCategory, ProductSubCategory, ProductItemCategory, Product, Comment, Brand, Sale, AddsBrands, \
     Favourites, Cart, CartItem, Questions
 from rest_framework import status
@@ -120,25 +120,7 @@ class ProductViewSet(ViewSet):
         tags=["Product"]
     )
     def product_detail(self, request, pk):
-        token = request.COOKIES.get("cart_token")
-        customer = request.user.id
-        if not customer:
-            products = Product.objects.filter(id=pk).annotate(
-                in_cart=Exists(CartItem.objects.filter(cart__cart_token=token, product=pk)),
-                is_favourite=Exists(Favourites.objects.filter(favourite_token=token, product=pk))
-            ).first()
-            if not products:
-                raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
-        else:
-            cart_item_subquery = CartItem.objects.filter(cart__customer=customer, product=pk)
-            products = Product.objects.filter(id=pk).annotate(in_cart=Exists(cart_item_subquery),
-                                                              is_favourite=Exists(
-                                                                  Favourites.objects.filter(customer=customer,
-                                                                                            product=pk))).first()
-
-            if not products:
-                raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
-
+        products = Product.objects.filter(id=pk)
         serializer = ProductSerializer(products, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
@@ -187,22 +169,7 @@ class ProductViewSet(ViewSet):
         if item_category:
             filters &= Q(product_item_category=item_category)
 
-        customer = request.user.id
-
         products = Product.objects.filter(filters).order_by(sort)
-        token = request.COOKIES.get("cart_token")
-        fav_token = request.COOKIES.get("favourite_token")
-        if not customer:
-            products = products.annotate(
-                in_cart=Exists(CartItem.objects.filter(cart__cart_token=token, product=OuterRef("pk"))),
-                is_favourite=Exists(
-                    Favourites.objects.filter(favourite_token=fav_token, product=OuterRef("pk")))
-            )
-        else:
-            cart_item_subquery = CartItem.objects.filter(cart__customer=customer, product=OuterRef("pk"))
-            products = products.annotate(in_cart=Exists(cart_item_subquery),
-                                         is_favourite=Exists(
-                                             Favourites.objects.filter(customer=customer, product=OuterRef("pk"))))
         return Response(data={"result": get_products_paginator(response_data=products, page=page, page_size=page_size,
                                                                context={"request": request}), "ok": True},
                         status=status.HTTP_200_OK)
@@ -441,7 +408,7 @@ class FavouriteViewSet(ViewSet):
                 token = secrets.token_hex(16)
 
             favourite = Favourites.objects.filter(favourite_token=token)
-            serializer = FavouriteSerializer(favourite, many=True, context={"request": request})
+            serializer = FavouriteResponseSerializer(favourite, many=True, context={"request": request})
 
             resp = Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
             resp.set_cookie("favourite_token", token,
@@ -464,7 +431,7 @@ class FavouriteViewSet(ViewSet):
                         Favourites.objects.create(customer_id=customer, product=item.product)
                         item.delete()
         favourites = Favourites.objects.filter(customer_id=customer)
-        resp = Response(data={"result": FavouriteSerializer(favourites, many=True, context={"request": request}).data, "ok": True},
+        resp = Response(data={"result": FavouriteResponseSerializer(favourites, many=True, context={"request": request}).data, "ok": True},
                         status=status.HTTP_200_OK)
 
         resp.delete_cookie("cart_token")

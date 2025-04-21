@@ -214,8 +214,8 @@ class ProductSerializer(serializers.ModelSerializer):
         self.fields["description"] = serializers.CharField(source=f'description_{language}')
 
     images = ProductImageSerializer(source="product_image", many=True, read_only=True)
-    in_cart = serializers.BooleanField(read_only=True)
-    is_favourite = serializers.BooleanField(read_only=True)
+    in_cart = serializers.SerializerMethodField()
+    is_favourite = serializers.SerializerMethodField()
     characteristics = ProductCharacteristicsSerializer(source="product_characteristics", many=True, read_only=True)
 
     class Meta:
@@ -237,6 +237,47 @@ class ProductSerializer(serializers.ModelSerializer):
             "images",
         )
 
+    def get_in_cart(self, obj):
+        print("Working")
+        request = self.context.get("request")
+        if not request:
+            return False
+
+        customer = getattr(request.user, 'id', None)
+        token = request.COOKIES.get("cart_token")
+
+        if customer:
+            return CartItem.objects.filter(cart__customer_id=customer, product=obj).exists()
+        elif token:
+            return CartItem.objects.filter(cart__cart_token=token, product=obj).exists()
+        return False
+
+    def get_is_favourite(self, obj):
+        request = self.context.get("request")
+        if not request:
+            return False
+
+        customer = getattr(request.user, 'id', None)
+        fav_token = request.COOKIES.get("favourite_token")
+
+        if customer:
+            return Favourites.objects.filter(customer_id=customer, product=obj).exists()
+        elif fav_token:
+            return Favourites.objects.filter(favourite_token=fav_token, product=obj).exists()
+        return False
+
+
+class FavouriteResponseSerializer(serializers.ModelSerializer):
+    product = ProductSerializer(read_only=True)
+
+    class Meta:
+        model = Favourites
+        fields = (
+            "id",
+            "customer",
+            "favourite_token",
+            "product",
+        )
 
 class CartItemSerializer(serializers.ModelSerializer):
     product = ProductSerializer(read_only=True)
