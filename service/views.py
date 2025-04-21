@@ -178,7 +178,9 @@ class ProductViewSet(ViewSet):
                 in_cart=Exists(CartItem.objects.filter(cart__cart_token=token, product=OuterRef("pk"))))
         else:
             cart_item_subquery = CartItem.objects.filter(cart__customer=customer, product=OuterRef("pk"))
-            products = products.annotate(in_cart=Exists(cart_item_subquery))
+            products = products.annotate(in_cart=Exists(cart_item_subquery),
+                                         is_favourite=Exists(
+                                             Favourites.objects.filter(customer=customer, product=OuterRef("pk"))))
         return Response(data={"result": get_products_paginator(response_data=products, page=page, page_size=page_size,
                                                                context={"request": request}), "ok": True},
                         status=status.HTTP_200_OK)
@@ -216,7 +218,8 @@ class CommentViewSet(ViewSet):
         operation_summary="Write comment to product, pk receive product id",
         operation_description="Write comment to product, pk receive product id",
         manual_parameters=[
-            openapi.Parameter(name="product_id", in_=openapi.IN_QUERY, type=openapi.TYPE_INTEGER, description="Product id")
+            openapi.Parameter(name="product_id", in_=openapi.IN_QUERY, type=openapi.TYPE_INTEGER,
+                              description="Product id")
         ],
         request_body=CommentSerializer(),
         responses={201: CommentSerializer()},
@@ -228,7 +231,7 @@ class CommentViewSet(ViewSet):
         if not product:
             raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
 
-        comment = Comment.objects.filter(customer_id=request.user.id).first()
+        comment = Comment.objects.filter(customer_id=request.user.id, product_id=product.id).first()
         if comment:
             raise CustomApiException(error_code=ErrorCodes.INVALID_INPUT, message="Your comment already exist")
 
