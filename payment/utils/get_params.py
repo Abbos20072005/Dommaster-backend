@@ -17,7 +17,6 @@ def get_params(params: dict) -> dict:
         clean_params["reason"] = params.get("reason")
 
     if account is not None:
-        account_name: str = settings.PAYME.get("PAYME_ACCOUNT")
-        clean_params["order_id"] = account[account_name]
+        clean_params["order_id"] = account['order_id']
 
     return clean_params
