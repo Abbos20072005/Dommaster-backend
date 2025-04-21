@@ -258,7 +258,7 @@ class CommentViewSet(ViewSet):
         if not comment:
             raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
 
-        if comment.customer != request.user.id:
+        if comment.customer.id != request.user.id:
             raise CustomApiException(error_code=ErrorCodes.INVALID_INPUT, message="You could not update this comment")
 
         serializer = CommentUpdateSerializer(comment, data=request.data, partial=True, context={"request": request})
