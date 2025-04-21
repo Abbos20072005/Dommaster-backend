@@ -343,7 +343,11 @@ class BrandDetailSerializer(serializers.ModelSerializer):
 class ProductItemCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductItemCategory
-        fields = ("id", "name")
+        fields = (
+            "id",
+            "name",
+            "image"
+        )
 
 
 class ProductSubCategorySerializer(serializers.ModelSerializer):
@@ -351,7 +355,12 @@ class ProductSubCategorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ProductSubCategory
-        fields = ("id", "name", "product_item_categories")
+        fields = (
+            "id",
+            "name",
+            "image",
+            "product_item_categories"
+        )
 
 
 class ProductCategorySerializer(serializers.ModelSerializer):
@@ -359,7 +368,12 @@ class ProductCategorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ProductCategory
-        fields = ("id", "name", "image", "sub_categories")
+        fields = (
+            "id",
+            "name",
+            "image",
+            "sub_categories"
+        )
 
 
 class ProductCategoryListSerializer(serializers.ModelSerializer):
