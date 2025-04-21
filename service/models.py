@@ -156,7 +156,7 @@ class Product(BaseModel):
             avg_rating=Avg("product_rating"),
             count_comments=Count("id")
         )
-        self.rating = round(agg_data["avg_rating"], 1) or 0.0
+        self.rating = round(agg_data["avg_rating"], 1) if agg_data.get("avg_rating") else 0.0
         self.comments_quantity = agg_data["count_comments"] or 0
         self.save()
 
