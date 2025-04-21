@@ -29,6 +29,12 @@ class CartItemUpdateSerializer(serializers.ModelSerializer):
             "is_checked"
         )
 
+    def validate(self, attrs):
+        product = Product.objects.filter(id=attrs.get("product").id).first()
+        if product.quantity == 0:
+            raise CustomApiException(error_code=ErrorCodes.INVALID_INPUT, message="Product is not exist in warehouse")
+        return attrs
+
 
 class CartItemBulkUpdateSerializer(serializers.Serializer):
     is_checked = serializers.BooleanField()
@@ -203,6 +209,7 @@ class CartItemSerializer(serializers.ModelSerializer):
         )
 
     def validate(self, attrs):
+        print(attrs)
         product = Product.objects.filter(id=attrs.get("product").id).first()
         if product.quantity == 0:
             raise CustomApiException(error_code=ErrorCodes.INVALID_INPUT, message="Product is not exist in warehouse")

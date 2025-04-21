@@ -499,7 +499,7 @@ class CartViewSet(ViewSet):
                                                 product=data_serializer.validated_data.get("product").id).first()
 
         data["cart"] = cart_item.cart.id
-        serializer = CartItemSerializer(cart_item, data=data, partial=True, context={"request": request})
+        serializer = CartItemUpdateSerializer(cart_item, data=data, partial=True, context={"request": request})
         if not serializer.is_valid():
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
 
