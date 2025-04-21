@@ -11,7 +11,8 @@ from .serializers import ProductCategorySerializer, ProductCategoryListSerialize
     PaginationSerializer, BrandDetailSerializer, SaleSerializer, AddsBrandsSerializer, AddsBrandsDetailSerializer, \
     SearchByNameSerializer, CommentUpdateSerializer, FavouriteSerializer, FavouriteListSerializer, CartSerializer, \
     CartItemSerializer, CartItemUpdateSerializer, CartItemBulkUpdateSerializer, CommentParamSerializer, \
-    CommentCreateSerializer, CartItemCreateSerializer, QuestionsSerializer, QuestionsUpdateSerializer
+    CommentCreateSerializer, CartItemCreateSerializer, QuestionsSerializer, QuestionsUpdateSerializer, \
+    QuestionsCreateSerializer
 from .models import ProductCategory, ProductSubCategory, ProductItemCategory, Product, Comment, Brand, Sale, AddsBrands, \
     Favourites, Cart, CartItem, Questions
 from rest_framework import status
@@ -596,8 +597,8 @@ class QuestionsViewSet(ViewSet):
             openapi.Parameter(name="product_id", in_=openapi.IN_QUERY, type=openapi.TYPE_INTEGER,
                               description="Product id")
         ],
-        request_body=QuestionsSerializer(),
-        responses={201: QuestionsSerializer()},
+        request_body=QuestionsCreateSerializer(),
+        responses={201: QuestionsCreateSerializer()},
         tags=["Question"]
     )
     def question_create(self, request):
@@ -605,7 +606,7 @@ class QuestionsViewSet(ViewSet):
         data = request.data
         data["customer"] = request.user.id
         data["product"] = param.get("product_id")
-        serializer = QuestionsSerializer(data=data, context={"reqeust": request})
+        serializer = QuestionsCreateSerializer(data=data, context={"reqeust": request})
         if not serializer.is_valid():
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
 

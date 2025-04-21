@@ -413,6 +413,18 @@ class OrderItemSerializer(serializers.ModelSerializer):
         )
 
 class QuestionsSerializer(serializers.ModelSerializer):
+    customer = CustomerSerializer(read_only=True)
+
+    class Meta:
+        model = Questions
+        fields = (
+            "id",
+            "customer",
+            "product",
+            "question"
+        )
+
+class QuestionsCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Questions
         fields = (
