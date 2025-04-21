@@ -80,7 +80,7 @@ class ProductViewSet(ViewSet):
     )
     def categories_list(self, request):
         category = ProductCategory.objects.all()
-        serializer = ProductCategoryListSerializer(category, many=True)
+        serializer = ProductCategoryListSerializer(category, many=True, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
@@ -279,7 +279,7 @@ class CommentViewSet(ViewSet):
         if not comment:
             raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
 
-        if comment.customer != request.user.id:
+        if comment.customer.id != request.user.id:
             raise CustomApiException(error_code=ErrorCodes.INVALID_INPUT, message="You could not delete the comment")
 
         comment.delete()

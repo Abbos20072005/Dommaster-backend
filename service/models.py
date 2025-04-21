@@ -62,7 +62,7 @@ class Order(BaseModel):
 class ProductCategory(BaseModel):
     name = models.CharField(max_length=150, verbose_name="Название")
     icon = models.ImageField(upload_to="product_category/icon/")
-    image = models.ImageField(upload_to='product_category', verbose_name="Изображение")
+    image = models.ImageField(upload_to="product_category", verbose_name="Изображение")
 
     def __str__(self):
         return self.name
