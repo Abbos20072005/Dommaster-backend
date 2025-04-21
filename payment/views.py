@@ -34,30 +34,35 @@ class PreparePaymentView(APIView):
 
         order = get_order(params["merchant_trans_id"])
         if not order:
-            logged("PreparePaymentView: order not found for ID -> {}".format(params["merchant_trans_id"]), "error")
-            return Response(ClickError(ClickErrorCode.USER_NOT_FOUND), status=status.HTTP_400_BAD_REQUEST)
+            response = ClickError(ClickErrorCode.USER_NOT_FOUND)
+            logged("PreparePaymentView: order not found -> response: {}".format(response.data), "error")
+            return Response(response, status=status.HTTP_400_BAD_REQUEST)
 
         if ClickTransaction.objects.filter(
                 account_id=params["merchant_trans_id"],
                 state=ClickTransaction.SUCCESSFULLY
         ).exists():
-            logged("PreparePaymentView: transaction already paid for ID -> {}".format(params["merchant_trans_id"]), "warning")
-            return Response(ClickError(ClickErrorCode.ALREADY_PAID), status=status.HTTP_400_BAD_REQUEST)
+            response = ClickError(ClickErrorCode.ALREADY_PAID)
+            logged("PreparePaymentView: already paid -> response: {}".format(response.data), "warning")
+            return Response(response, status=status.HTTP_400_BAD_REQUEST)
 
         if float(getattr(order, settings.CLICK_AMOUNT_FIELD)) != float(params["amount"]):
-            logged("PreparePaymentView: incorrect amount for order ID -> {}".format(params["merchant_trans_id"]), "error")
-            return Response(ClickError(ClickErrorCode.INCORRECT_AMOUNT), status=status.HTTP_400_BAD_REQUEST)
+            response = ClickError(ClickErrorCode.INCORRECT_AMOUNT)
+            logged("PreparePaymentView: incorrect amount -> response: {}".format(response.data), "error")
+            return Response(response, status=status.HTTP_400_BAD_REQUEST)
 
         with transaction.atomic():
             txn = create_transaction(params, order)
-            logged("PreparePaymentView: transaction created -> ID: {}".format(txn.id), "info")
-            return Response({
+            response = {
                 "click_trans_id": params["click_trans_id"],
                 "merchant_trans_id": params["merchant_trans_id"],
                 "merchant_prepare_id": txn.id,
                 "error": 0,
                 "error_note": "Success"
-            }, status=status.HTTP_200_OK)
+            }
+            logged("PreparePaymentView: success -> response: {}".format(response), "info")
+            return Response(response, status=status.HTTP_200_OK)
+
 
 
 class CompletePaymentView(APIView):
@@ -76,30 +81,34 @@ class CompletePaymentView(APIView):
         txn = get_transaction(params["merchant_prepare_id"])
 
         if not txn:
-            logged("CompletePaymentView: transaction not found -> ID: {}".format(params["merchant_prepare_id"]), "error")
-            return Response(ClickError(ClickErrorCode.TRANSACTION_NOT_FOUND), status=status.HTTP_400_BAD_REQUEST)
+            response = ClickError(ClickErrorCode.TRANSACTION_NOT_FOUND)
+            logged("CompletePaymentView: transaction not found -> response: {}".format(response.data), "error")
+            return Response(response, status=status.HTTP_400_BAD_REQUEST)
 
         if txn.state == ClickTransaction.SUCCESSFULLY:
-            logged("CompletePaymentView: transaction already marked as successful -> ID: {}".format(txn.id), "warning")
-            return Response(ClickError(ClickErrorCode.ALREADY_PAID), status=status.HTTP_400_BAD_REQUEST)
+            response = ClickError(ClickErrorCode.ALREADY_PAID)
+            logged("CompletePaymentView: already paid -> response: {}".format(response.data), "warning")
+            return Response(response, status=status.HTTP_400_BAD_REQUEST)
 
         txn.state = ClickTransaction.SUCCESSFULLY if params["error"] == 0 else ClickTransaction.CANCELLED
         order.status = 1 if params["error"] == 0 else 0
         order.save()
         txn.save()
 
-        logged("CompletePaymentView: transaction {} -> ID: {}".format(
-            "completed successfully" if txn.state == ClickTransaction.SUCCESSFULLY else "cancelled",
-            txn.id
-        ), "info")
-
-        return Response({
+        response = {
             "click_trans_id": txn.transaction_id,
             "merchant_trans_id": txn.account_id,
             "merchant_confirm_id": txn.id,
             "error": 0 if txn.state == ClickTransaction.SUCCESSFULLY else -9,
             "error_note": "Success" if txn.state == ClickTransaction.SUCCESSFULLY else "Payment canceled"
-        })
+        }
+
+        logged("CompletePaymentView: transaction {} -> response: {}".format(
+            "completed successfully" if txn.state == ClickTransaction.SUCCESSFULLY else "cancelled",
+            response
+        ), "info")
+
+        return Response(response)
 
 
 class MerchantAPIView(APIView):

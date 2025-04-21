@@ -3,8 +3,9 @@ import hashlib
 from django.conf import settings
 from django.utils.module_loading import import_string
 
-from .exception_click import ClickErrorCode, ClickError
 from payment.models import ClickTransaction
+from .exception_click import ClickErrorCode, ClickError
+from .logger import logged
 
 OrderModels = import_string(settings.CLICK_ACCOUNT_MODEL)
 
@@ -23,6 +24,8 @@ def _serialize_request(data, prepare):
 
     sign_string = generate_sign(data, prepare)
     if sign_string != data.get("sign_string"):
+        logged("SIGN_CHECK_FAILED: error -> click:{} ,me:{}".format(data.get("sign_string", ''), sign_string),
+               "error")
         return None, ClickError(ClickErrorCode.SIGN_CHECK_FAILED)
 
     return data, None
