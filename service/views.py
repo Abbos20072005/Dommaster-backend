@@ -215,12 +215,16 @@ class CommentViewSet(ViewSet):
     @swagger_auto_schema(
         operation_summary="Write comment to product, pk receive product id",
         operation_description="Write comment to product, pk receive product id",
+        manual_parameters=[
+            openapi.Parameter(name="product_id", in_=openapi.IN_QUERY, type=openapi.TYPE_INTEGER, description="Product id")
+        ],
         request_body=CommentSerializer(),
         responses={201: CommentSerializer()},
         tags=["Comment"]
     )
-    def comment_create(self, request, pk):
-        product = Product.objects.filter(id=pk).first()
+    def comment_create(self, request):
+        param = request.query_params
+        product = Product.objects.filter(id=param.get("product_id")).first()
         if not product:
             raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
 
@@ -230,7 +234,7 @@ class CommentViewSet(ViewSet):
 
         data = request.data
         data["customer"] = request.user.id
-        data["product"] = pk
+        data["product"] = param.get("product_id")
         serializer = CommentSerializer(data=data, context={"request": request})
         if not serializer.is_valid():
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)

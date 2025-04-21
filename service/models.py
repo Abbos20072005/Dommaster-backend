@@ -76,6 +76,7 @@ class ProductSubCategory(BaseModel):
     product_category = models.ForeignKey(ProductCategory, on_delete=models.CASCADE, related_name="product_category",
                                          verbose_name="Категория продукта")
     name = models.CharField(max_length=255, verbose_name="Название")
+    image = models.ImageField(upload_to="sub_category/", blank=True, null=True, verbose_name="Изображение")
 
     def __str__(self):
         return self.name
@@ -90,6 +91,7 @@ class ProductItemCategory(BaseModel):
                                              related_name="product_sub_category",
                                              verbose_name="Подкатегория продукта")
     name = models.CharField(max_length=255, verbose_name="Название")
+    image = models.ImageField(upload_to="item_category/", blank=True, null=True, verbose_name="Изображение")
 
     def __str__(self):
         return self.name
