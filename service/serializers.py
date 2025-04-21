@@ -19,6 +19,22 @@ class ProductCharacteristicsSerializer(serializers.ModelSerializer):
             "value"
         )
 
+class CartItemCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CartItem
+        fields = (
+            "id",
+            "cart",
+            "product",
+            "quantity",
+            "is_checked"
+        )
+
+    def validate(self, attrs):
+        product = Product.objects.filter(id=attrs.get("product").id).first()
+        if product.quantity == 0:
+            raise CustomApiException(error_code=ErrorCodes.INVALID_INPUT, message="Product is not exist in warehouse")
+        return attrs
 
 class CartItemUpdateSerializer(serializers.ModelSerializer):
     class Meta:

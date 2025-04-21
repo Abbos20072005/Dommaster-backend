@@ -11,7 +11,7 @@ from .serializers import ProductCategorySerializer, ProductCategoryListSerialize
     PaginationSerializer, BrandDetailSerializer, SaleSerializer, AddsBrandsSerializer, AddsBrandsDetailSerializer, \
     SearchByNameSerializer, CommentUpdateSerializer, FavouriteSerializer, FavouriteListSerializer, CartSerializer, \
     CartItemSerializer, CartItemUpdateSerializer, CartItemBulkUpdateSerializer, CommentParamSerializer, \
-    CommentCreateSerializer
+    CommentCreateSerializer, CartItemCreateSerializer
 from .models import ProductCategory, ProductSubCategory, ProductItemCategory, Product, Comment, Brand, Sale, AddsBrands, \
     Favourites, Cart, CartItem
 from rest_framework import status
@@ -462,7 +462,7 @@ class CartViewSet(ViewSet):
     @swagger_auto_schema(
         operation_summary="Create cart item",
         operation_description="Create cart item",
-        request_body=CartItemSerializer(),
+        request_body=CartItemCreateSerializer(),
         responses={200: CartSerializer()},
         tags=["Cart"]
     )
@@ -476,7 +476,7 @@ class CartViewSet(ViewSet):
             cart = Cart.objects.filter(customer=customer).first()
 
         data["cart"] = cart.id
-        serializer = CartItemSerializer(data=data, context={"request": request})
+        serializer = CartItemCreateSerializer(data=data, context={"request": request})
         if not serializer.is_valid():
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
 
