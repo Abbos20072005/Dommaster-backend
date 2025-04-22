@@ -19,19 +19,21 @@ from .utils.exception_click import ClickErrorCode, ClickError
 from .utils.exception_payme import MethodNotFound, PerformTransactionDoesNotExist, PermissionDenied
 from .utils.logger import logged
 from .utils.utils_click import _serialize_request, get_order, create_transaction, get_transaction
+from drf_yasg.utils import swagger_auto_schema
 
 
 class PreparePaymentView(APIView):
     SECRET_KEY = settings.CLICK_SECRET_KEY
 
+    @swagger_auto_schema(auto_schema=None)
     def post(self, request, *args, **kwargs):
-        data = request.data
-        logged("PreparePaymentView: received data -> {}".format(data), "info")
+        data = request.data or ''
+        logged("PreparePaymentView: received data -> {}".format(data or ''), "info")
 
         params, error = _serialize_request(data, prepare=True)
         if error:
-            logged("PreparePaymentView: serialization error -> {}".format(error.data), "error")
-            return error
+            logged("PreparePaymentView: serialization error -> {}".format(error), "error")
+            raise error
 
         order = get_order(params["merchant_trans_id"])
         if not order:
@@ -68,14 +70,15 @@ class PreparePaymentView(APIView):
 class CompletePaymentView(APIView):
     SECRET_KEY = settings.CLICK_SECRET_KEY
 
+    @swagger_auto_schema(auto_schema=None)
     def post(self, request, *args, **kwargs):
-        data = request.data
+        data = request.data or ''
         logged("CompletePaymentView: received data -> {}".format(data), "info")
 
         params, error = _serialize_request(data, prepare=False)
         if error:
-            logged("CompletePaymentView: serialization error -> {}".format(error.data), "error")
-            return error
+            logged("CompletePaymentView: serialization error -> {}".format(error), "error")
+            raise error
 
         order = get_order(params["merchant_trans_id"])
         txn = get_transaction(params["merchant_prepare_id"])
@@ -115,6 +118,7 @@ class MerchantAPIView(APIView):
     permission_classes = ()
     authentication_classes = ()
 
+    @swagger_auto_schema(auto_schema=None)
     def post(self, request, *args, **kwargs):
         password = request.META.get('HTTP_AUTHORIZATION')
         if self.authorize(password):
