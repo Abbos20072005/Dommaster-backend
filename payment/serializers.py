@@ -48,25 +48,37 @@ class MerchatTransactionsModelSerializer(serializers.ModelSerializer):
 
 
 class PaymeTransactionSerializer(serializers.ModelSerializer):
-    create_time = serializers.SerializerMethodField()
+    account = serializers.SerializerMethodField()
     reason = serializers.SerializerMethodField()
+    create_time = serializers.SerializerMethodField()
 
     class Meta:
         model = MerchatTransactionsModel
         fields = [
-            'transaction_id',
-            'order_id',
-            'amount',
-            'time',
-            'perform_time',
-            'cancel_time',
-            'state',
-            'reason',
-            'create_time',
+            "transaction_id",
+            "account",
+            "amount",
+            "time",
+            "perform_time",
+            "cancel_time",
+            "state",
+            "reason",
+            "create_time"
         ]
 
-    def get_create_time(self, obj):
-        return int(obj.created_at_ms)
+    def get_account(self, obj):
+        return {
+            "order_id": obj.order_id
+        }
 
     def get_reason(self, obj):
-        return int(obj.reason) if obj.reason else None
+        try:
+            return int(obj.reason) if obj.reason else None
+        except ValueError:
+            return None
+
+    def get_create_time(self, obj):
+        try:
+            return int(obj.created_at_ms)
+        except (TypeError, ValueError):
+            return None
