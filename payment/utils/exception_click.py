@@ -27,3 +27,6 @@ class ClickError(APIException):
             "error": error_code.value[0],  # xatolik kodi
             "error_note": error_code.value[1]  # xatolik izohi
         }
+
+    def __call__(self):
+        return self.detail
