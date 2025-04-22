@@ -120,7 +120,7 @@ class ProductViewSet(ViewSet):
         tags=["Product"]
     )
     def product_detail(self, request, pk):
-        products = Product.objects.filter(id=pk)
+        products = Product.objects.filter(id=pk).first()
         serializer = ProductSerializer(products, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
