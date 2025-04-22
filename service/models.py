@@ -137,7 +137,7 @@ class Product(BaseModel):
                                               verbose_name="Предметная категория продуктов")
     name = models.CharField(max_length=500, verbose_name="Название")
     description = RichTextField(verbose_name="Описание")
-    price = models.FloatField(default=0, verbose_name="Цена")
+    price = models.FloatField(default=0.0, verbose_name="Цена")
     discount_price = models.FloatField(blank=True, null=True, verbose_name="Скидочная цена")
     rating = models.FloatField(default=0.0, validators=[MinValueValidator(0.0), MaxValueValidator(5.0)],
                                verbose_name="Рейтинг")
@@ -274,12 +274,31 @@ class ProductCharacteristics(BaseModel):
 class Cart(BaseModel):
     customer = models.ForeignKey(Customer, blank=True, null=True, on_delete=models.CASCADE, verbose_name="Клиент")
     cart_token = models.CharField(max_length=64, unique=True, blank=True, null=True, verbose_name="Токен карзины")
+    total_price = models.FloatField(default=0.0, verbose_name="Общая цена")
+    saved_price = models.FloatField(default=0.0, verbose_name="Сэкономленная сумма")
+    products_total_price =  models.FloatField(default=0.0, verbose_name="Общая стоимость продуктов")
 
     def total_items(self):
         return sum(item.quantity for item in self.cart_item.all())
 
-    def total_price(self):
-        return sum(item.product.price * item.quantity for item in self.cart_item.all())
+    def calculate_total_price(self):
+        total = 0.0
+        saved_price_total = 0.0
+        products_total_price = 0.0
+        for item in self.cart_item.all():
+            if item.is_checked is True and item.product and item.product.discount_price:
+                total += item.product.discount_price * item.quantity
+                saved_price_total += (item.product.price - item.product.discount_price) * item.quantity
+                products_total_price += item.product.price * item.quantity
+            elif item.is_checked is True and item.product:
+                total += item.product.price * item.quantity
+                products_total_price += item.product.price * item.quantity
+
+
+        self.total_price = total
+        self.saved_price = saved_price_total
+        self.products_total_price = products_total_price
+        return self.total_price, self.saved_price, self.products_total_price
 
     def save(self, *args, force_insert=False, force_update=False, using=None, update_fields=None):
         if not self.cart_token:

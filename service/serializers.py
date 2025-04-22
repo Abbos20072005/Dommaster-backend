@@ -328,6 +328,9 @@ class CartSerializer(serializers.ModelSerializer):
             "id",
             "customer",
             "cart_token",
+            "total_price",
+            "saved_price",
+            "products_total_price",
             "cart_items"
         )
 
