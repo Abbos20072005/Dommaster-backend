@@ -128,6 +128,9 @@ class AuthViewSet(ViewSet):
     )
     def auth_me(self, request):
         customer = Customer.objects.filter(id=request.user.id).first()
+        if not customer:
+            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
+
         serializer = CustomerSerializer(customer, context={'request': request})
         return Response(data={'result': serializer.data, 'ok': True}, status=status.HTTP_200_OK)
 
