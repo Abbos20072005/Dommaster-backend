@@ -431,8 +431,10 @@ class FavouriteViewSet(ViewSet):
                         Favourites.objects.create(customer_id=customer, product=item.product)
                         item.delete()
         favourites = Favourites.objects.filter(customer_id=customer)
-        resp = Response(data={"result": FavouriteResponseSerializer(favourites, many=True, context={"request": request}).data, "ok": True},
-                        status=status.HTTP_200_OK)
+        resp = Response(
+            data={"result": FavouriteResponseSerializer(favourites, many=True, context={"request": request}).data,
+                  "ok": True},
+            status=status.HTTP_200_OK)
 
         resp.delete_cookie("cart_token")
         return resp
@@ -534,20 +536,27 @@ class CartViewSet(ViewSet):
         if not data_serializer.is_valid():
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=data_serializer.errors)
 
-        if data_serializer.validated_data.get("quantity") == 0:
-            cart_item = CartItem.objects.filter(product_id=data_serializer.validated_data.get("product")).first()
-            cart_item.delete()
-            return Response(data={"result": "Product successfully deleted from cart", "ok": True},
-                            status=status.HTTP_204_NO_CONTENT)
-
         customer = request.user.id
         if not customer:
             token = request.COOKIES.get("cart_token")
             cart_item = CartItem.objects.filter(cart__cart_token=token,
                                                 product=data_serializer.validated_data.get("product").id).first()
+            if not cart_item:
+                raise CustomApiException(error_code=ErrorCodes.NOT_FOUND, message="Product does not exist")
+            if cart_item and data_serializer.validated_data.get("quantity") == 0:
+                cart_item.delete()
+                return Response(data={"result": "Product successfully deleted from cart", "ok": True},
+                                status=status.HTTP_204_NO_CONTENT)
         else:
             cart_item = CartItem.objects.filter(cart__customer=customer,
                                                 product=data_serializer.validated_data.get("product").id).first()
+            if not cart_item:
+                raise CustomApiException(error_code=ErrorCodes.NOT_FOUND, message="Product does not exist")
+
+            if cart_item and data_serializer.validated_data.get("quantity") == 0:
+                cart_item.delete()
+                return Response(data={"result": "Product successfully deleted from cart", "ok": True},
+                                status=status.HTTP_204_NO_CONTENT)
 
         data["cart"] = cart_item.cart.id
         serializer = CartItemUpdateSerializer(cart_item, data=data, partial=True, context={"request": request})
