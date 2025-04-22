@@ -38,7 +38,7 @@ class PreparePaymentView(APIView):
         order = get_order(params["merchant_trans_id"])
         if not order:
             response = ClickError(ClickErrorCode.USER_NOT_FOUND)
-            logged("PreparePaymentView: order not found -> response: {}".format(response.data), "error")
+            logged("PreparePaymentView: order not found -> response: {}".format(response), "error")
             return Response(response, status=status.HTTP_400_BAD_REQUEST)
 
         if ClickTransaction.objects.filter(
@@ -46,12 +46,12 @@ class PreparePaymentView(APIView):
                 state=ClickTransaction.SUCCESSFULLY
         ).exists():
             response = ClickError(ClickErrorCode.ALREADY_PAID)
-            logged("PreparePaymentView: already paid -> response: {}".format(response.data), "warning")
+            logged("PreparePaymentView: already paid -> response: {}".format(response), "warning")
             return Response(response, status=status.HTTP_400_BAD_REQUEST)
 
         if float(getattr(order, settings.CLICK_AMOUNT_FIELD)) != float(params["amount"]):
             response = ClickError(ClickErrorCode.INCORRECT_AMOUNT)
-            logged("PreparePaymentView: incorrect amount -> response: {}".format(response.data), "error")
+            logged("PreparePaymentView: incorrect amount -> response: {}".format(response), "error")
             return Response(response, status=status.HTTP_400_BAD_REQUEST)
 
         with transaction.atomic():
