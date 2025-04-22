@@ -11,7 +11,8 @@ from payment.utils.exception_payme import PerformTransactionDoesNotExist
 class CancelTransaction:
 
     @transaction.atomic
-    def __call__(self, params: dict):
+    def __call__(self, data: dict):
+        params = data.get("params", {})
         serializer = MerchatTransactionsModelSerializer(
             data=get_params(params)
         )

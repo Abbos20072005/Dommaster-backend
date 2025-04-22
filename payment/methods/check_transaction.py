@@ -6,7 +6,8 @@ from payment.serializers import MerchatTransactionsModelSerializer
 
 
 class CheckTransaction:
-    def __call__(self, params: dict) -> None:
+    def __call__(self, data: dict) -> None:
+        params = data.get("params", {})
         response: dict = None
         serializer = MerchatTransactionsModelSerializer(
             data=get_params(params)

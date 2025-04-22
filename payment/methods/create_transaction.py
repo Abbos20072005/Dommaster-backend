@@ -8,7 +8,8 @@ from payment.utils.get_params import get_params
 
 
 class CreateTransaction:
-    def __call__(self, params: dict) -> dict:
+    def __call__(self, data: dict) -> dict:
+        params = data.get("params", {})
         serializer = MerchatTransactionsModelSerializer(
             data=get_params(params)
         )

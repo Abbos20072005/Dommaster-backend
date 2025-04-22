@@ -12,6 +12,7 @@ from .methods.cancel_transaction import CancelTransaction
 from .methods.check_perform_transaction import CheckPerformTransaction
 from .methods.check_transaction import CheckTransaction
 from .methods.create_transaction import CreateTransaction
+from .methods.get_statement_transaction import GetStatement
 from .methods.perform_transaction import PerformTransaction
 from .models import ClickTransaction
 from .utils.exception_click import ClickErrorCode, ClickError
@@ -62,7 +63,6 @@ class PreparePaymentView(APIView):
             }
             logged("PreparePaymentView: success -> response: {}".format(response), "info")
             return Response(response, status=status.HTTP_200_OK)
-
 
 
 class CompletePaymentView(APIView):
@@ -138,7 +138,7 @@ class MerchantAPIView(APIView):
             except PerformTransactionDoesNotExist:
                 raise PerformTransactionDoesNotExist()
 
-            paycom_method = paycom_method(incoming_data.get("params"))
+            paycom_method = paycom_method(incoming_data)
 
         return Response(data=paycom_method)
 
@@ -153,7 +153,8 @@ class MerchantAPIView(APIView):
             "CreateTransaction": CreateTransaction,
             "CancelTransaction": CancelTransaction,
             "PerformTransaction": PerformTransaction,
-            "CheckPerformTransaction": CheckPerformTransaction
+            "CheckPerformTransaction": CheckPerformTransaction,
+            "GetStatement": GetStatement
         }
 
         try:
