@@ -65,6 +65,18 @@ class CustomerAddressesSerializer(serializers.ModelSerializer):
             "is_default"
         )
 
+class CustomerAddressesCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomerAddresses
+        fields = (
+            "id",
+            "customer",
+            "name",
+            "location_name",
+            "latitude",
+            "longitude"
+        )
+
 class CustomerAddressesUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomerAddresses

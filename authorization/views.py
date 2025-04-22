@@ -13,7 +13,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from .utils import otp_code_generator, generate_random_password
 from .serializers import CustomerSerializer, LoginSerializer, RegisterSerializer, OTPVerifySerializer, \
     OTPResendSerializer, ChangePasswordSerializer, ForgotPasswordSerializer, CustomerAddressesSerializer, \
-    CustomerAddressesUpdateSerializer
+    CustomerAddressesUpdateSerializer, CustomerAddressesCreateSerializer
 
 
 class AuthViewSet(ViewSet):
@@ -245,6 +245,15 @@ class AuthViewSet(ViewSet):
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
 
         serializer.save()
+
+        if data.get("is_default") and data.get("is_default") is True:
+            customer_addresses = CustomerAddresses.objects.filter(customer=request.user.id)
+            print(customer_addresses)
+            for address in customer_addresses:
+                if address and address.id != pk:
+                    address.is_default = False
+                    address.save(update_fields=["is_default"])
+
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_202_ACCEPTED)
 
     @swagger_auto_schema(
@@ -265,14 +274,14 @@ class AuthViewSet(ViewSet):
     @swagger_auto_schema(
         operation_summary="Create customer address",
         operation_description="Create customer address",
-        request_body=CustomerAddressesSerializer(),
-        responses={201: CustomerAddressesSerializer()},
+        request_body=CustomerAddressesCreateSerializer(),
+        responses={201: CustomerAddressesCreateSerializer()},
         tags=["Auth"]
     )
     def address_create(self, request):
         data = request.data
         data["customer"] = request.user.id
-        serializer = CustomerAddressesSerializer(data=data, context={"request": request})
+        serializer = CustomerAddressesCreateSerializer(data=data, context={"request": request})
         if not serializer.is_valid():
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
 
