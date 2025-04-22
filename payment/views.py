@@ -39,7 +39,7 @@ class PreparePaymentView(APIView):
         if not order:
             response = ClickError(ClickErrorCode.USER_NOT_FOUND)
             logged("PreparePaymentView: order not found -> response: {}".format(response), "error")
-            return Response(response, status=status.HTTP_400_BAD_REQUEST)
+            raise response
 
         if ClickTransaction.objects.filter(
                 account_id=params["merchant_trans_id"],
@@ -47,12 +47,12 @@ class PreparePaymentView(APIView):
         ).exists():
             response = ClickError(ClickErrorCode.ALREADY_PAID)
             logged("PreparePaymentView: already paid -> response: {}".format(response), "warning")
-            return Response(response, status=status.HTTP_400_BAD_REQUEST)
+            raise response
 
         if float(getattr(order, settings.CLICK_AMOUNT_FIELD)) != float(params["amount"]):
             response = ClickError(ClickErrorCode.INCORRECT_AMOUNT)
             logged("PreparePaymentView: incorrect amount -> response: {}".format(response), "error")
-            return Response(response, status=status.HTTP_400_BAD_REQUEST)
+            raise response
 
         with transaction.atomic():
             txn = create_transaction(params, order)
@@ -64,7 +64,7 @@ class PreparePaymentView(APIView):
                 "error_note": "Success"
             }
             logged("PreparePaymentView: success -> response: {}".format(response), "info")
-            return Response(response, status=status.HTTP_200_OK)
+            raise response
 
 
 class CompletePaymentView(APIView):
@@ -86,12 +86,12 @@ class CompletePaymentView(APIView):
         if not txn:
             response = ClickError(ClickErrorCode.TRANSACTION_NOT_FOUND)
             logged("CompletePaymentView: transaction not found -> response: {}".format(response.data), "error")
-            return Response(response, status=status.HTTP_400_BAD_REQUEST)
+            raise response
 
         if txn.state == ClickTransaction.SUCCESSFULLY:
             response = ClickError(ClickErrorCode.ALREADY_PAID)
             logged("CompletePaymentView: already paid -> response: {}".format(response.data), "warning")
-            return Response(response, status=status.HTTP_400_BAD_REQUEST)
+            raise response
 
         txn.state = ClickTransaction.SUCCESSFULLY if int(params["error"]) == 0 else ClickTransaction.CANCELLED
         order.status = 1 if int(params["error"]) == 0 else 0
