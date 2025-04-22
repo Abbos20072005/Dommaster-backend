@@ -270,7 +270,7 @@ class ProductSerializer(serializers.ModelSerializer):
     def get_in_cart_quantity(self, obj):
         request = self.context.get("request")
         if not request:
-            return False
+            return 0
 
         customer = getattr(request.user, 'id', None)
         token = request.COOKIES.get("cart_token")
@@ -281,7 +281,7 @@ class ProductSerializer(serializers.ModelSerializer):
         elif token:
             cart_item = CartItem.objects.filter(cart__cart_token=token, product_id=obj.id).first()
             return cart_item.quantity if cart_item else 0
-        return False
+        return 0
 
 
 
