@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from payment.models import MerchatTransactionsModel
-from payment.serializers import MerchatTransactionsModelSerializer
+from payment.serializers import PaymeTransactionSerializer
 
 
 class GetStatement:
@@ -10,7 +10,7 @@ class GetStatement:
         timestamp_from = params.get("from")
         timestamp_to = params.get("to")
 
-        transactions = MerchatTransactionsModelSerializer(
+        transactions = PaymeTransactionSerializer(
             MerchatTransactionsModel.objects.filter(created_at_ms__gte=timestamp_from,
                                                     created_at_ms__lte=timestamp_to), many=True).data
 

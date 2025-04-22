@@ -44,3 +44,29 @@ class MerchatTransactionsModelSerializer(serializers.ModelSerializer):
             raise PerformTransactionDoesNotExist()
 
         return order_id
+
+
+
+class PaymeTransactionSerializer(serializers.ModelSerializer):
+    create_time = serializers.SerializerMethodField()
+    reason = serializers.SerializerMethodField()
+
+    class Meta:
+        model = MerchatTransactionsModel
+        fields = [
+            'transaction_id',
+            'order_id',
+            'amount',
+            'time',
+            'perform_time',
+            'cancel_time',
+            'state',
+            'reason',
+            'create_time',
+        ]
+
+    def get_create_time(self, obj):
+        return int(obj.created_at_ms)
+
+    def get_reason(self, obj):
+        return int(obj.reason) if obj.reason else None
