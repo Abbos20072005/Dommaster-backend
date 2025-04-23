@@ -35,7 +35,7 @@ class CartItemCreateSerializer(serializers.ModelSerializer):
         product = Product.objects.filter(id=attrs.get("product").id).first()
         if product.quantity == 0:
             raise CustomApiException(error_code=ErrorCodes.INVALID_INPUT, message="Product is not exist in warehouse")
-        elif product.quantity < attrs.get("quantity"):
+        elif product and attrs.get("quantity") and product.quantity < attrs.get("quantity"):
             raise CustomApiException(error_code=ErrorCodes.INVALID_INPUT, message="We don't have enough product in warehouse")
         return attrs
 
@@ -52,9 +52,9 @@ class CartItemUpdateSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         product = Product.objects.filter(id=attrs.get("product").id).first()
-        if product.quantity == 0:
+        if product and product.quantity == 0:
             raise CustomApiException(error_code=ErrorCodes.INVALID_INPUT, message="Product is not exist in warehouse")
-        elif product.quantity < attrs.get("quantity"):
+        elif product and attrs.get("quantity") and product.quantity < attrs.get("quantity"):
             raise CustomApiException(error_code=ErrorCodes.INVALID_INPUT, message="We don't have enough product in warehouse")
         return attrs
 
@@ -325,7 +325,7 @@ class CartItemSerializer(serializers.ModelSerializer):
         product = Product.objects.filter(id=attrs.get("product").id).first()
         if product.quantity == 0:
             raise CustomApiException(error_code=ErrorCodes.INVALID_INPUT, message="Product is not exist in warehouse")
-        elif product.quantity < attrs.get("quantity"):
+        elif product and attrs.get("quantity") and product.quantity < attrs.get("quantity"):
             raise CustomApiException(error_code=ErrorCodes.INVALID_INPUT, message="We don't have enough product in warehouse")
         return attrs
 

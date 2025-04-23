@@ -7,9 +7,47 @@ from exceptions.error_messages import ErrorCodes
 from service.models import Product
 from service.serializers import CommentParamSerializer
 from .serializers import BannerSerializer, MessageSerializer, MessageCreateSerializer, AboutUsSerializer, \
-    ChatCreateSerializer
-from .models import Banner, Chat, AboutUs, Messages
+    ChatCreateSerializer, PromocodeRequestSerializer
+from .models import Banner, Chat, AboutUs, Messages, Promocodes
+from service.models import Cart
 from drf_yasg import openapi
+from datetime import date
+
+
+class OrderViewSet(ViewSet):
+    @swagger_auto_schema(
+        operation_summary="Promocode checker",
+        operation_description="Promocode checker",
+        request_body=PromocodeRequestSerializer(),
+        responses={},
+        tags=["Order"]
+    )
+    def promocode_checker(self, request):
+        cart = Cart.objects.filter(customer_id=request.user.id).first()
+        if not cart:
+            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND, message="Cart not found")
+
+        data = request.data
+        serializer = PromocodeRequestSerializer(data=data, context={"request": request})
+        if not serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
+
+        promocode = Promocodes.objects.filter(name=serializer.validated_data.get("promocode").lower()).first()
+        if not promocode:
+            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND, message="Promocode does not found")
+
+        if promocode.expires_at < date.today():
+            raise CustomApiException(error_code=ErrorCodes.PROMOCODE_EXPIRED)
+
+        promocode_discount_price = 0
+        if not promocode.discount_precent and promocode.discount_price:
+            promocode_discount_price = cart.total_price - promocode.discount_price
+        elif not promocode.discount_price and promocode.discount_precent:
+            promocode_discount_price = cart.total_price * (1 - (promocode.discount_precent / 100))
+
+        return Response(
+            data={"result": {"promocode_discount": promocode_discount_price, "total_price": cart.total_price},
+                  "ok": True}, status=status.HTTP_200_OK)
 
 
 class BannerViewSet(ViewSet):
@@ -79,5 +117,3 @@ class AboutUsViewSet(ViewSet):
         about_us = AboutUs.objects.last()
         serializer = AboutUsSerializer(about_us, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
-
-

@@ -696,14 +696,13 @@ class QuestionsViewSet(ViewSet):
         return Response(data={"result": "Question successfully deleted", "ok": True}, status=status.HTTP_204_NO_CONTENT)
 
 
-# class OrderViewSet(ViewSet):
-#     @swagger_auto_schema(
-#         operation_summary="Create order",
-#         operation_description="Create order",
-#         request_body=,
-#         responses={201: },
-#         tags=["Order"]
-#     )
-#     def create_order(self, request):
-#         order = Order.objects.filter
-#         cart_items = CartItem.objects.filter(cart__customer_id=request.user.id)
+    # @swagger_auto_schema(
+    #     operation_summary="Create order",
+    #     operation_description="Create order",
+    #     request_body=,
+    #     responses={201: },
+    #     tags=["Order"]
+    # )
+    # def create_order(self, request):
+    #     order = Order.objects.filter
+    #     cart_items = CartItem.objects.filter(cart__customer_id=request.user.id)

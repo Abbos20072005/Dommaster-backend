@@ -1,6 +1,15 @@
 from django.contrib import admin
 from .models import Product, ProductCategory, ProductSubCategory, ProductItemCategory, Comment, Order, \
-    OrderItem, Tag, Brand, Sale, AddsBrands, ProductImage, Favourites, Cart, CartItem, Questions
+    OrderItem, Tag, Brand, Sale, AddsBrands, ProductImage, Favourites, Cart, CartItem, Questions, ProductCharacteristics
+
+
+@admin.register(ProductCharacteristics)
+class ProductCharacteristicsAdmin(admin.ModelAdmin):
+    list_display = ("id", "product", "name", "unit", "value")
+    list_display_links = ("id", "product")
+    search_fields = ("name",)
+    list_filter = ("unit",)
+
 
 @admin.register(Questions)
 class QuestionsAdmin(admin.ModelAdmin):

@@ -4,9 +4,6 @@ from authorization.models import Customer
 from ckeditor.fields import RichTextField
 from ckeditor_uploader.fields import RichTextUploadingField
 
-from service.models import Product
-
-
 class Banner(BaseModel):
     title = models.CharField(max_length=255, verbose_name="Заголовок")
     short_description = models.CharField(max_length=255, verbose_name="Краткое описание")
@@ -135,6 +132,17 @@ class Video(BaseModel):
         verbose_name_plural = "Видео"
 
 
-class Promocode(BaseModel):
-    pass
+class Promocodes(BaseModel):
+    name = models.CharField(max_length=15, unique=True, verbose_name="Название")
+    discount_precent = models.IntegerField(blank=True, null=True, verbose_name="Процент скидки")
+    discount_price = models.FloatField(blank=True, null=True, verbose_name="Сумма скидки")
+    expires_at = models.DateField(blank=True, null=True, verbose_name="Истекает в")
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name = "Промокод"
+        verbose_name_plural = "Промокоды"
+
 

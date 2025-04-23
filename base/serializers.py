@@ -1,5 +1,20 @@
 from rest_framework import serializers
-from .models import Banner, Chat, LoyaltyCard, AboutUs, Messages
+from .models import Banner, Chat, LoyaltyCard, AboutUs, Messages, Promocodes
+
+
+class PromocodeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Promocodes
+        fields = (
+            "id",
+            "name",
+            "discount_precent",
+            "discount_price"
+        )
+
+
+class PromocodeRequestSerializer(serializers.Serializer):
+    promocode = serializers.CharField(max_length=15)
 
 
 class BannerSerializer(serializers.ModelSerializer):
@@ -13,6 +28,7 @@ class BannerSerializer(serializers.ModelSerializer):
             "link"
         )
 
+
 class ChatCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Chat
@@ -20,6 +36,7 @@ class ChatCreateSerializer(serializers.ModelSerializer):
             "id",
             "customer"
         )
+
 
 class MessageSerializer(serializers.ModelSerializer):
     class Meta:
@@ -44,6 +61,7 @@ class MessageCreateSerializer(serializers.ModelSerializer):
             "file"
         )
 
+
 class LoyaltyCardSerializer(serializers.ModelSerializer):
     class Meta:
         model = LoyaltyCard
@@ -55,6 +73,7 @@ class LoyaltyCardSerializer(serializers.ModelSerializer):
             "is_active"
         )
 
+
 class AboutUsSerializer(serializers.ModelSerializer):
     class Meta:
         model = AboutUs
@@ -62,4 +81,3 @@ class AboutUsSerializer(serializers.ModelSerializer):
             "id",
             "description"
         )
-

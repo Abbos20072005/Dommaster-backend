@@ -1,5 +1,15 @@
 from django.contrib import admin
-from .models import Banner, Chat, AboutUs, Messages
+from .models import Banner, Chat, AboutUs, Messages, Promocodes
+
+@admin.register(Promocodes)
+class PromocodesAdmin(admin.ModelAdmin):
+    list_display = ("id", "name", "expires_at")
+    list_display_links = ("id", "name")
+    search_fields = ("name",)
+
+    def save_model(self, request, obj, form, change):
+        obj.name = obj.name.lower()
+        obj.save()
 
 @admin.register(Banner)
 class BannerAdmin(admin.ModelAdmin):
