@@ -144,6 +144,7 @@ class Product(BaseModel):
     discount = models.IntegerField(blank=True, null=True, verbose_name="Скидка")
     quantity = models.IntegerField(default=0, verbose_name="Количество")
     comments_quantity = models.IntegerField(default=0, verbose_name="Количество коментариев")
+    questions_quantity = models.IntegerField(default=0, verbose_name="Количество вопросов")
 
     def __str__(self):
         return self.name
@@ -157,6 +158,15 @@ class Product(BaseModel):
         self.rating = round(agg_data["avg_rating"], 1) if agg_data.get("avg_rating") else 0.0
         self.comments_quantity = agg_data["count_comments"] or 0
         self.save()
+
+    def update_questions(self):
+        from django.db.models import Count
+        agg_data = self.product_question.aggregate(
+            count_questions=Count("id")
+        )
+        self.questions_quantity = agg_data["count_questions"] or 0
+        self.save()
+
 
     class Meta:
         verbose_name = "Продукт"

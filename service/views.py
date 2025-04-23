@@ -14,7 +14,7 @@ from .serializers import ProductCategorySerializer, ProductCategoryListSerialize
     CommentCreateSerializer, CartItemCreateSerializer, QuestionsSerializer, QuestionsUpdateSerializer, \
     QuestionsCreateSerializer, FavouriteCreateSerializer, FavouriteResponseSerializer
 from .models import ProductCategory, ProductSubCategory, ProductItemCategory, Product, Comment, Brand, Sale, AddsBrands, \
-    Favourites, Cart, CartItem, Questions
+    Favourites, Cart, CartItem, Questions, Order, OrderItem
 from rest_framework import status
 from django.db.models import Q, Sum, Exists, OuterRef, Value, BooleanField
 from .paginations.get_products_pagination import get_products_paginator
@@ -440,7 +440,6 @@ class FavouriteViewSet(ViewSet):
         return resp
 
 
-# Set cockie is set only for http requests.
 class CartViewSet(ViewSet):
     @swagger_auto_schema(
         operation_summary="Get cart",
@@ -594,10 +593,6 @@ class CartViewSet(ViewSet):
                         status=status.HTTP_202_ACCEPTED)
 
 
-class OrderViewSet(ViewSet):
-    pass
-
-
 class ServiceViewSet(ViewSet):
     pass
 
@@ -685,3 +680,16 @@ class QuestionsViewSet(ViewSet):
 
         question.delete()
         return Response(data={"result": "Question successfully deleted", "ok": True}, status=status.HTTP_204_NO_CONTENT)
+
+
+# class OrderViewSet(ViewSet):
+#     @swagger_auto_schema(
+#         operation_summary="Create order",
+#         operation_description="Create order",
+#         request_body=,
+#         responses={201: },
+#         tags=["Order"]
+#     )
+#     def create_order(self, request):
+#         order = Order.objects.filter
+#         cart_items = CartItem.objects.filter(cart__customer_id=request.user.id)
