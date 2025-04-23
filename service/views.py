@@ -114,6 +114,20 @@ class ProductViewSet(ViewSet):
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
+        operation_summary="",
+        operation_description="",
+        responses={200: ProductItemCategorySerializer()},
+        tags=["Product"]
+    )
+    def item_category_detail(self, request, pk):
+        item_category = ProductItemCategory.objects.filter(id=pk).first()
+        if not item_category:
+            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
+
+        serializer = ProductItemCategorySerializer(item_category, context={"request": request})
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
         operation_summary="Product detail",
         operation_description="Product detail",
         responses={200: ProductSerializer()},
