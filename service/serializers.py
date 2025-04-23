@@ -221,6 +221,7 @@ class ProductSerializer(serializers.ModelSerializer):
     in_cart = serializers.SerializerMethodField()
     is_favourite = serializers.SerializerMethodField()
     in_cart_quantity = serializers.SerializerMethodField()
+    breadcrumbs = serializers.SerializerMethodField()
     characteristics = ProductCharacteristicsSerializer(source="product_characteristics", many=True, read_only=True)
 
     class Meta:
@@ -241,8 +242,12 @@ class ProductSerializer(serializers.ModelSerializer):
             "comments_quantity",
             "questions_quantity",
             "characteristics",
+            "breadcrumbs",
             "images",
         )
+
+    def get_breadcrumbs(self, obj):
+        return obj.get_breadcrumbs()
 
     def get_in_cart(self, obj):
         request = self.context.get("request")
@@ -423,17 +428,24 @@ class BrandDetailSerializer(serializers.ModelSerializer):
 
 
 class ProductItemCategorySerializer(serializers.ModelSerializer):
+    breadcrumbs = serializers.SerializerMethodField()
+
     class Meta:
         model = ProductItemCategory
         fields = (
             "id",
             "name",
-            "image"
+            "image",
+            "breadcrumbs"
         )
+
+    def get_breadcrumbs(self, obj):
+        return obj.get_breadcrumbs()
 
 
 class ProductSubCategorySerializer(serializers.ModelSerializer):
     product_item_categories = ProductItemCategorySerializer(source="product_sub_category", many=True, read_only=True)
+    breadcrumbs = serializers.SerializerMethodField()
 
     class Meta:
         model = ProductSubCategory
@@ -441,12 +453,17 @@ class ProductSubCategorySerializer(serializers.ModelSerializer):
             "id",
             "name",
             "image",
+            "breadcrumbs",
             "product_item_categories"
         )
+
+    def get_breadcrumbs(self, obj):
+        return obj.get_breadcrumbs()
 
 
 class ProductCategorySerializer(serializers.ModelSerializer):
     sub_categories = ProductSubCategorySerializer(source="product_category", many=True, read_only=True)
+    breadcrumbs = serializers.SerializerMethodField()
 
     class Meta:
         model = ProductCategory
@@ -454,8 +471,12 @@ class ProductCategorySerializer(serializers.ModelSerializer):
             "id",
             "name",
             "image",
+            "breadcrumbs",
             "sub_categories"
         )
+
+    def get_breadcrumbs(self, obj):
+        return obj.get_breadcrumbs()
 
 
 class ProductCategoryListSerializer(serializers.ModelSerializer):

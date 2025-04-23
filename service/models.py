@@ -65,6 +65,10 @@ class ProductCategory(BaseModel):
     def __str__(self):
         return self.name
 
+    def get_breadcrumbs(self):
+        from .utils import build_breadcrumbs
+        return build_breadcrumbs(self)
+
     class Meta:
         verbose_name = "Категория продуктов"
         verbose_name_plural = "Категории продуктов"
@@ -78,6 +82,10 @@ class ProductSubCategory(BaseModel):
 
     def __str__(self):
         return self.name
+
+    def get_breadcrumbs(self):
+        from .utils import build_breadcrumbs
+        return build_breadcrumbs(self)
 
     class Meta:
         verbose_name = "Подкатегория продуктов"
@@ -93,6 +101,10 @@ class ProductItemCategory(BaseModel):
 
     def __str__(self):
         return self.name
+
+    def get_breadcrumbs(self):
+        from .utils import build_breadcrumbs
+        return build_breadcrumbs(self)
 
     class Meta:
         verbose_name = "Предметная категория продуктов"
@@ -148,6 +160,10 @@ class Product(BaseModel):
 
     def __str__(self):
         return self.name
+
+    def get_breadcrumbs(self):
+        from .utils import build_breadcrumbs
+        return build_breadcrumbs(self)
 
     def update_rating(self):
         from django.db.models import Avg, Count
