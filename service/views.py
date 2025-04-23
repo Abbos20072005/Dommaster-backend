@@ -528,6 +528,9 @@ class CartViewSet(ViewSet):
         else:
             cart = Cart.objects.filter(customer=customer).first()
 
+        if not cart:
+            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND, message="Cart not found")
+
         data["cart"] = cart.id
         serializer = CartItemCreateSerializer(data=data, context={"request": request})
         if not serializer.is_valid():
