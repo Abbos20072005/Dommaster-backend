@@ -311,6 +311,7 @@ class Cart(BaseModel):
     class Meta:
         verbose_name = "Карзина"
         verbose_name_plural = "Карзины"
+        ordering = ("-created_at",)
 
 
 class CartItem(BaseModel):
@@ -327,6 +328,7 @@ class CartItem(BaseModel):
         unique_together = ("cart", "product")
         verbose_name = "Вещь в корзине"
         verbose_name_plural = "Вещи в корзине"
+        ordering = ("-created_at",)
 
 
 class Questions(BaseModel):
