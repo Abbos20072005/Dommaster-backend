@@ -373,3 +373,15 @@ class Questions(BaseModel):
     class Meta:
         verbose_name = "Вопрос"
         verbose_name_plural = "Вопросы"
+
+class RecentlyViewedProducts(BaseModel):
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, verbose_name="Клиент")
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="recently_viewed_products", verbose_name="Продукт")
+
+    def __str__(self):
+        return self.customer.full_name
+
+    class Meta:
+        verbose_name = "Недавно просмотренный продукт"
+        verbose_name_plural = "Недавно просмотренные продукты"
+        ordering = ("-created_at",)

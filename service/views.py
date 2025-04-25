@@ -12,9 +12,9 @@ from .serializers import ProductCategorySerializer, ProductCategoryListSerialize
     SearchByNameSerializer, CommentUpdateSerializer, FavouriteSerializer, FavouriteListSerializer, CartSerializer, \
     CartItemSerializer, CartItemUpdateSerializer, CartItemBulkUpdateSerializer, CommentParamSerializer, \
     CommentCreateSerializer, CartItemCreateSerializer, QuestionsSerializer, QuestionsUpdateSerializer, \
-    QuestionsCreateSerializer, FavouriteCreateSerializer, FavouriteResponseSerializer
+    QuestionsCreateSerializer, FavouriteCreateSerializer, FavouriteResponseSerializer, RecentlyViewedProductsSerializer
 from .models import ProductCategory, ProductSubCategory, ProductItemCategory, Product, Comment, Brand, Sale, AddsBrands, \
-    Favourites, Cart, CartItem, Questions, Order, OrderItem
+    Favourites, Cart, CartItem, Questions, Order, OrderItem, RecentlyViewedProducts
 from rest_framework import status
 from django.db.models import Q, Sum, Exists, OuterRef, Value, BooleanField
 from .paginations.get_products_pagination import get_products_paginator
@@ -28,10 +28,32 @@ import secrets
 from django.db import transaction
 
 
-# TODO: in cart product quantity
-
-# TODO: need to do sale function
 class ProductViewSet(ViewSet):
+    @swagger_auto_schema(
+        operation_summary="Recently viewed products",
+        operation_description="Recently viewed products",
+        manual_parameters=[
+            openapi.Parameter(
+                name='page', in_=openapi.IN_QUERY, description='Page', type=openapi.TYPE_INTEGER),
+            openapi.Parameter(
+                name='page_size', in_=openapi.IN_QUERY, description='Page size', type=openapi.TYPE_INTEGER),
+        ],
+        responses={200: RecentlyViewedProductsSerializer(many=True)},
+        tags=["Product"]
+    )
+    def recently_viewed(self, request):
+        params = request.query_params
+        param_serializer = PaginationSerializer(data=params, context={"request": request})
+        if not param_serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=param_serializer.errors)
+
+        recently_viewed_products = Product.objects.filter(recently_viewed_products__customer_id=request.user.id)
+        return Response(data={"result": get_products_paginator(response_data=recently_viewed_products,
+                                                               page=param_serializer.validated_data.get("page"),
+                                                               page_size=param_serializer.validated_data.get(
+                                                                   "page_size"), context={"request": request}), "ok": True},
+                        status=status.HTTP_200_OK)
+
     @swagger_auto_schema(
         operation_summary="Search products by name",
         operation_description="Search products by name",

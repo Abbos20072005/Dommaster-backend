@@ -35,5 +35,6 @@ urlpatterns = [
     path("questions/<int:pk>/",
          QuestionsViewSet.as_view({"patch": "update_question", "delete": "delete_question"}),
          name="create question"),
-    path("questions/me/", QuestionsViewSet.as_view({"get": "my_questions"}), name="my questions")
+    path("questions/me/", QuestionsViewSet.as_view({"get": "my_questions"}), name="my questions"),
+    path("recently/viewed/", ProductViewSet.as_view({"get": "recently_viewed"}), name="recently viewed products")
 ]

@@ -2,7 +2,8 @@ from rest_framework import serializers
 
 from authorization.serializers import CustomerSerializer
 from .models import Product, ProductCategory, ProductItemCategory, ProductSubCategory, ProductImage, Comment, \
-    Order, OrderItem, Brand, Sale, AddsBrands, Favourites, Cart, CartItem, ProductCharacteristics, Questions
+    Order, OrderItem, Brand, Sale, AddsBrands, Favourites, Cart, CartItem, ProductCharacteristics, Questions, \
+    RecentlyViewedProducts
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from config import settings
@@ -36,7 +37,8 @@ class CartItemCreateSerializer(serializers.ModelSerializer):
         if product.quantity == 0:
             raise CustomApiException(error_code=ErrorCodes.INVALID_INPUT, message="Product is not exist in warehouse")
         elif product and attrs.get("quantity") and product.quantity < attrs.get("quantity"):
-            raise CustomApiException(error_code=ErrorCodes.INVALID_INPUT, message="We don't have enough product in warehouse")
+            raise CustomApiException(error_code=ErrorCodes.INVALID_INPUT,
+                                     message="We don't have enough product in warehouse")
         return attrs
 
 
@@ -55,7 +57,8 @@ class CartItemUpdateSerializer(serializers.ModelSerializer):
         if product and product.quantity == 0:
             raise CustomApiException(error_code=ErrorCodes.INVALID_INPUT, message="Product is not exist in warehouse")
         elif product and attrs.get("quantity") and product.quantity < attrs.get("quantity"):
-            raise CustomApiException(error_code=ErrorCodes.INVALID_INPUT, message="We don't have enough product in warehouse")
+            raise CustomApiException(error_code=ErrorCodes.INVALID_INPUT,
+                                     message="We don't have enough product in warehouse")
         return attrs
 
 
@@ -294,6 +297,17 @@ class ProductSerializer(serializers.ModelSerializer):
         return 0
 
 
+class RecentlyViewedProductsSerializer(serializers.ModelSerializer):
+    product = ProductSerializer(read_only=True)
+
+    class Meta:
+        model = RecentlyViewedProducts
+        fields = (
+            "id",
+            # "customer",
+            "product",
+            "created_at"
+        )
 
 
 class FavouriteResponseSerializer(serializers.ModelSerializer):
@@ -307,6 +321,7 @@ class FavouriteResponseSerializer(serializers.ModelSerializer):
             "favourite_token",
             "product",
         )
+
 
 class CartItemSerializer(serializers.ModelSerializer):
     product = ProductSerializer(read_only=True)
@@ -326,7 +341,8 @@ class CartItemSerializer(serializers.ModelSerializer):
         if product.quantity == 0:
             raise CustomApiException(error_code=ErrorCodes.INVALID_INPUT, message="Product is not exist in warehouse")
         elif product and attrs.get("quantity") and product.quantity < attrs.get("quantity"):
-            raise CustomApiException(error_code=ErrorCodes.INVALID_INPUT, message="We don't have enough product in warehouse")
+            raise CustomApiException(error_code=ErrorCodes.INVALID_INPUT,
+                                     message="We don't have enough product in warehouse")
         return attrs
 
 
