@@ -191,6 +191,30 @@ class ProductViewSet(ViewSet):
 
 class CommentViewSet(ViewSet):
     @swagger_auto_schema(
+        operation_summary="My comments list",
+        operation_description="My comments list",
+        manual_parameters=[
+            openapi.Parameter(
+                name='page', in_=openapi.IN_QUERY, description='Page', type=openapi.TYPE_INTEGER),
+            openapi.Parameter(
+                name='page_size', in_=openapi.IN_QUERY, description='Page size', type=openapi.TYPE_INTEGER),
+        ],
+        responses={200: CommentSerializer(many=True)},
+        tags=["Comment"]
+    )
+    def my_comments(self, request):
+        params = request.query_params
+        param_serializer = PaginationSerializer(data=params, context={"request": request})
+        if not param_serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=param_serializer.errors)
+
+        comments = Comment.objects.filter(customer=request.user.id)
+        return Response(data={
+            "result": get_comments_paginator(response_data=comments, page=param_serializer.validated_data.get("page"),
+                                             page_size=param_serializer.validated_data.get("page_size"),
+                                             context={"request": request}), "ok": True}, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
         operation_summary="Get product comments",
         operation_description="Get product comments",
         manual_parameters=[
@@ -697,7 +721,6 @@ class QuestionsViewSet(ViewSet):
 
         question.delete()
         return Response(data={"result": "Question successfully deleted", "ok": True}, status=status.HTTP_204_NO_CONTENT)
-
 
     # @swagger_auto_schema(
     #     operation_summary="Create order",

@@ -20,6 +20,7 @@ urlpatterns = [
     path("comments/<int:pk>/",
          CommentViewSet.as_view({"patch": "comment_update", "delete": "comment_delete"}),
          name="comment create"),
+    path("comments/me/", CommentViewSet.as_view({"get": "my_comments"}), name="my comments"),
     path("most/sold/", ProductViewSet.as_view({"get": "most_sold"}), name="most sold"),
     path("favourites/", FavouriteViewSet.as_view({"get": "favourite_list", "post": "create_favourite"}),
          name="create favourite"),
