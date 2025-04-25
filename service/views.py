@@ -157,8 +157,22 @@ class ProductViewSet(ViewSet):
     )
     def product_detail(self, request, pk):
         products = Product.objects.filter(id=pk).first()
+        if not products:
+            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
+
+        customer = request.user.id
+        if not customer:
+            serializer = ProductSerializer(products, context={"request": request})
+            return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+
+        recently_viewed_products = RecentlyViewedProducts.objects.filter(customer_id=customer, product_id=products.id).first()
+        if not recently_viewed_products:
+            RecentlyViewedProducts.objects.create(customer_id=customer, product_id=products.id)
+
         serializer = ProductSerializer(products, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+
+
 
     @swagger_auto_schema(
         operation_summary="Products filter",
