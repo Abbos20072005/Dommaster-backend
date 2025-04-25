@@ -7,7 +7,8 @@ urlpatterns = [
     path("categories/<int:pk>/", ProductViewSet.as_view({"get": "sub_category_list"}), name="sub categories list"),
     path("sub/categories/<int:pk>/", ProductViewSet.as_view({"get": "item_category_list"}),
          name="item categories list"),
-    path("item/categories/<int:pk>/", ProductViewSet.as_view({"get": "item_category_detail"}), name="item category detail"),
+    path("item/categories/<int:pk>/", ProductViewSet.as_view({"get": "item_category_detail"}),
+         name="item category detail"),
     path("products/<int:pk>/", ProductViewSet.as_view({"get": "product_detail"}), name="products detail"),
     path("brands/", BrandViewSet.as_view({"get": "brand_list"}), name="brand list"),
     path("brands/<int:pk>/", BrandViewSet.as_view({"get": "brand_detail"}), name="brand detail"),
@@ -16,7 +17,8 @@ urlpatterns = [
     path("adds/brands/<int:pk>/", AddsBrandsViewSet.as_view({"get": "adds_brands_detail"}), name="adds brands detail"),
     path("search/", ProductViewSet.as_view({"get": "search_by_name"}), name="search by name"),
     path("product/filter/", ProductViewSet.as_view({"post": "product_filter"}), name="product filter"),
-    path("comments/", CommentViewSet.as_view({"post": "comment_create", "get": "product_comments"}), name="comment by product"),
+    path("comments/", CommentViewSet.as_view({"post": "comment_create", "get": "product_comments"}),
+         name="comment by product"),
     path("comments/<int:pk>/",
          CommentViewSet.as_view({"patch": "comment_update", "delete": "comment_delete"}),
          name="comment create"),
@@ -28,8 +30,10 @@ urlpatterns = [
     path("cart/item/", CartViewSet.as_view({"post": "create_cart_item", "patch": "update_cart_item"}),
          name="create cart item"),
     path("cart/item/bulk/", CartViewSet.as_view({"post": "cart_bulk_update"}), name="cart bulk update"),
-    path("questions/", QuestionsViewSet.as_view({"post": "question_create", "get": "questions_list"}), name="question list"),
+    path("questions/", QuestionsViewSet.as_view({"post": "question_create", "get": "questions_list"}),
+         name="question list"),
     path("questions/<int:pk>/",
          QuestionsViewSet.as_view({"patch": "update_question", "delete": "delete_question"}),
-         name="create question")
+         name="create question"),
+    path("questions/me/", QuestionsViewSet.as_view({"get": "my_questions"}), name="my questions")
 ]

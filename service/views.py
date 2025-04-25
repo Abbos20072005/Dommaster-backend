@@ -640,6 +640,31 @@ class ServiceViewSet(ViewSet):
 
 class QuestionsViewSet(ViewSet):
     @swagger_auto_schema(
+        operation_summary="My questions list",
+        operation_description="My questions list",
+        manual_parameters=[
+            openapi.Parameter(
+                name='page', in_=openapi.IN_QUERY, description='Page', type=openapi.TYPE_INTEGER),
+            openapi.Parameter(
+                name='page_size', in_=openapi.IN_QUERY, description='Page size', type=openapi.TYPE_INTEGER),
+        ],
+        responses={200: QuestionsSerializer(many=True)},
+        tags=["Question"]
+    )
+    def my_questions(self, request):
+        params = request.query_params
+        param_serializer = PaginationSerializer(data=params, context={"request": request})
+        if not param_serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=param_serializer.errors)
+
+        questions = Questions.objects.filter(customer=request.user.id)
+        return Response(data={
+            "result": get_questions_paginator(response_data=questions, page=param_serializer.validated_data.get("page"),
+                                              page_size=param_serializer.validated_data.get("page_size"),
+                                              context={"request": request}), "ok": True},
+            status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
         operation_summary="Product questions list",
         operation_description="Product questions list",
         manual_parameters=[
