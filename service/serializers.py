@@ -375,7 +375,7 @@ class FavouriteListSerializer(serializers.ModelSerializer):
 
 
 class AddsBrandsSerializer(serializers.ModelSerializer):
-    products = serializers.SerializerMethodField()
+    products = ProductSerializer(many=True, read_only=True)
 
     class Meta:
         model = AddsBrands
@@ -385,34 +385,6 @@ class AddsBrandsSerializer(serializers.ModelSerializer):
             "brand",
             "products"
         )
-
-    def get_products(self, obj):
-        request = self.context.get("request")
-        if not request:
-            return []
-
-        customer_id = getattr(request.user, "id", None)
-        token = request.COOKIES.get("cart_token")
-
-        products_qs = Product.objects.filter(brand_id=obj.brand.id).order_by("id")
-        print(products_qs)
-
-        if customer_id:
-            cart_filter = CartItem.objects.filter(
-                cart__customer_id=customer_id,
-                product=OuterRef("pk")
-            )
-        else:
-            cart_filter = CartItem.objects.filter(
-                cart__cart_token=token,
-                product=OuterRef("pk")
-            )
-
-        products_qs = products_qs.annotate(
-            in_cart=Exists(cart_filter)
-        )
-
-        return ProductSerializer(products_qs, many=True, context={"request": request}).data
 
 
 class SaleSerializer(serializers.ModelSerializer):
