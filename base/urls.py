@@ -1,9 +1,9 @@
 from django.urls import path
-from .views import BannerViewSet, ChatViewSet, AboutUsViewSet, OrderViewSet
+from .views import BannerViewSet, ChatViewSet, AboutUsViewSet, PromocodeViewSet
 
 urlpatterns = [
     path("banner/", BannerViewSet.as_view({"get": "banner_list"}), name="banner list"),
     path("chat/", ChatViewSet.as_view({"get": "message_list", "post": "message_create"}), name="chat message list"),
     path("about/", AboutUsViewSet.as_view({"get": "about_us"}), name="about us"),
-    path("promocode/checker/", OrderViewSet.as_view({"post": "promocode_checker"}), name="promocode checker")
+    path("promocode/checker/", PromocodeViewSet.as_view({"post": "promocode_checker"}), name="promocode checker")
 ]

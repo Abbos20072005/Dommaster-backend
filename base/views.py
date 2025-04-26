@@ -14,7 +14,7 @@ from drf_yasg import openapi
 from datetime import date
 
 
-class OrderViewSet(ViewSet):
+class PromocodeViewSet(ViewSet):
     @swagger_auto_schema(
         operation_summary="Promocode checker",
         operation_description="Promocode checker",
