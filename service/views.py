@@ -12,7 +12,8 @@ from .serializers import ProductCategorySerializer, ProductCategoryListSerialize
     SearchByNameSerializer, CommentUpdateSerializer, FavouriteSerializer, FavouriteListSerializer, CartSerializer, \
     CartItemSerializer, CartItemUpdateSerializer, CartItemBulkUpdateSerializer, CommentParamSerializer, \
     CommentCreateSerializer, CartItemCreateSerializer, QuestionsSerializer, QuestionsUpdateSerializer, \
-    QuestionsCreateSerializer, FavouriteCreateSerializer, FavouriteResponseSerializer, RecentlyViewedProductsSerializer
+    QuestionsCreateSerializer, FavouriteCreateSerializer, FavouriteResponseSerializer, RecentlyViewedProductsSerializer, \
+    OrderSerializer
 from .models import ProductCategory, ProductSubCategory, ProductItemCategory, Product, Comment, Brand, Sale, AddsBrands, \
     Favourites, Cart, CartItem, Questions, Order, OrderItem, RecentlyViewedProducts
 from rest_framework import status
@@ -26,6 +27,9 @@ from django.contrib.postgres.search import TrigramSimilarity
 from django.db.models.functions import Greatest
 import secrets
 from django.db import transaction
+from base.models import Promocodes
+from base.serializers import PromocodeRequestSerializer
+from datetime import date
 
 
 class ProductViewSet(ViewSet):
@@ -51,7 +55,8 @@ class ProductViewSet(ViewSet):
         return Response(data={"result": get_products_paginator(response_data=recently_viewed_products,
                                                                page=param_serializer.validated_data.get("page"),
                                                                page_size=param_serializer.validated_data.get(
-                                                                   "page_size"), context={"request": request}), "ok": True},
+                                                                   "page_size"), context={"request": request}),
+                              "ok": True},
                         status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
@@ -165,14 +170,13 @@ class ProductViewSet(ViewSet):
             serializer = ProductSerializer(products, context={"request": request})
             return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
-        recently_viewed_products = RecentlyViewedProducts.objects.filter(customer_id=customer, product_id=products.id).first()
+        recently_viewed_products = RecentlyViewedProducts.objects.filter(customer_id=customer,
+                                                                         product_id=products.id).first()
         if not recently_viewed_products:
             RecentlyViewedProducts.objects.create(customer_id=customer, product_id=products.id)
 
         serializer = ProductSerializer(products, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
-
-
 
     @swagger_auto_schema(
         operation_summary="Products filter",
@@ -783,13 +787,45 @@ class QuestionsViewSet(ViewSet):
         question.delete()
         return Response(data={"result": "Question successfully deleted", "ok": True}, status=status.HTTP_204_NO_CONTENT)
 
-    # @swagger_auto_schema(
-    #     operation_summary="Create order",
-    #     operation_description="Create order",
-    #     request_body=,
-    #     responses={201: },
-    #     tags=["Order"]
-    # )
-    # def create_order(self, request):
-    #     order = Order.objects.filter
-    #     cart_items = CartItem.objects.filter(cart__customer_id=request.user.id)
+
+class OrderViewSet(ViewSet):
+    @swagger_auto_schema(
+        operation_summary="Create order",
+        operation_description="Create order",
+        request_body=PromocodeRequestSerializer(),
+        responses={201: OrderSerializer()},
+        tags=["Order"]
+    )
+    def create_order(self, request):
+        cart = Cart.objects.filter(customer_id=request.user.id).first()
+        if not cart:
+            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND, message="Cart not found")
+
+        data = request.data
+        serializer = PromocodeRequestSerializer(data=data, context={"request": request})
+        if not serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
+
+        promocode = Promocodes.objects.filter(name=serializer.validated_data.get("promocode").lower()).first()
+        if not promocode:
+            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND, message="Promocode does not found")
+
+        if promocode.expires_at < date.today():
+            raise CustomApiException(error_code=ErrorCodes.PROMOCODE_EXPIRED)
+
+        promocode_discount_price = 0
+        if not promocode.discount_precent and promocode.discount_price:
+            promocode_discount_price = cart.total_price - promocode.discount_price
+        elif not promocode.discount_price and promocode.discount_precent:
+            promocode_discount_price = cart.total_price * (1 - (promocode.discount_precent / 100))
+
+        order = Order.objects.create(customer_id=request.user.id, promocode_id=promocode.id,
+                                     total_price=promocode_discount_price)
+
+        cart_items = CartItem.objects.filter(cart_id=cart.id)
+        for cart_item in cart_items:
+            OrderItem.objects.create(order=order, product=cart_item.product, quantity=cart_item.quantity)
+            cart_item.delete()
+
+        return Response(data={"result": OrderSerializer(order, context={"request": request}).data, "ok": True},
+                        status=status.HTTP_201_CREATED)

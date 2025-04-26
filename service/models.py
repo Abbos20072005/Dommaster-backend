@@ -46,7 +46,7 @@ class Brand(BaseModel):
 
 
 class Order(BaseModel):
-    product = models.ForeignKey(Promocodes, on_delete=models.SET_NULL, null=True, verbose_name="Промокод")
+    promocode = models.ForeignKey(Promocodes, on_delete=models.SET_NULL, null=True, verbose_name="Промокод")
     customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, verbose_name="Покупатель")
     status = models.IntegerField(choices=ORDER_STATUS, default=0, verbose_name="Статус")
     total_price = models.FloatField(default=0.0, verbose_name="Общая стоимость")
