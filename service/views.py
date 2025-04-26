@@ -540,7 +540,7 @@ class CartViewSet(ViewSet):
                             status=status.HTTP_200_OK)
 
             resp.set_cookie("cart_token", cart.cart_token, httponly=False,
-                            secure=True, samesite="Lax")
+                            secure=True, samesite="None")
 
             return resp
 
