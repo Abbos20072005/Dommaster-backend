@@ -97,7 +97,8 @@ class ProductViewSet(ViewSet):
         tags=["Product"]
     )
     def most_sold(self, request):
-        products = Product.objects.annotate(most_solds=Sum("product_order_item__quantity")).order_by("-most_solds")[:20]
+        products = Product.objects.annotate(most_solds=Sum("product_order_item__quantity")).exclude(most_solds=0).order_by(
+                "-most_solds")[:20]
         serializer = ProductSerializer(products, many=True, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
@@ -453,7 +454,7 @@ class FavouriteViewSet(ViewSet):
             resp = Response(data={"result": favourite_serializer.data, "ok": True}, status=status.HTTP_200_OK)
             resp.set_cookie("favourite_token", favourite_serializer.validated_data.get("favourite_token"),
                             httponly=False,
-                            secure=True, samesite="Lax")
+                            secure=True, samesite="None")
 
             return resp
 
@@ -491,7 +492,7 @@ class FavouriteViewSet(ViewSet):
             resp = Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
             resp.set_cookie("favourite_token", token,
                             httponly=False,
-                            secure=True, samesite="Lax")
+                            secure=True, samesite="None")
 
             return resp
 
