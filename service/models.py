@@ -288,7 +288,7 @@ class ProductCharacteristics(BaseModel):
     product = models.ForeignKey(Product, blank=True, null=True, related_name="product_characteristics",
                                 on_delete=models.CASCADE, verbose_name="Продукт")
     name = models.CharField(max_length=150, verbose_name="Название")
-    unit = models.CharField(max_length=150, verbose_name="Еденица измерения")
+    unit = models.CharField(max_length=150, blank=True, null=True, verbose_name="Еденица измерения")
     value = models.CharField(max_length=150, verbose_name="Значение")
 
     def __str__(self):
