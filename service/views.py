@@ -73,7 +73,7 @@ class ProductViewSet(ViewSet):
         if not param:
             return Response(data={"result": [], "ok": True}, status=status.HTTP_200_OK)
 
-        param_data = param.strip().lower()
+        param_data = param.strip()
         cache_key = f"{param_data}"
 
         query = cache.get(cache_key)
@@ -85,8 +85,8 @@ class ProductViewSet(ViewSet):
                     TrigramSimilarity("name_ru", param_data),
                     TrigramSimilarity("name_en", param_data)
                 )
-            ).filter(similarity__gt=0.1).order_by('-similarity').values_list("name", flat=True)
-            cache.set(cache_key, product, timeout=300)
+            ).filter(similarity__gt=0.01).order_by('-similarity').values_list("name", flat=True)
+            cache.set(cache_key, product, timeout=240)
 
         return Response(data={"result": cache.get(cache_key), "ok": True}, status=status.HTTP_200_OK)
 
