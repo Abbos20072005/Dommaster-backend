@@ -823,7 +823,7 @@ class OrderViewSet(ViewSet):
         order = Order.objects.create(customer_id=request.user.id, promocode_id=promocode.id,
                                      total_price=promocode_discount_price)
 
-        cart_items = CartItem.objects.filter(cart_id=cart.id)
+        cart_items = CartItem.objects.filter(cart_id=cart.id).exclude(is_checked=False)
         for cart_item in cart_items:
             OrderItem.objects.create(order=order, product=cart_item.product, quantity=cart_item.quantity)
             cart_item.delete()
