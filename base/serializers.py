@@ -78,8 +78,9 @@ class PromocodeSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "name",
+            "code",
             "discount_precent",
-            "discount_price"
+            "expires_at"
         )
 
 

@@ -133,7 +133,8 @@ class Video(BaseModel):
 
 
 class Promocodes(BaseModel):
-    name = models.CharField(max_length=15, unique=True, verbose_name="Название")
+    name = models.CharField(max_length=150, verbose_name="Название")
+    code = models.CharField(max_length=15, unique=True, verbose_name="Код")
     discount_precent = models.IntegerField(blank=True, null=True, verbose_name="Процент скидки")
     discount_price = models.FloatField(blank=True, null=True, verbose_name="Сумма скидки")
     expires_at = models.DateField(verbose_name="Истекает в")

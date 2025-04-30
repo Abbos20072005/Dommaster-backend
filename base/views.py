@@ -121,7 +121,7 @@ class NewsViewSet(ViewSet):
         if not news:
             raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
 
-        serializer = NewsSerializer(news, context={"request": request})
+        serializer = NewsDetailSerializer(news, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
 
