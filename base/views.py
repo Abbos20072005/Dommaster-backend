@@ -21,18 +21,18 @@ class VideoViewSet(ViewSet):
     @swagger_auto_schema(
         operation_summary="Video list",
         operation_description="Video list",
-        responses={200: NewsSerializer(many=True)},
+        responses={200: VideoSerializer(many=True)},
         tags=["Video"]
     )
     def video_list(self, request):
         video = Reviews.objects.all()
-        serializer = NewsSerializer(video, many=True, context={"request": request})
+        serializer = VideoSerializer(video, many=True, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
         operation_summary="Video detail",
         operation_description="Video detail",
-        responses={200: NewsDetailSerializer()},
+        responses={200: VideoSerializer()},
         tags=["Video"]
     )
     def video_detail(self, request, pk):
@@ -40,7 +40,7 @@ class VideoViewSet(ViewSet):
         if not video:
             raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
 
-        serializer = NewsSerializer(video, context={"request": request})
+        serializer = VideoSerializer(video, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
 
@@ -48,18 +48,18 @@ class ReviewsViewSet(ViewSet):
     @swagger_auto_schema(
         operation_summary="Reviews list",
         operation_description="Reviews list",
-        responses={200: NewsSerializer(many=True)},
+        responses={200: ReviewsSerializer(many=True)},
         tags=["Reviews"]
     )
     def reviews_list(self, request):
         reviews = Reviews.objects.all()
-        serializer = NewsSerializer(reviews, many=True, context={"request": request})
+        serializer = ReviewsSerializer(reviews, many=True, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
         operation_summary="Reviews detail",
         operation_description="Reviews detail",
-        responses={200: NewsDetailSerializer()},
+        responses={200: ReviewsDetailSerializer()},
         tags=["Reviews"]
     )
     def reviews_detail(self, request, pk):
@@ -67,7 +67,7 @@ class ReviewsViewSet(ViewSet):
         if not reviews:
             raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
 
-        serializer = NewsSerializer(reviews, context={"request": request})
+        serializer = ReviewsDetailSerializer(reviews, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
 
@@ -75,18 +75,18 @@ class ArticlesViewSet(ViewSet):
     @swagger_auto_schema(
         operation_summary="Articles list",
         operation_description="Articles list",
-        responses={200: NewsSerializer(many=True)},
+        responses={200: ArticlesSerializer(many=True)},
         tags=["Articles"]
     )
     def articles_list(self, request):
         articles = Articles.objects.all()
-        serializer = NewsSerializer(articles, many=True, context={"request": request})
+        serializer = ArticlesSerializer(articles, many=True, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
         operation_summary="Articles detail",
         operation_description="Articles detail",
-        responses={200: NewsDetailSerializer()},
+        responses={200: ArticlesDetailSerializer()},
         tags=["Articles"]
     )
     def articles_detail(self, request, pk):
@@ -94,7 +94,7 @@ class ArticlesViewSet(ViewSet):
         if not articles:
             raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
 
-        serializer = NewsSerializer(articles, context={"request": request})
+        serializer = ArticlesDetailSerializer(articles, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
 
