@@ -1,13 +1,13 @@
-from math import trunc
-
 from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
 from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
-from service.models import Product
-from service.serializers import CommentParamSerializer
+from service.serializers import PaginationSerializer
+from .paginations.get_news import get_news_paginator
+from .paginations.get_articles import get_articles_paginator
+from .paginations.get_reviews import get_reviews_paginator
 from .serializers import BannerSerializer, MessageSerializer, MessageCreateSerializer, AboutUsSerializer, \
     ChatCreateSerializer, PromocodeRequestSerializer, NewsSerializer, NewsDetailSerializer, ArticlesSerializer, \
     ArticlesDetailSerializer, ReviewsSerializer, ReviewsDetailSerializer, VideoSerializer
@@ -48,13 +48,26 @@ class ReviewsViewSet(ViewSet):
     @swagger_auto_schema(
         operation_summary="Reviews list",
         operation_description="Reviews list",
+        manual_parameters=[
+            openapi.Parameter(
+                name='page', in_=openapi.IN_QUERY, description='Page', type=openapi.TYPE_INTEGER),
+            openapi.Parameter(
+                name='page_size', in_=openapi.IN_QUERY, description='Page size', type=openapi.TYPE_INTEGER),
+        ],
         responses={200: ReviewsSerializer(many=True)},
         tags=["Reviews"]
     )
     def reviews_list(self, request):
+        params = request.query_params
+        param_serializer = PaginationSerializer(data=params, context={"request": request})
+        if not param_serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=param_serializer.errors)
+
         reviews = Reviews.objects.all()
-        serializer = ReviewsSerializer(reviews, many=True, context={"request": request})
-        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+        return Response(data={
+            "result": get_reviews_paginator(response_data=reviews, page=param_serializer.validated_data.get("page"),
+                                             page_size=param_serializer.validated_data.get("page_size"),
+                                             context={"request": request}), "ok": True}, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
         operation_summary="Reviews detail",
@@ -75,13 +88,26 @@ class ArticlesViewSet(ViewSet):
     @swagger_auto_schema(
         operation_summary="Articles list",
         operation_description="Articles list",
+        manual_parameters=[
+            openapi.Parameter(
+                name='page', in_=openapi.IN_QUERY, description='Page', type=openapi.TYPE_INTEGER),
+            openapi.Parameter(
+                name='page_size', in_=openapi.IN_QUERY, description='Page size', type=openapi.TYPE_INTEGER),
+        ],
         responses={200: ArticlesSerializer(many=True)},
         tags=["Articles"]
     )
     def articles_list(self, request):
+        params = request.query_params
+        param_serializer = PaginationSerializer(data=params, context={"request": request})
+        if not param_serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=param_serializer.errors)
+
         articles = Articles.objects.all()
-        serializer = ArticlesSerializer(articles, many=True, context={"request": request})
-        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+        return Response(data={
+            "result": get_articles_paginator(response_data=articles, page=param_serializer.validated_data.get("page"),
+                                             page_size=param_serializer.validated_data.get("page_size"),
+                                             context={"request": request}), "ok": True}, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
         operation_summary="Articles detail",
@@ -102,13 +128,26 @@ class NewsViewSet(ViewSet):
     @swagger_auto_schema(
         operation_summary="News list",
         operation_description="News list",
+        manual_parameters=[
+            openapi.Parameter(
+                name='page', in_=openapi.IN_QUERY, description='Page', type=openapi.TYPE_INTEGER),
+            openapi.Parameter(
+                name='page_size', in_=openapi.IN_QUERY, description='Page size', type=openapi.TYPE_INTEGER),
+        ],
         responses={200: NewsSerializer(many=True)},
         tags=["News"]
     )
     def news_list(self, request):
+        params = request.query_params
+        param_serializer = PaginationSerializer(data=params, context={"request": request})
+        if not param_serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=param_serializer.errors)
+
         news = News.objects.all()
-        serializer = NewsSerializer(news, many=True, context={"request": request})
-        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+        return Response(data={
+            "result": get_news_paginator(response_data=news, page=param_serializer.validated_data.get("page"),
+                                             page_size=param_serializer.validated_data.get("page_size"),
+                                             context={"request": request}), "ok": True}, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
         operation_summary="News detail",
