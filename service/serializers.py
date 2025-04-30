@@ -417,6 +417,7 @@ class BrandDetailSerializer(serializers.ModelSerializer):
 
 class ProductItemCategorySerializer(serializers.ModelSerializer):
     breadcrumbs = serializers.SerializerMethodField()
+    product_amount = serializers.SerializerMethodField()
 
     class Meta:
         model = ProductItemCategory
@@ -424,8 +425,12 @@ class ProductItemCategorySerializer(serializers.ModelSerializer):
             "id",
             "name",
             "image",
+            "product_amount",
             "breadcrumbs"
         )
+
+    def get_product_amount(self, obj):
+        return obj.product_item_category.count()
 
     def get_breadcrumbs(self, obj):
         return obj.get_breadcrumbs()
