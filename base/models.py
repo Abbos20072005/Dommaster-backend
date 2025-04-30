@@ -83,7 +83,7 @@ class AboutUs(BaseModel):
 
 class News(BaseModel):
     title = models.CharField(max_length=450, verbose_name="Заголовок")
-    description = RichTextField(verbose_name="Описание")
+    description = RichTextUploadingField(verbose_name="Описание")
     image = models.ImageField(upload_to="news/", verbose_name="Изображение")
 
     def __str__(self):
@@ -136,7 +136,7 @@ class Promocodes(BaseModel):
     name = models.CharField(max_length=15, unique=True, verbose_name="Название")
     discount_precent = models.IntegerField(blank=True, null=True, verbose_name="Процент скидки")
     discount_price = models.FloatField(blank=True, null=True, verbose_name="Сумма скидки")
-    expires_at = models.DateField(blank=True, null=True, verbose_name="Истекает в")
+    expires_at = models.DateField(verbose_name="Истекает в")
 
     def __str__(self):
         return self.name

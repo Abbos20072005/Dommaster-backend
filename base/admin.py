@@ -1,6 +1,30 @@
 from django.contrib import admin
-from .models import Banner, Chat, AboutUs, Messages, Promocodes
+from .models import Banner, Chat, AboutUs, Messages, Promocodes, News, Articles, Reviews, Video
 
+
+@admin.register(News)
+class NewsAdmin(admin.ModelAdmin):
+    list_display = ("id", "title")
+    list_display_links = ("id", "title")
+    search_fields = ("title",)
+
+@admin.register(Articles)
+class ArticlesAdmin(admin.ModelAdmin):
+    list_display = ("id", "title")
+    list_display_links = ("id", "title")
+    search_fields = ("title",)
+
+@admin.register(Reviews)
+class ReviewsAdmin(admin.ModelAdmin):
+    list_display = ("id", "title")
+    list_display_links = ("id", "title")
+    search_fields = ("title",)
+
+@admin.register(Video)
+class VideoAdmin(admin.ModelAdmin):
+    list_display = ("id", "name")
+    list_display_links = ("id", "name")
+    search_fields = ("name",)
 
 @admin.register(Chat)
 class ChatAdmin(admin.ModelAdmin):

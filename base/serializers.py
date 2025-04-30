@@ -1,6 +1,76 @@
 from rest_framework import serializers
-from .models import Banner, Chat, LoyaltyCard, AboutUs, Messages, Promocodes
+from .models import Banner, Chat, LoyaltyCard, AboutUs, Messages, Promocodes, News, Articles, Reviews, Video
 
+
+class NewsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = News
+        fields = (
+            "id",
+            "title",
+            "image",
+            "created_at"
+        )
+
+class NewsDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = News
+        fields = (
+            "id",
+            "title",
+            "description",
+            "created_at"
+        )
+
+class ArticlesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Articles
+        fields = (
+            "id",
+            "title",
+            "short_description",
+            "created_at"
+        )
+
+class ArticlesDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Articles
+        fields = (
+            "id",
+            "title",
+            "descritpion",
+            "created_at"
+        )
+
+class ReviewsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Reviews
+        fields = (
+            "id",
+            "title",
+            "short_description",
+            "created_at"
+        )
+
+class ReviewsDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Reviews
+        fields = (
+            "id",
+            "title",
+            "description",
+            "created_at"
+        )
+
+class VideoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Video
+        fields = (
+            "id",
+            "name",
+            "url",
+            "created_at"
+        )
 
 class PromocodeSerializer(serializers.ModelSerializer):
     class Meta:
