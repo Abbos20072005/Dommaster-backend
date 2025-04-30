@@ -38,7 +38,7 @@ class ArticlesDetailSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "title",
-            "descritpion",
+            "description",
             "created_at"
         )
 
