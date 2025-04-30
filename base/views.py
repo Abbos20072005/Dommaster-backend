@@ -25,7 +25,7 @@ class VideoViewSet(ViewSet):
         tags=["Video"]
     )
     def video_list(self, request):
-        video = Reviews.objects.all()
+        video = Video.objects.all()
         serializer = VideoSerializer(video, many=True, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
