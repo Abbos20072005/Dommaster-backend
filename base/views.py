@@ -43,6 +43,7 @@ class NewsViewSet(ViewSet):
         serializer = NewsSerializer(news, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
+
 class PromocodeViewSet(ViewSet):
     @swagger_auto_schema(
         operation_summary="Promocode checker",
@@ -75,7 +76,8 @@ class PromocodeViewSet(ViewSet):
             promocode_discount_price = cart.total_price * (1 - (promocode.discount_precent / 100))
 
         return Response(
-            data={"result": {"discount_price": promocode_discount_price, "discount": promocode.discount_precent},
+            data={"result": {"total_price": promocode_discount_price, "saved_price": cart.total_price - promocode_discount_price,
+                             "discount_precent": promocode.discount_precent},
                   "ok": True}, status=status.HTTP_200_OK)
 
 
