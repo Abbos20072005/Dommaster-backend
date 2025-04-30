@@ -10,7 +10,7 @@ from .paginations.get_articles import get_articles_paginator
 from .paginations.get_reviews import get_reviews_paginator
 from .serializers import BannerSerializer, MessageSerializer, MessageCreateSerializer, AboutUsSerializer, \
     ChatCreateSerializer, PromocodeRequestSerializer, NewsSerializer, NewsDetailSerializer, ArticlesSerializer, \
-    ArticlesDetailSerializer, ReviewsSerializer, ReviewsDetailSerializer, VideoSerializer
+    ArticlesDetailSerializer, ReviewsSerializer, ReviewsDetailSerializer, VideoSerializer, PromocodeSerializer
 from .models import Banner, Chat, AboutUs, Messages, Promocodes, News, Articles, Reviews, Video
 from service.models import Cart
 from drf_yasg import openapi
@@ -165,6 +165,17 @@ class NewsViewSet(ViewSet):
 
 
 class PromocodeViewSet(ViewSet):
+    @swagger_auto_schema(
+        operation_summary="Promocodes list",
+        operation_description="Promocodes list",
+        responses={200: PromocodeSerializer(many=True)},
+        tags=["Order"]
+    )
+    def promocode_list(self, request):
+        promocode = Promocodes.objects.filter(customer_id=request.user.id)
+        serializer = PromocodeSerializer(promocode, many=True, context={"request": request})
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+
     @swagger_auto_schema(
         operation_summary="Promocode checker",
         operation_description="Promocode checker",

@@ -6,6 +6,7 @@ urlpatterns = [
     path("chat/", ChatViewSet.as_view({"get": "message_list", "post": "message_create"}), name="chat message list"),
     path("about/", AboutUsViewSet.as_view({"get": "about_us"}), name="about us"),
     path("promocode/checker/", PromocodeViewSet.as_view({"post": "promocode_checker"}), name="promocode checker"),
+    path("promocodes/", PromocodeViewSet.as_view({"get": "promocode_list"}), name="promocode list"),
     path("news/", NewsViewSet.as_view({"get": "news_list"}), name="news list"),
     path("news/<int:pk>/", NewsViewSet.as_view({"get": "news_detail"}), name="news detail"),
     path("articles/", ArticlesViewSet.as_view({"get": "articles_list"}), name="articles list"),

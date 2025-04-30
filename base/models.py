@@ -133,6 +133,7 @@ class Video(BaseModel):
 
 
 class Promocodes(BaseModel):
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, verbose_name="Клиент")
     name = models.CharField(max_length=150, verbose_name="Название")
     code = models.CharField(max_length=15, unique=True, verbose_name="Код")
     discount_precent = models.IntegerField(blank=True, null=True, verbose_name="Процент скидки")

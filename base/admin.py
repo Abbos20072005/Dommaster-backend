@@ -34,7 +34,7 @@ class ChatAdmin(admin.ModelAdmin):
 
 @admin.register(Promocodes)
 class PromocodesAdmin(admin.ModelAdmin):
-    list_display = ("id", "name", "expires_at")
+    list_display = ("id", "name", "customer", "expires_at")
     list_display_links = ("id", "name")
     search_fields = ("name",)
 
