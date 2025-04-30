@@ -1,3 +1,5 @@
+from math import trunc
+
 from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
 from rest_framework import status
@@ -7,12 +9,39 @@ from exceptions.error_messages import ErrorCodes
 from service.models import Product
 from service.serializers import CommentParamSerializer
 from .serializers import BannerSerializer, MessageSerializer, MessageCreateSerializer, AboutUsSerializer, \
-    ChatCreateSerializer, PromocodeRequestSerializer
-from .models import Banner, Chat, AboutUs, Messages, Promocodes
+    ChatCreateSerializer, PromocodeRequestSerializer, NewsSerializer, NewsDetailSerializer, ArticlesSerializer, \
+    ArticlesDetailSerializer, ReviewsSerializer, ReviewsDetailSerializer, VideoSerializer
+from .models import Banner, Chat, AboutUs, Messages, Promocodes, News, Articles, Reviews, Video
 from service.models import Cart
 from drf_yasg import openapi
 from datetime import date
 
+
+class NewsViewSet(ViewSet):
+    @swagger_auto_schema(
+        operation_summary="News list",
+        operation_description="News list",
+        responses={200: NewsSerializer(many=True)},
+        tags=["News"]
+    )
+    def news_list(self, request):
+        news = News.objects.all()
+        serializer = NewsSerializer(news, many=True, context={"request": request})
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        operation_summary="News detail",
+        operation_description="News detail",
+        responses={200: NewsDetailSerializer()},
+        tags=["News"]
+    )
+    def news_detail(self, request, pk):
+        news = News.objects.filter(id=pk).first()
+        if not news:
+            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
+
+        serializer = NewsSerializer(news, context={"request": request})
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
 class PromocodeViewSet(ViewSet):
     @swagger_auto_schema(
@@ -46,7 +75,7 @@ class PromocodeViewSet(ViewSet):
             promocode_discount_price = cart.total_price * (1 - (promocode.discount_precent / 100))
 
         return Response(
-            data={"result": {"promocode_discount": promocode_discount_price, "total_price": cart.total_price},
+            data={"result": {"discount_price": promocode_discount_price, "discount": promocode.discount_precent},
                   "ok": True}, status=status.HTTP_200_OK)
 
 
