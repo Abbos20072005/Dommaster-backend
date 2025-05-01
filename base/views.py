@@ -10,7 +10,8 @@ from .paginations.get_articles import get_articles_paginator
 from .paginations.get_reviews import get_reviews_paginator
 from .serializers import BannerSerializer, MessageSerializer, MessageCreateSerializer, AboutUsSerializer, \
     ChatCreateSerializer, PromocodeRequestSerializer, NewsSerializer, NewsDetailSerializer, ArticlesSerializer, \
-    ArticlesDetailSerializer, ReviewsSerializer, ReviewsDetailSerializer, VideoSerializer, PromocodeSerializer
+    ArticlesDetailSerializer, ReviewsSerializer, ReviewsDetailSerializer, VideoSerializer, PromocodeSerializer, \
+    BannerDetailSerializer
 from .models import Banner, Chat, AboutUs, Messages, Promocodes, News, Articles, Reviews, Video
 from service.models import Cart
 from drf_yasg import openapi
@@ -66,8 +67,8 @@ class ReviewsViewSet(ViewSet):
         reviews = Reviews.objects.all()
         return Response(data={
             "result": get_reviews_paginator(response_data=reviews, page=param_serializer.validated_data.get("page"),
-                                             page_size=param_serializer.validated_data.get("page_size"),
-                                             context={"request": request}), "ok": True}, status=status.HTTP_200_OK)
+                                            page_size=param_serializer.validated_data.get("page_size"),
+                                            context={"request": request}), "ok": True}, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
         operation_summary="Reviews detail",
@@ -146,8 +147,8 @@ class NewsViewSet(ViewSet):
         news = News.objects.all()
         return Response(data={
             "result": get_news_paginator(response_data=news, page=param_serializer.validated_data.get("page"),
-                                             page_size=param_serializer.validated_data.get("page_size"),
-                                             context={"request": request}), "ok": True}, status=status.HTTP_200_OK)
+                                         page_size=param_serializer.validated_data.get("page_size"),
+                                         context={"request": request}), "ok": True}, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
         operation_summary="News detail",
@@ -223,6 +224,17 @@ class BannerViewSet(ViewSet):
     def banner_list(self, request):
         banner = Banner.objects.filter(is_visible=True)
         serializer = BannerSerializer(banner, many=True, context={"request": request})
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        operation_summary="Banner detail",
+        operation_description="Banner detail",
+        responses={200: BannerSerializer()},
+        tags=["Base"]
+    )
+    def banner_detail(self, request, pk):
+        banner = Banner.objects.filter(id=pk).first()
+        serializer = BannerDetailSerializer(banner, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
 

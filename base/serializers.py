@@ -93,6 +93,16 @@ class PromocodeRequestSerializer(serializers.Serializer):
 
 
 class BannerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Banner
+        fields = (
+            "id",
+            "title",
+            "desktop_image",
+            "mobile_image",
+        )
+
+class BannerDetailSerializer(serializers.ModelSerializer):
     content_object = serializers.SerializerMethodField()
 
     class Meta:
@@ -100,7 +110,6 @@ class BannerSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "title",
-            "image",
             "content_object"
         )
 

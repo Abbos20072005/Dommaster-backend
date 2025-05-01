@@ -5,9 +5,12 @@ from ckeditor_uploader.fields import RichTextUploadingField
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
 
+
 class Banner(BaseModel):
     title = models.CharField(max_length=255, verbose_name="Заголовок")
-    image = models.ImageField(upload_to='banner/', verbose_name="Изображение")
+    desktop_image = models.ImageField(upload_to="banner/desktop/", verbose_name="Компютерное изображение")
+    mobile_image = models.ImageField(upload_to="banner/mobile/", blank=True, null=True,
+                                     verbose_name="Телефонное изображение")
     is_visible = models.BooleanField(default=True, verbose_name="Виден")
 
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
@@ -149,5 +152,3 @@ class Promocodes(BaseModel):
     class Meta:
         verbose_name = "Промокод"
         verbose_name_plural = "Промокоды"
-
-
