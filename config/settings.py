@@ -59,7 +59,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 
     #custom middleware
-    # "middleware.auth_blocker.IsAuthenticatedMiddleware",
+    "middleware.auth_blocker.IsAuthenticatedMiddleware",
 ]
 
 ROOT_URLCONF = 'config.urls'
