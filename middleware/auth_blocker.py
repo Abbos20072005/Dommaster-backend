@@ -38,6 +38,8 @@ class IsAuthenticatedMiddleware(MiddlewareMixin):
         )
         allowed_prefixes = (
             '/swagger/',
+            '/media/',
+            '/static/',
             '/api/v1/base/news/',
             '/api/v1/base/articles/',
             '/api/v1/base/reviews/',
