@@ -282,8 +282,8 @@ class CommentViewSet(ViewSet):
                                              context={"request": request}), "ok": True}, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
-        operation_summary="Write comment to product, pk receive product id",
-        operation_description="Write comment to product, pk receive product id",
+        operation_summary="Write comment to product",
+        operation_description="Write comment to product",
         manual_parameters=[
             openapi.Parameter(name="product_id", in_=openapi.IN_QUERY, type=openapi.TYPE_INTEGER,
                               description="Product id")
