@@ -1,18 +1,21 @@
 from django.db import models
 from abstract_model.base_model import BaseModel
 from authorization.models import Customer
-from ckeditor.fields import RichTextField
 from ckeditor_uploader.fields import RichTextUploadingField
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes.fields import GenericForeignKey
 
 class Banner(BaseModel):
     title = models.CharField(max_length=255, verbose_name="Заголовок")
-    short_description = models.CharField(max_length=255, verbose_name="Краткое описание")
     image = models.ImageField(upload_to='banner/', verbose_name="Изображение")
-    link = models.CharField(max_length=150, verbose_name="Линк")
     is_visible = models.BooleanField(default=True, verbose_name="Виден")
 
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField()
+    content_object = GenericForeignKey("content_type", "object_id")
+
     def __str__(self):
-        return str(self.title)
+        return self.title
 
     class Meta:
         verbose_name = "Баннер"

@@ -47,7 +47,7 @@ class PromocodesAdmin(admin.ModelAdmin):
 class BannerAdmin(admin.ModelAdmin):
     list_display = ('id', 'title')
     list_display_links = ('id', 'title')
-    search_fields = ('title', 'short_description')
+    search_fields = ('title',)
 
 
 @admin.register(Messages)

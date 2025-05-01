@@ -1,5 +1,8 @@
 from rest_framework import serializers
+
+from service.serializers import SaleSerializer
 from .models import Banner, Chat, LoyaltyCard, AboutUs, Messages, Promocodes, News, Articles, Reviews, Video
+from service.models import Sale
 
 
 class NewsSerializer(serializers.ModelSerializer):
@@ -90,15 +93,23 @@ class PromocodeRequestSerializer(serializers.Serializer):
 
 
 class BannerSerializer(serializers.ModelSerializer):
+    content_object = serializers.SerializerMethodField()
+
     class Meta:
         model = Banner
         fields = (
             "id",
             "title",
-            "short_description",
             "image",
-            "link"
+            "content_object"
         )
+
+    def get_content_object(self, obj):
+        if isinstance(obj.content_object, News):
+            return NewsDetailSerializer(obj.content_object).data
+        elif isinstance(obj.content_object, Sale):
+            return SaleSerializer(obj.content_object).data
+        return None
 
 
 class ChatCreateSerializer(serializers.ModelSerializer):
