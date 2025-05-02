@@ -10,8 +10,7 @@ from .paginations.get_articles import get_articles_paginator
 from .paginations.get_reviews import get_reviews_paginator
 from .serializers import BannerSerializer, MessageSerializer, MessageCreateSerializer, AboutUsSerializer, \
     ChatCreateSerializer, PromocodeRequestSerializer, NewsSerializer, NewsDetailSerializer, ArticlesSerializer, \
-    ArticlesDetailSerializer, ReviewsSerializer, ReviewsDetailSerializer, VideoSerializer, PromocodeSerializer, \
-    BannerDetailSerializer
+    ArticlesDetailSerializer, ReviewsSerializer, ReviewsDetailSerializer, VideoSerializer, PromocodeSerializer
 from .models import Banner, Chat, AboutUs, Messages, Promocodes, News, Articles, Reviews, Video
 from service.models import Cart
 from drf_yasg import openapi
@@ -224,17 +223,6 @@ class BannerViewSet(ViewSet):
     def banner_list(self, request):
         banner = Banner.objects.filter(is_visible=True)
         serializer = BannerSerializer(banner, many=True, context={"request": request})
-        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
-
-    @swagger_auto_schema(
-        operation_summary="Banner detail",
-        operation_description="Banner detail",
-        responses={200: BannerSerializer()},
-        tags=["Base"]
-    )
-    def banner_detail(self, request, pk):
-        banner = Banner.objects.filter(id=pk).first()
-        serializer = BannerDetailSerializer(banner, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
 

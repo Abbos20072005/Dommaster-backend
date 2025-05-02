@@ -93,6 +93,8 @@ class PromocodeRequestSerializer(serializers.Serializer):
 
 
 class BannerSerializer(serializers.ModelSerializer):
+    content_type_info = serializers.SerializerMethodField()
+
     class Meta:
         model = Banner
         fields = (
@@ -100,24 +102,16 @@ class BannerSerializer(serializers.ModelSerializer):
             "title",
             "desktop_image",
             "mobile_image",
+            "link",
+            "content_type_info"
         )
 
-class BannerDetailSerializer(serializers.ModelSerializer):
-    content_object = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Banner
-        fields = (
-            "id",
-            "title",
-            "content_object"
-        )
-
-    def get_content_object(self, obj):
-        if isinstance(obj.content_object, News):
-            return NewsDetailSerializer(obj.content_object).data
-        elif isinstance(obj.content_object, Sale):
-            return SaleSerializer(obj.content_object).data
+    def get_content_type_info(self, obj):
+        if obj.content_object:
+            return {
+                "model": obj.content_type.model,
+                "id": obj.object_id
+            }
         return None
 
 

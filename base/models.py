@@ -12,9 +12,10 @@ class Banner(BaseModel):
     mobile_image = models.ImageField(upload_to="banner/mobile/", blank=True, null=True,
                                      verbose_name="Телефонное изображение")
     is_visible = models.BooleanField(default=True, verbose_name="Виден")
+    link = models.URLField(verbose_name="Линк")
 
-    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
-    object_id = models.PositiveIntegerField()
+    content_type = models.ForeignKey(ContentType, blank=True, null=True, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField(blank=True, null=True)
     content_object = GenericForeignKey("content_type", "object_id")
 
     def __str__(self):
