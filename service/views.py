@@ -13,7 +13,7 @@ from .serializers import ProductCategorySerializer, ProductCategoryListSerialize
     CartItemSerializer, CartItemUpdateSerializer, CartItemBulkUpdateSerializer, CommentParamSerializer, \
     CommentCreateSerializer, CartItemCreateSerializer, QuestionsSerializer, QuestionsUpdateSerializer, \
     QuestionsCreateSerializer, FavouriteCreateSerializer, FavouriteResponseSerializer, RecentlyViewedProductsSerializer, \
-    OrderSerializer
+    OrderSerializer, SaleMainSerializer, SaleDetailSerializer
 from .models import ProductCategory, ProductSubCategory, ProductItemCategory, Product, Comment, Brand, Sale, AddsBrands, \
     Favourites, Cart, CartItem, Questions, Order, OrderItem, RecentlyViewedProducts
 from rest_framework import status
@@ -382,16 +382,43 @@ class BrandViewSet(ViewSet):
 
 class SaleViewSet(ViewSet):
     @swagger_auto_schema(
-        operation_summary="Sale products list",
-        operation_description="Sale products list",
+        operation_summary="Sale list",
+        operation_description="Sale list",
         responses={200: SaleSerializer(many=True)},
         tags=["Sale"]
     )
-    def sale_products(self, request):
-        sale = Sale.objects.filter(is_visible=True).prefetch_related("products")
+    def sale_list(self, request):
+        sale = Sale.objects.filter(is_visible=True)
         serializer = SaleSerializer(sale, many=True, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
+    @swagger_auto_schema(
+        operation_summary="Sale main",
+        operation_description="Sale main",
+        responses={200: SaleMainSerializer()},
+        tags=["Sale"]
+    )
+    def sale_main(self, request):
+        sale = Sale.objects.filter(is_main=True, is_visible=True).first()
+        if not sale:
+            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
+
+        serializer = SaleMainSerializer(sale, context={"request": request})
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        operation_summary="Sale detail, pk receive sale id",
+        operation_description="Sale detail, pk receive sale id",
+        responses={200: SaleDetailSerializer()},
+        tags=["Sale"]
+    )
+    def sale_detail(self, request, pk):
+        sale = Sale.objects.filter(id=pk, is_visible=True).first()
+        if not sale:
+            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
+
+        serializer = SaleDetailSerializer(sale, context={"request": request})
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
 class AddsBrandsViewSet(ViewSet):
     @swagger_auto_schema(

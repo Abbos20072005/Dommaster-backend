@@ -36,7 +36,7 @@ error_messages = {
     9: {"result": "User Blocked, Contact admins", "http_status": status.HTTP_400_BAD_REQUEST},
     10: {"result": "You already have 3 attempts, please return after 12 times",
          "http_status": status.HTTP_400_BAD_REQUEST},
-    11: {"result": "otp_key does not exist", "http_status": status.HTTP_400_BAD_REQUEST},
+    11: {"result": "Otp_key does not exist", "http_status": status.HTTP_400_BAD_REQUEST},
     12: {"result": "incorrect otp_code", "http_status": status.HTTP_400_BAD_REQUEST},
     13: {"result": "OTP key Expired", "http_status": status.HTTP_400_BAD_REQUEST},
     14: {"result": "OTP attempt riched it's limit", "http_status": status.HTTP_400_BAD_REQUEST},

@@ -59,7 +59,7 @@ class AddsBrandsAdmin(admin.ModelAdmin):
 
 @admin.register(Sale)
 class SaleAdmin(admin.ModelAdmin):
-    list_display = ("id", "name", "discount_from", "discount_to", "is_visible")
+    list_display = ("id", "name", "discount_from", "discount_to", "is_main", "is_visible")
     list_display_links = ("id", "name")
     search_fields = ("name",)
     list_filter = ("is_visible",)

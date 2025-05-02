@@ -388,6 +388,17 @@ class AddsBrandsSerializer(serializers.ModelSerializer):
 
 
 class SaleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Sale
+        fields = (
+            "id",
+            "name",
+            "discount_from",
+            "discount_to",
+            "image"
+        )
+
+class SaleMainSerializer(serializers.ModelSerializer):
     products = ProductSerializer(many=True, read_only=True)
 
     class Meta:
@@ -397,7 +408,21 @@ class SaleSerializer(serializers.ModelSerializer):
             "name",
             "discount_from",
             "discount_to",
-            "is_main",
+            "bg_image",
+            "products"
+        )
+
+class SaleDetailSerializer(serializers.ModelSerializer):
+    products = ProductSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Sale
+        fields = (
+            "id",
+            "name",
+            "discount_from",
+            "discount_to",
+            "image",
             "products"
         )
 
