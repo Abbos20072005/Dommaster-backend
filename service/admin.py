@@ -55,6 +55,7 @@ class AddsBrandsAdmin(admin.ModelAdmin):
     list_display_links = ("id", "name")
     search_fields = ("name",)
     list_filter = ("is_visible",)
+    autocomplete_fields = ("products",)
 
 
 @admin.register(Sale)
@@ -63,6 +64,7 @@ class SaleAdmin(admin.ModelAdmin):
     list_display_links = ("id", "name")
     search_fields = ("name",)
     list_filter = ("is_visible",)
+    autocomplete_fields = ("products",)
 
 
 @admin.register(Brand)
