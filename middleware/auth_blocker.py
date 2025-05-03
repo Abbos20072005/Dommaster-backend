@@ -33,7 +33,10 @@ class IsAuthenticatedMiddleware(MiddlewareMixin):
             reverse("get_cart"),
             reverse("create_cart_item"),
             reverse("cart_bulk_update"),
-            reverse("question_list")
+            reverse("question_list"),
+            reverse("verify_reset_otp"),
+            reverse("reset_password"),
+            reverse("forgot_password")
         )
         allowed_prefixes = (
             '/swagger/',

@@ -2,6 +2,7 @@ from django.db import models
 from abstract_model.base_model import BaseModel
 from authorization.utils import validate_number
 import uuid
+from django.utils import timezone
 
 
 class Customer(BaseModel):
@@ -63,3 +64,12 @@ class OTP(BaseModel):
     class Meta:
         verbose_name = "ОТП"
         verbose_name_plural = "ОТП"
+
+class PasswordResetToken(models.Model):
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
+    token = models.CharField(max_length=250, unique=True)
+    is_used = models.BooleanField(default=False)
+    expires_at = models.DateTimeField()
+
+    def is_valid(self):
+        return not self.is_used and self.expires_at > timezone.now()

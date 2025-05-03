@@ -1,19 +1,21 @@
+import uuid
 from rest_framework.viewsets import ViewSet
 from django.db.models import Q
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from utils.send_notification import send_notification
-from .models import Customer, OTP, FcmToken, CustomerAddresses
+from .models import Customer, OTP, FcmToken, CustomerAddresses, PasswordResetToken
 from rest_framework.response import Response
 from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from datetime import datetime, timedelta
 from django.contrib.auth.hashers import check_password, make_password
 from rest_framework_simplejwt.tokens import RefreshToken
-from .utils import otp_code_generator, generate_random_password
+from .utils import otp_code_generator
 from .serializers import CustomerSerializer, LoginSerializer, RegisterSerializer, OTPVerifySerializer, \
     OTPResendSerializer, ChangePasswordSerializer, ForgotPasswordSerializer, CustomerAddressesSerializer, \
-    CustomerAddressesUpdateSerializer, CustomerAddressesCreateSerializer
+    CustomerAddressesUpdateSerializer, CustomerAddressesCreateSerializer, VerifyResetSerializer, ResetPasswordSerializer
+from django.utils import timezone
 
 
 class AuthViewSet(ViewSet):
@@ -189,7 +191,7 @@ class AuthViewSet(ViewSet):
         operation_summary="Forgot password",
         operation_description="Forgot password",
         request_body=ForgotPasswordSerializer(),
-        responses={202: "Password successfully changed"},
+        responses={200: "Message sent to {}"},
         tags=["Auth"]
 
     )
@@ -203,18 +205,101 @@ class AuthViewSet(ViewSet):
         if not customer:
             raise CustomApiException(error_code=ErrorCodes.USER_DOES_NOT_EXIST)
 
-        random_password = generate_random_password()
-        customer.password = make_password(random_password)
+        all_otp = OTP.objects.filter(customer_id=customer.id)
+        last_otp = all_otp.order_by("-created_at").first()
+        if len(all_otp) >= 3 and last_otp.created_at > datetime.now() - timedelta(hours=12):
+            raise CustomApiException(error_code=ErrorCodes.ATTEMPT_ALREADY_EXISTS,
+                                     time=last_otp.created_at + timedelta(hours=12))
 
-        customer.save(update_fields=["password"])
+        otp_code = otp_code_generator()
+        otp = OTP.objects.create(customer_id=customer.id, otp_code=otp_code, resend=False)
+        otp.expire_at = otp.created_at + timedelta(minutes=1)
+        otp.save()
+
+        latest_otp = all_otp.order_by("-created_at").exclude(otp_key=otp.otp_key).first()
+        if latest_otp and latest_otp.created_at < datetime.now() - timedelta(hours=12) and len(all_otp) >= 2:
+            all_otp.exclude(otp_key=otp.otp_key).delete()
 
         message = (
-            f' Project: Dommaster \nuser: {customer.id} \nphone_number: {customer.phone_number} '
-            f'\nmessage: Your new password is {random_password} '
+            f' Project: Dommaster \nuser: {customer.id} \nphone_number: {customer.phone_number}\ncode: {otp.otp_code} '
+            f'\notp_key: {otp.otp_key} '
+            f'\nReset: {otp.resend}'
+            f'\nexpires: {otp.expire_at}')
+        send_notification(message)
+        return Response(data={"result": f"Message sent to {customer.phone_number}", "ok": True},
+                        status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        operation_summary="Verify reset otp",
+        operation_description="Verify reset otp",
+        request_body=VerifyResetSerializer(),
+        responses={200: "OTP successfully verified"},
+        tags=["Auth"]
+    )
+    def verify_reset_otp(self, request):
+        data = request.data
+        data_serializer = VerifyResetSerializer(data=data)
+        if not data_serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=data_serializer.errors)
+
+        otp = OTP.objects.filter(customer__phone_number=data_serializer.validated_data.get("phone_number")).order_by(
+            "-created_at").first()
+
+        if not otp:
+            raise CustomApiException(error_code=ErrorCodes.OTP_KEY_NOT_FOUND, message="OTP not found")
+
+        otp.count_attempts += 1
+        otp.save(update_fields=["count_attempts"])
+        if otp.otp_code != data_serializer.validated_data.get("otp_code"):
+            raise CustomApiException(error_code=ErrorCodes.INCORRECT_OTP)
+
+        if otp.expire_at < datetime.now() - timedelta(minutes=1):
+            raise CustomApiException(error_code=ErrorCodes.OTP_EXPIRED)
+
+        reset_token = uuid.uuid4().hex
+        PasswordResetToken.objects.create(
+            customer=otp.customer,
+            token=reset_token,
+            expires_at=timezone.now() + timedelta(minutes=10)
         )
 
-        send_notification(message)
-        return Response(data={"result": "Password successfully changed", "ok": True}, status=status.HTTP_202_ACCEPTED)
+        return Response(data={"result": {"reset_token": reset_token}, "ok": True}, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        operation_summary="",
+        operation_description="",
+        request_body=ResetPasswordSerializer(),
+        responses={200: "Password successfully changed"},
+        tags=["Auth"]
+    )
+    def reset_password(self, request):
+        data = request.data
+        data_serializer = ResetPasswordSerializer(data=data)
+        if not data_serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=data_serializer.errors)
+
+        reset_password = PasswordResetToken.objects.filter(token=data_serializer.validated_data.get("reset_token"),
+                                                           is_used=False).first()
+        if not reset_password:
+            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND, message="Reset password information not found")
+
+        if reset_password.expires_at < datetime.now() - timedelta(minutes=10):
+            raise CustomApiException(error_code=ErrorCodes.INVALID_TOKEN, message="Reset token expired")
+
+        customer = Customer.objects.filter(id=reset_password.customer_id).first()
+        if not customer:
+            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND, message="User not found")
+
+        new_password = data_serializer.validated_data.get("new_password")
+        confirm_new_password = data_serializer.validated_data.get("confirm_new_password")
+
+        if new_password != confirm_new_password:
+            raise CustomApiException(error_code=ErrorCodes.NEW_PASSWORD_NOT_MATCH)
+
+        customer.password = make_password(new_password)
+        customer.save(update_fields=["password"])
+
+        return Response(data={"result": "Password successfully changed", "ok": True}, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
         operation_summary="Get customer address",
@@ -287,6 +372,7 @@ class AuthViewSet(ViewSet):
 
         serializer.save()
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_201_CREATED)
+
 
 class OTPViewSet(ViewSet):
     @swagger_auto_schema(

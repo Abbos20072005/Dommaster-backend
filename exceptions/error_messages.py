@@ -22,6 +22,7 @@ class ErrorCodes(Enum):
     NEW_PASSWORD_NOT_MATCH = 17
     OLD_PASSWORD_NOT_MATCH = 18
     PROMOCODE_EXPIRED = 19
+    OTP_NOT_FOUND = 20
 
 
 error_messages = {
@@ -45,8 +46,8 @@ error_messages = {
     17: {"result": "New password and confirming new passoword fields are not match",
          "http_status": status.HTTP_400_BAD_REQUEST},
     18: {"result": "Old password not match your current password", "http_status": status.HTTP_400_BAD_REQUEST},
-    19: {"result": "Promocode expired", "http_status": status.HTTP_400_BAD_REQUEST}
-
+    19: {"result": "Promocode expired", "http_status": status.HTTP_400_BAD_REQUEST},
+    20: {"result": "Otp not found", "http_status": status.HTTP_400_BAD_REQUEST},
 }
 
 
