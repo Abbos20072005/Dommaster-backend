@@ -15,7 +15,38 @@ from .models import Banner, Chat, AboutUs, Messages, Promocodes, News, Articles,
 from service.models import Cart
 from drf_yasg import openapi
 from datetime import date
+from service.models import AddsBrands
+from service.serializers import AddsBrandsSerializer
 
+class TestViewSet(ViewSet):
+    @swagger_auto_schema(
+        operation_summary="",
+        operation_description="",
+        responses={200: "Result"},
+        tags=["Test"]
+    )
+    def get_homepage_rows(self, request):
+        result = []
+        banners = list(Banner.objects.filter(is_visible=True).order_by("id"))
+        addsbrands_list = AddsBrands.objects.filter(is_visible=True).prefetch_related("products")
+
+        banner_index = 0
+
+        for addsbrand in addsbrands_list:
+            result.append({
+                "type": "addsbrands",
+                "data": AddsBrandsSerializer(addsbrand).data
+            })
+
+            if banner_index < len(banners):
+                banner = banners[banner_index]
+                result.append({
+                    "type": "banner",
+                    "data": BannerSerializer(banner).data
+                })
+                banner_index += 1
+
+        return Response(result)
 
 class VideoViewSet(ViewSet):
     @swagger_auto_schema(

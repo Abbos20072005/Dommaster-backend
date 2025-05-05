@@ -36,7 +36,8 @@ class IsAuthenticatedMiddleware(MiddlewareMixin):
             reverse("question_list"),
             reverse("verify_reset_otp"),
             reverse("reset_password"),
-            reverse("forgot_password")
+            reverse("forgot_password"),
+            reverse("test")
         )
         allowed_prefixes = (
             '/swagger/',
