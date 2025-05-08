@@ -6,6 +6,8 @@ from drf_yasg.utils import swagger_auto_schema
 from authorization.models import Customer
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
+from payment.utils.utils_click import get_order
+from .paginations.get_orders import get_orders_paginator
 from .serializers import ProductCategorySerializer, ProductCategoryListSerializer, ProductSubCategorySerializer, \
     ProductItemCategorySerializer, ProductSerializer, CommentSerializer, BrandSerializer, FilterSerializer, \
     PaginationSerializer, BrandDetailSerializer, SaleSerializer, AddsBrandsSerializer, AddsBrandsDetailSerializer, \
@@ -97,8 +99,9 @@ class ProductViewSet(ViewSet):
         tags=["Product"]
     )
     def most_sold(self, request):
-        products = Product.objects.annotate(most_solds=Sum("product_order_item__quantity")).exclude(most_solds=0).order_by(
-                "-most_solds")[:20]
+        products = Product.objects.annotate(most_solds=Sum("product_order_item__quantity")).exclude(
+            most_solds=0).order_by(
+            "-most_solds")[:20]
         serializer = ProductSerializer(products, many=True, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
@@ -419,6 +422,7 @@ class SaleViewSet(ViewSet):
 
         serializer = SaleDetailSerializer(sale, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+
 
 class AddsBrandsViewSet(ViewSet):
     @swagger_auto_schema(
@@ -857,3 +861,51 @@ class OrderViewSet(ViewSet):
 
         return Response(data={"result": OrderSerializer(order, context={"request": request}).data, "ok": True},
                         status=status.HTTP_201_CREATED)
+
+    @swagger_auto_schema(
+        operation_summary="Orders history list",
+        operation_description="Orders history list",
+        manual_parameters=[
+            openapi.Parameter(
+                name='page', in_=openapi.IN_QUERY, description='Page', type=openapi.TYPE_INTEGER),
+            openapi.Parameter(
+                name='page_size', in_=openapi.IN_QUERY, description='Page size', type=openapi.TYPE_INTEGER),
+        ],
+        responses={200: OrderSerializer(many=True)},
+        tags=["Order"]
+    )
+    def orders_history_list(self, request):
+        params = request.query_params
+        param_serializer = PaginationSerializer(data=params, context={"request": request})
+        if not param_serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=param_serializer.errors)
+
+        orders = Order.objects.filter(Q(status=3) | Q(status=4), customer_id=request.user.id)
+        return Response(data={
+            "result": get_orders_paginator(response_data=orders, page=param_serializer.validated_data.get("page"),
+                                           page_size=param_serializer.validated_data.get("page_size"),
+                                           context={"request": request}), "ok": True}, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        operation_summary="Orders active list",
+        operation_description="Orders active list",
+        manual_parameters=[
+            openapi.Parameter(
+                name='page', in_=openapi.IN_QUERY, description='Page', type=openapi.TYPE_INTEGER),
+            openapi.Parameter(
+                name='page_size', in_=openapi.IN_QUERY, description='Page size', type=openapi.TYPE_INTEGER),
+        ],
+        responses={200: OrderSerializer(many=True)},
+        tags=["Order"]
+    )
+    def orders_active_list(self, request):
+        params = request.query_params
+        param_serializer = PaginationSerializer(data=params, context={"request": request})
+        if not param_serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=param_serializer.errors)
+
+        orders = Order.objects.filter(customer_id=request.user.id).exclude(Q(status=3) | Q(status=4))
+        return Response(data={
+            "result": get_orders_paginator(response_data=orders, page=param_serializer.validated_data.get("page"),
+                                           page_size=param_serializer.validated_data.get("page_size"),
+                                           context={"request": request}), "ok": True}, status=status.HTTP_200_OK)
