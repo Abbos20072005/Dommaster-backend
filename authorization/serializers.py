@@ -22,9 +22,6 @@ class OTPVerifySerializer(serializers.Serializer):
     otp_key = serializers.UUIDField()
     otp_code = serializers.IntegerField()
 
-class VerifyResetSerializer(serializers.Serializer):
-    phone_number = serializers.CharField(required=True, validators=[validate_number])
-    otp_code = serializers.IntegerField(required=True)
 
 class ResetPasswordSerializer(serializers.Serializer):
     reset_token = serializers.CharField(required=True)

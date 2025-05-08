@@ -14,7 +14,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from .utils import otp_code_generator
 from .serializers import CustomerSerializer, LoginSerializer, RegisterSerializer, OTPVerifySerializer, \
     OTPResendSerializer, ChangePasswordSerializer, ForgotPasswordSerializer, CustomerAddressesSerializer, \
-    CustomerAddressesUpdateSerializer, CustomerAddressesCreateSerializer, VerifyResetSerializer, ResetPasswordSerializer
+    CustomerAddressesUpdateSerializer, CustomerAddressesCreateSerializer, ResetPasswordSerializer
 from django.utils import timezone
 
 
@@ -226,25 +226,24 @@ class AuthViewSet(ViewSet):
             f'\nReset: {otp.resend}'
             f'\nexpires: {otp.expire_at}')
         send_notification(message)
-        return Response(data={"result": f"Message sent to {customer.phone_number}", "ok": True},
+        return Response(data={"result": {"otp_key": otp.otp_key}, "ok": True},
                         status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
         operation_summary="Verify reset otp",
         operation_description="Verify reset otp",
-        request_body=VerifyResetSerializer(),
+        request_body=OTPVerifySerializer(),
         responses={200: "OTP successfully verified"},
         tags=["Auth"]
     )
     def verify_reset_otp(self, request):
         data = request.data
-        data_serializer = VerifyResetSerializer(data=data)
+        data_serializer = OTPVerifySerializer(data=data)
         if not data_serializer.is_valid():
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=data_serializer.errors)
 
-        otp = OTP.objects.filter(customer__phone_number=data_serializer.validated_data.get("phone_number")).order_by(
+        otp = OTP.objects.filter(otp_key=data_serializer.validated_data.get("otp_key")).order_by(
             "-created_at").first()
-
         if not otp:
             raise CustomApiException(error_code=ErrorCodes.OTP_KEY_NOT_FOUND, message="OTP not found")
 
