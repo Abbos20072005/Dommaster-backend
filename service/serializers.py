@@ -146,6 +146,7 @@ class FilterSerializer(PaginationSerializer):
     price_to = serializers.FloatField(required=False)
     brand = serializers.IntegerField(required=False)
     item_category = serializers.IntegerField(required=False)
+    sale_id = serializers.IntegerField(required=False)
 
     def validate(self, attrs):
         price_from = attrs.get("price_from")
@@ -412,19 +413,16 @@ class SaleMainSerializer(serializers.ModelSerializer):
             "products"
         )
 
-class SaleDetailSerializer(serializers.ModelSerializer):
-    products = ProductSerializer(many=True, read_only=True)
-
-    class Meta:
-        model = Sale
-        fields = (
-            "id",
-            "name",
-            "discount_from",
-            "discount_to",
-            "image",
-            "products"
-        )
+# class SaleDetailSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = Sale
+#         fields = (
+#             "id",
+#             "name",
+#             "discount_from",
+#             "discount_to",
+#             "image",
+#         )
 
 
 class BrandDetailSerializer(serializers.ModelSerializer):

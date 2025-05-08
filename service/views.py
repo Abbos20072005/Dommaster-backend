@@ -6,7 +6,6 @@ from drf_yasg.utils import swagger_auto_schema
 from authorization.models import Customer
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
-from payment.utils.utils_click import get_order
 from .paginations.get_orders import get_orders_paginator
 from .serializers import ProductCategorySerializer, ProductCategoryListSerializer, ProductSubCategorySerializer, \
     ProductItemCategorySerializer, ProductSerializer, CommentSerializer, BrandSerializer, FilterSerializer, \
@@ -15,7 +14,7 @@ from .serializers import ProductCategorySerializer, ProductCategoryListSerialize
     CartItemSerializer, CartItemUpdateSerializer, CartItemBulkUpdateSerializer, CommentParamSerializer, \
     CommentCreateSerializer, CartItemCreateSerializer, QuestionsSerializer, QuestionsUpdateSerializer, \
     QuestionsCreateSerializer, FavouriteCreateSerializer, FavouriteResponseSerializer, RecentlyViewedProductsSerializer, \
-    OrderSerializer, SaleMainSerializer, SaleDetailSerializer
+    OrderSerializer, SaleMainSerializer
 from .models import ProductCategory, ProductSubCategory, ProductItemCategory, Product, Comment, Brand, Sale, AddsBrands, \
     Favourites, Cart, CartItem, Questions, Order, OrderItem, RecentlyViewedProducts
 from rest_framework import status
@@ -203,6 +202,7 @@ class ProductViewSet(ViewSet):
         sort_by = serializer.validated_data.get("sort_by")
         brand = serializer.validated_data.get("brand")
         item_category = serializer.validated_data.get("item_category")
+        sale_id = serializer.validated_data.get("sale_id")
 
         filters = Q()
         if q:
@@ -226,6 +226,9 @@ class ProductViewSet(ViewSet):
 
         if item_category:
             filters &= Q(product_item_category=item_category)
+
+        if sale_id:
+            filters &= Q(sale_products__id=sale_id)
 
         products = Product.objects.filter(filters).order_by(sort)
         return Response(data={"result": get_products_paginator(response_data=products, page=page, page_size=page_size,
@@ -412,7 +415,7 @@ class SaleViewSet(ViewSet):
     @swagger_auto_schema(
         operation_summary="Sale detail, pk receive sale id",
         operation_description="Sale detail, pk receive sale id",
-        responses={200: SaleDetailSerializer()},
+        responses={200: SaleSerializer()},
         tags=["Sale"]
     )
     def sale_detail(self, request, pk):
@@ -420,7 +423,7 @@ class SaleViewSet(ViewSet):
         if not sale:
             raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
 
-        serializer = SaleDetailSerializer(sale, context={"request": request})
+        serializer = SaleSerializer(sale, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
 

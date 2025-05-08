@@ -127,7 +127,7 @@ class Tag(BaseModel):
 
 
 class Sale(BaseModel):
-    products = models.ManyToManyField("Product", verbose_name="Продукты")
+    products = models.ManyToManyField("Product", related_name="sale_products", verbose_name="Продукты")
     name = models.CharField(max_length=150, verbose_name="Название")
     image = models.ImageField(upload_to="sale/image/")
     bg_image = models.ImageField(upload_to="sale/bg_image/", verbose_name="Изображение фона")
