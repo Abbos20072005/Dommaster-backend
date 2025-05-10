@@ -14,9 +14,9 @@ from .serializers import ProductCategorySerializer, ProductCategoryListSerialize
     CartItemSerializer, CartItemUpdateSerializer, CartItemBulkUpdateSerializer, CommentParamSerializer, \
     CommentCreateSerializer, CartItemCreateSerializer, QuestionsSerializer, QuestionsUpdateSerializer, \
     QuestionsCreateSerializer, FavouriteCreateSerializer, FavouriteResponseSerializer, RecentlyViewedProductsSerializer, \
-    OrderSerializer, SaleMainSerializer
+    OrderSerializer, SaleMainSerializer, ServiceSerializer, ServiceDetailSerializer
 from .models import ProductCategory, ProductSubCategory, ProductItemCategory, Product, Comment, Brand, Sale, AddsBrands, \
-    Favourites, Cart, CartItem, Questions, Order, OrderItem, RecentlyViewedProducts
+    Favourites, Cart, CartItem, Questions, Order, OrderItem, RecentlyViewedProducts, Service
 from rest_framework import status
 from django.db.models import Q, Sum, Exists, OuterRef, Value, BooleanField
 from .paginations.get_products_pagination import get_products_paginator
@@ -710,7 +710,27 @@ class CartViewSet(ViewSet):
 
 
 class ServiceViewSet(ViewSet):
-    pass
+    @swagger_auto_schema(
+        operation_summary="Service list",
+        operation_description="Service list",
+        responses={200: ServiceSerializer(many=True)},
+        tags=["Service"]
+    )
+    def service_list(self, request):
+        services = Service.objects.all()
+        serializer = ServiceSerializer(services, many=True, context={"request": request})
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        operation_summary="Service detail",
+        operation_description="Service detail",
+        responses={200: ServiceDetailSerializer()},
+        tags=["Service"]
+    )
+    def service_detail(self, request, pk):
+        service = Service.objects.filter(id=pk).first()
+        serializer = ServiceDetailSerializer(service, context={"request": request})
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
 
 class QuestionsViewSet(ViewSet):
@@ -864,6 +884,13 @@ class OrderViewSet(ViewSet):
 
         return Response(data={"result": OrderSerializer(order, context={"request": request}).data, "ok": True},
                         status=status.HTTP_201_CREATED)
+
+    # @swagger_auto_schema(
+    #     operation_summary="Order detail",
+    #     operation_description="Order detail",
+    #     responses={201: OrderSerializer()},
+    #     tags=["Order"]
+    # )
 
     @swagger_auto_schema(
         operation_summary="Orders history list",

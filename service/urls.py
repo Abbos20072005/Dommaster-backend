@@ -1,6 +1,6 @@
 from django.urls import path
 from .views import ProductViewSet, BrandViewSet, SaleViewSet, AddsBrandsViewSet, CommentViewSet, FavouriteViewSet, \
-    CartViewSet, QuestionsViewSet, OrderViewSet
+    CartViewSet, QuestionsViewSet, OrderViewSet, ServiceViewSet
 
 urlpatterns = [
     path("categories/", ProductViewSet.as_view({"get": "categories_list"}), name="categories_list"),
@@ -41,5 +41,7 @@ urlpatterns = [
     path("recently/viewed/", ProductViewSet.as_view({"get": "recently_viewed"}), name="recently_viewed_products"),
     path("order/", OrderViewSet.as_view({"post": "create_order"}), name="create_order"),
     path("order/history/", OrderViewSet.as_view({"get": "orders_history_list"}), name="orders_history"),
-    path("order/active/", OrderViewSet.as_view({"get": "orders_active_list"}), name="orders_active")
+    path("order/active/", OrderViewSet.as_view({"get": "orders_active_list"}), name="orders_active"),
+    path("services/", ServiceViewSet.as_view({"get": "service_list"}), name="services_list"),
+    path("services/<int:pk>/", ServiceViewSet.as_view({"get": "service_detail"}), name="service_detail")
 ]

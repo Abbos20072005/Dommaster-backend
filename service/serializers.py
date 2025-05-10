@@ -1,14 +1,32 @@
 from rest_framework import serializers
-
 from authorization.serializers import CustomerSerializer
 from .models import Product, ProductCategory, ProductItemCategory, ProductSubCategory, ProductImage, Comment, \
     Order, OrderItem, Brand, Sale, AddsBrands, Favourites, Cart, CartItem, ProductCharacteristics, Questions, \
-    RecentlyViewedProducts
+    RecentlyViewedProducts, Service
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from config import settings
 from django.db.models import Exists, OuterRef
 
+
+class ServiceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Service
+        fields = (
+            "id",
+            "name",
+            "icon"
+        )
+
+class ServiceDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Service
+        fields = (
+            "id",
+            "name",
+            "icon",
+            "description"
+        )
 
 class ProductCharacteristicsSerializer(serializers.ModelSerializer):
     class Meta:
@@ -412,17 +430,6 @@ class SaleMainSerializer(serializers.ModelSerializer):
             "bg_image",
             "products"
         )
-
-# class SaleDetailSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = Sale
-#         fields = (
-#             "id",
-#             "name",
-#             "discount_from",
-#             "discount_to",
-#             "image",
-#         )
 
 
 class BrandDetailSerializer(serializers.ModelSerializer):

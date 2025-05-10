@@ -1,7 +1,13 @@
 from django.contrib import admin
 from .models import Product, ProductCategory, ProductSubCategory, ProductItemCategory, Comment, Order, \
     OrderItem, Tag, Brand, Sale, AddsBrands, ProductImage, Favourites, Cart, CartItem, Questions, \
-    ProductCharacteristics, RecentlyViewedProducts
+    ProductCharacteristics, RecentlyViewedProducts, Service
+
+@admin.register(Service)
+class ServiceAdmin(admin.ModelAdmin):
+    list_display = ("id", "name")
+    list_display_links = ("id", "name")
+    search_fields = ("name",)
 
 
 @admin.register(RecentlyViewedProducts)

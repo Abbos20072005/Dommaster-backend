@@ -3,6 +3,7 @@ from abstract_model.base_model import BaseModel
 from django.core.validators import MinValueValidator, MaxValueValidator
 from authorization.models import Customer
 from ckeditor.fields import RichTextField
+from ckeditor_uploader.fields import RichTextUploadingField
 from django.contrib.postgres.indexes import GinIndex
 import secrets
 from base.models import Promocodes
@@ -275,7 +276,7 @@ class Comment(BaseModel):
 class Service(BaseModel):
     name = models.CharField(max_length=250, verbose_name="Название")
     icon = models.ImageField(upload_to="service/", verbose_name="Иконка")
-    description = RichTextField(verbose_name="Описание")
+    description = RichTextUploadingField(verbose_name="Описание")
 
     def __str__(self):
         return self.name
