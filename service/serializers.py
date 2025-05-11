@@ -517,10 +517,8 @@ class ProductCategoryListSerializer(serializers.ModelSerializer):
 
 
 
-
-
 class OrderItemSerializer(serializers.ModelSerializer):
-    product = ProductSerializer(read_only=True)
+    # product = ProductSerializer(read_only=True)
 
     class Meta:
         model = OrderItem
