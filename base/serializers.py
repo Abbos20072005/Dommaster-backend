@@ -89,7 +89,7 @@ class PromocodeSerializer(serializers.ModelSerializer):
 
 
 class PromocodeRequestSerializer(serializers.Serializer):
-    promocode = serializers.CharField(max_length=15)
+    promocode = serializers.CharField(max_length=15, required=False)
 
 
 class BannerSerializer(serializers.ModelSerializer):

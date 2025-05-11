@@ -516,18 +516,12 @@ class ProductCategoryListSerializer(serializers.ModelSerializer):
         )
 
 
-class OrderSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Order
-        fields = (
-            "id",
-            "customer",
-            "status",
-            "total_price"
-        )
+
 
 
 class OrderItemSerializer(serializers.ModelSerializer):
+    product = ProductSerializer(read_only=True)
+
     class Meta:
         model = OrderItem
         fields = (
@@ -535,6 +529,27 @@ class OrderItemSerializer(serializers.ModelSerializer):
             "order",
             "product",
             "quantity"
+        )
+
+class OrderSerializer(serializers.ModelSerializer):
+    order_items = OrderItemSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Order
+        fields = (
+            "id",
+            "customer",
+            "status",
+            "total_price",
+            "order_items"
+        )
+
+class OrderDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Order
+        fields = (
+            "id",
+            "product"
         )
 
 
