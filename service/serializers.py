@@ -527,7 +527,7 @@ class OrderItemSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "order",
-            "product",
+            "product_order_item__image",
             "quantity"
         )
 
