@@ -31,6 +31,38 @@ from django.db import transaction
 from base.models import Promocodes
 from base.serializers import PromocodeRequestSerializer
 from datetime import date
+from base.models import Banner
+from base.serializers import BannerSerializer
+
+class MainPageViewSet(ViewSet):
+    @swagger_auto_schema(
+        operation_summary="Main page informations",
+        operation_description="Main page informations",
+        responses={200: "Result"},
+        tags=["Main"]
+    )
+    def homepage_data(self, request):
+        result = []
+        banners = list(Banner.objects.filter(is_visible=True).order_by("id"))
+        addsbrands_list = AddsBrands.objects.filter(is_visible=True).prefetch_related("products")
+
+        banner_index = 0
+
+        for addsbrand in addsbrands_list:
+            result.append({
+                "type": "addsbrands",
+                "data": AddsBrandsSerializer(addsbrand).data
+            })
+
+            if banner_index < len(banners):
+                banner = banners[banner_index]
+                result.append({
+                    "type": "banner",
+                    "data": BannerSerializer(banner).data
+                })
+                banner_index += 1
+
+        return Response(data={"result": result, "ok": True}, status=status.HTTP_200_OK)
 
 
 class ProductViewSet(ViewSet):
