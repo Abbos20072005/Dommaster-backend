@@ -2,7 +2,7 @@ from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
-
+from .utils import send_telegram_message
 from authorization.models import Customer
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
@@ -861,27 +861,43 @@ class OrderViewSet(ViewSet):
         if not serializer.is_valid():
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
 
-        promocode = Promocodes.objects.filter(name=serializer.validated_data.get("promocode").lower()).first()
-        if not promocode:
-            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND, message="Promocode does not found")
+        promocode = Promocodes.objects.filter(name=serializer.validated_data.get("promocode")).first()
 
-        if promocode.expires_at < date.today():
-            raise CustomApiException(error_code=ErrorCodes.PROMOCODE_EXPIRED)
+        if promocode:
+            if promocode.expires_at < date.today():
+                raise CustomApiException(error_code=ErrorCodes.PROMOCODE_EXPIRED)
 
-        promocode_discount_price = 0
-        if not promocode.discount_precent and promocode.discount_price:
-            promocode_discount_price = cart.total_price - promocode.discount_price
-        elif not promocode.discount_price and promocode.discount_precent:
-            promocode_discount_price = cart.total_price * (1 - (promocode.discount_precent / 100))
+            promocode_discount_price = 0
+            if not promocode.discount_precent and promocode.discount_price:
+                promocode_discount_price = cart.total_price - promocode.discount_price
+            elif not promocode.discount_price and promocode.discount_precent:
+                promocode_discount_price = cart.total_price * (1 - (promocode.discount_precent / 100))
 
-        order = Order.objects.create(customer_id=request.user.id, promocode_id=promocode.id,
-                                     total_price=promocode_discount_price)
+            order = Order.objects.create(customer_id=request.user.id, promocode_id=promocode.id,
+                                         total_price=promocode_discount_price)
+        else:
+            order = Order.objects.create(customer_id=request.user.id, total_price=cart.products_total_price)
 
         cart_items = CartItem.objects.filter(cart_id=cart.id).exclude(is_checked=False)
         for cart_item in cart_items:
             OrderItem.objects.create(order=order, product=cart_item.product, quantity=cart_item.quantity)
             cart_item.delete()
 
+        order_items = order.order_items.all()
+        message_lines = [
+            f"<b>🛒 New Order Created</b>",
+            f"🆔 Order ID: {order.id}",
+            f"👤 Customer ID: {order.customer.id if order.customer else 'Unknown'}",
+            f"💰 Total Price: {order.total_price}",
+            "📦 Items:"
+        ]
+
+        for item in order_items:
+            product_name = item.product.name
+            message_lines.append(f" - {product_name} (Qty: {item.quantity})")
+
+        message = "\n".join(message_lines)
+        send_telegram_message(message)
         return Response(data={"result": OrderSerializer(order, context={"request": request}).data, "ok": True},
                         status=status.HTTP_201_CREATED)
 
