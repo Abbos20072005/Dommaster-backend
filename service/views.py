@@ -910,7 +910,7 @@ class OrderViewSet(ViewSet):
         if not param_serializer.is_valid():
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=param_serializer.errors)
 
-        orders = Order.objects.filter(Q(status=3) | Q(status=4), customer_id=request.user.id)
+        orders = Order.objects.filter(Q(status=3) | Q(status=4), customer_id=request.user.id).order_by("-created_at")
         return Response(data={
             "result": get_orders_paginator(response_data=orders, page=param_serializer.validated_data.get("page"),
                                            page_size=param_serializer.validated_data.get("page_size"),
@@ -934,7 +934,7 @@ class OrderViewSet(ViewSet):
         if not param_serializer.is_valid():
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=param_serializer.errors)
 
-        orders = Order.objects.filter(customer_id=request.user.id).exclude(Q(status=3) | Q(status=4))
+        orders = Order.objects.filter(customer_id=request.user.id).exclude(Q(status=3) | Q(status=4)).order_by("-created_at")
         return Response(data={
             "result": get_orders_paginator(response_data=orders, page=param_serializer.validated_data.get("page"),
                                            page_size=param_serializer.validated_data.get("page_size"),

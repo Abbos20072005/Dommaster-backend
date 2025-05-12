@@ -231,7 +231,7 @@ class Announcements(BaseModel):
 
 
 class OrderItem(BaseModel):
-    order = models.ForeignKey(Order, on_delete=models.CASCADE, verbose_name="Заказ")
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="order_items", verbose_name="Заказ")
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="product_order_item",
                                 verbose_name="Продукт")
     quantity = models.IntegerField(default=0, verbose_name="Количество")

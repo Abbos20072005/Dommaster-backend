@@ -516,18 +516,21 @@ class ProductCategoryListSerializer(serializers.ModelSerializer):
         )
 
 
-
 class OrderItemSerializer(serializers.ModelSerializer):
-    product = ProductSerializer(read_only=True)
+    image = serializers.SerializerMethodField()
 
     class Meta:
         model = OrderItem
         fields = (
             "id",
-            "order",
-            "product",
-            "quantity"
+            "image",
         )
+
+    def get_image(self, obj):
+        first_image = obj.product.product_image.first()
+        if first_image:
+            return first_image.image.url
+        return None
 
 class OrderSerializer(serializers.ModelSerializer):
     order_items = OrderItemSerializer(many=True, read_only=True)
@@ -539,16 +542,17 @@ class OrderSerializer(serializers.ModelSerializer):
             "customer",
             "status",
             "total_price",
+            "created_at",
             "order_items"
         )
 
-class OrderDetailSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Order
-        fields = (
-            "id",
-            "product"
-        )
+# class OrderDetailSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = Order
+#         fields = (
+#             "id",
+#             "product"
+#         )
 
 
 class QuestionsSerializer(serializers.ModelSerializer):
