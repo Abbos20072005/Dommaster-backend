@@ -51,14 +51,14 @@ class MainPageViewSet(ViewSet):
         for addsbrand in addsbrands_list:
             result.append({
                 "type": "addsbrands",
-                "data": AddsBrandsSerializer(addsbrand).data
+                "data": AddsBrandsSerializer(addsbrand, context={"request": request}).data
             })
 
             if banner_index < len(banners):
                 banner = banners[banner_index]
                 result.append({
                     "type": "banner",
-                    "data": BannerSerializer(banner).data
+                    "data": BannerSerializer(banner, context={"request": request}).data
                 })
                 banner_index += 1
 
