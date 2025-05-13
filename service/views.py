@@ -14,7 +14,7 @@ from .serializers import ProductCategorySerializer, ProductCategoryListSerialize
     CartItemSerializer, CartItemUpdateSerializer, CartItemBulkUpdateSerializer, CommentParamSerializer, \
     CommentCreateSerializer, CartItemCreateSerializer, QuestionsSerializer, QuestionsUpdateSerializer, \
     QuestionsCreateSerializer, FavouriteCreateSerializer, FavouriteResponseSerializer, RecentlyViewedProductsSerializer, \
-    OrderSerializer, SaleMainSerializer, ServiceSerializer, ServiceDetailSerializer
+    OrderSerializer, SaleMainSerializer, ServiceSerializer, ServiceDetailSerializer, OrderDetailSerializer
 from .models import ProductCategory, ProductSubCategory, ProductItemCategory, Product, Comment, Brand, Sale, AddsBrands, \
     Favourites, Cart, CartItem, Questions, Order, OrderItem, RecentlyViewedProducts, Service
 from rest_framework import status
@@ -913,6 +913,9 @@ class OrderViewSet(ViewSet):
         cart_items = CartItem.objects.filter(cart_id=cart.id).exclude(is_checked=False)
         for cart_item in cart_items:
             OrderItem.objects.create(order=order, product=cart_item.product, quantity=cart_item.quantity)
+            # product = Product.objects.filter(id=cart_item.product.id).first()
+            # product.quantity = product.quantity - cart_items.quantity
+            # product.save(update_fields=["quantity"])
             cart_item.delete()
 
         order_items = order.order_items.all()
@@ -933,12 +936,16 @@ class OrderViewSet(ViewSet):
         return Response(data={"result": OrderSerializer(order, context={"request": request}).data, "ok": True},
                         status=status.HTTP_201_CREATED)
 
-    # @swagger_auto_schema(
-    #     operation_summary="Order detail",
-    #     operation_description="Order detail",
-    #     responses={201: OrderSerializer()},
-    #     tags=["Order"]
-    # )
+    @swagger_auto_schema(
+        operation_summary="Order detail",
+        operation_description="Order detail",
+        responses={201: OrderDetailSerializer()},
+        tags=["Order"]
+    )
+    def order_detail(self, request, pk):
+        order = Order.objects.filter(id=pk).first()
+        serializer = OrderDetailSerializer(order, context={"request": request})
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
         operation_summary="Orders history list",

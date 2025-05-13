@@ -42,6 +42,7 @@ urlpatterns = [
     path("order/", OrderViewSet.as_view({"post": "create_order"}), name="create_order"),
     path("order/history/", OrderViewSet.as_view({"get": "orders_history_list"}), name="orders_history"),
     path("order/active/", OrderViewSet.as_view({"get": "orders_active_list"}), name="orders_active"),
+    path("order/<int:pk>/", OrderViewSet.as_view({"get": "order_detail"}), name="order_detail"),
     path("services/", ServiceViewSet.as_view({"get": "service_list"}), name="services_list"),
     path("services/<int:pk>/", ServiceViewSet.as_view({"get": "service_detail"}), name="service_detail"),
     path("main/", MainPageViewSet.as_view({"get": "homepage_data"}), name="homepage_data"),

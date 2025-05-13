@@ -516,7 +516,7 @@ class ProductCategoryListSerializer(serializers.ModelSerializer):
         )
 
 
-class OrderItemSerializer(serializers.ModelSerializer):
+class OrderItemImageSerializer(serializers.ModelSerializer):
     image = serializers.SerializerMethodField()
 
     class Meta:
@@ -534,7 +534,7 @@ class OrderItemSerializer(serializers.ModelSerializer):
         return None
 
 class OrderSerializer(serializers.ModelSerializer):
-    order_items = OrderItemSerializer(many=True, read_only=True)
+    order_items = OrderItemImageSerializer(many=True, read_only=True)
 
     class Meta:
         model = Order
@@ -547,13 +547,31 @@ class OrderSerializer(serializers.ModelSerializer):
             "order_items"
         )
 
-# class OrderDetailSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = Order
-#         fields = (
-#             "id",
-#             "product"
-#         )
+class OrderItemSerializer(serializers.ModelSerializer):
+    product = ProductSerializer(read_only=True)
+
+    class Meta:
+        model = OrderItem
+        fields = (
+            "id",
+            "quantity",
+            "product"
+        )
+
+
+class OrderDetailSerializer(serializers.ModelSerializer):
+    order_items = OrderItemSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Order
+        fields = (
+            "id",
+            "status",
+            "promocode",
+            "total_price",
+            "created_at",
+            "order_items"
+        )
 
 
 class QuestionsSerializer(serializers.ModelSerializer):
