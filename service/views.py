@@ -943,7 +943,10 @@ class OrderViewSet(ViewSet):
         tags=["Order"]
     )
     def order_detail(self, request, pk):
-        order = Order.objects.filter(id=pk).first()
+        order = Order.objects.filter(id=pk, customer_id=request.user.id).first()
+        if not order:
+            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
+
         serializer = OrderDetailSerializer(order, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
