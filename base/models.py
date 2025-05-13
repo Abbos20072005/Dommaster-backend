@@ -1,3 +1,5 @@
+import uuid
+
 from django.db import models
 from abstract_model.base_model import BaseModel
 from authorization.models import Customer
@@ -27,7 +29,8 @@ class Banner(BaseModel):
 
 
 class Chat(BaseModel):
-    customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, verbose_name="Клиент")
+    customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Клиент")
+    chat_token = models.CharField(max_length=64, unique=True, blank=True, null=True, verbose_name="Токен чата")
 
     def __str__(self):
         return str(self.id)

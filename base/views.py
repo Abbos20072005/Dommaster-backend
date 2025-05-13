@@ -2,6 +2,8 @@ from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
 from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
+from yaml import serialize
+
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from service.serializers import PaginationSerializer
@@ -15,6 +17,8 @@ from .models import Banner, Chat, AboutUs, Messages, Promocodes, News, Articles,
 from service.models import Cart
 from drf_yasg import openapi
 from datetime import date
+import secrets
+
 
 class VideoViewSet(ViewSet):
     @swagger_auto_schema(
@@ -233,9 +237,30 @@ class ChatViewSet(ViewSet):
         tags=["Chat"]
     )
     def message_list(self, request):
-        chat = Chat.objects.filter(customer_id=request.user.id).first()
+        customer = request.user.id
+        if not customer:
+            token = request.COOKIES.get("chat_token")
+            if not token:
+                token = secrets.token_hex(16)
+
+            chat = Chat.objects.filter(chat_token=token).first()
+            if not chat:
+                chat = Chat.objects.create(chat_token=token)
+
+            messages = Messages.objects.filter(chat=chat.id)
+            serializer = MessageSerializer(messages, many=True, context={"request": request})
+
+            resp = Response(data={"result": serializer.data, "ok": True},
+                            status=status.HTTP_200_OK)
+
+            resp.set_cookie("chat_token", chat.chat_token, httponly=False,
+                            secure=True, samesite="None")
+
+            return resp
+
+        chat = Chat.objects.filter(customer_id=customer).first()
         if not chat:
-            create_serializer = ChatCreateSerializer(data={"customer": request.user.id},
+            create_serializer = ChatCreateSerializer(data={"customer": customer},
                                                      context={"request": request})
             if not create_serializer.is_valid():
                 raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=create_serializer.errors)
@@ -255,6 +280,23 @@ class ChatViewSet(ViewSet):
         tags=["Chat"]
     )
     def message_create(self, request):
+        customer = request.user.id
+        if not customer:
+            token = request.COOKIES.get("chat_token")
+            if not token:
+                raise CustomApiException(error_code=ErrorCodes.NOT_FOUND,
+                                         message="You could not write to chat because you don't have any chat")
+            chat = Chat.objects.filter(chat_token=token).first()
+            if not chat:
+                raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
+
+            serializer = MessageCreateSerializer(data={"chat": chat.id, **request.data}, context={"request": request})
+            if not serializer.is_valid():
+                raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
+
+            serializer.save()
+            return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+
         chat = Chat.objects.filter(customer_id=request.user.id).first()
         if not chat:
             raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
