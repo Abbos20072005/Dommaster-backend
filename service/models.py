@@ -146,6 +146,7 @@ class Sale(BaseModel):
 
 
 class Product(BaseModel):
+    telegram_id = models.IntegerField(blank=True, null=True, verbose_name="Телеграм id")
     brand = models.ForeignKey(Brand, on_delete=models.SET_NULL, null=True, blank=True, related_name="product_brand",
                               verbose_name="Бренд")
     product_item_category = models.ForeignKey(ProductItemCategory, on_delete=models.CASCADE, blank=True, null=True,

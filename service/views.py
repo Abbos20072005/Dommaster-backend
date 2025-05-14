@@ -3,7 +3,6 @@ from rest_framework.response import Response
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from .utils import send_telegram_message
-from authorization.models import Customer
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from .paginations.get_orders import get_orders_paginator
@@ -928,8 +927,7 @@ class OrderViewSet(ViewSet):
         ]
 
         for item in order_items:
-            product_name = item.product.name
-            message_lines.append(f" - {product_name} (Qty: {item.quantity})")
+            message_lines.append(f" - {item.product.name} (Qty: {item.quantity}) | 👤 Manager: {item.product.telegram_id}")
 
         message = "\n".join(message_lines)
         send_telegram_message(message)
