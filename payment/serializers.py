@@ -22,7 +22,7 @@ class MerchatTransactionsModelSerializer(serializers.ModelSerializer):
                 order = AccountModel.objects.get(
                     id=data['order_id']
                 )
-                if order.total_price != int(data['amount']):
+                if order.total_price*100 != int(data['amount']):
                     raise IncorrectAmount()
 
             except IncorrectAmount:

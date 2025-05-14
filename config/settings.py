@@ -273,3 +273,8 @@ CLICK_AMOUNT_FIELD = os.getenv('CLICK_AMOUNT_FIELD', "")
 # payme_settings
 PAYME_ID = os.getenv('PAYME_ID', 1)
 PAYME_KEY = os.getenv('PAYME_KEY', "")
+
+
+
+#web redirected url
+REDIRECTED_URL=os.getenv('REDIRECTED_URL', "")
