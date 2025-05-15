@@ -255,6 +255,7 @@ class ProductSerializer(serializers.ModelSerializer):
             "is_favourite",
             "in_cart",
             "in_cart_quantity",
+            "short_description",
             "description",
             "price",
             "quantity",

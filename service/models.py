@@ -153,6 +153,7 @@ class Product(BaseModel):
                                               related_name="product_item_category",
                                               verbose_name="Предметная категория продуктов")
     name = models.CharField(max_length=500, verbose_name="Название")
+    short_description = RichTextField(blank=True, null=True, verbose_name="Краткое описансе")
     description = RichTextField(verbose_name="Описание")
     price = models.FloatField(default=0.0, verbose_name="Цена")
     discount_price = models.FloatField(blank=True, null=True, verbose_name="Скидочная цена")
