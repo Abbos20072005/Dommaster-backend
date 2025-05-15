@@ -66,6 +66,19 @@ class MainPageViewSet(ViewSet):
 
 class ProductViewSet(ViewSet):
     @swagger_auto_schema(
+        operation_summary="Most searched products",
+        operation_description="Most searched products",
+        responses={200: "Products name list"},
+        tags=["Product"]
+    )
+    def most_search(self, request):
+        products = Product.objects.annotate(most_solds=Sum("product_order_item__quantity")).exclude(
+            most_solds=0).order_by(
+            "-most_solds").values_list("name", flat=True)[:7]
+        return Response(data={"result": products, "ok": True}, status=status.HTTP_200_OK)
+
+
+    @swagger_auto_schema(
         operation_summary="Recently viewed products",
         operation_description="Recently viewed products",
         manual_parameters=[

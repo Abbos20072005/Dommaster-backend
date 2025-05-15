@@ -46,5 +46,6 @@ urlpatterns = [
     path("services/", ServiceViewSet.as_view({"get": "service_list"}), name="services_list"),
     path("services/<int:pk>/", ServiceViewSet.as_view({"get": "service_detail"}), name="service_detail"),
     path("main/", MainPageViewSet.as_view({"get": "homepage_data"}), name="homepage_data"),
+    path("most/search/", ProductViewSet.as_view({"get": "most_search"}), name="most_search")
 
 ]
