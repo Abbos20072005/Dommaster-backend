@@ -189,7 +189,6 @@ class Product(BaseModel):
         self.questions_quantity = agg_data["count_questions"] or 0
         self.save()
 
-
     class Meta:
         verbose_name = "Продукт"
         verbose_name_plural = "Продукты"
@@ -275,6 +274,36 @@ class Comment(BaseModel):
         verbose_name_plural = "Коментарии"
 
 
+class CommentReply(BaseModel):
+    comment = models.ForeignKey(Comment, on_delete=models.CASCADE, verbose_name="Коментарий")
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, verbose_name="Клиент")
+    reply_comment = models.TextField(verbose_name="Коментарий ответа")
+    is_admin = models.BooleanField(default=False, verbose_name="Админ")
+    is_visible = models.BooleanField(default=True, verbose_name="Виден")
+
+    def __str__(self):
+        return str(self.id)
+
+    class Meta:
+        verbose_name = "Ответ коментария"
+        verbose_name_plural = "Ответы коментариям"
+        ordering = ("-created_at",)
+
+
+class CommentImages(BaseModel):
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, verbose_name="Клиент")
+    comment = models.ForeignKey(Comment, on_delete=models.CASCADE, verbose_name="Коментарий")
+    image = models.ImageField(upload_to="comment/images/", verbose_name="Изображение")
+
+    def __str__(self):
+        return str("id")
+
+    class Meta:
+        verbose_name = "Изображение комментария"
+        verbose_name_plural = "Изображения комментариев"
+        ordering = ("-created_at",)
+
+
 class Service(BaseModel):
     name = models.CharField(max_length=250, verbose_name="Название")
     icon = models.ImageField(upload_to="service/", verbose_name="Иконка")
@@ -308,7 +337,7 @@ class Cart(BaseModel):
     cart_token = models.CharField(max_length=64, unique=True, blank=True, null=True, verbose_name="Токен карзины")
     total_price = models.FloatField(default=0.0, verbose_name="Общая цена")
     saved_price = models.FloatField(default=0.0, verbose_name="Сэкономленная сумма")
-    products_total_price =  models.FloatField(default=0.0, verbose_name="Общая стоимость продуктов")
+    products_total_price = models.FloatField(default=0.0, verbose_name="Общая стоимость продуктов")
 
     def total_items(self):
         return sum(item.quantity for item in self.cart_item.all())
@@ -325,7 +354,6 @@ class Cart(BaseModel):
             elif item.is_checked is True and item.product:
                 total += item.product.price * item.quantity
                 products_total_price += item.product.price * item.quantity
-
 
         self.total_price = total
         self.saved_price = saved_price_total
@@ -378,9 +406,11 @@ class Questions(BaseModel):
         verbose_name = "Вопрос"
         verbose_name_plural = "Вопросы"
 
+
 class RecentlyViewedProducts(BaseModel):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, verbose_name="Клиент")
-    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="recently_viewed_products", verbose_name="Продукт")
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="recently_viewed_products",
+                                verbose_name="Продукт")
 
     def __str__(self):
         return self.customer.full_name

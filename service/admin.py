@@ -1,7 +1,18 @@
 from django.contrib import admin
 from .models import Product, ProductCategory, ProductSubCategory, ProductItemCategory, Comment, Order, \
     OrderItem, Tag, Brand, Sale, AddsBrands, ProductImage, Favourites, Cart, CartItem, Questions, \
-    ProductCharacteristics, RecentlyViewedProducts, Service
+    ProductCharacteristics, RecentlyViewedProducts, Service, CommentImages, CommentReply
+
+@admin.register(CommentReply)
+class CommentReplyAdmin(admin.ModelAdmin):
+    list_display = ("id", "customer", "comment", "is_admin", "is_visible")
+    list_display_links = ("id", "customer")
+    list_filter = ("is_admin", "is_visible")
+
+@admin.register(CommentImages)
+class CommentImagesAdmin(admin.ModelAdmin):
+    list_display = ("id", "customer", "comment")
+    list_display_links = ("id", "customer")
 
 @admin.register(Service)
 class ServiceAdmin(admin.ModelAdmin):
