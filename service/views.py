@@ -917,20 +917,7 @@ class OrderViewSet(ViewSet):
             # product.save(update_fields=["quantity"])
             cart_item.delete()
 
-        order_items = order.order_items.all()
-        message_lines = [
-            f"<b>🛒 New Order Created</b>",
-            f"🆔 Order ID: {order.id}",
-            f"👤 Customer ID: {order.customer.id if order.customer else 'Unknown'}",
-            f"💰 Total Price: {order.total_price}",
-            "📦 Items:"
-        ]
-
-        for item in order_items:
-            message_lines.append(f" - {item.product.name} (Qty: {item.quantity}) | 👤 Manager: {item.product.telegram_id}")
-
-        message = "\n".join(message_lines)
-        send_telegram_message(message)
+        send_telegram_message(order)
         return Response(data={"result": OrderSerializer(order, context={"request": request}).data, "ok": True},
                         status=status.HTTP_201_CREATED)
 
