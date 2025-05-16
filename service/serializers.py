@@ -16,14 +16,44 @@ class CommentImagesSerializer(serializers.ModelSerializer):
             "image"
         )
 
+class CommentImagesCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CommentImages
+        fields = (
+            "id",
+            "customer",
+            "comment",
+            "image"
+        )
+
 class CommentReplySerializer(serializers.ModelSerializer):
     class Meta:
         model = CommentReply
         fields = (
             "id",
-            "reply_message"
+            "customer",
+            "is_admin",
+            "reply_comment"
         )
 
+
+class CommentReplyCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CommentReply
+        fields = (
+            "id",
+            "customer",
+            "comment",
+            "reply_comment"
+        )
+
+class CommentReplyUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CommentReply
+        fields = (
+            "id",
+            "reply_comment"
+        )
 
 class ServiceSerializer(serializers.ModelSerializer):
     class Meta:

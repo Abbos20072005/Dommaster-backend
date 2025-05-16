@@ -32,7 +32,9 @@ class IsAuthenticatedMiddleware(MiddlewareMixin):
             "create_order",
             "orders_history",
             "orders_active",
-            "order_detail"
+            "order_detail",
+            "reply_update",
+            "reply_action"
         }
 
         match = request.resolver_match

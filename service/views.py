@@ -2,6 +2,8 @@ from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
+from yaml import serialize
+
 from .utils import send_telegram_message
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
@@ -13,14 +15,17 @@ from .serializers import ProductCategorySerializer, ProductCategoryListSerialize
     CartItemSerializer, CartItemUpdateSerializer, CartItemBulkUpdateSerializer, CommentParamSerializer, \
     CommentCreateSerializer, CartItemCreateSerializer, QuestionsSerializer, QuestionsUpdateSerializer, \
     QuestionsCreateSerializer, FavouriteCreateSerializer, FavouriteResponseSerializer, RecentlyViewedProductsSerializer, \
-    OrderSerializer, SaleMainSerializer, ServiceSerializer, ServiceDetailSerializer, OrderDetailSerializer
+    OrderSerializer, SaleMainSerializer, ServiceSerializer, ServiceDetailSerializer, OrderDetailSerializer, \
+    CommentReplySerializer, CommentReplyCreateSerializer, CommentReplyUpdateSerializer
 from .models import ProductCategory, ProductSubCategory, ProductItemCategory, Product, Comment, Brand, Sale, AddsBrands, \
-    Favourites, Cart, CartItem, Questions, Order, OrderItem, RecentlyViewedProducts, Service
+    Favourites, Cart, CartItem, Questions, Order, OrderItem, RecentlyViewedProducts, Service, CommentReply, \
+    CommentImages
 from rest_framework import status
 from django.db.models import Q, Sum, Exists, OuterRef, Value, BooleanField
 from .paginations.get_products_pagination import get_products_paginator
 from .paginations.get_comments import get_comments_paginator
 from .paginations.get_question import get_questions_paginator
+from .paginations.get_comment_replies import get_comment_replies_paginator
 from django.db.models import Count
 from django.core.cache import cache
 from django.contrib.postgres.search import TrigramSimilarity
@@ -32,6 +37,7 @@ from base.serializers import PromocodeRequestSerializer
 from datetime import date
 from base.models import Banner
 from base.serializers import BannerSerializer
+
 
 class MainPageViewSet(ViewSet):
     @swagger_auto_schema(
@@ -76,7 +82,6 @@ class ProductViewSet(ViewSet):
             most_solds=0).order_by(
             "-most_solds").values_list("name", flat=True)[:7]
         return Response(data={"result": products, "ok": True}, status=status.HTTP_200_OK)
-
 
     @swagger_auto_schema(
         operation_summary="Recently viewed products",
@@ -281,6 +286,85 @@ class ProductViewSet(ViewSet):
 
 
 class CommentViewSet(ViewSet):
+    @swagger_auto_schema(
+        operation_summary="Comment reply create",
+        operation_description="Comment reply create",
+        responses={204: "Comment successfully deleted"},
+        tags=["Comment"]
+    )
+    def reply_delete(self, request, pk):
+        comment_reply = CommentReply.objects.filter(id=pk, customer_id=request.user.id).first()
+        if not comment_reply:
+            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
+
+        comment_reply.delete()
+        return Response(data={"result": "Comment successfully deleted", "ok": True}, status=status.HTTP_204_NO_CONTENT)
+
+
+    @swagger_auto_schema(
+        operation_summary="Comment reply create",
+        operation_description="Comment reply create",
+        request_body=CommentReplyCreateSerializer(),
+        responses={200: CommentReplyCreateSerializer()},
+        tags=["Comment"]
+    )
+    def reply_create(self, request, pk):
+        data = request.data
+        comment = Comment.objects.filter(id=pk).first()
+        if not comment:
+            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
+
+        data["comment"] = pk
+        data["customer"] = request.user.id
+        serializer = CommentReplyCreateSerializer(data=request.data, context={"request": request})
+        if not serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
+
+        serializer.save()
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        operation_summary="My comments list",
+        operation_description="My comments list",
+        manual_parameters=[
+            openapi.Parameter(
+                name='page', in_=openapi.IN_QUERY, description='Page', type=openapi.TYPE_INTEGER),
+            openapi.Parameter(
+                name='page_size', in_=openapi.IN_QUERY, description='Page size', type=openapi.TYPE_INTEGER),
+        ],
+        responses={200: CommentReplySerializer(many=True)},
+        tags=["Comment"]
+    )
+    def reply_list(self, request, pk):
+        params = request.query_params
+        param_serializer = PaginationSerializer(data=params, context={"request": request})
+        if not param_serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=param_serializer.errors)
+
+        comment_reply = CommentReply.objects.filter(comment_id=pk, is_visible=True)
+        return Response(data={
+            "result": get_comment_replies_paginator(response_data=comment_reply, context={"request": request},
+                                                    page=param_serializer.validated_data.get("page"),
+                                                    page_size=param_serializer.validated_data.get("page_size")),
+            "ok": True}, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        operation_summary="Comment reply update",
+        operation_description="Comment reply update",
+        request_body=CommentReplyUpdateSerializer(),
+        responses={202: CommentReplyUpdateSerializer()},
+        tags=["Comment"]
+    )
+    def reply_update(self, request, pk):
+        comment_reply = CommentReply.objects.filter(id=pk, customer_id=request.user.id).first()
+        serializer = CommentReplyUpdateSerializer(comment_reply, data=request.data, partial=True, context={"request": request})
+        if not serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
+
+        serializer.save()
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_202_ACCEPTED)
+
+
     @swagger_auto_schema(
         operation_summary="My comments list",
         operation_description="My comments list",
@@ -990,7 +1074,8 @@ class OrderViewSet(ViewSet):
         if not param_serializer.is_valid():
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=param_serializer.errors)
 
-        orders = Order.objects.filter(customer_id=request.user.id).exclude(Q(status=3) | Q(status=4)).order_by("-created_at")
+        orders = Order.objects.filter(customer_id=request.user.id).exclude(Q(status=3) | Q(status=4)).order_by(
+            "-created_at")
         return Response(data={
             "result": get_orders_paginator(response_data=orders, page=param_serializer.validated_data.get("page"),
                                            page_size=param_serializer.validated_data.get("page_size"),
