@@ -13,7 +13,6 @@ class CommentImagesSerializer(serializers.ModelSerializer):
         model = CommentImages
         fields = (
             "id",
-            "comment",
             "image"
         )
 

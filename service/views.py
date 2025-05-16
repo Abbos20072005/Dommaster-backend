@@ -409,7 +409,7 @@ class CommentViewSet(ViewSet):
         if not param_serializer.is_valid():
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=param_serializer.errors)
 
-        comments = Comment.objects.filter(product=param_serializer.validated_data.get("product_id"))
+        comments = Comment.objects.filter(product=param_serializer.validated_data.get("product_id")).order_by("-created_at")
         return Response(data={
             "result": get_comments_paginator(response_data=comments, page=param_serializer.validated_data.get("page"),
                                              page_size=param_serializer.validated_data.get("page_size"),
