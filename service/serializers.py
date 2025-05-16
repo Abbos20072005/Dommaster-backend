@@ -233,7 +233,7 @@ class BrandSerializer(serializers.ModelSerializer):
 
 class CommentSerializer(serializers.ModelSerializer):
     customer = CustomerSerializer(read_only=True)
-    images = CommentImagesSerializer(many=True, read_only=True)
+    images = CommentImagesSerializer(source="comment_image", many=True, read_only=True)
 
     class Meta:
         model = Comment

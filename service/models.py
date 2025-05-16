@@ -292,7 +292,7 @@ class CommentReply(BaseModel):
 
 class CommentImages(BaseModel):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, verbose_name="Клиент")
-    comment = models.ForeignKey(Comment, on_delete=models.CASCADE, verbose_name="Коментарий")
+    comment = models.ForeignKey(Comment, related_name="comment_image", on_delete=models.CASCADE, verbose_name="Коментарий")
     image = models.ImageField(upload_to="comment/images/", verbose_name="Изображение")
 
     def __str__(self):
