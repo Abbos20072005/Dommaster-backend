@@ -49,6 +49,7 @@ urlpatterns = [
     path("most/search/", ProductViewSet.as_view({"get": "most_search"}), name="most_search"),
     path("comment/reply/<int:pk>/", CommentViewSet.as_view({"patch": "reply_update"}), name="reply_update"),
     path("comment/<int:pk>/reply/",
-         CommentViewSet.as_view({"post": "reply_create", "get": "reply_list", "delete": "reply_delete"}),
+         CommentViewSet.as_view({"post": "reply_create", "delete": "reply_delete"}),
          name="reply_action"),
+    path("comment/<int:pk>/replies/", CommentViewSet.as_view({"get": "reply_list"}), name="reply_list")
 ]

@@ -333,8 +333,8 @@ class CommentViewSet(ViewSet):
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
-        operation_summary="My comments list",
-        operation_description="My comments list",
+        operation_summary="Replies list",
+        operation_description="Replies list",
         manual_parameters=[
             openapi.Parameter(
                 name='page', in_=openapi.IN_QUERY, description='Page', type=openapi.TYPE_INTEGER),
