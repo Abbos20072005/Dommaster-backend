@@ -47,7 +47,8 @@ class CommentReplySerializer(serializers.ModelSerializer):
             "id",
             "customer",
             "is_admin",
-            "reply_comment"
+            "reply_comment",
+            "created_at"
         )
 
 
