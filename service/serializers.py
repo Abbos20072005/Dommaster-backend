@@ -9,10 +9,13 @@ from config import settings
 from django.db.models import Exists, OuterRef
 
 class QuestionsReplySerializer(serializers.ModelSerializer):
+    customer = CustomerSerializer(read_only=True)
+
     class Meta:
         model = QuestionsReply
         fields = (
             "id",
+            "customer",
             "created_at",
             "answer"
         )
@@ -642,7 +645,6 @@ class OrderDetailSerializer(serializers.ModelSerializer):
 
 class QuestionsSerializer(serializers.ModelSerializer):
     customer = CustomerSerializer(read_only=True)
-    question_reply = QuestionsReplySerializer(source="question_reply", read_only=True)
 
     class Meta:
         model = Questions
@@ -651,8 +653,7 @@ class QuestionsSerializer(serializers.ModelSerializer):
             "customer",
             "product",
             "question",
-            "created_at",
-            "question_reply"
+            "created_at"
         )
 
 

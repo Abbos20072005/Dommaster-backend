@@ -286,15 +286,6 @@ class ProductViewSet(ViewSet):
 
 
 class CommentViewSet(ViewSet):
-    # @swagger_auto_schema(
-    #     operation_summary="Comment image create",
-    #     operation_description="Comment image create",
-    #     responses={204: "Comment successfully deleted"},
-    #     tags=["Comment"]
-    # )
-    # def image_create(self, request, pk):
-    #     pass
-
     @swagger_auto_schema(
         operation_summary="Comment reply delete",
         operation_description="Comment reply delete",
@@ -876,6 +867,21 @@ class ServiceViewSet(ViewSet):
 
 
 class QuestionsViewSet(ViewSet):
+    @swagger_auto_schema(
+        operation_summary="Questions replies list",
+        operation_description="Question replies list",
+        manual_parameters=[
+            openapi.Parameter(
+                name='page', in_=openapi.IN_QUERY, description='Page', type=openapi.TYPE_INTEGER),
+            openapi.Parameter(
+                name='page_size', in_=openapi.IN_QUERY, description='Page size', type=openapi.TYPE_INTEGER),
+        ],
+        responses={200: QuestionsSerializer(many=True)},
+        tags=["Question"]
+    )
+    def reply_list(self, request, pk):
+        pass
+
     @swagger_auto_schema(
         operation_summary="My questions list",
         operation_description="My questions list",

@@ -409,8 +409,11 @@ class Questions(BaseModel):
         verbose_name_plural = "Вопросы"
 
 class QuestionsReply(BaseModel):
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, blank=True, null=True, verbose_name="Клиент")
     question = models.ForeignKey(Questions, related_name="question_reply", on_delete=models.CASCADE, verbose_name="Вопрос")
     answer = models.TextField(verbose_name="Ответ")
+    is_admin = models.BooleanField(default=False, verbose_name="Админ")
+    is_visible = models.BooleanField(default=False, verbose_name="Виден")
 
     def __str__(self):
         return str(self.id)
