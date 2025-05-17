@@ -9,6 +9,10 @@ class CommentReplyAdmin(admin.ModelAdmin):
     list_display_links = ("id", "customer")
     list_filter = ("is_admin", "is_visible")
 
+    def save_model(self, request, obj, form, change):
+        obj.is_admin = True
+        obj.save()
+
 @admin.register(CommentImages)
 class CommentImagesAdmin(admin.ModelAdmin):
     list_display = ("id", "customer", "comment")
