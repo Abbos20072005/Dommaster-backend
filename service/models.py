@@ -275,7 +275,7 @@ class Comment(BaseModel):
 
 
 class CommentReply(BaseModel):
-    comment = models.ForeignKey(Comment, on_delete=models.CASCADE, verbose_name="Коментарий")
+    comment = models.ForeignKey(Comment, related_name="comment_reply", on_delete=models.CASCADE, verbose_name="Коментарий")
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, verbose_name="Клиент")
     reply_comment = models.TextField(verbose_name="Коментарий ответа")
     is_admin = models.BooleanField(default=False, verbose_name="Админ")

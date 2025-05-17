@@ -27,7 +27,7 @@ class CommentImagesCreateSerializer(serializers.ModelSerializer):
         )
 
 class CommentReplySerializer(serializers.ModelSerializer):
-    reply_count = serializers.IntegerField(read_only=True)
+    customer = CustomerSerializer(read_only=True)
 
     class Meta:
         model = CommentReply
@@ -35,7 +35,6 @@ class CommentReplySerializer(serializers.ModelSerializer):
             "id",
             "customer",
             "is_admin",
-            "reply_count",
             "reply_comment"
         )
 
@@ -237,6 +236,8 @@ class BrandSerializer(serializers.ModelSerializer):
 class CommentSerializer(serializers.ModelSerializer):
     customer = CustomerSerializer(read_only=True)
     images = CommentImagesSerializer(source="comment_image", many=True, read_only=True)
+    reply_count = serializers.IntegerField(read_only=True)
+
 
     class Meta:
         model = Comment
@@ -247,6 +248,7 @@ class CommentSerializer(serializers.ModelSerializer):
             "product_rating",
             "comment",
             "created_at",
+            "reply_count",
             "images"
         )
 
