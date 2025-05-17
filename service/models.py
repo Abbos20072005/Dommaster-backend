@@ -1,4 +1,6 @@
 from django.db import models
+from rest_framework.reverse import reverse_lazy
+
 from abstract_model.base_model import BaseModel
 from django.core.validators import MinValueValidator, MaxValueValidator
 from authorization.models import Customer
@@ -405,6 +407,18 @@ class Questions(BaseModel):
     class Meta:
         verbose_name = "Вопрос"
         verbose_name_plural = "Вопросы"
+
+class QuestionsReply(BaseModel):
+    question = models.ForeignKey(Questions, related_name="question_reply", on_delete=models.CASCADE, verbose_name="Вопрос")
+    answer = models.TextField(verbose_name="Ответ")
+
+    def __str__(self):
+        return str(self.id)
+
+    class Meta:
+        verbose_name = "Ответ вопросу"
+        verbose_name_plural = "Ответы вопросам"
+        ordering = ("-created_at",)
 
 
 class RecentlyViewedProducts(BaseModel):

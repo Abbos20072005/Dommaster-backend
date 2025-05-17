@@ -2,11 +2,20 @@ from rest_framework import serializers
 from authorization.serializers import CustomerSerializer
 from .models import Product, ProductCategory, ProductItemCategory, ProductSubCategory, ProductImage, Comment, \
     Order, OrderItem, Brand, Sale, AddsBrands, Favourites, Cart, CartItem, ProductCharacteristics, Questions, \
-    RecentlyViewedProducts, Service, CommentReply, CommentImages
+    RecentlyViewedProducts, Service, CommentReply, CommentImages, QuestionsReply
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from config import settings
 from django.db.models import Exists, OuterRef
+
+class QuestionsReplySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = QuestionsReply
+        fields = (
+            "id",
+            "created_at",
+            "answer"
+        )
 
 class CommentImagesSerializer(serializers.ModelSerializer):
     class Meta:
@@ -633,6 +642,7 @@ class OrderDetailSerializer(serializers.ModelSerializer):
 
 class QuestionsSerializer(serializers.ModelSerializer):
     customer = CustomerSerializer(read_only=True)
+    question_reply = QuestionsReplySerializer(source="question_reply", read_only=True)
 
     class Meta:
         model = Questions
@@ -641,7 +651,8 @@ class QuestionsSerializer(serializers.ModelSerializer):
             "customer",
             "product",
             "question",
-            "created_at"
+            "created_at",
+            "question_reply"
         )
 
 
