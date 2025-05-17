@@ -286,9 +286,18 @@ class ProductViewSet(ViewSet):
 
 
 class CommentViewSet(ViewSet):
+    # @swagger_auto_schema(
+    #     operation_summary="Comment image create",
+    #     operation_description="Comment image create",
+    #     responses={204: "Comment successfully deleted"},
+    #     tags=["Comment"]
+    # )
+    # def image_create(self, request, pk):
+    #     pass
+
     @swagger_auto_schema(
-        operation_summary="Comment reply create",
-        operation_description="Comment reply create",
+        operation_summary="Comment reply delete",
+        operation_description="Comment reply delete",
         responses={204: "Comment successfully deleted"},
         tags=["Comment"]
     )
@@ -341,7 +350,7 @@ class CommentViewSet(ViewSet):
         if not param_serializer.is_valid():
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=param_serializer.errors)
 
-        comment_reply = CommentReply.objects.filter(comment_id=pk, is_visible=True)
+        comment_reply = CommentReply.objects.annotate(reply_count=Count("id")).filter(comment_id=pk, is_visible=True)
         return Response(data={
             "result": get_comment_replies_paginator(response_data=comment_reply, context={"request": request},
                                                     page=param_serializer.validated_data.get("page"),

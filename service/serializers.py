@@ -27,12 +27,15 @@ class CommentImagesCreateSerializer(serializers.ModelSerializer):
         )
 
 class CommentReplySerializer(serializers.ModelSerializer):
+    reply_count = serializers.IntegerField(read_only=True)
+
     class Meta:
         model = CommentReply
         fields = (
             "id",
             "customer",
             "is_admin",
+            "reply_count",
             "reply_comment"
         )
 
