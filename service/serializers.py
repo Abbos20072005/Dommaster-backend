@@ -254,6 +254,8 @@ class CommentSerializer(serializers.ModelSerializer):
 
 
 class CommentCreateSerializer(serializers.ModelSerializer):
+    images = serializers.ListField(child=serializers.ImageField(), write_only=True, required=False)
+
     class Meta:
         model = Comment
         fields = (
@@ -262,7 +264,8 @@ class CommentCreateSerializer(serializers.ModelSerializer):
             "product",
             "product_rating",
             "comment",
-            "created_at"
+            "created_at",
+            "images"
         )
 
 

@@ -452,7 +452,12 @@ class CommentViewSet(ViewSet):
         if not serializer.is_valid():
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
 
-        serializer.save()
+        images = serializer.validated_data.pop("images")
+        comment = serializer.save()
+
+        for image in images:
+            CommentImages.objects.create(customer_id=request.user.id, comment_id=comment.id, image=image)
+
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_201_CREATED)
 
     @swagger_auto_schema(
