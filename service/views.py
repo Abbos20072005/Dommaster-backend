@@ -213,22 +213,39 @@ class ProductViewSet(ViewSet):
         tags=["Product"]
     )
     def product_detail(self, request, pk):
+        products_comments = Comment.objects.filter(product_id=pk).aggregate(
+            one=Count('id', filter=Q(product_rating=1)),
+            two=Count('id', filter=Q(product_rating=2)),
+            three=Count('id', filter=Q(product_rating=3)),
+            four=Count('id', filter=Q(product_rating=4)),
+            five=Count('id', filter=Q(product_rating=5)))
+
         products = Product.objects.filter(id=pk).first()
         if not products:
             raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
 
         customer = request.user.id
         if not customer:
-            serializer = ProductSerializer(products, context={"request": request})
-            return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+            serializer = ProductSerializer(products, context={"request": request}).data
+            result_serializer = serializer.copy()
+            result_serializer["comment_ratings"] = {"5": products_comments["five"], "4": products_comments["four"],
+                                                    "3": products_comments["three"],
+                                                    "2": products_comments["two"],
+                                                    "1": products_comments["one"]}
+            return Response(data={"result": result_serializer, "ok": True}, status=status.HTTP_200_OK)
 
         recently_viewed_products = RecentlyViewedProducts.objects.filter(customer_id=customer,
                                                                          product_id=products.id).first()
         if not recently_viewed_products:
             RecentlyViewedProducts.objects.create(customer_id=customer, product_id=products.id)
 
-        serializer = ProductSerializer(products, context={"request": request})
-        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+        serializer = ProductSerializer(products, context={"request": request}).data
+        result_serializer = serializer.copy()
+        result_serializer["comment_ratings"] = {"5": products_comments["five"], "4": products_comments["four"],
+                                                "3": products_comments["three"],
+                                                "2": products_comments["two"],
+                                                "1": products_comments["one"]}
+        return Response(data={"result": result_serializer, "ok": True}, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
         operation_summary="Products filter",
@@ -300,7 +317,6 @@ class CommentViewSet(ViewSet):
         comment_reply.delete()
         return Response(data={"result": "Comment successfully deleted", "ok": True}, status=status.HTTP_204_NO_CONTENT)
 
-
     @swagger_auto_schema(
         operation_summary="Comment reply create",
         operation_description="Comment reply create",
@@ -357,13 +373,13 @@ class CommentViewSet(ViewSet):
     )
     def reply_update(self, request, pk):
         comment_reply = CommentReply.objects.filter(id=pk, customer_id=request.user.id).first()
-        serializer = CommentReplyUpdateSerializer(comment_reply, data=request.data, partial=True, context={"request": request})
+        serializer = CommentReplyUpdateSerializer(comment_reply, data=request.data, partial=True,
+                                                  context={"request": request})
         if not serializer.is_valid():
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
 
         serializer.save()
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_202_ACCEPTED)
-
 
     @swagger_auto_schema(
         operation_summary="My comments list",
@@ -409,7 +425,8 @@ class CommentViewSet(ViewSet):
         if not param_serializer.is_valid():
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=param_serializer.errors)
 
-        comments = Comment.objects.annotate(reply_count=Count("comment_reply")).filter(product=param_serializer.validated_data.get("product_id")).order_by("-created_at")
+        comments = Comment.objects.annotate(reply_count=Count("comment_reply")).filter(
+            product=param_serializer.validated_data.get("product_id")).order_by("-created_at")
         return Response(data={
             "result": get_comments_paginator(response_data=comments, page=param_serializer.validated_data.get("page"),
                                              page_size=param_serializer.validated_data.get("page_size"),
