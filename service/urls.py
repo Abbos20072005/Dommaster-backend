@@ -47,9 +47,15 @@ urlpatterns = [
     path("services/<int:pk>/", ServiceViewSet.as_view({"get": "service_detail"}), name="service_detail"),
     path("main/", MainPageViewSet.as_view({"get": "homepage_data"}), name="homepage_data"),
     path("most/search/", ProductViewSet.as_view({"get": "most_search"}), name="most_search"),
-    path("comment/reply/<int:pk>/", CommentViewSet.as_view({"patch": "reply_update", "delete": "reply_delete"}), name="reply_update"),
+    path("comment/reply/<int:pk>/", CommentViewSet.as_view({"patch": "reply_update", "delete": "reply_delete"}),
+         name="reply_action"),
     path("comment/<int:pk>/reply/",
          CommentViewSet.as_view({"post": "reply_create"}),
-         name="reply_action"),
-    path("comment/<int:pk>/replies/", CommentViewSet.as_view({"get": "reply_list"}), name="reply_list")
+         name="reply_create"),
+    path("comment/<int:pk>/replies/", CommentViewSet.as_view({"get": "reply_list"}), name="reply_list"),
+    path("questions/<int:pk>/replies/", QuestionsViewSet.as_view({"get": "reply_list"}), name="question_reply_list"),
+    path("questions/<int:pk>/reply/", QuestionsViewSet.as_view({"post": "reply_create"}), name="question_reply_create"),
+    path("questions/reply/<int:pk>/", QuestionsViewSet.as_view({"patch": "reply_update", "delete": "reply_delete"}),
+         name="question_reply_action")
+
 ]

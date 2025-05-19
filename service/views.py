@@ -4,6 +4,7 @@ from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from yaml import serialize
 
+from .paginations.get_question_replies import get_question_replies_paginator
 from .utils import send_telegram_message
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
@@ -16,10 +17,11 @@ from .serializers import ProductCategorySerializer, ProductCategoryListSerialize
     CommentCreateSerializer, CartItemCreateSerializer, QuestionsSerializer, QuestionsUpdateSerializer, \
     QuestionsCreateSerializer, FavouriteCreateSerializer, FavouriteResponseSerializer, RecentlyViewedProductsSerializer, \
     OrderSerializer, SaleMainSerializer, ServiceSerializer, ServiceDetailSerializer, OrderDetailSerializer, \
-    CommentReplySerializer, CommentReplyCreateSerializer, CommentReplyUpdateSerializer
+    CommentReplySerializer, CommentReplyCreateSerializer, CommentReplyUpdateSerializer, QuestionsReplySerializer, \
+    QuestionsReplyCreateSerializer, QuestionsReplyUpdateSerializer
 from .models import ProductCategory, ProductSubCategory, ProductItemCategory, Product, Comment, Brand, Sale, AddsBrands, \
     Favourites, Cart, CartItem, Questions, Order, OrderItem, RecentlyViewedProducts, Service, CommentReply, \
-    CommentImages
+    CommentImages, QuestionsReply
 from rest_framework import status
 from django.db.models import Q, Sum, Exists, OuterRef, Value, BooleanField
 from .paginations.get_products_pagination import get_products_paginator
@@ -885,6 +887,58 @@ class ServiceViewSet(ViewSet):
 
 class QuestionsViewSet(ViewSet):
     @swagger_auto_schema(
+        operation_summary="Question reply delete",
+        operation_description="Question reply delete",
+        responses={204: "Question reply successfully deleted"},
+        tags=["Question"]
+    )
+    def reply_delete(self, request, pk):
+        question_reply = QuestionsReply.objects.filter(id=pk, customer_id=request.user.id).first()
+        if not question_reply:
+            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
+
+        question_reply.delete()
+        return Response(data={"result": "Question reply successfully deleted", "ok": True}, status=status.HTTP_204_NO_CONTENT)
+
+    @swagger_auto_schema(
+        operation_summary="Question reply update",
+        operation_description="Question reply update",
+        request_body=QuestionsReplyUpdateSerializer(),
+        responses={202: QuestionsReplyUpdateSerializer()},
+        tags=["Question"]
+    )
+    def reply_update(self, request, pk):
+        question_reply = QuestionsReply.objects.filter(id=pk, customer_id=request.user.id).first()
+        serializer = QuestionsReplyUpdateSerializer(question_reply, data=request.data, partial=True,
+                                                  context={"request": request})
+        if not serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
+
+        serializer.save()
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_202_ACCEPTED)
+
+    @swagger_auto_schema(
+        operation_summary="Question reply create",
+        operation_description="Question reply create",
+        responses={200: QuestionsReplyCreateSerializer()},
+        tags=["Question"]
+    )
+    def reply_create(self, request, pk):
+        data = request.data
+        question_reply = QuestionsReply.objects.filter(id=pk).first()
+        if not question_reply:
+            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
+
+        data["comment"] = pk
+        data["customer"] = request.user.id
+        serializer = QuestionsReplyCreateSerializer(data=request.data, context={"request": request})
+        if not serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
+
+        serializer.save()
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
         operation_summary="Questions replies list",
         operation_description="Question replies list",
         manual_parameters=[
@@ -897,7 +951,18 @@ class QuestionsViewSet(ViewSet):
         tags=["Question"]
     )
     def reply_list(self, request, pk):
-        pass
+        params = request.query_params
+        param_serializer = PaginationSerializer(data=params, context={"request": request})
+        if not param_serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=param_serializer.errors)
+
+        questions_replies = QuestionsReply.objects.filter(question_id=pk)
+        return Response(data={"result": get_question_replies_paginator(response_data=questions_replies,
+                                                                       page=param_serializer.validated_data.get("page"),
+                                                                       page_size=param_serializer.validated_data.get(
+                                                                           "page_size"), context={"request": request}),
+                              "ok": True},
+                        status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
         operation_summary="My questions list",

@@ -17,6 +17,25 @@ class QuestionsReplySerializer(serializers.ModelSerializer):
             "id",
             "customer",
             "created_at",
+            "answer",
+            "is_admin"
+        )
+
+class QuestionsReplyCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = QuestionsReply
+        fields = (
+            "id",
+            "customer",
+            "question",
+            "answer"
+        )
+
+class QuestionsReplyUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = QuestionsReply
+        fields = (
+            "id",
             "answer"
         )
 
