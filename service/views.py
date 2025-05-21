@@ -1111,9 +1111,6 @@ class OrderViewSet(ViewSet):
         cart_items = CartItem.objects.filter(cart_id=cart.id).exclude(is_checked=False)
         for cart_item in cart_items:
             OrderItem.objects.create(order=order, product=cart_item.product, quantity=cart_item.quantity)
-            # product = Product.objects.filter(id=cart_item.product.id).first()
-            # product.quantity = product.quantity - cart_items.quantity
-            # product.save(update_fields=["quantity"])
             cart_item.delete()
 
         send_telegram_message(order)
