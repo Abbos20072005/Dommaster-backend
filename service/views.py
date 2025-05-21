@@ -39,6 +39,7 @@ from base.serializers import PromocodeRequestSerializer
 from datetime import date
 from base.models import Banner
 from base.serializers import BannerSerializer
+from utils.pyment_link import generate_link
 
 
 class MainPageViewSet(ViewSet):
@@ -898,7 +899,8 @@ class QuestionsViewSet(ViewSet):
             raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
 
         question_reply.delete()
-        return Response(data={"result": "Question reply successfully deleted", "ok": True}, status=status.HTTP_204_NO_CONTENT)
+        return Response(data={"result": "Question reply successfully deleted", "ok": True},
+                        status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(
         operation_summary="Question reply update",
@@ -910,7 +912,7 @@ class QuestionsViewSet(ViewSet):
     def reply_update(self, request, pk):
         question_reply = QuestionsReply.objects.filter(id=pk, customer_id=request.user.id).first()
         serializer = QuestionsReplyUpdateSerializer(question_reply, data=request.data, partial=True,
-                                                  context={"request": request})
+                                                    context={"request": request})
         if not serializer.is_valid():
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
 
@@ -1113,8 +1115,11 @@ class OrderViewSet(ViewSet):
             OrderItem.objects.create(order=order, product=cart_item.product, quantity=cart_item.quantity)
             cart_item.delete()
 
-        send_telegram_message(order)
-        return Response(data={"result": OrderSerializer(order, context={"request": request}).data, "ok": True},
+        # send_telegram_message(order)
+        payment_link = generate_link(order_id=order.id, total_price=order.total_price,
+                                     type_pyment=serializer.validated_data.get("payment_type"),
+                                     is_web=serializer.validated_data.get("is_web"))
+        return Response(data={"result": payment_link, "ok": True},
                         status=status.HTTP_201_CREATED)
 
     @swagger_auto_schema(
