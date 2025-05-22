@@ -38,7 +38,7 @@ from .serializers import ProductCategorySerializer, ProductCategoryListSerialize
     QuestionsCreateSerializer, FavouriteCreateSerializer, FavouriteResponseSerializer, RecentlyViewedProductsSerializer, \
     OrderSerializer, SaleMainSerializer, ServiceSerializer, ServiceDetailSerializer, OrderDetailSerializer, \
     CommentReplySerializer, CommentReplyCreateSerializer, CommentReplyUpdateSerializer, QuestionsReplySerializer, \
-    QuestionsReplyCreateSerializer, QuestionsReplyUpdateSerializer
+    QuestionsReplyCreateSerializer, QuestionsReplyUpdateSerializer, OrderCancelSerializer
 
 
 class MainPageViewSet(ViewSet):
@@ -1065,12 +1065,24 @@ class OrderViewSet(ViewSet):
     @swagger_auto_schema(
         operation_summary="Order cancel",
         operation_description="Order cancel",
-        request_body=PromocodeRequestSerializer(),
-        responses={201: OrderSerializer()},
+        request_body=OrderCancelSerializer(),
+        responses={200: OrderSerializer()},
         tags=["Order"]
     )
     def cancel_order(self, request):
-        pass
+        param = request.query_params
+        param_serializer = OrderCancelSerializer(data=param)
+        if not param_serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=param_serializer.errors)
+
+        order = Order.objects.filter(id=param_serializer.validated_data.get("order_id"), customer_id=request.user.id)
+        if not order:
+            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
+
+        order.status = 4
+        order.save(update_fields=["status"])
+        return Response(data={"result": OrderSerializer(order, context={"request": request}).data, "ok": True}, status=status.HTTP_200_OK)
+
 
     @swagger_auto_schema(
         operation_summary="Create order",
