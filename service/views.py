@@ -2,6 +2,8 @@ from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
+
+from .paginations.get_comments_me import get_comments_me_paginator
 from .paginations.get_question_replies import get_question_replies_paginator
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
@@ -384,7 +386,7 @@ class CommentViewSet(ViewSet):
 
         comments = Comment.objects.filter(customer=request.user.id)
         return Response(data={
-            "result": get_comments_paginator(response_data=comments, page=param_serializer.validated_data.get("page"),
+            "result": get_comments_me_paginator(response_data=comments, page=param_serializer.validated_data.get("page"),
                                              page_size=param_serializer.validated_data.get("page_size"),
                                              context={"request": request}), "ok": True}, status=status.HTTP_200_OK)
 
