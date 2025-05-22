@@ -912,7 +912,7 @@ class QuestionsViewSet(ViewSet):
     )
     def reply_create(self, request, pk):
         data = request.data
-        question_reply = QuestionsReply.objects.filter(id=pk).first()
+        question_reply = Questions.objects.filter(id=pk).first()
         if not question_reply:
             raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
 
