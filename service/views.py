@@ -2,26 +2,10 @@ from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
-from yaml import serialize
-
 from .paginations.get_question_replies import get_question_replies_paginator
-from .utils import send_telegram_message
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from .paginations.get_orders import get_orders_paginator
-from .serializers import ProductCategorySerializer, ProductCategoryListSerializer, ProductSubCategorySerializer, \
-    ProductItemCategorySerializer, ProductSerializer, CommentSerializer, BrandSerializer, FilterSerializer, \
-    PaginationSerializer, BrandDetailSerializer, SaleSerializer, AddsBrandsSerializer, AddsBrandsDetailSerializer, \
-    SearchByNameSerializer, CommentUpdateSerializer, FavouriteSerializer, FavouriteListSerializer, CartSerializer, \
-    CartItemSerializer, CartItemUpdateSerializer, CartItemBulkUpdateSerializer, CommentParamSerializer, \
-    CommentCreateSerializer, CartItemCreateSerializer, QuestionsSerializer, QuestionsUpdateSerializer, \
-    QuestionsCreateSerializer, FavouriteCreateSerializer, FavouriteResponseSerializer, RecentlyViewedProductsSerializer, \
-    OrderSerializer, SaleMainSerializer, ServiceSerializer, ServiceDetailSerializer, OrderDetailSerializer, \
-    CommentReplySerializer, CommentReplyCreateSerializer, CommentReplyUpdateSerializer, QuestionsReplySerializer, \
-    QuestionsReplyCreateSerializer, QuestionsReplyUpdateSerializer
-from .models import ProductCategory, ProductSubCategory, ProductItemCategory, Product, Comment, Brand, Sale, AddsBrands, \
-    Favourites, Cart, CartItem, Questions, Order, OrderItem, RecentlyViewedProducts, Service, CommentReply, \
-    CommentImages, QuestionsReply
 from rest_framework import status
 from django.db.models import Q, Sum, Exists, OuterRef, Value, BooleanField
 from .paginations.get_products_pagination import get_products_paginator
@@ -40,6 +24,19 @@ from datetime import date
 from base.models import Banner
 from base.serializers import BannerSerializer
 from utils.pyment_link import generate_link
+from .models import ProductCategory, ProductSubCategory, ProductItemCategory, Product, Comment, Brand, Sale, AddsBrands, \
+    Favourites, Cart, CartItem, Questions, Order, OrderItem, RecentlyViewedProducts, Service, CommentReply, \
+    CommentImages, QuestionsReply
+from .serializers import ProductCategorySerializer, ProductCategoryListSerializer, ProductSubCategorySerializer, \
+    ProductItemCategorySerializer, ProductSerializer, CommentSerializer, BrandSerializer, FilterSerializer, \
+    PaginationSerializer, BrandDetailSerializer, SaleSerializer, AddsBrandsSerializer, AddsBrandsDetailSerializer, \
+    SearchByNameSerializer, CommentUpdateSerializer, FavouriteSerializer, FavouriteListSerializer, CartSerializer, \
+    CartItemSerializer, CartItemUpdateSerializer, CartItemBulkUpdateSerializer, CommentParamSerializer, \
+    CommentCreateSerializer, CartItemCreateSerializer, QuestionsSerializer, QuestionsUpdateSerializer, \
+    QuestionsCreateSerializer, FavouriteCreateSerializer, FavouriteResponseSerializer, RecentlyViewedProductsSerializer, \
+    OrderSerializer, SaleMainSerializer, ServiceSerializer, ServiceDetailSerializer, OrderDetailSerializer, \
+    CommentReplySerializer, CommentReplyCreateSerializer, CommentReplyUpdateSerializer, QuestionsReplySerializer, \
+    QuestionsReplyCreateSerializer, QuestionsReplyUpdateSerializer
 
 
 class MainPageViewSet(ViewSet):
@@ -216,39 +213,22 @@ class ProductViewSet(ViewSet):
         tags=["Product"]
     )
     def product_detail(self, request, pk):
-        products_comments = Comment.objects.filter(product_id=pk).aggregate(
-            one=Count('id', filter=Q(product_rating=1)),
-            two=Count('id', filter=Q(product_rating=2)),
-            three=Count('id', filter=Q(product_rating=3)),
-            four=Count('id', filter=Q(product_rating=4)),
-            five=Count('id', filter=Q(product_rating=5)))
-
         products = Product.objects.filter(id=pk).first()
         if not products:
             raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
 
         customer = request.user.id
         if not customer:
-            serializer = ProductSerializer(products, context={"request": request}).data
-            result_serializer = serializer.copy()
-            result_serializer["comment_ratings"] = {"5": products_comments["five"], "4": products_comments["four"],
-                                                    "3": products_comments["three"],
-                                                    "2": products_comments["two"],
-                                                    "1": products_comments["one"]}
-            return Response(data={"result": result_serializer, "ok": True}, status=status.HTTP_200_OK)
+            serializer = ProductSerializer(products, context={"request": request})
+            return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
         recently_viewed_products = RecentlyViewedProducts.objects.filter(customer_id=customer,
                                                                          product_id=products.id).first()
         if not recently_viewed_products:
             RecentlyViewedProducts.objects.create(customer_id=customer, product_id=products.id)
 
-        serializer = ProductSerializer(products, context={"request": request}).data
-        result_serializer = serializer.copy()
-        result_serializer["comment_ratings"] = {"5": products_comments["five"], "4": products_comments["four"],
-                                                "3": products_comments["three"],
-                                                "2": products_comments["two"],
-                                                "1": products_comments["one"]}
-        return Response(data={"result": result_serializer, "ok": True}, status=status.HTTP_200_OK)
+        serializer = ProductSerializer(products, context={"request": request})
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
         operation_summary="Products filter",
@@ -430,10 +410,13 @@ class CommentViewSet(ViewSet):
 
         comments = Comment.objects.annotate(reply_count=Count("comment_reply")).filter(
             product=param_serializer.validated_data.get("product_id")).order_by("-created_at")
+
         return Response(data={
-            "result": get_comments_paginator(response_data=comments, page=param_serializer.validated_data.get("page"),
-                                             page_size=param_serializer.validated_data.get("page_size"),
-                                             context={"request": request}), "ok": True}, status=status.HTTP_200_OK)
+            "result": get_comments_paginator(
+                response_data={"comments": comments, "product_id": param_serializer.validated_data.get("product_id")},
+                page=param_serializer.validated_data.get("page"),
+                page_size=param_serializer.validated_data.get("page_size"),
+                context={"request": request}), "ok": True}, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
         operation_summary="Write comment to product",
@@ -1077,6 +1060,16 @@ class QuestionsViewSet(ViewSet):
 
 class OrderViewSet(ViewSet):
     @swagger_auto_schema(
+        operation_summary="Order cancel",
+        operation_description="Order cancel",
+        request_body=PromocodeRequestSerializer(),
+        responses={201: OrderSerializer()},
+        tags=["Order"]
+    )
+    def cancel_order(self, request):
+        pass
+
+    @swagger_auto_schema(
         operation_summary="Create order",
         operation_description="Create order",
         request_body=PromocodeRequestSerializer(),
@@ -1115,7 +1108,6 @@ class OrderViewSet(ViewSet):
             OrderItem.objects.create(order=order, product=cart_item.product, quantity=cart_item.quantity)
             cart_item.delete()
 
-        # send_telegram_message(order)
         payment_link = generate_link(order_id=order.id, total_price=order.total_price,
                                      type_pyment=serializer.validated_data.get("payment_type"),
                                      is_web=serializer.validated_data.get("is_web"))

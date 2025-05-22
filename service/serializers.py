@@ -8,6 +8,14 @@ from exceptions.error_messages import ErrorCodes
 from config import settings
 from django.db.models import Exists, OuterRef
 
+class OrderCancelSerializer(serializers.Serializer):
+    order_id = serializers.IntegerField(required=True)
+
+class OrderPaySerializer(serializers.Serializer):
+    payment_type = serializers.IntegerField(required=True)
+    is_web = serializers.BooleanField(required=False)
+    order_id = serializers.IntegerField(required=True)
+
 class QuestionsReplySerializer(serializers.ModelSerializer):
     customer = CustomerSerializer(read_only=True)
 
