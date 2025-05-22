@@ -38,7 +38,7 @@ from .serializers import ProductCategorySerializer, ProductCategoryListSerialize
     QuestionsCreateSerializer, FavouriteCreateSerializer, FavouriteResponseSerializer, RecentlyViewedProductsSerializer, \
     OrderSerializer, SaleMainSerializer, ServiceSerializer, ServiceDetailSerializer, OrderDetailSerializer, \
     CommentReplySerializer, CommentReplyCreateSerializer, CommentReplyUpdateSerializer, QuestionsReplySerializer, \
-    QuestionsReplyCreateSerializer, QuestionsReplyUpdateSerializer, OrderCancelSerializer
+    QuestionsReplyCreateSerializer, QuestionsReplyUpdateSerializer, OrderCancelSerializer, OrderPaySerializer
 
 
 class MainPageViewSet(ViewSet):
@@ -1063,19 +1063,36 @@ class QuestionsViewSet(ViewSet):
 
 class OrderViewSet(ViewSet):
     @swagger_auto_schema(
-        operation_summary="Order cancel",
-        operation_description="Order cancel",
-        request_body=OrderCancelSerializer(),
+        operation_summary="Order pay",
+        operation_description="Order pay",
+        request_body=OrderPaySerializer(),
         responses={200: OrderSerializer()},
         tags=["Order"]
     )
-    def cancel_order(self, request):
-        param = request.query_params
-        param_serializer = OrderCancelSerializer(data=param)
-        if not param_serializer.is_valid():
-            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=param_serializer.errors)
+    def order_pay(self, request):
+        data = request.data
+        data_serializer = OrderPaySerializer(data=data)
+        if not data_serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=data_serializer.errors)
 
-        order = Order.objects.filter(id=param_serializer.validated_data.get("order_id"), customer_id=request.user.id)
+        order = Order.objects.filter(id=data_serializer.validated_data.get("order_id"), customer_id=request.user.id, status=0).first()
+        if not order:
+            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
+
+        payment_link = generate_link(order_id=order.id, total_price=order.total_price,
+                                     type_pyment=data_serializer.validated_data.get("payment_type"),
+                                     is_web=data_serializer.validated_data.get("is_web"))
+        return Response(data={"result": payment_link, "ok": True}, status=status.HTTP_200_OK)
+
+
+    @swagger_auto_schema(
+        operation_summary="Order cancel",
+        operation_description="Order cancel",
+        responses={200: OrderSerializer()},
+        tags=["Order"]
+    )
+    def cancel_order(self, request, pk):
+        order = Order.objects.filter(id=pk, customer_id=request.user.id)
         if not order:
             raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
 
