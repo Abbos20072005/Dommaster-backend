@@ -907,6 +907,7 @@ class QuestionsViewSet(ViewSet):
     @swagger_auto_schema(
         operation_summary="Question reply create",
         operation_description="Question reply create",
+        request_body=QuestionsReplyCreateSerializer(),
         responses={200: QuestionsReplyCreateSerializer()},
         tags=["Question"]
     )
