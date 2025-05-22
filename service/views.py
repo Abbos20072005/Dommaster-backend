@@ -1092,7 +1092,7 @@ class OrderViewSet(ViewSet):
         tags=["Order"]
     )
     def cancel_order(self, request, pk):
-        order = Order.objects.filter(id=pk, customer_id=request.user.id)
+        order = Order.objects.filter(id=pk, customer_id=request.user.id).first()
         if not order:
             raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
 
