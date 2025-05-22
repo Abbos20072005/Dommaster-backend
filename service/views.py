@@ -916,7 +916,7 @@ class QuestionsViewSet(ViewSet):
         if not question_reply:
             raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
 
-        data["comment"] = pk
+        data["question"] = pk
         data["customer"] = request.user.id
         serializer = QuestionsReplyCreateSerializer(data=request.data, context={"request": request})
         if not serializer.is_valid():
