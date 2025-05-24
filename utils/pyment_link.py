@@ -4,6 +4,8 @@ import base64
 import os
 import django
 
+# os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')  # <-- settings modulini to'g'ri yozing
+# django.setup()
 def generate_link(order_id: int, total_price: int, type_pyment: int, is_web: bool = False):
     if type_pyment == 1:
         # Click payment link
@@ -14,14 +16,14 @@ def generate_link(order_id: int, total_price: int, type_pyment: int, is_web: boo
             f'&transaction_param={order_id}'
         )
         if is_web and settings.REDIRECTED_URL:
-            url += f'&return_url={settings.REDIRECTED_URL}'
+            url += f'&return_url={settings.REDIRECTED_URL.format(order_id)}'
         return url
 
     elif type_pyment == 2:
         # Payme payment link
         url_prefix = f'm={settings.PAYME_ID};ac.order_id={order_id};a={total_price * 100}'
         if is_web and settings.REDIRECTED_URL:
-            url_prefix += f';c={settings.REDIRECTED_URL}'
+            url_prefix += f';c={settings.REDIRECTED_URL.format(order_id)}'
 
         # Encode the string correctly
         encoded_string = base64.b64encode(url_prefix.encode()).decode()
@@ -30,4 +32,4 @@ def generate_link(order_id: int, total_price: int, type_pyment: int, is_web: boo
 
     return None
 
-#print(generate_link(15, 1000, 2))
+# print(generate_link(15, 1000, 2, is_web=True))
