@@ -90,6 +90,8 @@ class PromocodeSerializer(serializers.ModelSerializer):
 
 class PromocodeRequestSerializer(serializers.Serializer):
     promocode = serializers.CharField(max_length=15, required=False)
+    payment_type = serializers.IntegerField(required=True)
+    is_web = serializers.BooleanField(required=False)
 
 
 class BannerSerializer(serializers.ModelSerializer):

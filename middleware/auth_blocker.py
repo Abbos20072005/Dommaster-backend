@@ -36,7 +36,8 @@ class IsAuthenticatedMiddleware(MiddlewareMixin):
             "reply_action",
             "reply_create",
             "question_reply_create",
-            "question_reply_action"
+            "question_reply_action",
+            "order_cancel"
         }
 
         match = request.resolver_match
