@@ -33,7 +33,7 @@ class CancelTransaction:
                 transactions.reason = clean_data.get("reason")
                 transactions.save()
                 order = AccountModel.objects.get(id=transactions.order_id)
-                order.status = 4
+                order.status = 0
                 order.save()
 
         except PerformTransactionDoesNotExist:

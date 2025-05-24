@@ -4,6 +4,12 @@ from django.utils.module_loading import import_string
 
 AccountModel = import_string(settings.CLICK_ACCOUNT_MODEL)
 
+UzumBankStatus = (
+    ('CREATED', "CREATED"),
+    ('CONFIRMED', "CONFIRMED"),
+    ('REVERSED', "REVERSED")
+)
+
 
 class ClickTransaction(models.Model):
     CREATED = 0
@@ -56,3 +62,23 @@ class MerchatTransactionsModel(models.Model):
 
     def __str__(self):
         return str(self._id)
+
+
+class UzumBankTransactionsModel(models.Model):
+    trans_id = models.CharField(max_length=255, null=True, blank=True)
+    order_id = models.BigIntegerField(null=True, blank=True)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    status = models.CharField(max_length=11, choices=UzumBankStatus)
+    trans_time = models.BigIntegerField(null=True, blank=True)
+    confirm_time = models.BigIntegerField(null=True, blank=True)
+    reverse_time = models.BigIntegerField(null=True, blank=True)
+    payment_source=models.CharField(max_length=100, null=True, blank=True)
+    tariff=models.CharField(max_length=50, null=True, blank=True)
+    processing_reference_number=models.CharField(max_length=50, null=True, blank=True)
+    phone=models.CharField(max_length=50, null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return str(self.trans_id)

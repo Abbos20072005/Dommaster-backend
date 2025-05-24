@@ -274,7 +274,10 @@ CLICK_AMOUNT_FIELD = os.getenv('CLICK_AMOUNT_FIELD', "")
 PAYME_ID = os.getenv('PAYME_ID', 1)
 PAYME_KEY = os.getenv('PAYME_KEY', "")
 
-
+#Uzum Bank
+SERVICE_ID_UZUM=int(os.getenv('SERVICE_ID_UZUM', 1))
+SERVICE_UZUM_KEY=os.getenv('SERVICE_UZUM_KEY', "")
+SERVICE_UZUM_PASSWORD=os.getenv('SERVICE_UZUM_PASSWORD', "")
 
 #web redirected url
 REDIRECTED_URL=os.getenv('REDIRECTED_URL', "")

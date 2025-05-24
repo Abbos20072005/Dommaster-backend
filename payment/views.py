@@ -1,12 +1,14 @@
 import base64
 import binascii
+import time
 
 from django.conf import settings
 from django.db import transaction
-from rest_framework import status
+from drf_yasg.utils import swagger_auto_schema
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.viewsets import ViewSet
 
 from .methods.cancel_transaction import CancelTransaction
 from .methods.check_perform_transaction import CheckPerformTransaction
@@ -14,12 +16,15 @@ from .methods.check_transaction import CheckTransaction
 from .methods.create_transaction import CreateTransaction
 from .methods.get_statement_transaction import GetStatement
 from .methods.perform_transaction import PerformTransaction
-from .models import ClickTransaction
+from .models import ClickTransaction, UzumBankTransactionsModel
+from .serializers import UzumAccountCheckSerializer, BaseUzumResponse, UzumTransactionInitSerializer, \
+    UzumConFirmSerializer
 from .utils.exception_click import ClickErrorCode, ClickError
 from .utils.exception_payme import MethodNotFound, PerformTransactionDoesNotExist, PermissionDenied
+from .utils.exception_uzumbank import UzumBankAPIException, ErrorCode
 from .utils.logger import logged
 from .utils.utils_click import _serialize_request, get_order, create_transaction, get_transaction
-from drf_yasg.utils import swagger_auto_schema
+from .utils.utils_uzum import check_request, raise_exception_if_invalid
 
 
 class PreparePaymentView(APIView):
@@ -221,3 +226,160 @@ class MerchantAPIView(APIView):
             )
 
         return is_payme
+
+
+class UzumBankPaymentView(ViewSet):
+
+    @swagger_auto_schema(auto_schema=None)
+    def transaction_check(self, request):
+        check_request(request)
+        account = request.data.get('params', {}).get('account')
+        order = get_order(account)
+
+        serializer = UzumAccountCheckSerializer(data=request.data, context={'order': order})
+        raise_exception_if_invalid(serializer)
+
+        return BaseUzumResponse(service_id=settings.SERVICE_ID_UZUM).success(
+            order_id=serializer.validated_data['params']['account'],
+            trans_time=int(time.time() * 1000)
+        )
+
+    @swagger_auto_schema(auto_schema=None)
+    def transaction_create(self, request):
+        check_request(request)
+        account = request.data.get('params', {}).get('account')
+        order = get_order(account)
+
+        serializer = UzumTransactionInitSerializer(data=request.data, context={'order': order})
+        raise_exception_if_invalid(serializer)
+
+        validated = serializer.validated_data
+        trans_time = int(time.time() * 1000)
+        status = 'CREATED'
+
+        UzumBankTransactionsModel.objects.create(
+            trans_id=validated['transId'],
+            amount=validated['amount'],
+            order_id=validated['params']['account'],
+            status=status,
+            trans_time=trans_time,
+        )
+
+        return BaseUzumResponse(service_id=settings.SERVICE_ID_UZUM).with_trans(
+            trans_id=validated['transId'],
+            amount=validated['amount'],
+            status_str=status,
+            trans_time=trans_time,
+            order_id=validated['params']['account']
+        )
+
+    @swagger_auto_schema(auto_schema=None)
+    def transaction_confirm(self, request):
+        check_request(request)
+
+        serializer = UzumConFirmSerializer(data=request.data)
+        raise_exception_if_invalid(serializer)
+        data = serializer.validated_data
+
+        transaction = UzumBankTransactionsModel.objects.filter(trans_id=data['transId']).first()
+        if not transaction:
+            raise UzumBankAPIException(settings.SERVICE_ID_UZUM, ErrorCode.TRANSACTION_NOT_FOUND)
+
+        error_map = {
+            'CONFIRMED': ErrorCode.TRANSACTION_ALREADY_PAID,
+            'REVERSED': ErrorCode.TRANSACTION_CANCELED,
+        }
+        if transaction.status in error_map:
+            logged(error_map[transaction.status].message, "error")
+            raise UzumBankAPIException(settings.SERVICE_ID_UZUM, error_map[transaction.status])
+
+        order = get_order(transaction.order_id)
+        if not order:
+            logged(ErrorCode.VALIDATION_ERROR.message, "error")
+            raise UzumBankAPIException(settings.SERVICE_ID_UZUM, ErrorCode.VALIDATION_ERROR)
+
+        if order.status != 0:
+            logged(ErrorCode.ALREADY_PAID.message, "error")
+            raise UzumBankAPIException(settings.SERVICE_ID_UZUM, ErrorCode.ALREADY_PAID)
+
+        confirm_time = int(time.time() * 1000)
+
+        # Update transaction
+        transaction.status = 'CONFIRMED'
+        transaction.payment_source = serializer.data.get('paymentSource')
+        transaction.tariff = serializer.data.get('tariff')
+        transaction.processing_reference_number = serializer.data.get('processingReferenceNumber')
+        transaction.confirm_time = confirm_time
+        transaction.save()
+
+        # Update order
+        order.status = 1
+        order.save()
+
+        response_data = BaseUzumResponse(settings.SERVICE_ID_UZUM).with_trans(
+            trans_id=data['transId'],
+            amount=transaction.amount,
+            status_str='CONFIRMED',
+            confirm_time=confirm_time,
+            order_id=transaction.order_id,
+        ).data
+
+        return Response(data=response_data)
+
+    @swagger_auto_schema(auto_schema=None)
+    def transaction_reverse(self, request):
+        check_request(request)
+
+        serializer = UzumConFirmSerializer(data=request.data)
+        raise_exception_if_invalid(serializer)
+        data = serializer.validated_data
+        transaction = UzumBankTransactionsModel.objects.filter(trans_id=data['transId']).first()
+        if not transaction:
+            raise UzumBankAPIException(settings.SERVICE_ID_UZUM, ErrorCode.TRANSACTION_NOT_FOUND)
+        if transaction.status == "REVERSED":
+            raise UzumBankAPIException(settings.SERVICE_ID_UZUM, ErrorCode.TRANSACTION_ALREADY_CANCELED)
+        order = get_order(transaction.order_id)
+        if not order:
+            logged(ErrorCode.VALIDATION_ERROR.message, "error")
+            raise UzumBankAPIException(settings.SERVICE_ID_UZUM, ErrorCode.VALIDATION_ERROR)
+
+        if order.status == 0:
+            raise UzumBankAPIException(settings.SERVICE_ID_UZUM, ErrorCode.TRANSACTION_UNABLE_CANCELED)
+
+        reverse_time = int(time.time() * 1000)
+        transaction.status = 'REVERSED'
+        transaction.reverse_time = reverse_time
+        transaction.save()
+
+        order.status = 4
+        order.save()
+
+        response_data = BaseUzumResponse(settings.SERVICE_ID_UZUM).with_trans(
+            trans_id=data['transId'],
+            amount=transaction.amount,
+            status_str='REVERSED',
+            reverse_time=reverse_time,
+            order_id=transaction.order_id,
+        ).data
+
+        return Response(data=response_data)
+
+    @swagger_auto_schema(auto_schema=None)
+    def transaction_status(self, request):
+        check_request(request)
+        serializer = UzumConFirmSerializer(data=request.data)
+        raise_exception_if_invalid(serializer)
+        data = serializer.validated_data
+
+        transaction = UzumBankTransactionsModel.objects.filter(trans_id=data['transId']).first()
+        response_data = BaseUzumResponse(settings.SERVICE_ID_UZUM).with_trans(
+            trans_id=data['transId'],
+            amount=transaction.amount,
+            status_str=transaction.status,
+            trans_time=transaction.trans_time,
+            confirm_time=transaction.confirm_time,
+            reverse_time=transaction.reverse_time,
+            order_id=transaction.order_id
+        ).data
+
+        return Response(data=response_data)
