@@ -673,6 +673,8 @@ class OrderDetailSerializer(serializers.ModelSerializer):
 
 class QuestionsSerializer(serializers.ModelSerializer):
     customer = CustomerSerializer(read_only=True)
+    reply_count = serializers.IntegerField(read_only=True)
+
 
     class Meta:
         model = Questions
