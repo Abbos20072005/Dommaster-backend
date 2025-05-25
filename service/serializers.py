@@ -98,6 +98,14 @@ class CommentReplyUpdateSerializer(serializers.ModelSerializer):
         )
 
 class ServiceSerializer(serializers.ModelSerializer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        request = self.context.get('request')
+        language = 'ru'
+        if request and request.META.get('HTTP_ACCEPT_LANGUAGE') in settings.MODELTRANSLATION_LANGUAGES:
+            language = request.META.get('HTTP_ACCEPT_LANGUAGE')
+        self.fields["name"] = serializers.CharField(source=f'name_{language}')
+
     class Meta:
         model = Service
         fields = (
@@ -107,6 +115,15 @@ class ServiceSerializer(serializers.ModelSerializer):
         )
 
 class ServiceDetailSerializer(serializers.ModelSerializer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        request = self.context.get('request')
+        language = 'ru'
+        if request and request.META.get('HTTP_ACCEPT_LANGUAGE') in settings.MODELTRANSLATION_LANGUAGES:
+            language = request.META.get('HTTP_ACCEPT_LANGUAGE')
+        self.fields["name"] = serializers.CharField(source=f'name_{language}')
+        self.fields["description"] = serializers.CharField(source=f'description_{language}')
+
     class Meta:
         model = Service
         fields = (
@@ -117,6 +134,17 @@ class ServiceDetailSerializer(serializers.ModelSerializer):
         )
 
 class ProductCharacteristicsSerializer(serializers.ModelSerializer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        request = self.context.get('request')
+        language = 'ru'
+        if request and request.META.get('HTTP_ACCEPT_LANGUAGE') in settings.MODELTRANSLATION_LANGUAGES:
+            language = request.META.get('HTTP_ACCEPT_LANGUAGE')
+        self.fields["name"] = serializers.CharField(source=f'name_{language}')
+        self.fields["unit"] = serializers.CharField(source=f'unit_{language}')
+        self.fields["value"] = serializers.CharField(source=f'value_{language}')
+
+
     class Meta:
         model = ProductCharacteristics
         fields = (
@@ -197,6 +225,15 @@ class SearchByNameSerializer(serializers.Serializer):
 
 
 class AddsBrandsDetailSerializer(serializers.ModelSerializer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        request = self.context.get('request')
+        language = 'ru'
+        if request and request.META.get('HTTP_ACCEPT_LANGUAGE') in settings.MODELTRANSLATION_LANGUAGES:
+            language = request.META.get('HTTP_ACCEPT_LANGUAGE')
+        self.fields["title"] = serializers.CharField(source=f'title_{language}')
+        self.fields["description"] = serializers.CharField(source=f'description_{language}')
+
     class Meta:
         model = AddsBrands
         fields = (
@@ -491,6 +528,14 @@ class FavouriteListSerializer(serializers.ModelSerializer):
 
 
 class AddsBrandsSerializer(serializers.ModelSerializer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        request = self.context.get('request')
+        language = 'ru'
+        if request and request.META.get('HTTP_ACCEPT_LANGUAGE') in settings.MODELTRANSLATION_LANGUAGES:
+            language = request.META.get('HTTP_ACCEPT_LANGUAGE')
+        self.fields["name"] = serializers.CharField(source=f'name_{language}')
+
     products = ProductSerializer(many=True, read_only=True)
 
     class Meta:
@@ -530,6 +575,14 @@ class SaleMainSerializer(serializers.ModelSerializer):
 
 
 class BrandDetailSerializer(serializers.ModelSerializer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        request = self.context.get('request')
+        language = 'ru'
+        if request and request.META.get('HTTP_ACCEPT_LANGUAGE') in settings.MODELTRANSLATION_LANGUAGES:
+            language = request.META.get('HTTP_ACCEPT_LANGUAGE')
+        self.fields["name"] = serializers.CharField(source=f'name_{language}')
+
     products_count = serializers.IntegerField(read_only=True)
 
     class Meta:
@@ -543,6 +596,14 @@ class BrandDetailSerializer(serializers.ModelSerializer):
 
 
 class ProductItemCategorySerializer(serializers.ModelSerializer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        request = self.context.get('request')
+        language = 'ru'
+        if request and request.META.get('HTTP_ACCEPT_LANGUAGE') in settings.MODELTRANSLATION_LANGUAGES:
+            language = request.META.get('HTTP_ACCEPT_LANGUAGE')
+        self.fields["name"] = serializers.CharField(source=f'name_{language}')
+
     breadcrumbs = serializers.SerializerMethodField()
     product_amount = serializers.SerializerMethodField()
 
@@ -564,6 +625,14 @@ class ProductItemCategorySerializer(serializers.ModelSerializer):
 
 
 class ProductSubCategorySerializer(serializers.ModelSerializer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        request = self.context.get('request')
+        language = 'ru'
+        if request and request.META.get('HTTP_ACCEPT_LANGUAGE') in settings.MODELTRANSLATION_LANGUAGES:
+            language = request.META.get('HTTP_ACCEPT_LANGUAGE')
+        self.fields["name"] = serializers.CharField(source=f'name_{language}')
+
     product_item_categories = ProductItemCategorySerializer(source="product_sub_category", many=True, read_only=True)
     breadcrumbs = serializers.SerializerMethodField()
 
@@ -582,6 +651,14 @@ class ProductSubCategorySerializer(serializers.ModelSerializer):
 
 
 class ProductCategorySerializer(serializers.ModelSerializer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        request = self.context.get('request')
+        language = 'ru'
+        if request and request.META.get('HTTP_ACCEPT_LANGUAGE') in settings.MODELTRANSLATION_LANGUAGES:
+            language = request.META.get('HTTP_ACCEPT_LANGUAGE')
+        self.fields["name"] = serializers.CharField(source=f'name_{language}')
+
     sub_categories = ProductSubCategorySerializer(source="product_category", many=True, read_only=True)
     breadcrumbs = serializers.SerializerMethodField()
 
@@ -600,6 +677,14 @@ class ProductCategorySerializer(serializers.ModelSerializer):
 
 
 class ProductCategoryListSerializer(serializers.ModelSerializer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        request = self.context.get('request')
+        language = 'ru'
+        if request and request.META.get('HTTP_ACCEPT_LANGUAGE') in settings.MODELTRANSLATION_LANGUAGES:
+            language = request.META.get('HTTP_ACCEPT_LANGUAGE')
+        self.fields["name"] = serializers.CharField(source=f'name_{language}')
+
     sub_categories = ProductSubCategorySerializer(source="product_category", many=True, read_only=True)
 
     class Meta:
