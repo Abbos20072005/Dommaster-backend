@@ -681,6 +681,7 @@ class QuestionsSerializer(serializers.ModelSerializer):
             "customer",
             "product",
             "question",
+            "reply_count",
             "created_at"
         )
 

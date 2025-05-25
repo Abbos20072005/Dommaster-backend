@@ -997,7 +997,7 @@ class QuestionsViewSet(ViewSet):
         if not param_serializer.is_valid():
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=param_serializer.errors)
 
-        questions = Questions.objects.filter(product=param_serializer.validated_data.get("product_id"))
+        questions = Questions.objects.annotate(reply_count=Count("question_reply")).filter(product=param_serializer.validated_data.get("product_id"))
         return Response(data={
             "result": get_questions_paginator(response_data=questions, page=param_serializer.validated_data.get("page"),
                                               page_size=param_serializer.validated_data.get("page_size"),
