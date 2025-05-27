@@ -138,7 +138,27 @@ class ProductViewSet(ViewSet):
                     TrigramSimilarity("name_en", param_data)
                 )
             ).filter(similarity__gt=0.01).order_by('-similarity').values_list("name", flat=True)
-            cache.set(cache_key, product, timeout=240)
+
+            category = ProductCategory.objects.annotate(
+                similarity=Greatest(
+                    TrigramSimilarity("name", param_data),
+                    TrigramSimilarity("name_uz", param_data),
+                    TrigramSimilarity("name_ru", param_data),
+                    TrigramSimilarity("name_en", param_data)
+                )
+            ).filter(similarity__gt=0.01).order_by('-similarity').values_list("name", flat=True)
+
+            brand = Brand.objects.annotate(
+                similarity=Greatest(
+                    TrigramSimilarity("name", param_data),
+                    TrigramSimilarity("name_uz", param_data),
+                    TrigramSimilarity("name_ru", param_data),
+                    TrigramSimilarity("name_en", param_data)
+                )
+            ).filter(similarity__gt=0.01).order_by('-similarity').values_list("name", flat=True)
+            cache.set(cache_key, {"products": product,
+                                  "categories": category,
+                                  "brands": brand}, timeout=240)
 
         return Response(data={"result": cache.get(cache_key), "ok": True}, status=status.HTTP_200_OK)
 

@@ -46,6 +46,12 @@ class Brand(BaseModel):
     class Meta:
         verbose_name = "Бренд"
         verbose_name_plural = "Бренды"
+        indexes = [
+            GinIndex(fields=['name'], opclasses=['gin_trgm_ops'], name='idx_brand_name_trgm'),
+            GinIndex(fields=['name_uz'], opclasses=['gin_trgm_ops'], name='idx_brand_name_uz_trgm'),
+            GinIndex(fields=['name_ru'], opclasses=['gin_trgm_ops'], name='idx_brand_name_ru_trgm'),
+            GinIndex(fields=['name_en'], opclasses=['gin_trgm_ops'], name='idx_brand_name_en_trgm'),
+        ]
 
 
 class Order(BaseModel):
@@ -77,6 +83,12 @@ class ProductCategory(BaseModel):
     class Meta:
         verbose_name = "Категория продуктов"
         verbose_name_plural = "Категории продуктов"
+        indexes = [
+            GinIndex(fields=['name'], opclasses=['gin_trgm_ops'], name='idx_category_name_trgm'),
+            GinIndex(fields=['name_uz'], opclasses=['gin_trgm_ops'], name='idx_category_name_uz_trgm'),
+            GinIndex(fields=['name_ru'], opclasses=['gin_trgm_ops'], name='idx_category_name_ru_trgm'),
+            GinIndex(fields=['name_en'], opclasses=['gin_trgm_ops'], name='idx_category_name_en_trgm'),
+        ]
 
 
 class ProductSubCategory(BaseModel):
