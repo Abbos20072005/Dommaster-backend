@@ -38,7 +38,7 @@ from .serializers import ProductCategorySerializer, ProductCategoryListSerialize
     OrderSerializer, SaleMainSerializer, ServiceSerializer, ServiceDetailSerializer, OrderDetailSerializer, \
     CommentReplySerializer, CommentReplyCreateSerializer, CommentReplyUpdateSerializer, QuestionsReplySerializer, \
     QuestionsReplyCreateSerializer, QuestionsReplyUpdateSerializer, OrderCancelSerializer, OrderPaySerializer, \
-    OrderCreateSerializer
+    OrderCreateSerializer, ProductCategorySearchSerializer
 
 
 class MainPageViewSet(ViewSet):
@@ -129,7 +129,6 @@ class ProductViewSet(ViewSet):
         cache_key = f"{param_data}"
 
         query = cache.get(cache_key)
-        print(query)
         if not query:
             product = Product.objects.annotate(
                 similarity=Greatest(
@@ -147,7 +146,9 @@ class ProductViewSet(ViewSet):
                     TrigramSimilarity("name_ru", param_data),
                     TrigramSimilarity("name_en", param_data)
                 )
-            ).filter(similarity__gt=0.01).order_by('-similarity').values("id", "name", "image")
+            ).filter(similarity__gt=0.01).order_by('-similarity')
+            category_serializer = ProductCategorySearchSerializer(category, many=True,
+                                                                  context={"request": request}).data
 
             brand = Brand.objects.annotate(
                 similarity=Greatest(
@@ -157,9 +158,10 @@ class ProductViewSet(ViewSet):
                     TrigramSimilarity("name_en", param_data)
                 )
             ).filter(similarity__gt=0.01).order_by('-similarity').values("id", "name", "image")
+            brand_serializer = BrandSerializer(brand, many=True, context={"request": request}).data
             cache.set(cache_key, {"products": product,
-                                  "categories": category,
-                                  "brands": brand}, timeout=240)
+                                  "categories": category_serializer,
+                                  "brands": brand_serializer}, timeout=240)
 
         return Response(data={"result": cache.get(cache_key), "ok": True}, status=status.HTTP_200_OK)
 
@@ -407,9 +409,10 @@ class CommentViewSet(ViewSet):
 
         comments = Comment.objects.filter(customer=request.user.id)
         return Response(data={
-            "result": get_comments_me_paginator(response_data=comments, page=param_serializer.validated_data.get("page"),
-                                             page_size=param_serializer.validated_data.get("page_size"),
-                                             context={"request": request}), "ok": True}, status=status.HTTP_200_OK)
+            "result": get_comments_me_paginator(response_data=comments,
+                                                page=param_serializer.validated_data.get("page"),
+                                                page_size=param_serializer.validated_data.get("page_size"),
+                                                context={"request": request}), "ok": True}, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
         operation_summary="Get product comments",
@@ -1018,7 +1021,8 @@ class QuestionsViewSet(ViewSet):
         if not param_serializer.is_valid():
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=param_serializer.errors)
 
-        questions = Questions.objects.annotate(reply_count=Count("question_reply")).filter(product=param_serializer.validated_data.get("product_id"))
+        questions = Questions.objects.annotate(reply_count=Count("question_reply")).filter(
+            product=param_serializer.validated_data.get("product_id"))
         return Response(data={
             "result": get_questions_paginator(response_data=questions, page=param_serializer.validated_data.get("page"),
                                               page_size=param_serializer.validated_data.get("page_size"),
@@ -1096,7 +1100,8 @@ class OrderViewSet(ViewSet):
         if not data_serializer.is_valid():
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=data_serializer.errors)
 
-        order = Order.objects.filter(id=data_serializer.validated_data.get("order_id"), customer_id=request.user.id, status=0).first()
+        order = Order.objects.filter(id=data_serializer.validated_data.get("order_id"), customer_id=request.user.id,
+                                     status=0).first()
         if not order:
             raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
 
@@ -1104,7 +1109,6 @@ class OrderViewSet(ViewSet):
                                      type_pyment=data_serializer.validated_data.get("payment_type"),
                                      is_web=data_serializer.validated_data.get("is_web"))
         return Response(data={"result": payment_link, "ok": True}, status=status.HTTP_200_OK)
-
 
     @swagger_auto_schema(
         operation_summary="Order cancel",
@@ -1119,8 +1123,8 @@ class OrderViewSet(ViewSet):
 
         order.status = 4
         order.save(update_fields=["status"])
-        return Response(data={"result": OrderSerializer(order, context={"request": request}).data, "ok": True}, status=status.HTTP_200_OK)
-
+        return Response(data={"result": OrderSerializer(order, context={"request": request}).data, "ok": True},
+                        status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
         operation_summary="Create order",
