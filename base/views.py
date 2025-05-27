@@ -212,7 +212,8 @@ class PromocodeViewSet(ViewSet):
         return Response(
             data={"result": {"total_price": promocode_discount_price,
                              "saved_price": cart.total_price - promocode_discount_price,
-                             "discount_precent": promocode.discount_precent},
+                             "discount_precent": promocode.discount_precent,
+                             "promocode": serializer.validated_data.get("promocode")},
                   "ok": True}, status=status.HTTP_200_OK)
 
 
