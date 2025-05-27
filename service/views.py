@@ -129,6 +129,7 @@ class ProductViewSet(ViewSet):
         cache_key = f"{param_data}"
 
         query = cache.get(cache_key)
+        print(query)
         if not query:
             product = Product.objects.annotate(
                 similarity=Greatest(
@@ -146,7 +147,7 @@ class ProductViewSet(ViewSet):
                     TrigramSimilarity("name_ru", param_data),
                     TrigramSimilarity("name_en", param_data)
                 )
-            ).filter(similarity__gt=0.01).order_by('-similarity').values_list("name", flat=True)
+            ).filter(similarity__gt=0.01).order_by('-similarity').values("id", "name", "image")
 
             brand = Brand.objects.annotate(
                 similarity=Greatest(
@@ -155,7 +156,7 @@ class ProductViewSet(ViewSet):
                     TrigramSimilarity("name_ru", param_data),
                     TrigramSimilarity("name_en", param_data)
                 )
-            ).filter(similarity__gt=0.01).order_by('-similarity').values_list("name", flat=True)
+            ).filter(similarity__gt=0.01).order_by('-similarity').values("id", "name", "image")
             cache.set(cache_key, {"products": product,
                                   "categories": category,
                                   "brands": brand}, timeout=240)
