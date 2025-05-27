@@ -159,6 +159,7 @@ class ProductViewSet(ViewSet):
                 )
             ).filter(similarity__gt=0.01).order_by('-similarity').values("id", "name", "image")
             brand_serializer = BrandSerializer(brand, many=True, context={"request": request}).data
+
             cache.set(cache_key, {"products": product,
                                   "categories": category_serializer,
                                   "brands": brand_serializer}, timeout=240)
