@@ -21,7 +21,6 @@ from django.db.models.functions import Greatest
 import secrets
 from django.db import transaction
 from base.models import Promocodes
-from base.serializers import PromocodeRequestSerializer
 from datetime import date
 from base.models import Banner
 from base.serializers import BannerSerializer
@@ -38,7 +37,8 @@ from .serializers import ProductCategorySerializer, ProductCategoryListSerialize
     QuestionsCreateSerializer, FavouriteCreateSerializer, FavouriteResponseSerializer, RecentlyViewedProductsSerializer, \
     OrderSerializer, SaleMainSerializer, ServiceSerializer, ServiceDetailSerializer, OrderDetailSerializer, \
     CommentReplySerializer, CommentReplyCreateSerializer, CommentReplyUpdateSerializer, QuestionsReplySerializer, \
-    QuestionsReplyCreateSerializer, QuestionsReplyUpdateSerializer, OrderCancelSerializer, OrderPaySerializer
+    QuestionsReplyCreateSerializer, QuestionsReplyUpdateSerializer, OrderCancelSerializer, OrderPaySerializer, \
+    OrderCreateSerializer
 
 
 class MainPageViewSet(ViewSet):
@@ -1104,7 +1104,7 @@ class OrderViewSet(ViewSet):
     @swagger_auto_schema(
         operation_summary="Create order",
         operation_description="Create order",
-        request_body=PromocodeRequestSerializer(),
+        request_body=OrderCreateSerializer(),
         responses={201: OrderSerializer()},
         tags=["Order"]
     )
@@ -1114,7 +1114,7 @@ class OrderViewSet(ViewSet):
             raise CustomApiException(error_code=ErrorCodes.NOT_FOUND, message="Cart not found")
 
         data = request.data
-        serializer = PromocodeRequestSerializer(data=data, context={"request": request})
+        serializer = OrderCreateSerializer(data=data, context={"request": request})
         if not serializer.is_valid():
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
 
