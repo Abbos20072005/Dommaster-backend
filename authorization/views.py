@@ -332,7 +332,6 @@ class AuthViewSet(ViewSet):
 
         if data.get("is_default") and data.get("is_default") is True:
             customer_addresses = CustomerAddresses.objects.filter(customer=request.user.id)
-            print(customer_addresses)
             for address in customer_addresses:
                 if address and address.id != pk:
                     address.is_default = False

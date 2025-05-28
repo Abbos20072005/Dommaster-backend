@@ -746,6 +746,7 @@ class OrderSerializer(serializers.ModelSerializer):
             "customer",
             "status",
             "total_price",
+            "order_location",
             "created_at",
             "order_items"
         )

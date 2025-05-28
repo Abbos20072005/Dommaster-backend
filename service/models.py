@@ -9,6 +9,7 @@ from ckeditor_uploader.fields import RichTextUploadingField
 from django.contrib.postgres.indexes import GinIndex
 import secrets
 from base.models import Promocodes
+from authorization.models import CustomerAddresses
 
 ORDER_STATUS = (
     (0, "Pending"),
@@ -59,6 +60,8 @@ class Order(BaseModel):
     customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, verbose_name="Покупатель")
     status = models.IntegerField(choices=ORDER_STATUS, default=0, verbose_name="Статус")
     total_price = models.FloatField(default=0.0, verbose_name="Общая стоимость")
+    order_location = models.ForeignKey(CustomerAddresses, on_delete=models.SET_NULL, blank=True, null=True,
+                                       verbose_name="Локация доставки")
 
     def __str__(self):
         return str(self.id)
@@ -289,7 +292,8 @@ class Comment(BaseModel):
 
 
 class CommentReply(BaseModel):
-    comment = models.ForeignKey(Comment, related_name="comment_reply", on_delete=models.CASCADE, verbose_name="Коментарий")
+    comment = models.ForeignKey(Comment, related_name="comment_reply", on_delete=models.CASCADE,
+                                verbose_name="Коментарий")
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, blank=True, null=True, verbose_name="Клиент")
     reply_comment = models.TextField(verbose_name="Коментарий ответа")
     is_admin = models.BooleanField(default=False, verbose_name="Админ")
@@ -306,7 +310,8 @@ class CommentReply(BaseModel):
 
 class CommentImages(BaseModel):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, verbose_name="Клиент")
-    comment = models.ForeignKey(Comment, related_name="comment_image", on_delete=models.CASCADE, verbose_name="Коментарий")
+    comment = models.ForeignKey(Comment, related_name="comment_image", on_delete=models.CASCADE,
+                                verbose_name="Коментарий")
     image = models.ImageField(upload_to="comment/images/", verbose_name="Изображение")
 
     def __str__(self):
@@ -420,9 +425,11 @@ class Questions(BaseModel):
         verbose_name = "Вопрос"
         verbose_name_plural = "Вопросы"
 
+
 class QuestionsReply(BaseModel):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, blank=True, null=True, verbose_name="Клиент")
-    question = models.ForeignKey(Questions, related_name="question_reply", on_delete=models.CASCADE, verbose_name="Вопрос")
+    question = models.ForeignKey(Questions, related_name="question_reply", on_delete=models.CASCADE,
+                                 verbose_name="Вопрос")
     answer = models.TextField(verbose_name="Ответ")
     is_admin = models.BooleanField(default=False, verbose_name="Админ")
     is_visible = models.BooleanField(default=False, verbose_name="Виден")

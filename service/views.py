@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 
+from authorization.models import CustomerAddresses
 from .paginations.get_comments_me import get_comments_me_paginator
 from .paginations.get_question_replies import get_question_replies_paginator
 from exceptions.error_exception import CustomApiException
@@ -1145,6 +1146,9 @@ class OrderViewSet(ViewSet):
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
 
         promocode = Promocodes.objects.filter(name=serializer.validated_data.get("promocode")).first()
+        customer_location = CustomerAddresses.objects.filter(customer_id=request.user.id, is_default=True).first()
+        if not customer_location:
+            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND, message="Customer location not found")
 
         if promocode:
             if promocode.expires_at < date.today():
@@ -1157,9 +1161,10 @@ class OrderViewSet(ViewSet):
                 promocode_discount_price = cart.total_price * (1 - (promocode.discount_precent / 100))
 
             order = Order.objects.create(customer_id=request.user.id, promocode_id=promocode.id,
-                                         total_price=promocode_discount_price)
+                                         total_price=promocode_discount_price, customer_location=customer_location.id)
         else:
-            order = Order.objects.create(customer_id=request.user.id, total_price=cart.products_total_price)
+            order = Order.objects.create(customer_id=request.user.id, total_price=cart.products_total_price,
+                                         customer_location=customer_location.id)
 
         cart_items = CartItem.objects.filter(cart_id=cart.id).exclude(is_checked=False)
         for cart_item in cart_items:
