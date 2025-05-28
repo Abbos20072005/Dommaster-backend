@@ -1161,10 +1161,10 @@ class OrderViewSet(ViewSet):
                 promocode_discount_price = cart.total_price * (1 - (promocode.discount_precent / 100))
 
             order = Order.objects.create(customer_id=request.user.id, promocode_id=promocode.id,
-                                         total_price=promocode_discount_price, customer_location=customer_location.id)
+                                         total_price=promocode_discount_price, order_location=customer_location.id)
         else:
             order = Order.objects.create(customer_id=request.user.id, total_price=cart.products_total_price,
-                                         customer_location=customer_location.id)
+                                         order_location=customer_location.id)
 
         cart_items = CartItem.objects.filter(cart_id=cart.id).exclude(is_checked=False)
         for cart_item in cart_items:
