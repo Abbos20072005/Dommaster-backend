@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from authorization.serializers import CustomerSerializer
+from authorization.serializers import CustomerSerializer, CustomerAddressesSerializer
 from .models import Product, ProductCategory, ProductItemCategory, ProductSubCategory, ProductImage, Comment, \
     Order, OrderItem, Brand, Sale, AddsBrands, Favourites, Cart, CartItem, ProductCharacteristics, Questions, \
     RecentlyViewedProducts, Service, CommentReply, CommentImages, QuestionsReply
@@ -738,6 +738,7 @@ class OrderItemImageSerializer(serializers.ModelSerializer):
 
 class OrderSerializer(serializers.ModelSerializer):
     order_items = OrderItemImageSerializer(many=True, read_only=True)
+    order_location = CustomerAddressesSerializer(read_only=True)
 
     class Meta:
         model = Order
@@ -765,6 +766,7 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
 class OrderDetailSerializer(serializers.ModelSerializer):
     order_items = OrderItemSerializer(many=True, read_only=True)
+    order_location = CustomerAddressesSerializer(read_only=True)
 
     class Meta:
         model = Order
