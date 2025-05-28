@@ -773,6 +773,7 @@ class OrderDetailSerializer(serializers.ModelSerializer):
             "status",
             "promocode",
             "total_price",
+            "order_location",
             "created_at",
             "order_items"
         )
