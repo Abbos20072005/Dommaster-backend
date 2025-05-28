@@ -1169,7 +1169,7 @@ class OrderViewSet(ViewSet):
         payment_link = generate_link(order_id=order.id, total_price=order.total_price,
                                      type_pyment=serializer.validated_data.get("payment_type"),
                                      is_web=serializer.validated_data.get("is_web"))
-        return Response(data={"result": payment_link, "ok": True},
+        return Response(data={"result": payment_link, "order_id": order.id, "ok": True},
                         status=status.HTTP_201_CREATED)
 
     @swagger_auto_schema(
