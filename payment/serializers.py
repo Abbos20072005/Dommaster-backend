@@ -159,9 +159,8 @@ class BaseUzumResponse:
             "serviceId": self.service_id,
             "status": status_str,
         }
-
         # Vaqt maydonlarini shartli qo‘shish
-        for key in ("transTime", "confirmTime", "reverseTime"):
+        for key in ("transTime", "confirmTime", "reverseTime", 'timestamp'):
             if key in time_fields and time_fields[key] is not None:
                 response[key] = time_fields[key]
 
@@ -174,7 +173,7 @@ class BaseUzumResponse:
 
     def success(self, order_id=None, status_str="OK", trans_time=None):
         data = {"account": {"value": str(order_id)}} if order_id else None
-        return self._base_response(status_str=status_str, data=data, transTime=trans_time)
+        return self._base_response(status_str=status_str, data=data, timestamp=trans_time)
 
     def with_trans(self, trans_id, amount, order_id, status_str="CREATED",
                    trans_time=None, confirm_time=None, reverse_time=None):
