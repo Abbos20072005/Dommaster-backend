@@ -37,7 +37,8 @@ class IsAuthenticatedMiddleware(MiddlewareMixin):
             "reply_create",
             "question_reply_create",
             "question_reply_action",
-            "order_cancel"
+            "order_cancel",
+            "fcm_token"
         }
 
         match = request.resolver_match

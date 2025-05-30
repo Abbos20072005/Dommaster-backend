@@ -171,7 +171,7 @@ class MessageSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "chat",
-            "file",
+            "image",
             "message",
             "is_answer",
             "created_at"
@@ -185,7 +185,7 @@ class MessageCreateSerializer(serializers.ModelSerializer):
             "id",
             "chat",
             "message",
-            "file"
+            "image"
         )
 
 

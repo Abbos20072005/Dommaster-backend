@@ -1,8 +1,22 @@
-from .models import Customer, CustomerAddresses
+from .models import Customer, CustomerAddresses, FcmToken
 from rest_framework import serializers
 from .utils import validate_number
 from django.contrib.auth.hashers import make_password
 
+class FCMTokenRequestSerializer(serializers.Serializer):
+    fcm_token = serializers.CharField(max_length=300, required=True)
+    device_id = serializers.CharField(max_length=300, required=True)
+
+class FCMTokenSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FcmToken
+        fields = (
+            "id",
+            "customer",
+            "device_id",
+            "fcm_token",
+            "status"
+        )
 
 class ForgotPasswordSerializer(serializers.Serializer):
     phone_number = serializers.CharField(required=True, validators=[validate_number])

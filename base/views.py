@@ -282,6 +282,8 @@ class ChatViewSet(ViewSet):
     )
     def message_create(self, request):
         customer = request.user.id
+        data = request.data.copy()
+
         if not customer:
             token = request.COOKIES.get("chat_token")
             if not token:
@@ -291,7 +293,8 @@ class ChatViewSet(ViewSet):
             if not chat:
                 raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
 
-            serializer = MessageCreateSerializer(data={"chat": chat.id, **request.data}, context={"request": request})
+            data["chat"] = chat.id
+            serializer = MessageCreateSerializer(data=data, context={"request": request})
             if not serializer.is_valid():
                 raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
 
@@ -302,7 +305,8 @@ class ChatViewSet(ViewSet):
         if not chat:
             raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
 
-        serializer = MessageCreateSerializer(data={"chat": chat.id, **request.data},
+        data["chat"] = chat.id
+        serializer = MessageCreateSerializer(data=data,
                                              context={"request": request})
         if not serializer.is_valid():
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)

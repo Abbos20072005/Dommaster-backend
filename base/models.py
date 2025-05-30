@@ -43,7 +43,7 @@ class Chat(BaseModel):
 class Messages(BaseModel):
     chat = models.ForeignKey(Chat, on_delete=models.CASCADE, related_name="chat_messages", verbose_name="Чат")
     message = models.TextField(blank=True, null=True, verbose_name="Сообщение")
-    file = models.FileField(upload_to="chat/", blank=True, null=True, verbose_name="Файл")
+    image = models.ImageField(upload_to="chat/", blank=True, null=True, verbose_name="Изображение")
     is_answer = models.BooleanField(default=False, verbose_name="Ответ")
 
     def __str__(self):

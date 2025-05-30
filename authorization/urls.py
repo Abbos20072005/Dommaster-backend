@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import AuthViewSet, OTPViewSet
+from .views import AuthViewSet, OTPViewSet, FCMTokenViewSet
 
 urlpatterns = [
     path("login/", AuthViewSet.as_view({"post": "login"}), name="login"),
@@ -14,4 +14,5 @@ urlpatterns = [
     path("customer/update/", AuthViewSet.as_view({"patch": "update_customer_info"}), name="update_customer_info"),
     path("customer/addresses/", AuthViewSet.as_view({"get": "addresses_list", "post": "address_create"}), name="addresses_list"),
     path("customer/addresses/<int:pk>/", AuthViewSet.as_view({"patch": "addresses_update", "delete": "delete_address"}), name="address_update"),
+    path("fcm/token/", FCMTokenViewSet.as_view({"patch": "fcm_token"}), name="fcm_token")
 ]

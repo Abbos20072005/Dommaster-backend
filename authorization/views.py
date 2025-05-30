@@ -14,7 +14,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from .utils import otp_code_generator
 from .serializers import CustomerSerializer, LoginSerializer, RegisterSerializer, OTPVerifySerializer, \
     OTPResendSerializer, ChangePasswordSerializer, ForgotPasswordSerializer, CustomerAddressesSerializer, \
-    CustomerAddressesUpdateSerializer, CustomerAddressesCreateSerializer, ResetPasswordSerializer
+    CustomerAddressesUpdateSerializer, CustomerAddressesCreateSerializer, ResetPasswordSerializer, FCMTokenSerializer, \
+    FCMTokenRequestSerializer
 from django.utils import timezone
 
 
@@ -474,3 +475,34 @@ class OTPViewSet(ViewSet):
         send_notification(message)
 
         return Response(data={"result": {"otp_key": otp.otp_key}, "ok": True}, status=status.HTTP_200_OK)
+
+
+class FCMTokenViewSet(ViewSet):
+    @swagger_auto_schema(
+        operation_summary="FCMToken",
+        operation_description="FCMToken",
+        request_body=FCMTokenRequestSerializer(),
+        responses={200: FCMTokenSerializer()},
+        tags=["FcmToken"]
+    )
+    def fcm_token(self, request):
+        data = request.data
+        serializer = FCMTokenRequestSerializer(data=data)
+        if not serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
+
+        fcm_token = FcmToken.objects.filter(device_id=serializer.validated_data.get("device_id"),
+                                            customer_id=request.user.id, status=True).first()
+        if not fcm_token:
+            fcm_token = FcmToken.objects.create(device_id=serializer.validated_data.get("device_id"),
+                                                customer_id=request.user.id,
+                                                fcm_token=serializer.validated_data.get("fcm_token"))
+            create_serializer = FCMTokenSerializer(fcm_token, context={"request": request})
+            return Response(data={"result": create_serializer.data, 'ok': True}, status=status.HTTP_200_OK)
+
+        update_serializer = FCMTokenSerializer(fcm_token, data=data, partial=True, context={"request": request})
+        if not update_serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=update_serializer.errors)
+
+        update_serializer.save()
+        return Response(data={"result": update_serializer.data, "ok": True}, status=status.HTTP_202_ACCEPTED)
