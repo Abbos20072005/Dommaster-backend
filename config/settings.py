@@ -39,7 +39,6 @@ INSTALLED_APPS = [
     "rest_framework",
     "drf_yasg",
     "corsheaders",
-    "tinymce",
     "rest_framework_simplejwt",
     "modeltranslation",
     'ckeditor',
