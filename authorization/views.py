@@ -15,7 +15,7 @@ from .utils import otp_code_generator
 from .serializers import CustomerSerializer, LoginSerializer, RegisterSerializer, OTPVerifySerializer, \
     OTPResendSerializer, ChangePasswordSerializer, ForgotPasswordSerializer, CustomerAddressesSerializer, \
     CustomerAddressesUpdateSerializer, CustomerAddressesCreateSerializer, ResetPasswordSerializer, FCMTokenSerializer, \
-    FCMTokenRequestSerializer
+    FCMTokenRequestSerializer, FCMTokenDeleteSerializer
 from django.utils import timezone
 
 
@@ -506,3 +506,23 @@ class FCMTokenViewSet(ViewSet):
 
         update_serializer.save()
         return Response(data={"result": update_serializer.data, "ok": True}, status=status.HTTP_202_ACCEPTED)
+    
+    @swagger_auto_schema(
+        operation_summary="FCMToken delete",
+        operation_description="FCMToken delete",
+        request_body=FCMTokenDeleteSerializer(),
+        responses={204: "FCMToken successfully deleted"},
+        tags=["FcmToken"]
+    )
+    def fcmtoken_delete(self, request):
+        serializer = FCMTokenDeleteSerializer(data=request.data, context={"request": request})
+        if not serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
+
+        fcm_token = FcmToken.objects.filter(device_id=serializer.validated_data.get("device_id"),
+                                            customer_id=request.user.id).first()
+        if not fcm_token:
+            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND, message="FCMToken not found")
+
+        fcm_token.delete()
+        return Response(data={"result": "FCMToken successfully deleted", "ok": True}, status=status.HTTP_204_NO_CONTENT)

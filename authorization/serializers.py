@@ -3,6 +3,9 @@ from rest_framework import serializers
 from .utils import validate_number
 from django.contrib.auth.hashers import make_password
 
+class FCMTokenDeleteSerializer(serializers.Serializer):
+    device_id = serializers.CharField(max_length=300, required=True)
+
 class FCMTokenRequestSerializer(serializers.Serializer):
     fcm_token = serializers.CharField(max_length=300, required=True)
     device_id = serializers.CharField(max_length=300, required=True)
