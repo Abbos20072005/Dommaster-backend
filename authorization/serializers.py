@@ -15,7 +15,6 @@ class FCMTokenSerializer(serializers.ModelSerializer):
             "customer",
             "device_id",
             "fcm_token",
-            "status"
         )
 
 class ForgotPasswordSerializer(serializers.Serializer):

@@ -26,9 +26,8 @@ class OTPAdmin(admin.ModelAdmin):
 
 @admin.register(FcmToken)
 class FcmTokenAdmin(admin.ModelAdmin):
-    list_display = ("id", "customer", "status")
+    list_display = ("id", "customer")
     list_display_links = ("id", "customer")
-    list_filter = ("status",)
     search_fields = ("customer",)
 
 @admin.register(CustomerAddresses)

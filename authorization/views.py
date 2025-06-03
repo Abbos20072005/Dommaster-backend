@@ -492,7 +492,7 @@ class FCMTokenViewSet(ViewSet):
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
 
         fcm_token = FcmToken.objects.filter(device_id=serializer.validated_data.get("device_id"),
-                                            customer_id=request.user.id, status=True).first()
+                                            customer_id=request.user.id).first()
         if not fcm_token:
             fcm_token = FcmToken.objects.create(device_id=serializer.validated_data.get("device_id"),
                                                 customer_id=request.user.id,

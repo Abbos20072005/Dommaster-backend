@@ -3,7 +3,7 @@ import os
 import requests
 from django.conf import settings
 from pyfcm import FCMNotification
-
+from authorization.models import FcmToken
 
 def send_notification(message: str) -> None:
     try:
@@ -39,16 +39,15 @@ def push_notification(message_title: str, message_body: str, fcm: str) -> bool:
         return False
 
 
-# def send_notification_to_members(contract, sender, taker_id, enum_code):
-#     fcm_tokens = FcmToken.objects.filter(user_id=taker_id, status=True)
-#     count = 0
-#     for token in fcm_tokens:
-#         result = push_notification(message_title='Haq', message_body="message", fcm=token.fcm_token)
-#         if not result:
-#             token.status = False
-#             token.save()
-#             continue
-#         count += 1
-#     if count > 0:
-#         return True
-#     return False
+def send_notification_to_customer(customer_id, enum_code):
+    fcm_tokens = FcmToken.objects.filter(customer_id=customer_id)
+    count = 0
+    for token in fcm_tokens:
+        result = push_notification(message_title="Dommaster", message_body="message", fcm=token.fcm_token)
+        if not result:
+            token.delete()
+            continue
+        count += 1
+    if count > 0:
+        return True
+    return False

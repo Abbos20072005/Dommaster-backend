@@ -41,7 +41,6 @@ class FcmToken(BaseModel):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, verbose_name="Клиент")
     device_id = models.CharField(max_length=300, verbose_name="ID устройства")
     fcm_token = models.CharField(max_length=300, verbose_name="Фсм Токен")
-    status = models.BooleanField(default=True, verbose_name="Статус")
 
     def __str__(self):
         return str(self.id)
