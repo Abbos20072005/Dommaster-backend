@@ -1122,6 +1122,9 @@ class OrderViewSet(ViewSet):
         order = Order.objects.filter(id=pk, customer_id=request.user.id).first()
         if not order:
             raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
+        
+        if order.status != 0:
+            raise CustomApiException(error_code=ErrorCodes.INVALID_INPUT, message="You could not cancel this order")
 
         order.status = 4
         order.save(update_fields=["status"])
