@@ -219,7 +219,7 @@ class Product(BaseModel):
 
 class Favourites(BaseModel):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, blank=True, null=True, verbose_name="Клиент")
-    favourite_token = models.CharField(max_length=64, unique=True, blank=True, null=True, verbose_name="Токен карзины")
+    favourite_token = models.CharField(max_length=64, blank=True, null=True, verbose_name="Токен карзины")
     product = models.ForeignKey(Product, on_delete=models.CASCADE, verbose_name="Продукт")
 
     def __str__(self):

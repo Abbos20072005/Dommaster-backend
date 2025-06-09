@@ -645,9 +645,10 @@ class FavouriteViewSet(ViewSet):
 
             data["favourite_token"] = token
             favourite_serializer = FavouriteSerializer(data=data, context={"request": request})
+
             if not favourite_serializer.is_valid():
                 raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=favourite_serializer.errors)
-
+            
             favourite_serializer.save()
             resp = Response(data={"result": favourite_serializer.data, "ok": True}, status=status.HTTP_200_OK)
             resp.set_cookie("favourite_token", favourite_serializer.validated_data.get("favourite_token"),
