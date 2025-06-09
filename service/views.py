@@ -820,15 +820,19 @@ class CartViewSet(ViewSet):
             token = request.COOKIES.get("cart_token")
             cart_item = CartItem.objects.filter(cart__cart_token=token,
                                                 product=data_serializer.validated_data.get("product").id).first()
+
             if not cart_item:
                 raise CustomApiException(error_code=ErrorCodes.NOT_FOUND, message="Product does not exist")
+            
             if cart_item and data_serializer.validated_data.get("quantity") == 0:
                 cart_item.delete()
                 return Response(data={"result": "Product successfully deleted from cart", "ok": True},
                                 status=status.HTTP_204_NO_CONTENT)
+            
         else:
             cart_item = CartItem.objects.filter(cart__customer=customer,
                                                 product=data_serializer.validated_data.get("product").id).first()
+            
             if not cart_item:
                 raise CustomApiException(error_code=ErrorCodes.NOT_FOUND, message="Product does not exist")
 
