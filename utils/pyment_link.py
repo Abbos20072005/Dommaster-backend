@@ -1,35 +1,39 @@
-from django.conf import settings
 import base64
 
-import os
-import django
+from django.conf import settings
 
-# os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')  # <-- settings modulini to'g'ri yozing
-# django.setup()
+
 def generate_link(order_id: int, total_price: int, type_pyment: int, is_web: bool = False):
     if type_pyment == 1:
-        # Click payment link
+
         url = (
             f'https://my.click.uz/services/pay?service_id={settings.CLICK_SERVICE_ID}'
             f'&merchant_id={settings.CLICK_MERCHANT_ID}'
             f'&amount={total_price}'
             f'&transaction_param={order_id}'
         )
+
         if is_web and settings.REDIRECTED_URL:
             url += f'&return_url={settings.REDIRECTED_URL.format(order_id)}'
         return url
 
     elif type_pyment == 2:
-        # Payme payment link
+
         url_prefix = f'm={settings.PAYME_ID};ac.order_id={order_id};a={total_price * 100}'
+
         if is_web and settings.REDIRECTED_URL:
             url_prefix += f';c={settings.REDIRECTED_URL.format(order_id)}'
 
-        # Encode the string correctly
         encoded_string = base64.b64encode(url_prefix.encode()).decode()
         url = f'https://checkout.paycom.uz/{encoded_string}'
         return url
 
-    return None
+    elif type_pyment == 3:
 
-# print(generate_link(15, 1000, 2, is_web=True))
+        url_prefix = f'?serviceId={settings.SERVICE_ID_UZUM}&account={order_id}'
+
+        if is_web and settings.REDIRECTED_URL:
+            url_prefix += f'&successUrl={settings.REDIRECTED_URL.format(order_id)}'
+        url = f'https://www.uzumbank.uz/open-service{url_prefix}'
+        return url
+    return None
