@@ -202,7 +202,8 @@ class CartItemUpdateSerializer(serializers.ModelSerializer):
 
 
 class CartItemBulkUpdateSerializer(serializers.Serializer):
-    is_checked = serializers.BooleanField()
+    is_checked = serializers.BooleanField(required=False)
+    is_delete = serializers.BooleanField(required=False)
 
 
 class FavouriteSerializer(serializers.ModelSerializer):

@@ -858,8 +858,7 @@ class CartViewSet(ViewSet):
         tags=["Cart"]
     )
     def cart_bulk_update(self, request):
-        data = request.data
-        bulk_serializer = CartItemBulkUpdateSerializer(data=data)
+        bulk_serializer = CartItemBulkUpdateSerializer(data=request.data)
         if not bulk_serializer.is_valid():
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=bulk_serializer.errors)
 
@@ -870,7 +869,14 @@ class CartViewSet(ViewSet):
         else:
             cart_items = CartItem.objects.filter(cart__customer=customer)
 
+        is_delete = bulk_serializer.validated_data.get("is_delete")
+        
+
         for cart_item in cart_items:
+            if is_delete is True:
+                cart_item.delete()
+                continue
+
             cart_item.is_checked = bulk_serializer.validated_data.get("is_checked")
             cart_item.save(update_fields=["is_checked"])
 

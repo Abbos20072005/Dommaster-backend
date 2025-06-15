@@ -47,7 +47,7 @@ class ResetPasswordSerializer(serializers.Serializer):
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField(required=False)
     phone_number = serializers.CharField(max_length=14, required=False, validators=[validate_number])
-    password = serializers.CharField(max_length=30, required=False)
+    password = serializers.CharField(max_length=30, required=True)
 
 
 class RegisterSerializer(serializers.ModelSerializer):
