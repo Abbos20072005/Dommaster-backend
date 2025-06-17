@@ -171,8 +171,8 @@ class BaseUzumResponse:
 
         return Response(response, status=200)
 
-    def success(self, order_id=None, status_str="OK", trans_time=None):
-        data = {"account": {"value": str(order_id)}} if order_id else None
+    def success(self, order_id=None, amount=None ,status_str="OK", trans_time=None):
+        data = {"account": {"value": str(order_id), "amount":amount}} if order_id else None
         return self._base_response(status_str=status_str, data=data, timestamp=trans_time)
 
     def with_trans(self, trans_id, amount, order_id, status_str="CREATED",
