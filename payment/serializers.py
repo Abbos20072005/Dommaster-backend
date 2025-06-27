@@ -1,5 +1,3 @@
-import time
-
 from django.conf import settings
 from rest_framework import serializers
 from rest_framework.response import Response
@@ -8,7 +6,6 @@ from .models import MerchatTransactionsModel, AccountModel, UzumBankTransactions
 from .utils.exception_payme import IncorrectAmount, PerformTransactionDoesNotExist
 from .utils.exception_uzumbank import UzumBankAPIException, ErrorCode
 from .utils.logger import logged
-from .utils.utils_click import get_order
 
 
 class MerchatTransactionsModelSerializer(serializers.ModelSerializer):
@@ -145,9 +142,9 @@ class UzumTransactionInitSerializer(UzumAccountCheckSerializer):
 class UzumConFirmSerializer(BascUzumSerializer):
     transId = serializers.CharField()
     paymentSource = serializers.CharField(required=False)
-    tariff=serializers.CharField(required=False)
-    processingReferenceNumber=serializers.CharField(required=False)
-    phone=serializers.CharField(max_length=50, required=False)
+    tariff = serializers.CharField(required=False)
+    processingReferenceNumber = serializers.CharField(required=False)
+    phone = serializers.CharField(max_length=50, required=False)
 
 
 class BaseUzumResponse:
@@ -171,8 +168,8 @@ class BaseUzumResponse:
 
         return Response(response, status=200)
 
-    def success(self, order_id=None, amount=None ,status_str="OK", trans_time=None):
-        data = {"account": {"value": str(order_id), "amount":amount}} if order_id else None
+    def success(self, order_id=None, amount=None, status_str="OK", trans_time=None):
+        data = {"account": {"value": str(order_id)}, "amount": {"value": amount}} if order_id else None
         return self._base_response(status_str=status_str, data=data, timestamp=trans_time)
 
     def with_trans(self, trans_id, amount, order_id, status_str="CREATED",
