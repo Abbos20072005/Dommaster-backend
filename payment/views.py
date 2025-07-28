@@ -69,7 +69,8 @@ class PreparePaymentView(APIView):
                 "error_note": "Success"
             }
             logged("PreparePaymentView: success -> response: {}".format(response), "info")
-            raise response
+        return Response(response)
+
 
 
 class CompletePaymentView(APIView):
