@@ -468,7 +468,7 @@ class CommentViewSet(ViewSet):
         if comment:
             raise CustomApiException(error_code=ErrorCodes.INVALID_INPUT, message="Your comment already exist")
 
-        data = request.data
+        data = request.data.copy()                              # <- we need here copy() to avoid "request data is immutable" error
         data["customer"] = request.user.id
         data["product"] = param.get("product_id")
         serializer = CommentCreateSerializer(data=data, context={"request": request})
@@ -477,10 +477,12 @@ class CommentViewSet(ViewSet):
         
         if serializer.validated_data.get("images"):
             images = serializer.validated_data.pop("images")
-            for image in images:
-                CommentImages.objects.create(customer_id=request.user.id, comment_id=comment.id, image=image)
         
         comment = serializer.save()
+        if images:
+            for image in images:
+                CommentImages.objects.create(customer_id=request.user.id, comment_id=comment.id, image=image)
+
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_201_CREATED)
 
     @swagger_auto_schema(
