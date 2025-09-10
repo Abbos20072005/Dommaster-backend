@@ -69,7 +69,8 @@ class PreparePaymentView(APIView):
                 "error_note": "Success"
             }
             logged("PreparePaymentView: success -> response: {}".format(response), "info")
-            raise response
+        return Response(response)
+
 
 
 class CompletePaymentView(APIView):
@@ -240,7 +241,7 @@ class UzumBankPaymentView(ViewSet):
         raise_exception_if_invalid(serializer)
 
         return BaseUzumResponse(service_id=settings.SERVICE_ID_UZUM).success(
-            order_id=serializer.validated_data['params']['account'],
+            order_id=serializer.validated_data['params']['account'],amount=order.total_price,
             trans_time=int(time.time() * 1000)
         )
 
