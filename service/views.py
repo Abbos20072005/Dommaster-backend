@@ -446,6 +446,7 @@ class CommentViewSet(ViewSet):
                 page_size=param_serializer.validated_data.get("page_size"),
                 context={"request": request}), "ok": True}, status=status.HTTP_200_OK)
 
+    #TODO: need to optimize
     @swagger_auto_schema(
         operation_summary="Write comment to product",
         operation_description="Write comment to product",
@@ -473,13 +474,13 @@ class CommentViewSet(ViewSet):
         serializer = CommentCreateSerializer(data=data, context={"request": request})
         if not serializer.is_valid():
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
-
-        images = serializer.validated_data.pop("images")
+        
+        if serializer.validated_data.get("images"):
+            images = serializer.validated_data.pop("images")
+            for image in images:
+                CommentImages.objects.create(customer_id=request.user.id, comment_id=comment.id, image=image)
+        
         comment = serializer.save()
-
-        for image in images:
-            CommentImages.objects.create(customer_id=request.user.id, comment_id=comment.id, image=image)
-
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_201_CREATED)
 
     @swagger_auto_schema(
