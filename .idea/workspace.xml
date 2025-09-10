@@ -1,0 +1,532 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="25d4bde1-07bf-4e33-83a0-f5edbfb67ff4" name="Changes" comment="send notification partially added" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Python Script" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="HighlightingSettingsPerFile">
+    <setting file="file://$PROJECT_DIR$/venv/lib/python3.13/site-packages/django/db/models/query.py" root0="SKIP_INSPECTION" />
+    <setting file="file://$PROJECT_DIR$/venv/lib/python3.13/site-packages/rest_framework/serializers.py" root0="SKIP_INSPECTION" />
+    <setting file="file://$PROJECT_DIR$/venv/lib/python3.13/site-packages/rest_framework_simplejwt/authentication.py" root0="SKIP_INSPECTION" />
+    <setting file="file://$PROJECT_DIR$/venv/lib/python3.13/site-packages/rest_framework_simplejwt/exceptions.py" root0="SKIP_INSPECTION" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 8
+}</component>
+  <component name="ProjectId" id="2wieWryt1c6sRjDNHjHdUMQmSJx" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ASKED_SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;Python.test.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;dev&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Users/abbosbek/Work/Dommaster-backend&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.editor&quot;
+  }
+}</component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/utils" />
+    </key>
+  </component>
+  <component name="RunManager">
+    <configuration name="test" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="Dommaster-backend" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Python.test" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-python-sdk-348a24fa61fa-5312c7369657-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-251.23774.444" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="25d4bde1-07bf-4e33-83a0-f5edbfb67ff4" name="Changes" comment="" />
+      <created>1746528855443</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1746528855443</updated>
+    </task>
+    <task id="LOCAL-00023" summary="most search products added">
+      <option name="closed" value="true" />
+      <created>1747317433027</created>
+      <option name="number" value="00023" />
+      <option name="presentableId" value="LOCAL-00023" />
+      <option name="project" value="LOCAL" />
+      <updated>1747317433027</updated>
+    </task>
+    <task id="LOCAL-00024" summary="comment images and reply model and serializers added">
+      <option name="closed" value="true" />
+      <created>1747320124217</created>
+      <option name="number" value="00024" />
+      <option name="presentableId" value="LOCAL-00024" />
+      <option name="project" value="LOCAL" />
+      <updated>1747320124217</updated>
+    </task>
+    <task id="LOCAL-00025" summary="comment reply functions added">
+      <option name="closed" value="true" />
+      <created>1747401856159</created>
+      <option name="number" value="00025" />
+      <option name="presentableId" value="LOCAL-00025" />
+      <option name="project" value="LOCAL" />
+      <updated>1747401856159</updated>
+    </task>
+    <task id="LOCAL-00026" summary="comment reply functions added">
+      <option name="closed" value="true" />
+      <created>1747403681508</created>
+      <option name="number" value="00026" />
+      <option name="presentableId" value="LOCAL-00026" />
+      <option name="project" value="LOCAL" />
+      <updated>1747403681508</updated>
+    </task>
+    <task id="LOCAL-00027" summary="comment reply functions added">
+      <option name="closed" value="true" />
+      <created>1747403842075</created>
+      <option name="number" value="00027" />
+      <option name="presentableId" value="LOCAL-00027" />
+      <option name="project" value="LOCAL" />
+      <updated>1747403842075</updated>
+    </task>
+    <task id="LOCAL-00028" summary="comment reply functions added">
+      <option name="closed" value="true" />
+      <created>1747403968834</created>
+      <option name="number" value="00028" />
+      <option name="presentableId" value="LOCAL-00028" />
+      <option name="project" value="LOCAL" />
+      <updated>1747403968834</updated>
+    </task>
+    <task id="LOCAL-00029" summary="reply count added">
+      <option name="closed" value="true" />
+      <created>1747448617228</created>
+      <option name="number" value="00029" />
+      <option name="presentableId" value="LOCAL-00029" />
+      <option name="project" value="LOCAL" />
+      <updated>1747448617228</updated>
+    </task>
+    <task id="LOCAL-00030" summary="replies url changed">
+      <option name="closed" value="true" />
+      <created>1747448946653</created>
+      <option name="number" value="00030" />
+      <option name="presentableId" value="LOCAL-00030" />
+      <option name="project" value="LOCAL" />
+      <updated>1747448946653</updated>
+    </task>
+    <task id="LOCAL-00031" summary="reply count added to comment">
+      <option name="closed" value="true" />
+      <created>1747449367529</created>
+      <option name="number" value="00031" />
+      <option name="presentableId" value="LOCAL-00031" />
+      <option name="project" value="LOCAL" />
+      <updated>1747449367529</updated>
+    </task>
+    <task id="LOCAL-00032" summary="image create added to comment">
+      <option name="closed" value="true" />
+      <created>1747462756199</created>
+      <option name="number" value="00032" />
+      <option name="presentableId" value="LOCAL-00032" />
+      <option name="project" value="LOCAL" />
+      <updated>1747462756199</updated>
+    </task>
+    <task id="LOCAL-00033" summary="customer is become null and blank in comment reply model">
+      <option name="closed" value="true" />
+      <created>1747464480429</created>
+      <option name="number" value="00033" />
+      <option name="presentableId" value="LOCAL-00033" />
+      <option name="project" value="LOCAL" />
+      <updated>1747464480429</updated>
+    </task>
+    <task id="LOCAL-00034" summary="is admin true added to comment reply">
+      <option name="closed" value="true" />
+      <created>1747464711397</created>
+      <option name="number" value="00034" />
+      <option name="presentableId" value="LOCAL-00034" />
+      <option name="project" value="LOCAL" />
+      <updated>1747464711397</updated>
+    </task>
+    <task id="LOCAL-00035" summary="is admin true added to comment reply">
+      <option name="closed" value="true" />
+      <created>1747464980939</created>
+      <option name="number" value="00035" />
+      <option name="presentableId" value="LOCAL-00035" />
+      <option name="project" value="LOCAL" />
+      <updated>1747464980939</updated>
+    </task>
+    <task id="LOCAL-00036" summary="question answer added">
+      <option name="closed" value="true" />
+      <created>1747478127117</created>
+      <option name="number" value="00036" />
+      <option name="presentableId" value="LOCAL-00036" />
+      <option name="project" value="LOCAL" />
+      <updated>1747478127117</updated>
+    </task>
+    <task id="LOCAL-00037" summary="questions reply added">
+      <option name="closed" value="true" />
+      <created>1747490039256</created>
+      <option name="number" value="00037" />
+      <option name="presentableId" value="LOCAL-00037" />
+      <option name="project" value="LOCAL" />
+      <updated>1747490039256</updated>
+    </task>
+    <task id="LOCAL-00038" summary="created at added to reply">
+      <option name="closed" value="true" />
+      <created>1747492777698</created>
+      <option name="number" value="00038" />
+      <option name="presentableId" value="LOCAL-00038" />
+      <option name="project" value="LOCAL" />
+      <updated>1747492777698</updated>
+    </task>
+    <task id="LOCAL-00039" summary="comments count by ratings added">
+      <option name="closed" value="true" />
+      <created>1747684249358</created>
+      <option name="number" value="00039" />
+      <option name="presentableId" value="LOCAL-00039" />
+      <option name="project" value="LOCAL" />
+      <updated>1747684249358</updated>
+    </task>
+    <task id="LOCAL-00040" summary="question reply functions added">
+      <option name="closed" value="true" />
+      <created>1747686655362</created>
+      <option name="number" value="00040" />
+      <option name="presentableId" value="LOCAL-00040" />
+      <option name="project" value="LOCAL" />
+      <updated>1747686655362</updated>
+    </task>
+    <task id="LOCAL-00041" summary="signals for change the product quantity when status become collecting added">
+      <option name="closed" value="true" />
+      <created>1747792971079</created>
+      <option name="number" value="00041" />
+      <option name="presentableId" value="LOCAL-00041" />
+      <option name="project" value="LOCAL" />
+      <updated>1747792971080</updated>
+    </task>
+    <task id="LOCAL-00042" summary="order payment link added to order create function">
+      <option name="closed" value="true" />
+      <created>1747794760336</created>
+      <option name="number" value="00042" />
+      <option name="presentableId" value="LOCAL-00042" />
+      <option name="project" value="LOCAL" />
+      <updated>1747794760336</updated>
+    </task>
+    <task id="LOCAL-00043" summary="signal for canceling product added">
+      <option name="closed" value="true" />
+      <created>1747796177395</created>
+      <option name="number" value="00043" />
+      <option name="presentableId" value="LOCAL-00043" />
+      <option name="project" value="LOCAL" />
+      <updated>1747796177395</updated>
+    </task>
+    <task id="LOCAL-00044" summary="Comments ratings count added to product comments">
+      <option name="closed" value="true" />
+      <created>1747938891974</created>
+      <option name="number" value="00044" />
+      <option name="presentableId" value="LOCAL-00044" />
+      <option name="project" value="LOCAL" />
+      <updated>1747938891974</updated>
+    </task>
+    <task id="LOCAL-00045" summary="bug of my comments fixed">
+      <option name="closed" value="true" />
+      <created>1747939528991</created>
+      <option name="number" value="00045" />
+      <option name="presentableId" value="LOCAL-00045" />
+      <option name="project" value="LOCAL" />
+      <updated>1747939528991</updated>
+    </task>
+    <task id="LOCAL-00046" summary="Question reply bug fixed">
+      <option name="closed" value="true" />
+      <created>1747939854135</created>
+      <option name="number" value="00046" />
+      <option name="presentableId" value="LOCAL-00046" />
+      <option name="project" value="LOCAL" />
+      <updated>1747939854135</updated>
+    </task>
+    <task id="LOCAL-00047" summary="Question reply bug fixed">
+      <option name="closed" value="true" />
+      <created>1747939985839</created>
+      <option name="number" value="00047" />
+      <option name="presentableId" value="LOCAL-00047" />
+      <option name="project" value="LOCAL" />
+      <updated>1747939985839</updated>
+    </task>
+    <task id="LOCAL-00048" summary="Question reply bug fixed">
+      <option name="closed" value="true" />
+      <created>1747940155895</created>
+      <option name="number" value="00048" />
+      <option name="presentableId" value="LOCAL-00048" />
+      <option name="project" value="LOCAL" />
+      <updated>1747940155895</updated>
+    </task>
+    <task id="LOCAL-00049" summary="order cancel added">
+      <option name="closed" value="true" />
+      <created>1747951468332</created>
+      <option name="number" value="00049" />
+      <option name="presentableId" value="LOCAL-00049" />
+      <option name="project" value="LOCAL" />
+      <updated>1747951468332</updated>
+    </task>
+    <task id="LOCAL-00050" summary="order repay added">
+      <option name="closed" value="true" />
+      <created>1747952785429</created>
+      <option name="number" value="00050" />
+      <option name="presentableId" value="LOCAL-00050" />
+      <option name="project" value="LOCAL" />
+      <updated>1747952785429</updated>
+    </task>
+    <task id="LOCAL-00051" summary="bug of order cancel fixed">
+      <option name="closed" value="true" />
+      <created>1747953372295</created>
+      <option name="number" value="00051" />
+      <option name="presentableId" value="LOCAL-00051" />
+      <option name="project" value="LOCAL" />
+      <updated>1747953372295</updated>
+    </task>
+    <task id="LOCAL-00052" summary="payment migration added">
+      <option name="closed" value="true" />
+      <created>1748084827239</created>
+      <option name="number" value="00052" />
+      <option name="presentableId" value="LOCAL-00052" />
+      <option name="project" value="LOCAL" />
+      <updated>1748084827239</updated>
+    </task>
+    <task id="LOCAL-00053" summary="questions reply count added">
+      <option name="closed" value="true" />
+      <created>1748177971296</created>
+      <option name="number" value="00053" />
+      <option name="presentableId" value="LOCAL-00053" />
+      <option name="project" value="LOCAL" />
+      <updated>1748177971296</updated>
+    </task>
+    <task id="LOCAL-00054" summary="questions reply count added">
+      <option name="closed" value="true" />
+      <created>1748178394254</created>
+      <option name="number" value="00054" />
+      <option name="presentableId" value="LOCAL-00054" />
+      <option name="project" value="LOCAL" />
+      <updated>1748178394254</updated>
+    </task>
+    <task id="LOCAL-00055" summary="model translation added to models">
+      <option name="closed" value="true" />
+      <created>1748182706378</created>
+      <option name="number" value="00055" />
+      <option name="presentableId" value="LOCAL-00055" />
+      <option name="project" value="LOCAL" />
+      <updated>1748182706378</updated>
+    </task>
+    <task id="LOCAL-00056" summary="model translation added to models">
+      <option name="closed" value="true" />
+      <created>1748182712303</created>
+      <option name="number" value="00056" />
+      <option name="presentableId" value="LOCAL-00056" />
+      <option name="project" value="LOCAL" />
+      <updated>1748182712303</updated>
+    </task>
+    <task id="LOCAL-00057" summary="promocode and order create serializers fixed">
+      <option name="closed" value="true" />
+      <created>1748334117241</created>
+      <option name="number" value="00057" />
+      <option name="presentableId" value="LOCAL-00057" />
+      <option name="project" value="LOCAL" />
+      <updated>1748334117241</updated>
+    </task>
+    <task id="LOCAL-00058" summary="promocode returned in promocode checker function">
+      <option name="closed" value="true" />
+      <created>1748357489966</created>
+      <option name="number" value="00058" />
+      <option name="presentableId" value="LOCAL-00058" />
+      <option name="project" value="LOCAL" />
+      <updated>1748357489967</updated>
+    </task>
+    <task id="LOCAL-00059" summary="to search by name added search by categories and brands">
+      <option name="closed" value="true" />
+      <created>1748374383050</created>
+      <option name="number" value="00059" />
+      <option name="presentableId" value="LOCAL-00059" />
+      <option name="project" value="LOCAL" />
+      <updated>1748374383050</updated>
+    </task>
+    <task id="LOCAL-00060" summary="to search by name added search by categories and brands">
+      <option name="closed" value="true" />
+      <created>1748376038130</created>
+      <option name="number" value="00060" />
+      <option name="presentableId" value="LOCAL-00060" />
+      <option name="project" value="LOCAL" />
+      <updated>1748376038130</updated>
+    </task>
+    <task id="LOCAL-00061" summary="to search by name added search by categories and brands">
+      <option name="closed" value="true" />
+      <created>1748383387589</created>
+      <option name="number" value="00061" />
+      <option name="presentableId" value="LOCAL-00061" />
+      <option name="project" value="LOCAL" />
+      <updated>1748383387589</updated>
+    </task>
+    <task id="LOCAL-00062" summary="to search by name added search by categories and brands">
+      <option name="closed" value="true" />
+      <created>1748383492517</created>
+      <option name="number" value="00062" />
+      <option name="presentableId" value="LOCAL-00062" />
+      <option name="project" value="LOCAL" />
+      <updated>1748383492517</updated>
+    </task>
+    <task id="LOCAL-00063" summary="to search by name added search by categories and brands">
+      <option name="closed" value="true" />
+      <created>1748383997557</created>
+      <option name="number" value="00063" />
+      <option name="presentableId" value="LOCAL-00063" />
+      <option name="project" value="LOCAL" />
+      <updated>1748383997557</updated>
+    </task>
+    <task id="LOCAL-00064" summary="order_create response changed">
+      <option name="closed" value="true" />
+      <created>1748427358246</created>
+      <option name="number" value="00064" />
+      <option name="presentableId" value="LOCAL-00064" />
+      <option name="project" value="LOCAL" />
+      <updated>1748427358246</updated>
+    </task>
+    <task id="LOCAL-00065" summary="order location added">
+      <option name="closed" value="true" />
+      <created>1748467061832</created>
+      <option name="number" value="00065" />
+      <option name="presentableId" value="LOCAL-00065" />
+      <option name="project" value="LOCAL" />
+      <updated>1748467061832</updated>
+    </task>
+    <task id="LOCAL-00066" summary="order location added">
+      <option name="closed" value="true" />
+      <created>1748467242430</created>
+      <option name="number" value="00066" />
+      <option name="presentableId" value="LOCAL-00066" />
+      <option name="project" value="LOCAL" />
+      <updated>1748467242430</updated>
+    </task>
+    <task id="LOCAL-00067" summary="order location added">
+      <option name="closed" value="true" />
+      <created>1748467321276</created>
+      <option name="number" value="00067" />
+      <option name="presentableId" value="LOCAL-00067" />
+      <option name="project" value="LOCAL" />
+      <updated>1748467321276</updated>
+    </task>
+    <task id="LOCAL-00068" summary="order location added">
+      <option name="closed" value="true" />
+      <created>1748467450774</created>
+      <option name="number" value="00068" />
+      <option name="presentableId" value="LOCAL-00068" />
+      <option name="project" value="LOCAL" />
+      <updated>1748467450774</updated>
+    </task>
+    <task id="LOCAL-00069" summary="order location added">
+      <option name="closed" value="true" />
+      <created>1748467687447</created>
+      <option name="number" value="00069" />
+      <option name="presentableId" value="LOCAL-00069" />
+      <option name="project" value="LOCAL" />
+      <updated>1748467687447</updated>
+    </task>
+    <task id="LOCAL-00070" summary="chat fixed and ready with image loading and fcmtoken added and ready to use">
+      <option name="closed" value="true" />
+      <created>1748639705646</created>
+      <option name="number" value="00070" />
+      <option name="presentableId" value="LOCAL-00070" />
+      <option name="project" value="LOCAL" />
+      <updated>1748639705646</updated>
+    </task>
+    <task id="LOCAL-00071" summary="send notification partially added">
+      <option name="closed" value="true" />
+      <created>1748956627643</created>
+      <option name="number" value="00071" />
+      <option name="presentableId" value="LOCAL-00071" />
+      <option name="project" value="LOCAL" />
+      <updated>1748956627643</updated>
+    </task>
+    <option name="localTasksCounter" value="72" />
+    <servers />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="is admin true added to comment reply" />
+    <MESSAGE value="question answer added" />
+    <MESSAGE value="questions reply added" />
+    <MESSAGE value="created at added to reply" />
+    <MESSAGE value="comments count by ratings added" />
+    <MESSAGE value="question reply functions added" />
+    <MESSAGE value="signals for change the product quantity when status become collecting added" />
+    <MESSAGE value="order payment link added to order create function" />
+    <MESSAGE value="signal for canceling product added" />
+    <MESSAGE value="Comments ratings count added to product comments" />
+    <MESSAGE value="bug of my comments fixed" />
+    <MESSAGE value="Question reply bug fixed" />
+    <MESSAGE value="order cancel added" />
+    <MESSAGE value="order repay added" />
+    <MESSAGE value="bug of order cancel fixed" />
+    <MESSAGE value="payment migration added" />
+    <MESSAGE value="questions reply count added" />
+    <MESSAGE value="model translation added to models" />
+    <MESSAGE value="promocode and order create serializers fixed" />
+    <MESSAGE value="promocode returned in promocode checker function" />
+    <MESSAGE value="to search by name added search by categories and brands" />
+    <MESSAGE value="order_create response changed" />
+    <MESSAGE value="order location added" />
+    <MESSAGE value="chat fixed and ready with image loading and fcmtoken added and ready to use" />
+    <MESSAGE value="send notification partially added" />
+    <option name="LAST_COMMIT_MESSAGE" value="send notification partially added" />
+  </component>
+</project>

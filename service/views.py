@@ -475,6 +475,7 @@ class CommentViewSet(ViewSet):
         if not serializer.is_valid():
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
         
+        images = None
         if serializer.validated_data.get("images"):
             images = serializer.validated_data.pop("images")
         
