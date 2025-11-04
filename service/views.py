@@ -39,8 +39,7 @@ from .serializers import ProductCategorySerializer, ProductCategoryListSerialize
     OrderSerializer, SaleMainSerializer, ServiceSerializer, ServiceDetailSerializer, OrderDetailSerializer, \
     CommentReplySerializer, CommentReplyCreateSerializer, CommentReplyUpdateSerializer, QuestionsReplySerializer, \
     QuestionsReplyCreateSerializer, QuestionsReplyUpdateSerializer, OrderCancelSerializer, OrderPaySerializer, \
-    OrderCreateSerializer, ProductCategorySearchSerializer
-
+    OrderCreateSerializer, ProductCategorySearchSerializer, ProductCharacteristicsCreateSerializer
 
 class MainPageViewSet(ViewSet):
     @swagger_auto_schema(
@@ -74,6 +73,21 @@ class MainPageViewSet(ViewSet):
 
 
 class ProductViewSet(ViewSet):
+    @swagger_auto_schema(
+        operation_summary="Product characteristics",
+        operation_description="Product characteristics",
+        request_body=ProductCharacteristicsCreateSerializer(),
+        responses={200: ProductCharacteristicsCreateSerializer()},
+        tags=["Product"]
+    )
+    def product_characteristics(self, request):
+        serializer = ProductCharacteristicsCreateSerializer(data=request.data, context={"request": request})
+        if not serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
+        
+        serializer.save()
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+
     @swagger_auto_schema(
         operation_summary="Most searched products",
         operation_description="Most searched products",

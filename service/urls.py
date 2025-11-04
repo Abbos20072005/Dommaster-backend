@@ -58,7 +58,6 @@ urlpatterns = [
     path("questions/reply/<int:pk>/", QuestionsViewSet.as_view({"patch": "reply_update", "delete": "reply_delete"}),
          name="question_reply_action"),
     path("order/<int:pk>/cancel/", OrderViewSet.as_view({"post": "cancel_order"}), name="order_cancel"),
-    path("order/pay/", OrderViewSet.as_view({"post": "order_pay"}), name="order_pay")
-
-
+    path("order/pay/", OrderViewSet.as_view({"post": "order_pay"}), name="order_pay"),
+    path("characteristics/", ProductViewSet.as_view({"post": "product_characteristics"}), name="product_characteristics"),
 ]

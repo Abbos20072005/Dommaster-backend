@@ -159,6 +159,16 @@ class ProductCharacteristicsSerializer(serializers.ModelSerializer):
             "value"
         )
 
+class ProductCharacteristicsCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductCharacteristics
+        fields = (
+            "id",
+            "product",
+            "name",
+            "unit",
+            "value"
+        )
 
 class CartItemCreateSerializer(serializers.ModelSerializer):
     class Meta:
