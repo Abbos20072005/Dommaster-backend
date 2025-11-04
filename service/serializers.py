@@ -729,6 +729,26 @@ class ProductCategoryListSerializer(serializers.ModelSerializer):
             "sub_categories"
         )
 
+class ProductSubCategoryCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductSubCategory
+        fields = (
+            "id",
+            "product_category",
+            "name",
+            "image"
+        )
+
+class ProductItemCategoryCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductItemCategory
+        fields = (
+            "id",
+            "product_sub_category",
+            "name",
+            "image"
+        )
+
 
 class OrderItemImageSerializer(serializers.ModelSerializer):
     image = serializers.SerializerMethodField()

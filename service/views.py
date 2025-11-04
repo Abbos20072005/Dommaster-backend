@@ -39,7 +39,8 @@ from .serializers import ProductCategorySerializer, ProductCategoryListSerialize
     OrderSerializer, SaleMainSerializer, ServiceSerializer, ServiceDetailSerializer, OrderDetailSerializer, \
     CommentReplySerializer, CommentReplyCreateSerializer, CommentReplyUpdateSerializer, QuestionsReplySerializer, \
     QuestionsReplyCreateSerializer, QuestionsReplyUpdateSerializer, OrderCancelSerializer, OrderPaySerializer, \
-    OrderCreateSerializer, ProductCategorySearchSerializer, ProductCharacteristicsCreateSerializer
+    OrderCreateSerializer, ProductCategorySearchSerializer, ProductCharacteristicsCreateSerializer, ProductSubCategoryCreateSerializer, \
+    ProductItemCategoryCreateSerializer
 
 class MainPageViewSet(ViewSet):
     @swagger_auto_schema(
@@ -73,6 +74,36 @@ class MainPageViewSet(ViewSet):
 
 
 class ProductViewSet(ViewSet):
+    @swagger_auto_schema(
+        operation_summary="Product sub categories create",
+        operation_description="Product sub categories create",
+        request_body=ProductSubCategoryCreateSerializer(),
+        responses={200: ProductSubCategoryCreateSerializer()},
+        tags=["Product"]
+    )
+    def sub_categories_create(self, request):
+        serializer = ProductSubCategoryCreateSerializer(data=request.data, context={"request": request})
+        if not serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
+        
+        serializer.save()
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+    
+    @swagger_auto_schema(
+        operation_summary="Product categories create",
+        operation_description="Product categories create",
+        request_body=ProductItemCategoryCreateSerializer(),
+        responses={200: ProductItemCategoryCreateSerializer()},
+        tags=["Product"]
+    )
+    def item_categories_create(self, request):
+        serializer = ProductItemCategoryCreateSerializer(data=request.data, context={"request": request})
+        if not serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
+        
+        serializer.save()
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+
     @swagger_auto_schema(
         operation_summary="Product characteristics",
         operation_description="Product characteristics",
