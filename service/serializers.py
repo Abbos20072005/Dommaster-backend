@@ -394,7 +394,8 @@ class ProductCreateSerializer(serializers.ModelSerializer):
             "description",
             "description_uz",
             "description_en",
-            "price"
+            "price",
+            "quantity"
         )
 
 
