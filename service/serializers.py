@@ -382,7 +382,11 @@ class ProductCreateSerializer(serializers.ModelSerializer):
         model = Product
         fields = (
             "name",
+            "name_uz",
+            "name_en",
             "description",
+            "description_uz",
+            "description_en",
             "price"
         )
 
