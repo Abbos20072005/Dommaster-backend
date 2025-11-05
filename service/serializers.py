@@ -377,6 +377,15 @@ class ProductImageSerializer(serializers.ModelSerializer):
         model = ProductImage
         fields = ("id", "product", "image")
 
+class ProductCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Product
+        fields = (
+            "name",
+            "description",
+            "price"
+        )
+
 
 class ProductSerializer(serializers.ModelSerializer):
     def __init__(self, *args, **kwargs):

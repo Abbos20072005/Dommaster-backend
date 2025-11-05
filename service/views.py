@@ -40,7 +40,7 @@ from .serializers import ProductCategorySerializer, ProductCategoryListSerialize
     CommentReplySerializer, CommentReplyCreateSerializer, CommentReplyUpdateSerializer, QuestionsReplySerializer, \
     QuestionsReplyCreateSerializer, QuestionsReplyUpdateSerializer, OrderCancelSerializer, OrderPaySerializer, \
     OrderCreateSerializer, ProductCategorySearchSerializer, ProductCharacteristicsCreateSerializer, ProductSubCategoryCreateSerializer, \
-    ProductItemCategoryCreateSerializer
+    ProductItemCategoryCreateSerializer, ProductCreateSerializer
 
 class MainPageViewSet(ViewSet):
     @swagger_auto_schema(
@@ -74,6 +74,21 @@ class MainPageViewSet(ViewSet):
 
 
 class ProductViewSet(ViewSet):
+    @swagger_auto_schema(
+        operation_summary="Product create",
+        operation_description="Product create",
+        request_body=ProductCreateSerializer(),
+        responses={200: ProductCreateSerializer()},
+        tags=["Product"]
+    )
+    def product_create(self, request):
+        serializer = ProductCreateSerializer(data=request.data, context={"request": request})
+        if not serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
+        
+        serializer.save()
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+    
     @swagger_auto_schema(
         operation_summary="Product sub categories create",
         operation_description="Product sub categories create",
