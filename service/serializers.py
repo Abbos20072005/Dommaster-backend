@@ -746,6 +746,8 @@ class ProductItemCategoryCreateSerializer(serializers.ModelSerializer):
             "id",
             "product_sub_category",
             "name",
+            "name_uz",
+            "name_en",
             "image"
         )
 

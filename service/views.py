@@ -97,7 +97,7 @@ class ProductViewSet(ViewSet):
         tags=["Product"]
     )
     def item_categories_create(self, request):
-        serializer = ProductItemCategoryCreateSerializer(data=request.data, context={"request": request})
+        serializer = ProductItemCategoryCreateSerializer(data=request.data, context={"request": request}) 
         if not serializer.is_valid():
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
         
