@@ -166,6 +166,8 @@ class ProductCharacteristicsCreateSerializer(serializers.ModelSerializer):
             "id",
             "product",
             "name",
+            "name_uz",
+            "name_en",
             "unit",
             "value"
         )
