@@ -169,7 +169,9 @@ class ProductCharacteristicsCreateSerializer(serializers.ModelSerializer):
             "name_uz",
             "name_en",
             "unit",
-            "value"
+            "value",
+            "value_uz",
+            "value_en"
         )
 
 class CartItemCreateSerializer(serializers.ModelSerializer):
