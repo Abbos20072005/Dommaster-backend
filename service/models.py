@@ -401,7 +401,7 @@ class CartItem(BaseModel):
     is_checked = models.BooleanField(default=True, verbose_name="Вабран")
 
     def __str__(self):
-        return self.product.name
+        return str(self.id)
 
     class Meta:
         unique_together = ("cart", "product")
