@@ -163,6 +163,14 @@ class Sale(BaseModel):
 
 
 class Product(BaseModel):
+    PRODUCT_UNIT_CHOICES = (
+        ("kg", "KG"),
+        ("l", "L"),
+        ("sm", "SM"),
+        ("pcs", "PCS"),
+        ("m", "M"),
+        ("g", "G")
+    )
     telegram_id = models.CharField(max_length=11, blank=True, null=True, verbose_name="Телеграм id")
     brand = models.ForeignKey(Brand, on_delete=models.SET_NULL, null=True, blank=True, related_name="product_brand",
                               verbose_name="Бренд")
@@ -173,6 +181,7 @@ class Product(BaseModel):
     short_description = RichTextField(blank=True, null=True, verbose_name="Краткое описансе")
     description = RichTextField(verbose_name="Описание")
     price = models.FloatField(default=0.0, verbose_name="Цена")
+    unit = models.CharField(choices=PRODUCT_UNIT_CHOICES, default="pcs")
     discount_price = models.FloatField(blank=True, null=True, verbose_name="Скидочная цена")
     rating = models.FloatField(default=0.0, validators=[MinValueValidator(0.0), MaxValueValidator(5.0)],
                                verbose_name="Рейтинг")

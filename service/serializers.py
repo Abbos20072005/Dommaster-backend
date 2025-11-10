@@ -395,6 +395,7 @@ class ProductCreateSerializer(serializers.ModelSerializer):
             "description_uz",
             "description_en",
             "price",
+            "unit",
             "quantity"
         )
 
@@ -428,6 +429,7 @@ class ProductSerializer(serializers.ModelSerializer):
             "short_description",
             "description",
             "price",
+            "unit",
             "quantity",
             "rating",
             "discount",
