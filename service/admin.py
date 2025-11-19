@@ -109,6 +109,9 @@ class TagAdmin(admin.ModelAdmin):
     search_fields = ("name",)
     list_filter = ("is_active",)
 
+class ProductImageInline(admin.TabularInline):
+    model = ProductImage
+    extra = 1
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
@@ -117,6 +120,7 @@ class ProductAdmin(admin.ModelAdmin):
     search_fields = ("name",)
     list_filter = ("price", "rating")
     readonly_fields = ("discount_price",)
+    inlines = (ProductImageInline,)
 
     def save_model(self, request, obj, form, change):
         if obj.discount and not obj.discount_price:
