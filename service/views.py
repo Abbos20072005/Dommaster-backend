@@ -198,7 +198,7 @@ class ProductViewSet(ViewSet):
                     TrigramSimilarity("name_ru", param_data),
                     TrigramSimilarity("name_en", param_data)
                 )
-            ).filter(similarity__gt=0.01).order_by('-similarity').values_list("name", flat=True)[:6]
+            ).filter(similarity__gt=0.01).order_by('-similarity').values_list("name", flat=True)[:5]
 
             category = ProductCategory.objects.annotate(
                 similarity=Greatest(
