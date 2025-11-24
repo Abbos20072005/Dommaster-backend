@@ -170,7 +170,8 @@ class Product(BaseModel):
         ("pcs", "PCS"),
         ("m", "M"),
         ("g", "G"),
-        ("pkg", "PKG")
+        ("pkg", "PKG"),
+        ("set", "SET")
     )
     telegram_id = models.CharField(max_length=11, blank=True, null=True, verbose_name="Телеграм id")
     brand = models.ForeignKey(Brand, on_delete=models.SET_NULL, null=True, blank=True, related_name="product_brand",
