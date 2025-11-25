@@ -1,6 +1,5 @@
 import re
 import random
-import string
 from django.core.validators import ValidationError
 
 
