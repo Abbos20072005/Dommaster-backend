@@ -1,7 +1,10 @@
 from rest_framework import serializers
-from .models import Banner, Chat, LoyaltyCard, AboutUs, Messages, Promocodes, News, Articles, Reviews, Video
+from .models import Banner, Chat, LoyaltyCard, AboutUs, Messages, Promocodes, News, Articles, Reviews, Video, DeleteButton
 from config import settings
 
+
+class DeleteButtonSerializer(serializers.Serializer):
+    is_deleted = serializers.BooleanField()
 
 
 class NewsSerializer(serializers.ModelSerializer):

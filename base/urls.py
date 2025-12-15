@@ -1,6 +1,6 @@
 from django.urls import path
 from .views import BannerViewSet, ChatViewSet, AboutUsViewSet, PromocodeViewSet, NewsViewSet, ArticlesViewSet, \
-    ReviewsViewSet, VideoViewSet
+    ReviewsViewSet, VideoViewSet, DeleteButtonViewSet
 
 urlpatterns = [
     path("banner/", BannerViewSet.as_view({"get": "banner_list"}), name="banner_list"),
@@ -15,5 +15,6 @@ urlpatterns = [
     path("reviews/", ReviewsViewSet.as_view({"get": "reviews_list"}), name="reviews_list"),
     path("reviews/<int:pk>/", ReviewsViewSet.as_view({"get": "reviews_detail"}), name="reviews_detail"),
     path("video/", VideoViewSet.as_view({"get": "video_list"}), name="video_list"),
-    path("video/<int:pk>/", VideoViewSet.as_view({"get": "video_detail"}), name="video_detail")
+    path("video/<int:pk>/", VideoViewSet.as_view({"get": "video_detail"}), name="video_detail"),
+    path("delete-button/", DeleteButtonViewSet.as_view({"get": "delete_button"}), name="delete_button"),
 ]

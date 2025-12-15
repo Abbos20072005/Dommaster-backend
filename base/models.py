@@ -156,3 +156,10 @@ class Promocodes(BaseModel):
     class Meta:
         verbose_name = "Промокод"
         verbose_name_plural = "Промокоды"
+
+class DeleteButton(BaseModel):
+    is_deleted = models.BooleanField(default=True, verbose_name="Удалено")
+
+    def __str__(self):
+        return str(self.id)
+

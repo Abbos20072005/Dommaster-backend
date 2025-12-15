@@ -1,5 +1,11 @@
 from django.contrib import admin
-from .models import Banner, Chat, AboutUs, Messages, Promocodes, News, Articles, Reviews, Video
+from .models import Banner, Chat, AboutUs, Messages, Promocodes, News, Articles, Reviews, Video, DeleteButton
+
+
+@admin.register(DeleteButton)
+class DeleteButtonAdmin(admin.ModelAdmin):
+    list_display = ("id", "is_deleted")
+    list_display_links = ("id", "is_deleted")
 
 
 @admin.register(News)

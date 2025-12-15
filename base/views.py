@@ -2,8 +2,6 @@ from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
 from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
-from yaml import serialize
-
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from service.serializers import PaginationSerializer
@@ -12,8 +10,8 @@ from .paginations.get_articles import get_articles_paginator
 from .paginations.get_reviews import get_reviews_paginator
 from .serializers import BannerSerializer, MessageSerializer, MessageCreateSerializer, AboutUsSerializer, \
     ChatCreateSerializer, PromocodeRequestSerializer, NewsSerializer, NewsDetailSerializer, ArticlesSerializer, \
-    ArticlesDetailSerializer, ReviewsSerializer, ReviewsDetailSerializer, VideoSerializer, PromocodeSerializer
-from .models import Banner, Chat, AboutUs, Messages, Promocodes, News, Articles, Reviews, Video
+    ArticlesDetailSerializer, ReviewsSerializer, ReviewsDetailSerializer, VideoSerializer, PromocodeSerializer, DeleteButtonSerializer
+from .models import Banner, Chat, AboutUs, Messages, Promocodes, News, Articles, Reviews, Video, DeleteButton
 from service.models import Cart
 from drf_yasg import openapi
 from datetime import date
@@ -326,3 +324,14 @@ class AboutUsViewSet(ViewSet):
         about_us = AboutUs.objects.last()
         serializer = AboutUsSerializer(about_us, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+    
+class DeleteButtonViewSet(ViewSet):
+    @swagger_auto_schema(
+        operation_summary="Delete Button",
+        operation_description="Delete Button",
+        responses={200: DeleteButtonSerializer()},
+        tags=["Delete Button"]
+    )
+    def delete_button(self, request):
+        delete_button = DeleteButton.objects.last()
+        return Response(data={"result": DeleteButtonSerializer(delete_button).data, "ok": True}, status=status.HTTP_200_OK)
