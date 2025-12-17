@@ -1222,12 +1222,27 @@ class OrderViewSet(ViewSet):
         serializer = OrderCreateSerializer(data=data, context={"request": request})
         if not serializer.is_valid():
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
+        
+        customer_address_id = serializer.validated_data.get("address_id")
+        if customer_address_id:
+            customer_location = CustomerAddresses.objects.filter(customer_id=request.user.id, id=customer_address_id).first()
+            if not customer_location:
+                raise CustomApiException(error_code=ErrorCodes.NOT_FOUND, message="Customer location not found")
+            
+            customer_locatioins = CustomerAddresses.objects.filter(customer_id=request.user.id).exclude(id=customer_address_id)
+            for location in customer_locatioins:
+                location.is_default = False
+                location.save(update_fields=["is_default"])
+            
+            customer_location.is_default = True
+            customer_location.save(update_fields=["is_default"])
+
+        else:
+            customer_location = CustomerAddresses.objects.filter(customer_id=request.user.id, is_default=True).first()
+            if not customer_location:
+                raise CustomApiException(error_code=ErrorCodes.NOT_FOUND, message="Customer location not found")
 
         promocode = Promocodes.objects.filter(name=serializer.validated_data.get("promocode")).first()
-        customer_location = CustomerAddresses.objects.filter(customer_id=request.user.id, is_default=True).first()
-        if not customer_location:
-            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND, message="Customer location not found")
-
         if promocode:
             if promocode.expires_at < date.today():
                 raise CustomApiException(error_code=ErrorCodes.PROMOCODE_EXPIRED)
