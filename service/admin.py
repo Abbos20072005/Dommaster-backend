@@ -123,7 +123,7 @@ class ProductAdmin(admin.ModelAdmin):
     inlines = (ProductImageInline,)
 
     def save_model(self, request, obj, form, change):
-        if obj.discount and not obj.discount_price:
+        if obj.discount:
             obj.discount_price = obj.price * (1 - (obj.discount / 100))
         obj.save()
 
