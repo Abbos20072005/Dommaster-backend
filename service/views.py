@@ -40,7 +40,7 @@ from .serializers import ProductCategorySerializer, ProductCategoryListSerialize
     CommentReplySerializer, CommentReplyCreateSerializer, CommentReplyUpdateSerializer, QuestionsReplySerializer, \
     QuestionsReplyCreateSerializer, QuestionsReplyUpdateSerializer, OrderCancelSerializer, OrderPaySerializer, \
     OrderCreateSerializer, ProductCategorySearchSerializer, ProductCharacteristicsCreateSerializer, ProductSubCategoryCreateSerializer, \
-    ProductItemCategoryCreateSerializer, ProductCreateSerializer, BrandByItemCategoriesSerializer
+    ProductItemCategoryCreateSerializer, ProductCreateSerializer, BrandByItemCategoriesSerializer, ProductCategoryFilterSerializer
 
 class MainPageViewSet(ViewSet):
     @swagger_auto_schema(
@@ -117,6 +117,22 @@ class ProductViewSet(ViewSet):
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
         
         serializer.save()
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+    
+    
+    @swagger_auto_schema(
+        operation_summary="Categories by brands",
+        operation_description="Categories by brands",
+        responses={200: ProductCategoryFilterSerializer()},
+        tags=["Product"]
+    )
+    def categories_by_brands(self, request, pk):
+        categories = ProductCategory.objects.filter(
+            product_category__product_sub_category__product_item_category__brand_id=pk, 
+            product_category__product_sub_category__product_item_category__id__isnull=False
+        ).distinct()
+
+        serializer = ProductCategoryFilterSerializer(categories, many=True, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(

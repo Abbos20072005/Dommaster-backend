@@ -638,6 +638,28 @@ class BrandDetailSerializer(serializers.ModelSerializer):
         )
 
 
+class ProductItemCategoryFilterSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+
+class ProductSubCategoryFilterSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    product_item_categories = serializers.SerializerMethodField()
+
+    def get_product_item_categories(self, obj):
+        qs = obj.product_sub_category.filter(product_item_category__id__isnull=False).distinct()
+        return ProductItemCategoryFilterSerializer(qs, many=True, context=self.context).data
+
+class ProductCategoryFilterSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    sub_categories = serializers.SerializerMethodField()
+
+    def get_sub_categories(self, obj):
+        qs = obj.product_category.filter(product_sub_category__product_item_category__id__isnull=False).distinct()
+        return ProductSubCategoryFilterSerializer(qs, many=True, context=self.context).data
+
 class ProductItemCategorySerializer(serializers.ModelSerializer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
