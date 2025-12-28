@@ -329,6 +329,10 @@ class BrandSerializer(serializers.ModelSerializer):
             "image"
         )
 
+class BrandByItemCategoriesSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+
 
 class CommentSerializer(serializers.ModelSerializer):
     customer = CustomerSerializer(read_only=True)

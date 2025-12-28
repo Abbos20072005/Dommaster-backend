@@ -40,7 +40,7 @@ from .serializers import ProductCategorySerializer, ProductCategoryListSerialize
     CommentReplySerializer, CommentReplyCreateSerializer, CommentReplyUpdateSerializer, QuestionsReplySerializer, \
     QuestionsReplyCreateSerializer, QuestionsReplyUpdateSerializer, OrderCancelSerializer, OrderPaySerializer, \
     OrderCreateSerializer, ProductCategorySearchSerializer, ProductCharacteristicsCreateSerializer, ProductSubCategoryCreateSerializer, \
-    ProductItemCategoryCreateSerializer, ProductCreateSerializer
+    ProductItemCategoryCreateSerializer, ProductCreateSerializer, BrandByItemCategoriesSerializer
 
 class MainPageViewSet(ViewSet):
     @swagger_auto_schema(
@@ -611,6 +611,17 @@ class BrandViewSet(ViewSet):
             raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
 
         serializer = BrandDetailSerializer(brand, context={"request": request})
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+    
+    @swagger_auto_schema(
+        operation_summary="Brands by item categories",
+        operation_description="Brands by item categories",
+        responses={200: BrandByItemCategoriesSerializer(many=True)},
+        tags=["Brand"]
+    )
+    def brands_by_item_categories(self, request, pk):
+        brands = Brand.objects.filter(product_brand__product_item_category_id=pk).distinct()
+        serializer = BrandByItemCategoriesSerializer(brands, many=True, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
 
