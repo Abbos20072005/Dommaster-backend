@@ -22,6 +22,21 @@ from integration.eskiz import EskizOTP
 
 class AuthViewSet(ViewSet):
     @swagger_auto_schema(
+        operation_summary="Account delete",
+        operation_description="Account delete",
+        responses={204: "Account successfully deleted"},
+        tags=["Auth"]
+    )
+    def delete_account(self, request):
+        customer = Customer.objects.filter(id=request.user.id).first()
+        if not customer:
+            raise CustomApiException(error_code=ErrorCodes.USER_DOES_NOT_EXIST)
+        
+        customer.delete()
+        return Response(data={"result": "Account successfully deleted", "ok": True},
+                        status=status.HTTP_204_NO_CONTENT)
+    
+    @swagger_auto_schema(
         operation_summary="Customer login",
         operation_description="Customer login",
         request_body=LoginSerializer(),
@@ -333,6 +348,7 @@ class AuthViewSet(ViewSet):
 
         serializer.save()
 
+        #TODO: need to add the .exclude() to CustomerAddresses query on line 338
         if data.get("is_default") and data.get("is_default") is True:
             customer_addresses = CustomerAddresses.objects.filter(customer=request.user.id)
             for address in customer_addresses:

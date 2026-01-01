@@ -14,5 +14,6 @@ urlpatterns = [
     path("customer/update/", AuthViewSet.as_view({"patch": "update_customer_info"}), name="update_customer_info"),
     path("customer/addresses/", AuthViewSet.as_view({"get": "addresses_list", "post": "address_create"}), name="addresses_list"),
     path("customer/addresses/<int:pk>/", AuthViewSet.as_view({"patch": "addresses_update", "delete": "delete_address"}), name="address_update"),
-    path("fcm/token/", FCMTokenViewSet.as_view({"patch": "fcm_token", "delete": "fcmtoken_delete"}), name="fcm_token")
+    path("fcm/token/", FCMTokenViewSet.as_view({"patch": "fcm_token", "delete": "fcmtoken_delete"}), name="fcm_token"),
+    path("delete/account/", AuthViewSet.as_view({"delete": "delete_account"}), name="delete_account"),
 ]
