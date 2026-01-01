@@ -367,7 +367,7 @@ class ProductViewSet(ViewSet):
                 "newest": "-created_at",
                 "price": "price",
                 "rating": "-rating"
-            }.get(sort_by, "created_at")
+            }.get(sort_by, "-created_at")
 
         if price_from or price_to:
             filters &= Q(price__gte=price_from)
