@@ -716,7 +716,7 @@ class FavouriteViewSet(ViewSet):
     )
     def create_favourite(self, request):
         data = request.data
-        customer = request.user.id
+        customer = request.user
 
         data_serializer = FavouriteCreateSerializer(data=data, context={"request": request})
         if not data_serializer.is_valid():
@@ -748,14 +748,14 @@ class FavouriteViewSet(ViewSet):
 
             return resp
 
-        favourite = Favourites.objects.filter(customer_id=customer,
+        favourite = Favourites.objects.filter(customer_id=customer.id,
                                               product_id=data_serializer.validated_data.get("product")).first()
         if favourite:
             favourite.delete()
             return Response(data={"result": "Product successfully removed from favourite", "ok": True},
                             status=status.HTTP_204_NO_CONTENT)
 
-        data["customer"] = customer
+        data["customer"] = customer.id
         serializer = FavouriteSerializer(data=data, context={"request": request})
         if not serializer.is_valid():
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
@@ -770,7 +770,7 @@ class FavouriteViewSet(ViewSet):
         tags=["Favourite"]
     )
     def favourite_list(self, request):
-        customer = request.user.id
+        customer = request.user
         if not customer:
             token = request.COOKIES.get("favourite_token")
             if not token:
@@ -794,12 +794,12 @@ class FavouriteViewSet(ViewSet):
         if guest_favourite:
             with transaction.atomic():
                 for item in guest_favourite.all():
-                    favourite_item = Favourites.objects.filter(customer_id=customer, product=item.product).first()
+                    favourite_item = Favourites.objects.filter(customer_id=customer.id, product=item.product).first()
 
                     if not favourite_item:
-                        Favourites.objects.create(customer_id=customer, product=item.product)
+                        Favourites.objects.create(customer_id=customer.id, product=item.product)
                         item.delete()
-        favourites = Favourites.objects.filter(customer_id=customer)
+        favourites = Favourites.objects.filter(customer_id=customer.id)
         resp = Response(
             data={"result": FavouriteResponseSerializer(favourites, many=True, context={"request": request}).data,
                   "ok": True},
