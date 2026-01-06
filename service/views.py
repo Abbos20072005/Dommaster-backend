@@ -118,22 +118,6 @@ class ProductViewSet(ViewSet):
         
         serializer.save()
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
-    
-    
-    @swagger_auto_schema(
-        operation_summary="Categories by brands",
-        operation_description="Categories by brands",
-        responses={200: ProductCategoryFilterSerializer()},
-        tags=["Product"]
-    )
-    def categories_by_brands(self, request, pk):
-        categories = ProductCategory.objects.filter(
-            product_category__product_sub_category__product_item_category__brand_id=pk, 
-            product_category__product_sub_category__product_item_category__id__isnull=False
-        ).distinct()
-
-        serializer = ProductCategoryFilterSerializer(categories, many=True, context={"request": request})
-        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
         operation_summary="Product characteristics",
@@ -256,15 +240,30 @@ class ProductViewSet(ViewSet):
         serializer = ProductSerializer(products, many=True, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
+    #TODO: need to check if brand id receive string is it working or not
     @swagger_auto_schema(
         operation_summary="Product categories list",
         operation_description="Product categories list",
+        manual_parameters=[
+            openapi.Parameter(
+                name='brand_id', in_=openapi.IN_QUERY, description='Brand id', type=openapi.TYPE_INTEGER)
+        ],
         responses={200: ProductCategoryListSerializer(many=True)},
         tags=["Product"]
     )
     def categories_list(self, request):
-        category = ProductCategory.objects.all()
-        serializer = ProductCategoryListSerializer(category, many=True, context={"request": request})
+        brand_id = request.query_params.get("brand_id")
+        if not brand_id:
+            category = ProductCategory.objects.all()
+            serializer = ProductCategoryListSerializer(category, many=True, context={"request": request})
+            return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+        
+        categories = ProductCategory.objects.filter(
+            product_category__product_sub_category__product_item_category__brand_id=brand_id, 
+            product_category__product_sub_category__product_item_category__id__isnull=False
+        ).distinct()
+
+        serializer = ProductCategoryFilterSerializer(categories, many=True, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
@@ -604,15 +603,27 @@ class CommentViewSet(ViewSet):
 
 
 class BrandViewSet(ViewSet):
+    #TODO: need to check if category id receive string is it working or not
     @swagger_auto_schema(
         operation_summary="Brands list",
         operation_description="Brands list",
+        manual_parameters=[
+            openapi.Parameter(
+                name="category_id", in_=openapi.IN_QUERY, type=openapi.TYPE_INTEGER, description="Category id"
+            ),
+        ],
         responses={200: BrandSerializer(many=True)},
         tags=["Brand"]
     )
     def brand_list(self, request):
-        brands = Brand.objects.filter(is_visible=True)
-        serializer = BrandSerializer(brands, many=True, context={"request": request})
+        category_id = request.query_params.get("category_id")
+        if not category_id:
+            brands = Brand.objects.filter(is_visible=True)
+            serializer = BrandSerializer(brands, many=True, context={"request": request})
+            return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+        
+        brands = Brand.objects.filter(product_brand__product_item_category_id=category_id).distinct()
+        serializer = BrandByItemCategoriesSerializer(brands, many=True, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
@@ -628,18 +639,6 @@ class BrandViewSet(ViewSet):
 
         serializer = BrandDetailSerializer(brand, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
-    
-    @swagger_auto_schema(
-        operation_summary="Brands by item categories",
-        operation_description="Brands by item categories",
-        responses={200: BrandByItemCategoriesSerializer(many=True)},
-        tags=["Brand"]
-    )
-    def brands_by_item_categories(self, request, pk):
-        brands = Brand.objects.filter(product_brand__product_item_category_id=pk).distinct()
-        serializer = BrandByItemCategoriesSerializer(brands, many=True, context={"request": request})
-        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
-
 
 class SaleViewSet(ViewSet):
     @swagger_auto_schema(

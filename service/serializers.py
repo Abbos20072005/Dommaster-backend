@@ -757,26 +757,11 @@ class ProductCategorySerializer(serializers.ModelSerializer):
         return obj.get_breadcrumbs()
 
 
-class ProductCategoryListSerializer(serializers.ModelSerializer):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        request = self.context.get('request')
-        language = 'ru'
-        if request and request.META.get('HTTP_ACCEPT_LANGUAGE') in settings.MODELTRANSLATION_LANGUAGES:
-            language = request.META.get('HTTP_ACCEPT_LANGUAGE')
-        self.fields["name"] = serializers.CharField(source=f'name_{language}')
-
-    sub_categories = ProductSubCategorySerializer(source="product_category", many=True, read_only=True)
-
-    class Meta:
-        model = ProductCategory
-        fields = (
-            "id",
-            "name",
-            "icon",
-            "image",
-            "sub_categories"
-        )
+class ProductCategoryListSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    icon = serializers.ImageField()
+    image = serializers.ImageField()
 
 class ProductSubCategoryCreateSerializer(serializers.ModelSerializer):
     class Meta:

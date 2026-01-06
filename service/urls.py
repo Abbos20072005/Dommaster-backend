@@ -12,8 +12,6 @@ urlpatterns = [
     path("products/<int:pk>/", ProductViewSet.as_view({"get": "product_detail"}), name="products_detail"),
     path("brands/", BrandViewSet.as_view({"get": "brand_list"}), name="brand_list"),
     path("brands/<int:pk>/", BrandViewSet.as_view({"get": "brand_detail"}), name="brand_detail"),
-    path("brands/item-categories/<int:pk>/", BrandViewSet.as_view({"get": "brands_by_item_categories"}),
-         name="brands_by_item_categories"),
     path("sales/", SaleViewSet.as_view({"get": "sale_list"}), name="sale_list"),
     path("sales/main/", SaleViewSet.as_view({"get": "sale_main"}), name="sale_main"),
     path("sales/<int:pk>/", SaleViewSet.as_view({"get": "sale_detail"}), name="sale_detail"),
@@ -65,5 +63,4 @@ urlpatterns = [
     path("sub-categories/create/", ProductViewSet.as_view({"post": "sub_categories_create"}, name="sub_categories_create")),
     path("item-categories/create/", ProductViewSet.as_view({"post": "item_categories_create"}, name="item_categories_create")),
     path("products/create/", ProductViewSet.as_view({"post": "product_create"}, name="product_create")),
-    path("categories/brands/<int:pk>/", ProductViewSet.as_view({"get": "categories_by_brands"}, name="categories_by_brands")),
 ]
