@@ -609,14 +609,14 @@ class BrandViewSet(ViewSet):
         operation_description="Brands list",
         manual_parameters=[
             openapi.Parameter(
-                name="category_id", in_=openapi.IN_QUERY, type=openapi.TYPE_INTEGER, description="Category id"
+                name="item_category_id", in_=openapi.IN_QUERY, type=openapi.TYPE_INTEGER, description="Item category id"
             ),
         ],
         responses={200: BrandSerializer(many=True)},
         tags=["Brand"]
     )
     def brand_list(self, request):
-        category_id = request.query_params.get("category_id")
+        category_id = request.query_params.get("item_category_id")
         if not category_id:
             brands = Brand.objects.filter(is_visible=True)
             serializer = BrandSerializer(brands, many=True, context={"request": request})
