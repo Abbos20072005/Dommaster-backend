@@ -706,6 +706,7 @@ class AddsBrandsViewSet(ViewSet):
 
 
 class FavouriteViewSet(ViewSet):
+    #TODO: need to check if user delete account and send request with old token it's returning error
     @swagger_auto_schema(
         operation_summary="Create favourite product or delete it from favourite",
         operation_description="Create favourite product or delete it from favourite",
@@ -715,7 +716,7 @@ class FavouriteViewSet(ViewSet):
     )
     def create_favourite(self, request):
         data = request.data
-        customer = request.user
+        customer = request.user.id
 
         data_serializer = FavouriteCreateSerializer(data=data, context={"request": request})
         if not data_serializer.is_valid():
@@ -769,7 +770,7 @@ class FavouriteViewSet(ViewSet):
         tags=["Favourite"]
     )
     def favourite_list(self, request):
-        customer = request.user
+        customer = request.user.id
         if not customer:
             token = request.COOKIES.get("favourite_token")
             if not token:
@@ -878,12 +879,23 @@ class CartViewSet(ViewSet):
         customer = request.user.id
         if not customer:
             token = request.COOKIES.get("cart_token")
+            if not token:
+                token = secrets.token_hex(16)
+                cart = Cart.objects.create(cart_token=token)
+                data["cart"] = cart.id
+                serializer = CartItemCreateSerializer(data=data, context={"request": request})
+                if not serializer.is_valid():
+                    raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
+
+                serializer.save()
+                resp = Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+                resp.set_cookie("cart_token", token, httponly=False,
+                                secure=True, samesite="None")
+                return resp
+
             cart = Cart.objects.filter(cart_token=token).first()
         else:
             cart = Cart.objects.filter(customer=customer).first()
-
-        if not cart:
-            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND, message="Cart not found")
 
         data["cart"] = cart.id
         serializer = CartItemCreateSerializer(data=data, context={"request": request})
