@@ -40,7 +40,9 @@ from .serializers import ProductCategorySerializer, ProductCategoryListSerialize
     CommentReplySerializer, CommentReplyCreateSerializer, CommentReplyUpdateSerializer, QuestionsReplySerializer, \
     QuestionsReplyCreateSerializer, QuestionsReplyUpdateSerializer, OrderCancelSerializer, OrderPaySerializer, \
     OrderCreateSerializer, ProductCategorySearchSerializer, ProductCharacteristicsCreateSerializer, ProductSubCategoryCreateSerializer, \
-    ProductItemCategoryCreateSerializer, ProductCreateSerializer, BrandByItemCategoriesSerializer, ProductCategoryFilterSerializer
+    ProductItemCategoryCreateSerializer, ProductCreateSerializer, BrandByItemCategoriesSerializer, ProductCategoryFilterSerializer, \
+    ProductShortSerializer
+    
 
 class MainPageViewSet(ViewSet):
     @swagger_auto_schema(
@@ -230,14 +232,14 @@ class ProductViewSet(ViewSet):
     @swagger_auto_schema(
         operation_summary="Most sold products",
         operation_description="Most sold products",
-        responses={200: ProductSerializer(many=True)},
+        responses={200: ProductShortSerializer(many=True)},
         tags=["Product"]
     )
     def most_sold(self, request):
         products = Product.objects.annotate(most_solds=Sum("product_order_item__quantity")).exclude(
             most_solds=0).order_by(
-            "-most_solds")[:20]
-        serializer = ProductSerializer(products, many=True, context={"request": request})
+            "-most_solds")[:10]
+        serializer = ProductShortSerializer(products, many=True, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
     #TODO: need to check if brand id receive string is it working or not
