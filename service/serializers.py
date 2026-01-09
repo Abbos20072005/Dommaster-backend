@@ -320,14 +320,10 @@ class FilterSerializer(PaginationSerializer):
         return attrs
 
 
-class BrandSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Brand
-        fields = (
-            "id",
-            "name",
-            "image"
-        )
+class BrandSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    image = serializers.ImageField()
 
 class BrandByItemCategoriesSerializer(serializers.Serializer):
     id = serializers.IntegerField()
