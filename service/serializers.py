@@ -492,6 +492,63 @@ class ProductSerializer(serializers.ModelSerializer):
             return cart_item.quantity if cart_item else 0
         return 0
 
+class ProductShortSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    is_favourite = serializers.SerializerMethodField()
+    rating = serializers.FloatField()
+    price = serializers.FloatField()
+    unit = serializers.CharField()
+    quantity = serializers.IntegerField()
+    in_cart = serializers.SerializerMethodField()
+    in_cart_quantity = serializers.SerializerMethodField()
+    discount = serializers.IntegerField()
+    discount_price = serializers.FloatField()
+    images = ProductImageSerializer(source="product_image", many=True, read_only=True)
+
+    def get_in_cart_quantity(self, obj):
+        request = self.context.get("request")
+        if not request:
+            return 0
+
+        customer = getattr(request.user, 'id', None)
+        token = request.COOKIES.get("cart_token")
+
+        if customer:
+            cart_item = CartItem.objects.filter(cart__customer_id=customer, product_id=obj.id).first()
+            return cart_item.quantity if cart_item else 0
+        elif token:
+            cart_item = CartItem.objects.filter(cart__cart_token=token, product_id=obj.id).first()
+            return cart_item.quantity if cart_item else 0
+        return 0
+
+    def get_in_cart(self, obj):
+        request = self.context.get("request")
+        if not request:
+            return False
+
+        customer = getattr(request.user, 'id', None)
+        token = request.COOKIES.get("cart_token")
+
+        if customer:
+            return CartItem.objects.filter(cart__customer_id=customer, product=obj).exists()
+        elif token:
+            return CartItem.objects.filter(cart__cart_token=token, product=obj).exists()
+        return False
+
+    def get_is_favourite(self, obj):
+        request = self.context.get("request")
+        if not request:
+            return False
+
+        customer = getattr(request.user, 'id', None)
+        fav_token = request.COOKIES.get("favourite_token")
+
+        if customer:
+            return Favourites.objects.filter(customer_id=customer, product=obj).exists()
+        elif fav_token:
+            return Favourites.objects.filter(favourite_token=fav_token, product=obj).exists()
+        return False
 
 class RecentlyViewedProductsSerializer(serializers.ModelSerializer):
     product = ProductSerializer(read_only=True)
@@ -570,25 +627,18 @@ class FavouriteListSerializer(serializers.ModelSerializer):
         )
 
 
-class AddsBrandsSerializer(serializers.ModelSerializer):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        request = self.context.get('request')
-        language = 'ru'
-        if request and request.META.get('HTTP_ACCEPT_LANGUAGE') in settings.MODELTRANSLATION_LANGUAGES:
-            language = request.META.get('HTTP_ACCEPT_LANGUAGE')
-        self.fields["name"] = serializers.CharField(source=f'name_{language}')
+class AddsBrandsSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    brand = serializers.SerializerMethodField()
+    products = serializers.SerializerMethodField()
 
-    products = ProductSerializer(many=True, read_only=True)
+    def get_brand(self, obj):
+        return obj.brand.id if obj.brand else None
 
-    class Meta:
-        model = AddsBrands
-        fields = (
-            "id",
-            "name",
-            "brand",
-            "products"
-        )
+    def get_products(self, obj):
+        qs = obj.products.all()
+        return ProductShortSerializer(qs, many=True, context=self.context).data
 
 
 class SaleSerializer(serializers.ModelSerializer):

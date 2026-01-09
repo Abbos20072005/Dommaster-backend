@@ -748,14 +748,14 @@ class FavouriteViewSet(ViewSet):
 
             return resp
 
-        favourite = Favourites.objects.filter(customer_id=customer.id,
+        favourite = Favourites.objects.filter(customer_id=customer,
                                               product_id=data_serializer.validated_data.get("product")).first()
         if favourite:
             favourite.delete()
             return Response(data={"result": "Product successfully removed from favourite", "ok": True},
                             status=status.HTTP_204_NO_CONTENT)
 
-        data["customer"] = customer.id
+        data["customer"] = customer
         serializer = FavouriteSerializer(data=data, context={"request": request})
         if not serializer.is_valid():
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
@@ -794,12 +794,12 @@ class FavouriteViewSet(ViewSet):
         if guest_favourite:
             with transaction.atomic():
                 for item in guest_favourite.all():
-                    favourite_item = Favourites.objects.filter(customer_id=customer.id, product=item.product).first()
+                    favourite_item = Favourites.objects.filter(customer_id=customer, product=item.product).first()
 
                     if not favourite_item:
-                        Favourites.objects.create(customer_id=customer.id, product=item.product)
+                        Favourites.objects.create(customer_id=customer, product=item.product)
                         item.delete()
-        favourites = Favourites.objects.filter(customer_id=customer.id)
+        favourites = Favourites.objects.filter(customer_id=customer)
         resp = Response(
             data={"result": FavouriteResponseSerializer(favourites, many=True, context={"request": request}).data,
                   "ok": True},
