@@ -271,15 +271,30 @@ class ProductViewSet(ViewSet):
     @swagger_auto_schema(
         operation_summary="Product category detail and sub categories list",
         operation_description="Product category detail and sub categories list",
+        manual_parameters=[
+            openapi.Parameter(
+                name='brand_id', in_=openapi.IN_QUERY, description='Brand id', type=openapi.TYPE_INTEGER)
+        ],
         responses={200: ProductCategorySerializer()},
         tags=["Product"]
     )
     def sub_category_list(self, request, pk):
-        category = ProductCategory.objects.filter(id=pk).first()
-        if not category:
-            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
+        brand_id = request.query_params.get("brand_id")
+        if not brand_id:
+            category = ProductCategory.objects.filter(id=pk).first()
+            if not category:
+                raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
+            
 
-        serializer = ProductCategorySerializer(category, context={"request": request})
+            serializer = ProductCategorySerializer(category, context={"request": request})
+            return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+        
+        categories = ProductCategory.objects.filter(
+            product_category__product_sub_category__product_item_category__brand_id=brand_id, 
+            product_category__product_sub_category__product_item_category__id__isnull=False
+        ).distinct()
+
+        serializer = ProductCategorySerializer(categories, many=True, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
