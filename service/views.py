@@ -294,7 +294,7 @@ class ProductViewSet(ViewSet):
             product_category__product_sub_category__product_item_category__id__isnull=False
         ).distinct()
 
-        serializer = ProductCategorySerializer(categories, many=True, context={"request": request})
+        serializer = ProductCategorySerializer(categories, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
