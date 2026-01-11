@@ -292,7 +292,7 @@ class ProductViewSet(ViewSet):
         categories = ProductCategory.objects.filter(
             product_category__product_sub_category__product_item_category__brand_id=brand_id, 
             product_category__product_sub_category__product_item_category__id__isnull=False
-        ).distinct()
+        ).distinct().first()
 
         serializer = ProductCategorySerializer(categories, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
