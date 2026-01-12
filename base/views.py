@@ -16,6 +16,7 @@ from service.models import Cart
 from drf_yasg import openapi
 from datetime import date
 import secrets
+from django.core.cache import cache
 
 
 class VideoViewSet(ViewSet):
@@ -223,9 +224,15 @@ class BannerViewSet(ViewSet):
         tags=["Base"]
     )
     def banner_list(self, request):
+        cache_key = f"banner:list"
+        cached_data = cache.get(cache_key)
+        if cached_data:
+            return Response(data={"result": cached_data, "ok": True}, status=status.HTTP_200_OK)
+        
         banner = Banner.objects.filter(is_visible=True)
-        serializer = BannerSerializer(banner, many=True, context={"request": request})
-        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+        serializer = BannerSerializer(banner, many=True, context={"request": request}).data
+        cache.set(cache_key, serializer, timeout=1000)
+        return Response(data={"result": serializer, "ok": True}, status=status.HTTP_200_OK)
 
 
 class ChatViewSet(ViewSet):
