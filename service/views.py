@@ -52,6 +52,12 @@ class MainPageViewSet(ViewSet):
         tags=["Main"]
     )
     def homepage_data(self, request):
+        cache_key = f"home:main:data"
+
+        cached_data = cache.get(cache_key)
+        if cached_data:
+            return Response(data={"result": cached_data, "ok": True}, status=status.HTTP_200_OK)
+        
         result = []
         banners = list(Banner.objects.filter(is_visible=True).order_by("id"))
         addsbrands_list = AddsBrands.objects.filter(is_visible=True).prefetch_related("products")
@@ -72,6 +78,7 @@ class MainPageViewSet(ViewSet):
                 })
                 banner_index += 1
 
+        cache.set(cache_key, result, timeout=1000)
         return Response(data={"result": result, "ok": True}, status=status.HTTP_200_OK)
 
 
@@ -273,7 +280,7 @@ class ProductViewSet(ViewSet):
             serializer = ProductCategoryFilterSerializer(categories, many=True, context={"request": request})
 
         data = serializer.data
-        cache.set(cache_key, data, timeout=600)
+        cache.set(cache_key, data, timeout=1000)
 
         return Response(data={"result": data, "ok": True}, status=status.HTTP_200_OK)
 
