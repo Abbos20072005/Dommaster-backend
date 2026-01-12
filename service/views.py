@@ -255,18 +255,27 @@ class ProductViewSet(ViewSet):
     )
     def categories_list(self, request):
         brand_id = request.query_params.get("brand_id")
-        if not brand_id:
-            category = ProductCategory.objects.all()
-            serializer = ProductCategoryListSerializer(category, many=True, context={"request": request})
-            return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
         
-        categories = ProductCategory.objects.filter(
-            product_category__product_sub_category__product_item_category__brand_id=brand_id, 
-            product_category__product_sub_category__product_item_category__id__isnull=False
-        ).distinct()
+        cache_key = f"categories:list:brand={brand_id or 'all'}"
 
-        serializer = ProductCategoryFilterSerializer(categories, many=True, context={"request": request})
-        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+        cached_data = cache.get(cache_key)
+        if cached_data:
+            return Response(data={"result": cached_data, "ok": True}, status=status.HTTP_200_OK)
+
+        if not brand_id:
+            categories = ProductCategory.objects.all()
+            serializer = ProductCategoryListSerializer(categories, many=True, context={"request": request})
+        else:
+            categories = ProductCategory.objects.filter(
+                product_category__product_sub_category__product_item_category__brand_id=brand_id,
+                product_category__product_sub_category__product_item_category__id__isnull=False
+            ).distinct()
+            serializer = ProductCategoryFilterSerializer(categories, many=True, context={"request": request})
+
+        data = serializer.data
+        cache.set(cache_key, data, timeout=600)
+
+        return Response(data={"result": data, "ok": True}, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
         operation_summary="Product category detail and sub categories list",

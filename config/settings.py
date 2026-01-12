@@ -149,6 +149,41 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
 
+
+# Redis cache configuration (django-redis)
+# Ensure you install: pip install django-redis
+# Configure env vars: REDIS_URL or REDIS_HOST/REDIS_PORT/REDIS_DB (and REDIS_PASSWORD if used)
+# REDIS_URL = os.getenv("REDIS_URL")
+# if not REDIS_URL:
+#     REDIS_HOST = os.getenv("REDIS_HOST", "127.0.0.1")
+#     REDIS_PORT = os.getenv("REDIS_PORT", "6379")
+#     REDIS_DB = os.getenv("REDIS_DB", "0")
+#     REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")
+#     if REDIS_PASSWORD:
+#         REDIS_URL = f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
+#     else:
+#         REDIS_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/1",
+        "OPTIONS": {
+            # Use DefaultClient for connection pooling
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            # "PASSWORD": os.getenv("REDIS_PASSWORD", None),
+        },
+        # "KEY_PREFIX": os.getenv("CACHE_KEY_PREFIX", "buildex"),
+    }
+}
+
+# Default TTL for cache.get / cache.set usage in seconds
+CACHE_TTL = int(os.getenv("CACHE_TTL", 60 * 5))  # default 5 minutes
+
+# Optional: use cache-based sessions (uncomment if desired)
+# SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+# SESSION_CACHE_ALIAS = 'default'
+
 LANGUAGE_CODE = 'ru-ru'
 
 get_text = lambda x: x
