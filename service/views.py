@@ -650,14 +650,21 @@ class BrandViewSet(ViewSet):
     )
     def brand_list(self, request):
         category_id = request.query_params.get("item_category_id")
+        cache_key = f"categories:list:item:category={category_id or 'all'}"
+
+        cached_data = cache.get(cache_key)
+        if cached_data:
+            return Response(data={"result": cached_data, "ok": True}, status=status.HTTP_200_OK)
+        
         if not category_id:
             brands = Brand.objects.filter(is_visible=True)
             serializer = BrandSerializer(brands, many=True, context={"request": request})
-            return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
-        
-        brands = Brand.objects.filter(product_brand__product_item_category_id=category_id).distinct()
-        serializer = BrandByItemCategoriesSerializer(brands, many=True, context={"request": request})
-        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+        else:
+            brands = Brand.objects.filter(product_brand__product_item_category_id=category_id).distinct()
+            serializer = BrandByItemCategoriesSerializer(brands, many=True, context={"request": request})
+        data = serializer.data
+        cache.set(cache_key, data, timeout=1000)
+        return Response(data={"result": data, "ok": True}, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
         operation_summary="Brand detail",
