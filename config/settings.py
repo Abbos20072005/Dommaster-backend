@@ -110,6 +110,8 @@ DATABASES = {
     }
 }
 
+CONN_MAX_AGE = 60
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'authorization.custom_jwt.CustomJwtAuthentication',
