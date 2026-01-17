@@ -389,9 +389,6 @@ class ProductViewSet(ViewSet):
         sale_id = serializer.validated_data.get("sale_id")
 
         filters = Q()
-        if q:
-            filters &= Q(name__icontains=q) | Q(name_uz__icontains=q) | Q(name_ru__icontains=q) | Q(
-                name_en__icontains=q)
 
         sort = "created_at"
         if sort_by:
@@ -414,7 +411,17 @@ class ProductViewSet(ViewSet):
         if sale_id:
             filters &= Q(sale_products__id=sale_id)
 
-        products = Product.objects.filter(filters).order_by(sort)
+        if q:
+            similarity = Greatest(
+                TrigramSimilarity("name", q),
+                TrigramSimilarity("name_uz", q),
+                TrigramSimilarity("name_ru", q),
+                TrigramSimilarity("name_en", q),
+            )
+            products = Product.objects.annotate(similarity=similarity).filter(filters).filter(similarity__gt=0.1).order_by(sort)
+        else:
+            products = Product.objects.filter(filters).order_by(sort)
+
         return Response(data={"result": get_products_paginator(response_data=products, page=page, page_size=page_size,
                                                                context={"request": request}), "ok": True},
                         status=status.HTTP_200_OK)
