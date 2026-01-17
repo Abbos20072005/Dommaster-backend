@@ -418,7 +418,7 @@ class ProductViewSet(ViewSet):
                 TrigramSimilarity("name_ru", q),
                 TrigramSimilarity("name_en", q),
             )
-            products = Product.objects.annotate(similarity=similarity).filter(filters).filter(similarity__gt=0.1).order_by(sort)
+            products = Product.objects.annotate(similarity=similarity).filter(filters).filter(similarity__gt=0.1).order_by("-similarity", sort)
         else:
             products = Product.objects.filter(filters).order_by(sort)
 
