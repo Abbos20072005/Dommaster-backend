@@ -255,19 +255,29 @@ class ProductViewSet(ViewSet):
         operation_description="Product categories list",
         manual_parameters=[
             openapi.Parameter(
-                name='brand_id', in_=openapi.IN_QUERY, description='Brand id', type=openapi.TYPE_INTEGER)
+                name='brand_id', in_=openapi.IN_QUERY, description='Brand id', type=openapi.TYPE_INTEGER),
+            openapi.Parameter(
+                name='is_main', in_=openapi.IN_QUERY, description='Is main category', type=openapi.TYPE_BOOLEAN)
         ],
         responses={200: ProductCategoryListSerializer(many=True)},
         tags=["Product"]
     )
     def categories_list(self, request):
         brand_id = request.query_params.get("brand_id")
-        
+        is_main = request.query_params.get("is_main", False)
+
         cache_key = f"categories:list:brand={brand_id or 'all'}"
+        if is_main == "true" or is_main == "True":
+            cache_key += f":is_main={is_main}"
 
         cached_data = cache.get(cache_key)
         if cached_data:
             return Response(data={"result": cached_data, "ok": True}, status=status.HTTP_200_OK)
+        
+        if is_main == "true" or is_main == "True":
+            categories = ProductCategory.objects.all()
+            serializer = ProductCategorySerializer(categories, many=True, context={"request": request})
+            return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
         if not brand_id:
             categories = ProductCategory.objects.all()
