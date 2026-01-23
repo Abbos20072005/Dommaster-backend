@@ -266,33 +266,31 @@ class ProductViewSet(ViewSet):
         brand_id = request.query_params.get("brand_id")
         is_main = request.query_params.get("is_main", False)
 
-        cache_key = f"categories:list:brand={brand_id or 'all'}"
-        if is_main == "true" or is_main == "True":
-            cache_key += f":is_main={is_main}"
+        if is_main == "true" or is_main == "True" or brand_id:
+            cache_key = f"categories:list:brand={brand_id or 'all'}"
 
-        cached_data = cache.get(cache_key)
-        if cached_data:
-            return Response(data={"result": cached_data, "ok": True}, status=status.HTTP_200_OK)
+            cached_data = cache.get(cache_key)
+            if cached_data:
+                return Response(data={"result": cached_data, "ok": True}, status=status.HTTP_200_OK)
+
+            if not brand_id:
+                categories = ProductCategory.objects.all()
+                serializer = ProductCategoryListSerializer(categories, many=True, context={"request": request})
+            else:
+                categories = ProductCategory.objects.filter(
+                    product_category__product_sub_category__product_item_category__brand_id=brand_id,
+                    product_category__product_sub_category__product_item_category__id__isnull=False
+                ).distinct()
+                serializer = ProductCategoryFilterSerializer(categories, many=True, context={"request": request})
+
+            data = serializer.data
+            cache.set(cache_key, data, timeout=1000)
+
+            return Response(data={"result": data, "ok": True}, status=status.HTTP_200_OK)
         
-        if is_main == "true" or is_main == "True":
-            categories = ProductCategory.objects.all()
-            serializer = ProductCategorySerializer(categories, many=True, context={"request": request})
-            return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
-
-        if not brand_id:
-            categories = ProductCategory.objects.all()
-            serializer = ProductCategoryListSerializer(categories, many=True, context={"request": request})
-        else:
-            categories = ProductCategory.objects.filter(
-                product_category__product_sub_category__product_item_category__brand_id=brand_id,
-                product_category__product_sub_category__product_item_category__id__isnull=False
-            ).distinct()
-            serializer = ProductCategoryFilterSerializer(categories, many=True, context={"request": request})
-
-        data = serializer.data
-        cache.set(cache_key, data, timeout=1000)
-
-        return Response(data={"result": data, "ok": True}, status=status.HTTP_200_OK)
+        categories = ProductCategory.objects.filter()
+        serializer = ProductCategorySerializer(categories, many=True, context={"request": request})
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
         operation_summary="Product category detail and sub categories list",
