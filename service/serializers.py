@@ -795,6 +795,7 @@ class ProductCategorySerializer(serializers.ModelSerializer):
             "id",
             "name",
             "image",
+            "icon",
             "breadcrumbs",
             "sub_categories"
         )
