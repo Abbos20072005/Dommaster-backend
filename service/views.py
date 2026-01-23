@@ -296,7 +296,7 @@ class ProductViewSet(ViewSet):
         categories = ProductCategory.objects.filter()
         serializer = ProductCategorySerializer(categories, many=True, context={"request": request})
         data = serializer.data
-        cache.set(cache_key_main, data, timeout=100)
+        cache.set(cache_key_main, data, timeout=1000)
         return Response(data={"result": data, "ok": True}, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
