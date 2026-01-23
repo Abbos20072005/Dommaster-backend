@@ -288,9 +288,16 @@ class ProductViewSet(ViewSet):
 
             return Response(data={"result": data, "ok": True}, status=status.HTTP_200_OK)
         
+        cache_key_main = f"categories:list"
+        cached_data = cache.get(cache_key_main)
+        if cached_data:
+            return Response(data={"result": cached_data, "ok": True}, status=status.HTTP_200_OK)
+        
         categories = ProductCategory.objects.filter()
         serializer = ProductCategorySerializer(categories, many=True, context={"request": request})
-        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+        data = serializer.data
+        cache.set(cache_key_main, data, timeout=2)
+        return Response(data={"result": serializer, "ok": True}, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
         operation_summary="Product category detail and sub categories list",
