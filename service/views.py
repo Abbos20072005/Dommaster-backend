@@ -293,7 +293,7 @@ class ProductViewSet(ViewSet):
         if cached_data:
             return Response(data={"result": cached_data, "ok": True}, status=status.HTTP_200_OK)
         
-        categories = ProductCategory.objects.filter()
+        categories = ProductCategory.objects.all().prefetch_related("product_category__product_sub_category")
         serializer = ProductCategorySerializer(categories, many=True, context={"request": request})
         data = serializer.data
         cache.set(cache_key_main, data, timeout=1000)
