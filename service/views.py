@@ -815,7 +815,7 @@ class FavouriteViewSet(ViewSet):
         if favourite:
             favourite.delete()
             return Response(data={"result": "Product successfully removed from favourite", "ok": True},
-                            status=status.HTTP_204_NO_CONTENT)
+                            status=status.HTTP_200_OK)
 
         data["customer"] = customer
         serializer = FavouriteSerializer(data=data, context={"request": request})
