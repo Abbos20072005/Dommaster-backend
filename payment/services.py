@@ -183,10 +183,10 @@ class UzumBankService:
             "serviceId": settings.SERVICE_ID_UZUM,
             "transId": trans.trans_id,
             "status": trans.status,
-            "data": {
-                "account": {"value": str(order.id)},
-                "amount": {"value": UzumBankService.sum_to_tiyin(order.total_price)},
-            },
+            # "data": {
+            #     "account": {"value": str(order.id)},
+            #     "amount": {"value": UzumBankService.sum_to_tiyin(order.total_price)},
+            # },
             "amount": UzumBankService.sum_to_tiyin(trans.amount),
         }
 
