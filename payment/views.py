@@ -474,6 +474,8 @@ class UzumBankCheckView(BaseUzumBankView):
                 ),
                 status=status.HTTP_400_BAD_REQUEST
             )
+        
+        order_data["amount"]["value"] = int(order_data["amount"]["value"] / 100)
 
         return Response({
             "serviceId": data["serviceId"],
