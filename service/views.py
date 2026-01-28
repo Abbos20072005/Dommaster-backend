@@ -867,7 +867,7 @@ class FavouriteViewSet(ViewSet):
                   "ok": True},
             status=status.HTTP_200_OK)
 
-        resp.delete_cookie("cart_token")
+        resp.delete_cookie("favourite_token")
         return resp
 
 
@@ -992,7 +992,7 @@ class CartViewSet(ViewSet):
             if cart_item and data_serializer.validated_data.get("quantity") == 0:
                 cart_item.delete()
                 return Response(data={"result": "Product successfully deleted from cart", "ok": True},
-                                status=status.HTTP_204_NO_CONTENT)
+                                status=status.HTTP_200_OK)
             
         else:
             cart_item = CartItem.objects.filter(cart__customer=customer,
@@ -1004,7 +1004,7 @@ class CartViewSet(ViewSet):
             if cart_item and data_serializer.validated_data.get("quantity") == 0:
                 cart_item.delete()
                 return Response(data={"result": "Product successfully deleted from cart", "ok": True},
-                                status=status.HTTP_204_NO_CONTENT)
+                                status=status.HTTP_200_OK)
 
         data["cart"] = cart_item.cart.id
         serializer = CartItemUpdateSerializer(cart_item, data=data, partial=True, context={"request": request})
@@ -1264,6 +1264,7 @@ class QuestionsViewSet(ViewSet):
 
 
 class OrderViewSet(ViewSet):
+    #TODO: need to implement payment with cash
     @swagger_auto_schema(
         operation_summary="Order pay",
         operation_description="Order pay",
