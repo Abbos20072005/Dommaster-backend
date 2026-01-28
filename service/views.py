@@ -773,7 +773,7 @@ class FavouriteViewSet(ViewSet):
         operation_summary="Create favourite product or delete it from favourite",
         operation_description="Create favourite product or delete it from favourite",
         request_body=FavouriteCreateSerializer(),
-        responses={201: FavouriteSerializer(), 204: "Product successfully removed from favourite"},
+        responses={201: FavouriteSerializer(), 200: "Product successfully removed from favourite"},
         tags=["Favourite"]
     )
     def create_favourite(self, request):
@@ -794,7 +794,7 @@ class FavouriteViewSet(ViewSet):
             if favourite:
                 favourite.delete()
                 return Response(data={"result": "Product successfully removed from favourite", "ok": True},
-                                status=status.HTTP_204_NO_CONTENT)
+                                status=status.HTTP_200_OK)
 
             data["favourite_token"] = token
             favourite_serializer = FavouriteSerializer(data=data, context={"request": request})
