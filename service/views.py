@@ -52,11 +52,11 @@ class MainPageViewSet(ViewSet):
         tags=["Main"]
     )
     def homepage_data(self, request):
-        # cache_key = f"home:main:data"
+        cache_key = f"home:main:data"
 
-        # cached_data = cache.get(cache_key)
-        # if cached_data:
-        #     return Response(data={"result": cached_data, "ok": True}, status=status.HTTP_200_OK)
+        cached_data = cache.get(cache_key)
+        if cached_data:
+            return Response(data={"result": cached_data, "ok": True}, status=status.HTTP_200_OK)
         
         result = []
         banners = list(Banner.objects.filter(is_visible=True).order_by("id"))
@@ -78,7 +78,7 @@ class MainPageViewSet(ViewSet):
                 })
                 banner_index += 1
 
-        # cache.set(cache_key, result, timeout=1000)
+        cache.set(cache_key, result, timeout=1000)
         return Response(data={"result": result, "ok": True}, status=status.HTTP_200_OK)
 
 
@@ -267,11 +267,11 @@ class ProductViewSet(ViewSet):
         is_main = request.query_params.get("is_main", False)
 
         if is_main == "true" or is_main == "True" or brand_id:
-            # cache_key = f"categories:list:brand={brand_id or 'all'}"
+            cache_key = f"categories:list:brand={brand_id or 'all'}"
 
-            # cached_data = cache.get(cache_key)
-            # if cached_data:
-            #     return Response(data={"result": cached_data, "ok": True}, status=status.HTTP_200_OK)
+            cached_data = cache.get(cache_key)
+            if cached_data:
+                return Response(data={"result": cached_data, "ok": True}, status=status.HTTP_200_OK)
 
             if not brand_id:
                 categories = ProductCategory.objects.all()
@@ -284,19 +284,19 @@ class ProductViewSet(ViewSet):
                 serializer = ProductCategoryFilterSerializer(categories, many=True, context={"request": request})
 
             data = serializer.data
-            # cache.set(cache_key, data, timeout=1000)
+            cache.set(cache_key, data, timeout=1000)
 
             return Response(data={"result": data, "ok": True}, status=status.HTTP_200_OK)
         
-        # cache_key_main = f"categories:list"
-        # cached_data = cache.get(cache_key_main)
-        # if cached_data:
-        #     return Response(data={"result": cached_data, "ok": True}, status=status.HTTP_200_OK)
+        cache_key_main = f"categories:list"
+        cached_data = cache.get(cache_key_main)
+        if cached_data:
+            return Response(data={"result": cached_data, "ok": True}, status=status.HTTP_200_OK)
         
         categories = ProductCategory.objects.all().prefetch_related("product_category__product_sub_category")
         serializer = ProductCategorySerializer(categories, many=True, context={"request": request})
         data = serializer.data
-        # cache.set(cache_key_main, data, timeout=1000)
+        cache.set(cache_key_main, data, timeout=1000)
         return Response(data={"result": data, "ok": True}, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
@@ -672,11 +672,11 @@ class BrandViewSet(ViewSet):
     )
     def brand_list(self, request):
         category_id = request.query_params.get("item_category_id")
-        # cache_key = f"categories:list:item:category={category_id or 'all'}"
+        cache_key = f"categories:list:item:category={category_id or 'all'}"
 
-        # cached_data = cache.get(cache_key)
-        # if cached_data:
-        #     return Response(data={"result": cached_data, "ok": True}, status=status.HTTP_200_OK)
+        cached_data = cache.get(cache_key)
+        if cached_data:
+            return Response(data={"result": cached_data, "ok": True}, status=status.HTTP_200_OK)
         
         if not category_id:
             brands = Brand.objects.filter(is_visible=True)
@@ -685,7 +685,7 @@ class BrandViewSet(ViewSet):
             brands = Brand.objects.filter(product_brand__product_item_category_id=category_id).distinct()
             serializer = BrandByItemCategoriesSerializer(brands, many=True, context={"request": request})
         data = serializer.data
-        # cache.set(cache_key, data, timeout=1000)
+        cache.set(cache_key, data, timeout=1000)
         return Response(data={"result": data, "ok": True}, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
