@@ -288,7 +288,7 @@ class ProductViewSet(ViewSet):
 
             return Response(data={"result": data, "ok": True}, status=status.HTTP_200_OK)
         
-        cache_key_main = f"categories:list"
+        cache_key_main = f"categories:lists"
         cached_data = cache.get(cache_key_main)
         if cached_data:
             return Response(data={"result": cached_data, "ok": True}, status=status.HTTP_200_OK)
