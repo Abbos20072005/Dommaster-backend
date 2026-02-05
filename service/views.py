@@ -41,7 +41,7 @@ from .serializers import ProductCategorySerializer, ProductCategoryListSerialize
     QuestionsReplyCreateSerializer, QuestionsReplyUpdateSerializer, OrderCancelSerializer, OrderPaySerializer, \
     OrderCreateSerializer, ProductCategorySearchSerializer, ProductCharacteristicsCreateSerializer, ProductSubCategoryCreateSerializer, \
     ProductItemCategoryCreateSerializer, ProductCreateSerializer, BrandByItemCategoriesSerializer, ProductCategoryFilterSerializer, \
-    ProductShortSerializer
+    ProductShortSerializer, ProducgtCategoryTreeSerializer
     
 
 class MainPageViewSet(ViewSet):
@@ -294,7 +294,7 @@ class ProductViewSet(ViewSet):
             return Response(data={"result": cached_data, "ok": True}, status=status.HTTP_200_OK)
         
         categories = ProductCategory.objects.all().prefetch_related("product_category__product_sub_category")
-        serializer = ProductCategorySerializer(categories, many=True, context={"request": request})
+        serializer = ProducgtCategoryTreeSerializer(categories, many=True, context={"request": request})
         data = serializer.data
         cache.set(cache_key_main, data, timeout=1000)
         return Response(data={"result": data, "ok": True}, status=status.HTTP_200_OK)

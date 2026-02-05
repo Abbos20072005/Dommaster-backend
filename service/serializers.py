@@ -802,6 +802,32 @@ class ProductCategorySerializer(serializers.ModelSerializer):
 
     def get_breadcrumbs(self, obj):
         return obj.get_breadcrumbs()
+    
+class ProductItemCategoryTreeSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    
+class ProductSubCategoryTreeSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    product_item_categories = serializers.SerializerMethodField()
+
+    def get_product_item_categories(self, obj):
+        qs = obj.product_sub_category.all()
+        return ProductItemCategoryFilterSerializer(qs, many=True, context=self.context).data
+    
+
+class ProducgtCategoryTreeSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    image = serializers.ImageField()
+    icon = serializers.ImageField()
+    sub_categories = serializers.SerializerMethodField()
+
+    def get_sub_categories(self, obj):
+        qs = obj.product_category.all()
+        return ProductSubCategoryTreeSerializer(qs, many=True, context=self.context).data
+
 
 
 class ProductCategoryListSerializer(serializers.Serializer):
