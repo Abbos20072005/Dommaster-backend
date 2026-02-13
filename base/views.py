@@ -195,7 +195,7 @@ class PromocodeViewSet(ViewSet):
         if not serializer.is_valid():
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
 
-        promocode = Promocodes.objects.filter(name=serializer.validated_data.get("promocode").lower()).first()
+        promocode = Promocodes.objects.filter(code=serializer.validated_data.get("promocode").lower()).first()
         if not promocode:
             raise CustomApiException(error_code=ErrorCodes.NOT_FOUND, message="Promocode does not found")
 
