@@ -189,6 +189,10 @@ class PromocodeViewSet(ViewSet):
         cart = Cart.objects.filter(customer_id=request.user.id).first()
         if not cart:
             raise CustomApiException(error_code=ErrorCodes.NOT_FOUND, message="Cart not found")
+        
+        promocode_owner = Promocodes.objects.filter(code=serializer.validated_data.get("promocode").lower(), customer_id=request.user.id).first()
+        if not promocode_owner:
+            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND, message="Promocode does not found")
 
         data = request.data
         serializer = PromocodeRequestSerializer(data=data, context={"request": request})
