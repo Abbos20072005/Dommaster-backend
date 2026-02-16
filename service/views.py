@@ -1343,7 +1343,7 @@ class OrderViewSet(ViewSet):
             if not customer_location:
                 raise CustomApiException(error_code=ErrorCodes.NOT_FOUND, message="Customer location not found")
 
-        promocode = Promocodes.objects.filter(name=serializer.validated_data.get("promocode")).first()
+        promocode = Promocodes.objects.filter(code=serializer.validated_data.get("promocode")).first()
         if promocode:
             if promocode.expires_at < date.today():
                 raise CustomApiException(error_code=ErrorCodes.PROMOCODE_EXPIRED)
