@@ -6,6 +6,7 @@ from .models import Product, ProductCategory, ProductItemCategory, ProductSubCat
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from config import settings
+from base.serializers import PromocodeSerializer
 
 class OrderCreateSerializer(serializers.Serializer):
     promocode = serializers.CharField(max_length=15, required=False)
@@ -907,6 +908,7 @@ class OrderItemSerializer(serializers.ModelSerializer):
 class OrderDetailSerializer(serializers.ModelSerializer):
     order_items = OrderItemSerializer(many=True, read_only=True)
     order_location = CustomerAddressesSerializer(read_only=True)
+    promocode = PromocodeSerializer(read_only=True)
 
     class Meta:
         model = Order
