@@ -6,6 +6,122 @@ from .models import MerchatTransactionsModel, AccountModel, UzumBankTransactions
 from .utils.exception_payme import IncorrectAmount, PerformTransactionDoesNotExist
 from .utils.exception_uzumbank import UzumBankAPIException, ErrorCode
 from .utils.logger import logged
+from service.models import Order
+
+class CreateHoldSerializer(serializers.Serializer):
+    order_id = serializers.IntegerField()
+    card_token = serializers.CharField(required=False)
+    card_number = serializers.CharField(required=False)
+    card_expiry = serializers.CharField(required=False)
+    duration = serializers.CharField(default="60")
+
+    def validate(self, attrs):
+        card_token = attrs.get("card_token")
+        card_number = attrs.get("card_number")
+        card_expiry = attrs.get("card_expiry")
+
+        if not card_token and not (card_number and card_expiry):
+            raise serializers.ValidationError(
+                "Provide either card_token or both card_number and card_expiry"
+            )
+
+        if card_token and (card_number or card_expiry):
+            raise serializers.ValidationError(
+                "Provide either card_token or card_number/card_expiry, not both"
+            )
+
+        return attrs
+
+    def validate_order_id(self, value):
+        try:
+            order = Order.objects.get(id=value)
+        except Order.DoesNotExist:
+            raise serializers.ValidationError("Order not found")
+
+        if order.payment_status != 0:
+            raise serializers.ValidationError(
+                f"Order is already in {order.get_payment_status_display()} state"
+            )
+
+        return value
+
+    def validate_duration(self, value):
+        try:
+            int(value)
+        except ValueError:
+            raise serializers.ValidationError("Duration must be a number (in minutes)")
+        return value
+
+
+class ApplyHoldSerializer(serializers.Serializer):
+    order_id = serializers.IntegerField()
+    otp = serializers.CharField(max_length=6, min_length=6)
+
+    def validate_order_id(self, value):
+        order = Order.objects.get(id=value)
+        if not order:
+            raise serializers.ValidationError("Order not found")
+
+        if not order.hold_id:
+            raise serializers.ValidationError("No hold found for this order, create hold first")
+
+        if order.payment_status != 0:
+            raise serializers.ValidationError(
+                f"Order is already in {order.get_payment_status_display()} state"
+            )
+
+        return value
+
+    def validate_otp(self, value):
+        if not value.isdigit():
+            raise serializers.ValidationError("OTP must contain only digits")
+        return value
+
+
+class ChargeHoldSerializer(serializers.Serializer):
+    order_id = serializers.IntegerField()
+    amount = serializers.IntegerField(required=False)  # optional, for partial charge
+
+    def validate_order_id(self, value):
+        try:
+            order = Order.objects.get(id=value)
+        except Order.DoesNotExist:
+            raise serializers.ValidationError("Order not found")
+
+        if not order.hold_id:
+            raise serializers.ValidationError("No hold found for this order")
+
+        if order.payment_status != 1:
+            raise serializers.ValidationError(
+                f"Order must be in Hold state to charge, current state: {order.get_payment_status_display()}"
+            )
+
+        return value
+
+    def validate_amount(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Amount must be greater than 0")
+        return value
+
+
+class CancelHoldSerializer(serializers.Serializer):
+    order_id = serializers.IntegerField()
+
+    def validate_order_id(self, value):
+        try:
+            order = Order.objects.get(id=value)
+        except Order.DoesNotExist:
+            raise serializers.ValidationError("Order not found")
+
+        if not order.hold_id:
+            raise serializers.ValidationError("No hold found for this order")
+
+        if order.payment_status != 1:
+            raise serializers.ValidationError(
+                f"Order must be in Hold state to cancel, current state: {order.get_payment_status_display()}"
+            )
+
+        return value
 
 
 class MerchatTransactionsModelSerializer(serializers.ModelSerializer):

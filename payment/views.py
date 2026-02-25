@@ -25,7 +25,11 @@ from .serializers import (
     UzumBankCreateSerializer,
     UzumBankConfirmSerializer,
     UzumBankReverseSerializer,
-    UzumBankStatusSerializer
+    UzumBankStatusSerializer,
+    CreateHoldSerializer,
+    ApplyHoldSerializer,
+    ChargeHoldSerializer,
+    CancelHoldSerializer
 )
 from .services import UzumBankService, UzumBankErrors
 from .utils.exception_click import ClickErrorCode, ClickError
@@ -34,6 +38,8 @@ from .utils.exception_uzumbank import UzumBankAPIException, ErrorCode
 from .utils.logger import logged
 from .utils.utils_click import _serialize_request, get_order, create_transaction, get_transaction
 from .utils.utils_uzum import check_request, raise_exception_if_invalid
+from .services_pay.auth_services import AtmosAuthService, AtmosHoldService
+import os
 
 
 class PreparePaymentView(APIView):
@@ -608,3 +614,222 @@ class UzumBankStatusView(BaseUzumBankView):
         return Response(
             UzumBankService.transaction_response(trans, order, "status")
         )
+
+class AtmosCreateHoldView(APIView):
+    @swagger_auto_schema(
+        operation_summary="Atmos Create Hold",
+        operation_description="Atmos Create Hold API endpoint. Client clicks Pay — freeze funds on card.",
+        request_body=CreateHoldSerializer(),
+        responses={200:"Created", 400:"Bad Request"},
+        tags=["Atmos"]
+    )
+    def post(self, request):
+        access_token = AtmosAuthService.get_access_token()
+        if not access_token:
+            return Response({"error": "Failed to authenticate"}, status=status.HTTP_400_BAD_REQUEST)
+
+        order_id = request.data.get("order_id")
+        card_token = request.data.get("card_token")
+        card_number = request.data.get("card_number")
+        card_expiry = request.data.get("card_expiry")
+        duration = request.data.get("duration", "60")  # default 60 mins
+
+        if not order_id:
+            return Response({"error": "order_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not card_token and not (card_number and card_expiry):
+            return Response(
+                {"error": "Provide either card_token or both card_number and card_expiry"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        order = Order.objects.filter(id=order_id).first()
+        if not order:
+            return Response({"error": "Order not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        if order.payment_status != 0:
+            return Response(
+                {"error": f"Order is already in {order.payment_status} state"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            data = AtmosHoldService.create_hold(
+                access_token=access_token,
+                store_id=str(os.environ["ATMOS_STORE_ID"]),
+                account=str(order.id),
+                amount=str(order.total_price),  # in tiins
+                duration=duration,
+                card_token=card_token,
+                card_number=card_number,
+                card_expiry=card_expiry,
+            )
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        if data.get("result", {}).get("code") != "OK":
+            return Response(data, status=status.HTTP_400_BAD_REQUEST)
+
+        # save hold_id to order
+        order.hold_id = data["hold_id"]
+        order.save()
+
+        return Response({
+            "hold_id": data["hold_id"],
+            "message": "OTP sent to card holder"
+        }, status=status.HTTP_200_OK)
+
+
+class AtmosApplyHoldView(APIView):
+    @swagger_auto_schema(
+        operation_summary="Atmos Apply Hold",
+        operation_description="Atmos Apply Hold API endpoint",
+        request_body=ApplyHoldSerializer(),
+        responses={200:"Apply", 400:"Bad Request"},
+        tags=["Atmos"]
+    )
+    def post(self, request):
+        access_token = AtmosAuthService.get_access_token()
+        if not access_token:
+            return Response({"error": "Failed to authenticate"}, status=status.HTTP_400_BAD_REQUEST)
+
+        order_id = request.data.get("order_id")
+        otp = request.data.get("otp")
+
+        if not order_id or not otp:
+            return Response({"error": "order_id and otp are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        order = Order.objects.get(id=order_id)
+        if not order:
+            return Response({"error": "Order not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        if not order.hold_id:
+            return Response({"error": "No hold found for this order, create hold first"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if order.payment_status != 0:
+            return Response(
+                {"error": f"Order is already in {order.payment_status} state"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            data = AtmosHoldService.apply_hold(
+                access_token=access_token,
+                hold_id=order.hold_id,
+                otp=otp,
+            )
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        if data.get("result", {}).get("code") != "OK":
+            return Response(data, status=status.HTTP_400_BAD_REQUEST)
+
+        # funds are now frozen
+        order.payment_status = 1
+        order.save()
+
+        return Response({
+            "message": "Funds frozen successfully",
+            "hold_till": data.get("hold_till"),
+        }, status=status.HTTP_200_OK)
+
+
+class AtmosChargeHoldView(APIView):
+    @swagger_auto_schema(
+        operation_summary="Atmos Charge Hold",
+        operation_description="Atmos Charge Hold API endpoint",
+        request_body=ChargeHoldSerializer(),
+        responses={200:"Charge", 400:"Bad Request"},
+        tags=["Atmos"]
+    )
+    def post(self, request):
+        access_token = AtmosAuthService.get_access_token()
+        if not access_token:
+            return Response({"error": "Failed to authenticate"}, status=status.HTTP_400_BAD_REQUEST)
+
+        order_id = request.data.get("order_id")
+        amount = request.data.get("amount")  # optional, for partial charge
+
+        if not order_id:
+            return Response({"error": "order_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            order = Order.objects.get(id=order_id)
+        except Order.DoesNotExist:
+            return Response({"error": "Order not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        if not order.hold_id:
+            return Response({"error": "No hold found for this order"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if order.payment_status != 1:
+            return Response(
+                {"error": f"Order must be in HOLD state to charge, current state: {order.payment_status}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            data = AtmosHoldService.charge_hold(
+                access_token=access_token,
+                hold_id=order.hold_id,
+                amount=amount,
+            )
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        if data.get("result", {}).get("code") != "OK":
+            return Response(data, status=status.HTTP_400_BAD_REQUEST)
+
+        # money moved, order is paid
+        order.payment_status = 2
+        order.save()
+
+        return Response({
+            "message": "Payment successful",
+            "ofd_url": data.get("ofd_url"),
+            "transaction": data.get("store_transaction"),
+        }, status=status.HTTP_200_OK)
+
+
+class AtmosCancelHoldView(APIView):
+    @swagger_auto_schema(
+        operation_summary="Atmos Cancel Hold",
+        operation_description="Atmos Cancel Hold API endpoint",
+        request_body=CancelHoldSerializer(),
+        responses={200:"Cancel", 400:"Bad Request"},
+        tags=["Atmos"]
+    )
+    def post(self, request):
+        access_token = AtmosAuthService.get_access_token()
+        if not access_token:
+            return Response({"error": "Failed to authenticate"}, status=status.HTTP_400_BAD_REQUEST)
+
+        order_id = request.data.get("order_id")
+
+        if not order_id:
+            return Response({"error": "order_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        order = Order.objects.get(id=order_id)
+        if not order:
+            return Response({"error": "Order not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        if not order.hold_id:
+            return Response({"error": "No hold found for this order"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if order.payment_status != 1:
+            return Response(
+                {"error": f"Order must be in HOLD state to cancel, current state: {order.payment_status}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            AtmosHoldService.cancel_hold(
+                access_token=access_token,
+                hold_id=order.hold_id,
+            )
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        order.payment_status = 3
+        order.save()
+
+        return Response({"message": "Hold cancelled, funds released"}, status=status.HTTP_200_OK)

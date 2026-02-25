@@ -7,7 +7,11 @@ from .views import (
     UzumBankCreateView,
     UzumBankConfirmView,
     UzumBankReverseView,
-    UzumBankStatusView
+    UzumBankStatusView,
+    AtmosCreateHoldView,
+    AtmosApplyHoldView,
+    AtmosChargeHoldView,
+    AtmosCancelHoldView
 )
 
 urlpatterns = [
@@ -21,4 +25,8 @@ urlpatterns = [
     path('uzum/payment/status',UzumBankStatusView.as_view(), name='status'),
 
     path('payment/', MerchantAPIView.as_view()),
+    path("payment/hold/create/", AtmosCreateHoldView.as_view()),
+    path("payment/hold/apply/", AtmosApplyHoldView.as_view()),
+    path("payment/hold/charge/", AtmosChargeHoldView.as_view()),
+    path("payment/hold/cancel/", AtmosCancelHoldView.as_view()),
 ]

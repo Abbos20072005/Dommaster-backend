@@ -19,6 +19,13 @@ ORDER_STATUS = (
     (4, "Canceled")
 )
 
+PAYMENT_STATUS = (
+    (0, "Pending"),
+    (1, "Hold"),
+    (2, "Paid"),
+    (3, "Cancelled"),
+)
+
 
 class AddsBrands(BaseModel):
     name = models.CharField(max_length=450, verbose_name="Название")
@@ -56,10 +63,12 @@ class Brand(BaseModel):
 
 
 class Order(BaseModel):
+    hold_id = models.IntegerField(null=True, blank=True)
     promocode = models.ForeignKey(Promocodes, on_delete=models.SET_NULL, blank=True, null=True, verbose_name="Промокод")
     customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, verbose_name="Покупатель")
     status = models.IntegerField(choices=ORDER_STATUS, default=0, verbose_name="Статус")
     total_price = models.FloatField(default=0.0, verbose_name="Общая стоимость")
+    payment_status = models.IntegerField(choices=PAYMENT_STATUS, default=0, verbose_name="Статус оплаты")
     order_location = models.ForeignKey(CustomerAddresses, on_delete=models.SET_NULL, blank=True, null=True,
                                        verbose_name="Локация доставки")
 
