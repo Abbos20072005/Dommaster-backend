@@ -652,13 +652,15 @@ class AtmosCreateHoldView(APIView):
                 {"error": f"Order is already in {order.payment_status} state"},
                 status=status.HTTP_400_BAD_REQUEST
             )
+        
+        print("Access token: ", access_token)
 
         try:
             data = AtmosHoldService.create_hold(
                 access_token=access_token,
                 store_id=str(os.environ["ATMOS_STORE_ID"]),
                 account=str(order.id),
-                amount=str(order.total_price),  # in tiins
+                amount=str(order.total_price * 100),  # in tiins
                 duration=duration,
                 card_token=card_token,
                 card_number=card_number,
@@ -666,6 +668,8 @@ class AtmosCreateHoldView(APIView):
             )
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+        print("Create hold response: ", data)
 
         if data.get("result", {}).get("code") != "OK":
             return Response(data, status=status.HTTP_400_BAD_REQUEST)
