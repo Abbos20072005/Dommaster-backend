@@ -656,8 +656,7 @@ class AtmosCreateHoldView(APIView):
             )
         
 
-        try:
-            data = AtmosHoldService.create_hold(
+        data = AtmosHoldService.create_hold(
                 access_token=access_token,
                 store_id=os.environ["ATMOS_STORE_ID"],
                 account=str(order.id),
@@ -667,9 +666,9 @@ class AtmosCreateHoldView(APIView):
                 card_number=card_number,
                 card_expiry=card_expiry,
             )
-            print("Error creating hold: ", data)
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        print("Error creating hold: ", data)
+        if not data:
+            return Response({"error": "Failed to create hold"}, status=status.HTTP_400_BAD_REQUEST)
         
         if data.get("result", {}).get("code") != "OK":
             return Response(data, status=status.HTTP_400_BAD_REQUEST)
