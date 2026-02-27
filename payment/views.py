@@ -627,6 +627,8 @@ class AtmosCreateHoldView(APIView):
         access_token = AtmosAuthService.get_access_token()
         if not access_token:
             return Response({"error": "Failed to authenticate"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        print("Access token obtained: ", access_token)
 
         order_id = request.data.get("order_id")
         card_token = request.data.get("card_token")
@@ -666,6 +668,7 @@ class AtmosCreateHoldView(APIView):
                 card_expiry=card_expiry,
             )
         except Exception as e:
+            print("Error creating hold: ", data)
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         
         if data.get("result", {}).get("code") != "OK":
