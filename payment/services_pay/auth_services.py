@@ -430,6 +430,8 @@ class AtmosHoldService:
             json_data["card_expiry"] = card_expiry
         if payment_details:
             json_data["payment_details"] = payment_details
+
+        print("Creating hold with data: ", json_data)
             
         res = requests.post(
             url="https://apigw.atmos.uz/hold/create",
