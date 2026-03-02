@@ -439,7 +439,7 @@ class AtmosHoldService:
                 "Authorization": f"Bearer {access_token}",
                 "Content-Type": "application/json"
             },
-            data=json_data,
+            json=json_data,
             timeout=5,
         )
         res.raise_for_status()
