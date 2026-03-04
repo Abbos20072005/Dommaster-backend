@@ -648,9 +648,6 @@ class AtmosCardBindCheckoutView(APIView):
         except Exception as e:
             return Response({"error": f"{e}"}, status=status.HTTP_400_BAD_REQUEST)
 
-        if data.get("status", {}).get("code") != "OK":
-            return Response(data, status=status.HTTP_400_BAD_REQUEST)
-
         return Response({
             "url": data.get("url"),
             "payment_id": data.get("payment_id"),
