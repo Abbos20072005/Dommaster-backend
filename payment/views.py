@@ -38,8 +38,9 @@ from .utils.exception_uzumbank import UzumBankAPIException, ErrorCode
 from .utils.logger import logged
 from .utils.utils_click import _serialize_request, get_order, create_transaction, get_transaction
 from .utils.utils_uzum import check_request, raise_exception_if_invalid
-from .services_pay.auth_services import AtmosAuthService, AtmosHoldService
+from .services_pay.auth_services import AtmosAuthService, AtmosHoldService, AtmosBindWithCheckoutService
 import os
+import uuid
 
 
 class PreparePaymentView(APIView):
@@ -614,6 +615,91 @@ class UzumBankStatusView(BaseUzumBankView):
         return Response(
             UzumBankService.transaction_response(trans, order, "status")
         )
+    
+class AtmosCardBindCheckoutView(APIView):
+    @swagger_auto_schema(
+        operation_summary="Atmos Checkout Card Bind Init",
+        operation_description=(
+            "Generates an Atmos hosted checkout URL for card binding. "
+            "Open the returned url in WebView. After the user binds the card via OTP, "
+            "Atmos sends card_id to your callback URL."
+        ),
+        responses={200: "Checkout URL generated", 400: "Bad Request"},
+        tags=["Atmos"],
+    )
+    def post(self, request):
+        access_token = AtmosAuthService.get_access_token()
+        if not access_token:
+            return Response({"error": "Failed to authenticate"}, status=status.HTTP_400_BAD_REQUEST)
+
+        print("Access token obtained: ", access_token)
+
+        request_id = str(uuid.uuid4())
+        account = str(request.user.id)
+
+        try:
+            data = AtmosBindWithCheckoutService.create_card_bind_session(
+                access_token=access_token,
+                request_id=request_id,
+                store_id=os.environ["ATMOS_STORE_ID"],
+                account=account,
+                success_url=os.environ["ATMOS_SUCCESS_URL"],
+            )
+        except Exception as e:
+            return Response({"error": f"{e}"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if data.get("status", {}).get("code") != "OK":
+            return Response(data, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({
+            "url": data.get("url"),
+            "payment_id": data.get("payment_id"),
+            "token": data.get("token"),
+            "message": "Open url in WebView to bind card",
+        }, status=status.HTTP_200_OK)
+    
+class AtmosCardDetailView(APIView):
+    @swagger_auto_schema(
+        operation_summary="Atmos Get Card Details",
+        operation_description="Returns details of a previously bound card by card_id.",
+        responses={200: "Card details returned", 400: "Bad Request", 404: "Not Found"},
+        tags=["Atmos"],
+    )
+    def get(self, request, card_id):
+        access_token = AtmosAuthService.get_access_token()
+        if not access_token:
+            return Response({"error": "Failed to authenticate"}, status=status.HTTP_400_BAD_REQUEST)
+
+        print("Access token obtained: ", access_token)
+
+        # card = CustomerCard.objects.filter(card_id=card_id, user=request.user).first()
+        # if not card:
+        #     return Response({"error": "Card not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            data = AtmosBindWithCheckoutService.get_card_details(
+                access_token=access_token,
+                card_id=card_id,
+            )
+        except Exception as e:
+            return Response({"error": f"{e}"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if data.get("status", {}).get("code") != 0:
+            return Response(data, status=status.HTTP_400_BAD_REQUEST)
+
+        card_data = data.get("payload", {}).get("card", {})
+
+        return Response({
+            "card_id": data.get("payload", {}).get("card_id"),
+            "masked_pan": card_data.get("masked_pan"),
+            "masked_card_holder": card_data.get("masked_card_holder"),
+            "card_type": card_data.get("card_type"),
+            "card_region": card_data.get("card_region"),
+            "verified_state": card_data.get("verified_state"),
+            "status_3ds": card_data.get("status_3ds"),
+            "status": card_data.get("status"),
+            "date_created": card_data.get("date_created"),
+        }, status=status.HTTP_200_OK)
 
 class AtmosCreateHoldView(APIView):
     @swagger_auto_schema(

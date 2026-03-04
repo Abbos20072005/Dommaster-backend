@@ -69,6 +69,46 @@ class AtmosAuthService:
         logger.info("Atmos token revoked")
         return data
 
+class AtmosBindWithCheckoutService:
+    @staticmethod
+    def create_card_bind_session(
+        access_token: str,
+        request_id: str,
+        store_id: str,
+        account: str,
+        success_url: str,
+    ) -> dict:
+        response = requests.post(
+            url="https://apigw.atmos.uz/checkout/card-bind/create",
+            headers={
+                "Authorization": f"Bearer {access_token}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "request_id": request_id,
+                "store_id": store_id,
+                "account": account,
+                "success_url": success_url,
+            },
+            timeout=5,
+        )
+        response.raise_for_status()
+        return response.json()
+    
+    @staticmethod
+    def get_card_details(access_token: str, card_id: int) -> dict:
+        response = requests.get(
+            url=f"https://apigw.atmos.uz/mps/pay/card/{card_id}",
+            headers={
+                "Authorization": f"Bearer {access_token}",
+                "Content-Type": "application/json",
+            },
+            timeout=5,
+        )
+        response.raise_for_status()
+        return response.json()
+
+
 
 class AtmosTransactionService:
     @staticmethod
