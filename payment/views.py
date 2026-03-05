@@ -19,7 +19,7 @@ from .methods.check_transaction import CheckTransaction
 from .methods.create_transaction import CreateTransaction
 from .methods.get_statement_transaction import GetStatement
 from .methods.perform_transaction import PerformTransaction
-from .models import ClickTransaction, UzumBankTransactionsModel
+from .models import ClickTransaction, UzumBankTransactionsModel, CustomerCard
 from .serializers import (
     UzumBankCheckSerializer,
     UzumBankCreateSerializer,
@@ -41,6 +41,7 @@ from .utils.utils_uzum import check_request, raise_exception_if_invalid
 from .services_pay.auth_services import AtmosAuthService, AtmosHoldService, AtmosBindWithCheckoutService
 import os
 import uuid
+from authorization.models import Customer
 
 
 class PreparePaymentView(APIView):
@@ -655,6 +656,59 @@ class AtmosCardBindCheckoutView(APIView):
             "message": "Open url in WebView to bind card",
         }, status=status.HTTP_200_OK)
     
+
+class AtmosCardBindCallbackView(APIView):
+    permission_classes = []
+
+    @swagger_auto_schema(
+        operation_summary="Atmos Checkout Card Bind Callback",
+        operation_description=(
+            
+        ),
+        responses={200: "Checkout URL generated", 400: "Bad Request"},
+        tags=["Atmos"],
+    )
+    def post(self, request):
+        api_key = request.data.get("api_key")
+        card_id = request.data.get("card_id")
+        account = request.data.get("account")
+
+        print("Atmos card bind callback received: ", request.data)
+
+        if api_key != os.environ["ATMOS_KEY"]:
+            return Response({"status": 0, "message": "Invalid API key"}, status=status.HTTP_403_FORBIDDEN)
+
+        if not card_id or not account:
+            return Response({"status": 0, "message": "card_id and account are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = Customer.objects.filter(id=account).first()
+        if not user:
+            return Response({"status": 0, "message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            access_token = AtmosAuthService.get_access_token()
+            data = AtmosBindWithCheckoutService.get_card_details(
+                access_token=access_token,
+                card_id=card_id,
+            )
+            card_data = data.get("payload", {}).get("card", {})
+        except Exception as e:
+            card_data = {}
+
+        CustomerCard.objects.update_or_create(
+            card_id=str(card_id),
+            defaults={
+                "user": user,
+                "pan": card_data.get("masked_pan"),
+                "card_holder": card_data.get("masked_card_holder"),
+                "expiry": card_data.get("expiry"),
+                "is_active": True,
+            }
+        )
+
+        return Response({"status": 1, "message": "Успешно"}, status=status.HTTP_200_OK)
+
+
 class AtmosCardDetailView(APIView):
     @swagger_auto_schema(
         operation_summary="Atmos Get Card Details",

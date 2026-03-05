@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.db import models
 from django.utils.module_loading import import_string
+from authorization.models import Customer
 
 AccountModel = import_string(settings.CLICK_ACCOUNT_MODEL)
 
@@ -82,3 +83,18 @@ class UzumBankTransactionsModel(models.Model):
 
     def __str__(self):
         return str(self.trans_id)
+
+class CustomerCard(models.Model):
+    user = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="cards")
+    card_id = models.CharField(max_length=255, unique=True)
+    pan = models.CharField(max_length=255, blank=True, null=True)
+    card_holder = models.CharField(max_length=255, blank=True, null=True)
+    expiry = models.CharField(max_length=10, blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.user} — {self.pan or self.card_id}"

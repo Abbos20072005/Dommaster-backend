@@ -13,7 +13,8 @@ from .views import (
     AtmosChargeHoldView,
     AtmosCancelHoldView,
     AtmosCardDetailView,
-    AtmosCardBindCheckoutView
+    AtmosCardBindCheckoutView,
+    AtmosCardBindCallbackView
 )
 
 urlpatterns = [
@@ -26,9 +27,11 @@ urlpatterns = [
     path('uzum/payment/reverse', UzumBankReverseView.as_view(), name='reverse'),
     path('uzum/payment/status',UzumBankStatusView.as_view(), name='status'),
 
-    path("atmos/card-bind/init/", AtmosCardBindCheckoutView.as_view(), name="atmos-card-bind-init"),
-    path("atmos/card/<int:card_id>/", AtmosCardDetailView.as_view(), name="atmos-card-detail"),
     path('payment/', MerchantAPIView.as_view()),
+
+    path("atmos/card-bind/init/", AtmosCardBindCheckoutView.as_view(), name="atmos-card-bind-init"),
+    path("atmos/card-bind/callback/", AtmosCardBindCallbackView.as_view(), name="atmos-card-bind-callback"),
+    path("atmos/card/<int:card_id>/", AtmosCardDetailView.as_view(), name="atmos-card-detail"),
     path("payment/hold/create/", AtmosCreateHoldView.as_view()),
     path("payment/hold/apply/", AtmosApplyHoldView.as_view()),
     path("payment/hold/charge/", AtmosChargeHoldView.as_view()),
