@@ -311,6 +311,7 @@ class FilterSerializer(PaginationSerializer):
     brand = serializers.IntegerField(required=False)
     item_category = serializers.IntegerField(required=False)
     sale_id = serializers.IntegerField(required=False)
+    characteristics = serializers.DictField(required=False, child=serializers.ListField(child=serializers.CharField()))
 
     def validate(self, attrs):
         price_from = attrs.get("price_from")
