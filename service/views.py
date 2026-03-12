@@ -28,7 +28,7 @@ from base.serializers import BannerSerializer
 from utils.pyment_link import generate_link
 from .models import ProductCategory, ProductSubCategory, ProductItemCategory, Product, Comment, Brand, Sale, AddsBrands, \
     Favourites, Cart, CartItem, Questions, Order, OrderItem, RecentlyViewedProducts, Service, CommentReply, \
-    CommentImages, QuestionsReply
+    CommentImages, QuestionsReply, ProductCharacteristics
 from .serializers import ProductCategorySerializer, ProductCategoryListSerializer, ProductSubCategorySerializer, \
     ProductItemCategorySerializer, ProductSerializer, CommentSerializer, BrandSerializer, FilterSerializer, \
     PaginationSerializer, BrandDetailSerializer, SaleSerializer, AddsBrandsSerializer, AddsBrandsDetailSerializer, \
@@ -402,6 +402,7 @@ class ProductViewSet(ViewSet):
         brand = serializer.validated_data.get("brand")
         item_category = serializer.validated_data.get("item_category")
         sale_id = serializer.validated_data.get("sale_id")
+        characteristics = serializer.validated_data.get("characteristics")
 
         filters = Q()
 
@@ -426,6 +427,37 @@ class ProductViewSet(ViewSet):
         if sale_id:
             filters &= Q(sale_products__id=sale_id)
 
+        products = Product.objects.filter(filters)
+
+        char_data = (
+            ProductCharacteristics.objects
+            .filter(product__in=products)
+            .values("name", "value")
+            .distinct()
+            .order_by("name", "value")
+        )
+
+        available_filters = {}
+        for item in char_data:
+            name = item["name"]
+            value = item["value"]
+            if name not in available_filters:
+                available_filters[name] = []
+            available_filters[name].append({"label": value, "value": value})
+
+        available_filters_list = [
+            {"name": name, "values": values}
+            for name, values in available_filters.items()
+        ]
+
+        if characteristics:
+            for char_name, char_values in characteristics.items():
+                if char_values:
+                    products = products.filter(
+                        product_characteristics__name=char_name,
+                        product_characteristics__value__in=char_values
+                    )
+
         if q:
             similarity = Greatest(
                 TrigramSimilarity("name", q),
@@ -433,13 +465,19 @@ class ProductViewSet(ViewSet):
                 TrigramSimilarity("name_ru", q),
                 TrigramSimilarity("name_en", q),
             )
-            products = Product.objects.annotate(similarity=similarity).filter(filters).filter(similarity__gt=0.3).order_by("-similarity", sort)
+            products = products.annotate(similarity=similarity).filter(similarity__gt=0.3).order_by("-similarity", sort)
         else:
-            products = Product.objects.filter(filters).order_by(sort)
+            products = products.order_by(sort)
 
-        return Response(data={"result": get_products_paginator(response_data=products, page=page, page_size=page_size,
-                                                               context={"request": request}), "ok": True},
-                        status=status.HTTP_200_OK)
+        pagination_data = get_products_paginator(response_data=products, page=page, page_size=page_size,
+                                                               context={"request": request})
+        return Response(data={
+            "result": {
+                "products": pagination_data,
+                "available_filters": available_filters_list
+            },
+            "ok": True
+        }, status=status.HTTP_200_OK)
 
 
 class CommentViewSet(ViewSet):
