@@ -371,6 +371,68 @@ class ProductCharacteristics(BaseModel):
         verbose_name_plural = "Характеристики продуктов"
 
 
+class CategoryAttribute(BaseModel):
+    """Defines which filterable attributes a category has (e.g., 'Voltage' for Drills)"""
+    category = models.ForeignKey(
+        ProductItemCategory, on_delete=models.CASCADE,
+        related_name="category_attributes",
+        verbose_name="Категория"
+    )
+    name = models.CharField(max_length=150, verbose_name="Название")
+    is_filterable = models.BooleanField(default=True, verbose_name="Фильтруемый")
+    position = models.IntegerField(default=0, verbose_name="Позиция")
+
+    def __str__(self):
+        return f"{self.category.name} — {self.name}"
+
+    class Meta:
+        verbose_name = "Атрибут категории"
+        verbose_name_plural = "Атрибуты категорий"
+        ordering = ("position",)
+
+
+class CategoryAttributeValue(BaseModel):
+    """Predefined allowed values per attribute (e.g., '110V', '220V')"""
+    attribute = models.ForeignKey(
+        CategoryAttribute, on_delete=models.CASCADE,
+        related_name="attribute_values",
+        verbose_name="Атрибут"
+    )
+    value = models.CharField(max_length=150, verbose_name="Значение")
+
+    def __str__(self):
+        return f"{self.attribute.name}: {self.value}"
+
+    class Meta:
+        verbose_name = "Значение атрибута"
+        verbose_name_plural = "Значения атрибутов"
+
+
+class ProductAttributeValue(BaseModel):
+    """Links a product to its attribute values"""
+    product = models.ForeignKey(
+        Product, on_delete=models.CASCADE,
+        related_name="product_attribute_values",
+        verbose_name="Продукт"
+    )
+    attribute = models.ForeignKey(
+        CategoryAttribute, on_delete=models.CASCADE,
+        verbose_name="Атрибут"
+    )
+    attribute_value = models.ForeignKey(
+        CategoryAttributeValue, on_delete=models.CASCADE,
+        verbose_name="Значение атрибута"
+    )
+
+    def __str__(self):
+        return f"{self.product.name} — {self.attribute.name}: {self.attribute_value.value}"
+
+    class Meta:
+        verbose_name = "Значение атрибута продукта"
+        verbose_name_plural = "Значения атрибутов продуктов"
+        unique_together = ("product", "attribute", "attribute_value")
+
+
 class Cart(BaseModel):
     customer = models.ForeignKey(Customer, blank=True, null=True, on_delete=models.CASCADE, verbose_name="Клиент")
     cart_token = models.CharField(max_length=64, unique=True, blank=True, null=True, verbose_name="Токен карзины")

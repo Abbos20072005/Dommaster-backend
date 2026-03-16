@@ -28,7 +28,7 @@ from base.serializers import BannerSerializer
 from utils.pyment_link import generate_link
 from .models import ProductCategory, ProductSubCategory, ProductItemCategory, Product, Comment, Brand, Sale, AddsBrands, \
     Favourites, Cart, CartItem, Questions, Order, OrderItem, RecentlyViewedProducts, Service, CommentReply, \
-    CommentImages, QuestionsReply, ProductCharacteristics
+    CommentImages, QuestionsReply, ProductCharacteristics, CategoryAttribute, ProductAttributeValue
 from .serializers import ProductCategorySerializer, ProductCategoryListSerializer, ProductSubCategorySerializer, \
     ProductItemCategorySerializer, ProductSerializer, CommentSerializer, BrandSerializer, FilterSerializer, \
     PaginationSerializer, BrandDetailSerializer, SaleSerializer, AddsBrandsSerializer, AddsBrandsDetailSerializer, \
@@ -41,7 +41,7 @@ from .serializers import ProductCategorySerializer, ProductCategoryListSerialize
     QuestionsReplyCreateSerializer, QuestionsReplyUpdateSerializer, OrderCancelSerializer, OrderPaySerializer, \
     OrderCreateSerializer, ProductCategorySearchSerializer, ProductCharacteristicsCreateSerializer, ProductSubCategoryCreateSerializer, \
     ProductItemCategoryCreateSerializer, ProductCreateSerializer, BrandByItemCategoriesSerializer, ProductCategoryFilterSerializer, \
-    ProductShortSerializer, ProducgtCategoryTreeSerializer
+    ProductShortSerializer, ProducgtCategoryTreeSerializer, CategoryAttributeSerializer
     
 
 class MainPageViewSet(ViewSet):
@@ -402,7 +402,7 @@ class ProductViewSet(ViewSet):
         brand = serializer.validated_data.get("brand")
         item_category = serializer.validated_data.get("item_category")
         sale_id = serializer.validated_data.get("sale_id")
-        characteristics = serializer.validated_data.get("characteristics")
+        attributes = serializer.validated_data.get("attributes")
 
         filters = Q()
 
@@ -428,35 +428,27 @@ class ProductViewSet(ViewSet):
             filters &= Q(sale_products__id=sale_id)
 
         products = Product.objects.filter(filters)
+        
+        available_filters_list = []
+        if item_category:
+            cat_attrs = CategoryAttribute.objects.filter(
+                category_id=item_category,
+                is_filterable=True
+            ).prefetch_related("attribute_values").order_by("position")
+            
+            available_filters_list = CategoryAttributeSerializer(
+                cat_attrs, many=True, context={"request": request}
+            ).data
 
-        char_data = (
-            ProductCharacteristics.objects
-            .filter(product__in=products)
-            .values("name", "value")
-            .distinct()
-            .order_by("name", "value")
-        )
-
-        available_filters = {}
-        for item in char_data:
-            name = item["name"]
-            value = item["value"]
-            if name not in available_filters:
-                available_filters[name] = []
-            available_filters[name].append({"label": value, "value": value})
-
-        available_filters_list = [
-            {"name": name, "values": values}
-            for name, values in available_filters.items()
-        ]
-
-        if characteristics:
-            for char_name, char_values in characteristics.items():
-                if char_values:
-                    products = products.filter(
-                        product_characteristics__name=char_name,
-                        product_characteristics__value__in=char_values
-                    )
+        if attributes:
+            for attr_id, value_ids in attributes.items():
+                if value_ids:
+                    matching_ids = ProductAttributeValue.objects.filter(
+                        attribute_id=attr_id,
+                        attribute_value_id__in=value_ids
+                    ).values_list("product_id", flat=True)
+                    
+                    products = products.filter(id__in=matching_ids)
 
         if q:
             similarity = Greatest(
@@ -469,15 +461,25 @@ class ProductViewSet(ViewSet):
         else:
             products = products.order_by(sort)
 
-        pagination_data = get_products_paginator(response_data=products, page=page, page_size=page_size,
-                                                               context={"request": request})
-        return Response(data={
-            "result": {
-                "products": pagination_data,
-                "available_filters": available_filters_list
-            },
-            "ok": True
-        }, status=status.HTTP_200_OK)
+        return Response(data={"result": get_products_paginator(response_data=products, page=page, page_size=page_size,
+                                                               context={"request": request}),
+                                "available_filters": available_filters_list,
+                                "ok": True},
+                        status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        operation_summary="Category attributes",
+        operation_description="Get filterable attributes and values for a specific item category",
+        responses={200: CategoryAttributeSerializer(many=True)},
+        tags=["Product"]
+    )
+    def category_attributes(self, request, pk):
+        attrs = CategoryAttribute.objects.filter(
+            category_id=pk, is_filterable=True
+        ).prefetch_related("attribute_values").order_by("position")
+        
+        serializer = CategoryAttributeSerializer(attrs, many=True, context={"request": request})
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
 
 class CommentViewSet(ViewSet):

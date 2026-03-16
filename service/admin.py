@@ -1,7 +1,8 @@
 from django.contrib import admin
 from .models import Product, ProductCategory, ProductSubCategory, ProductItemCategory, Comment, Order, \
     OrderItem, Tag, Brand, Sale, AddsBrands, ProductImage, Favourites, Cart, CartItem, Questions, \
-    ProductCharacteristics, RecentlyViewedProducts, Service, CommentImages, CommentReply, QuestionsReply
+    ProductCharacteristics, RecentlyViewedProducts, Service, CommentImages, CommentReply, QuestionsReply, \
+    CategoryAttribute, CategoryAttributeValue, ProductAttributeValue
 
 @admin.register(QuestionsReply)
 class QuestionsReplyAdmin(admin.ModelAdmin):
@@ -43,6 +44,25 @@ class ProductCharacteristicsAdmin(admin.ModelAdmin):
     list_display_links = ("id", "product")
     search_fields = ("name",)
     list_filter = ("unit",)
+
+
+class CategoryAttributeValueInline(admin.TabularInline):
+    model = CategoryAttributeValue
+    extra = 1
+
+
+@admin.register(CategoryAttribute)
+class CategoryAttributeAdmin(admin.ModelAdmin):
+    list_display = ("id", "name", "category", "is_filterable", "position")
+    list_display_links = ("id", "name")
+    list_filter = ("category", "is_filterable")
+    search_fields = ("name",)
+    inlines = [CategoryAttributeValueInline]
+
+
+class ProductAttributeValueInline(admin.TabularInline):
+    model = ProductAttributeValue
+    extra = 1
 
 
 @admin.register(Questions)
@@ -120,7 +140,7 @@ class ProductAdmin(admin.ModelAdmin):
     search_fields = ("name",)
     list_filter = ("price", "rating")
     readonly_fields = ("discount_price",)
-    inlines = (ProductImageInline,)
+    inlines = (ProductImageInline, ProductAttributeValueInline)
 
     def save_model(self, request, obj, form, change):
         if obj.discount:
