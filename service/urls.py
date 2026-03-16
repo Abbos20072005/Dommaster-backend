@@ -60,6 +60,7 @@ urlpatterns = [
     path("order/<int:pk>/cancel/", OrderViewSet.as_view({"post": "cancel_order"}), name="order_cancel"),
     path("order/pay/", OrderViewSet.as_view({"post": "order_pay"}), name="order_pay"),
     path("characteristics/", ProductViewSet.as_view({"post": "product_characteristics"}), name="product_characteristics"),
+    path("item-category/<int:pk>/attributes/", ProductViewSet.as_view({"get": "category_attributes"}), name="category_attributes"),
     path("sub-categories/create/", ProductViewSet.as_view({"post": "sub_categories_create"}, name="sub_categories_create")),
     path("item-categories/create/", ProductViewSet.as_view({"post": "item_categories_create"}, name="item_categories_create")),
     path("products/create/", ProductViewSet.as_view({"post": "product_create"}, name="product_create")),

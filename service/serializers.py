@@ -2,7 +2,8 @@ from rest_framework import serializers
 from authorization.serializers import CustomerSerializer, CustomerAddressesSerializer
 from .models import Product, ProductCategory, ProductItemCategory, ProductSubCategory, ProductImage, Comment, \
     Order, OrderItem, Brand, Sale, AddsBrands, Favourites, Cart, CartItem, ProductCharacteristics, Questions, \
-    RecentlyViewedProducts, Service, CommentReply, CommentImages, QuestionsReply
+    RecentlyViewedProducts, Service, CommentReply, CommentImages, QuestionsReply, CategoryAttribute, \
+    CategoryAttributeValue, ProductAttributeValue
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from config import settings
@@ -175,6 +176,41 @@ class ProductCharacteristicsCreateSerializer(serializers.ModelSerializer):
             "value_en"
         )
 
+
+class CategoryAttributeValueSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    value = serializers.CharField()
+
+
+class CategoryAttributeSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    is_filterable = serializers.BooleanField()
+    position = serializers.IntegerField()
+    values = CategoryAttributeValueSerializer(source="attribute_values", many=True, read_only=True)
+
+
+class ProductAttributeValueSerializer(serializers.Serializer):
+    attribute = serializers.SerializerMethodField()
+    value = serializers.SerializerMethodField()
+    attribute_id = serializers.IntegerField(source="attribute.id", read_only=True)
+    value_id = serializers.IntegerField(source="attribute_value.id", read_only=True)
+
+    def get_attribute(self, obj):
+        request = self.context.get('request')
+        language = 'ru'
+        if request and request.META.get('HTTP_ACCEPT_LANGUAGE') in settings.MODELTRANSLATION_LANGUAGES:
+            language = request.META.get('HTTP_ACCEPT_LANGUAGE')
+        return getattr(obj.attribute, f'name_{language}')
+
+    def get_value(self, obj):
+        request = self.context.get('request')
+        language = 'ru'
+        if request and request.META.get('HTTP_ACCEPT_LANGUAGE') in settings.MODELTRANSLATION_LANGUAGES:
+            language = request.META.get('HTTP_ACCEPT_LANGUAGE')
+        return getattr(obj.attribute_value, f'value_{language}')
+
+
 class CartItemCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = CartItem
@@ -311,7 +347,7 @@ class FilterSerializer(PaginationSerializer):
     brand = serializers.IntegerField(required=False)
     item_category = serializers.IntegerField(required=False)
     sale_id = serializers.IntegerField(required=False)
-    characteristics = serializers.DictField(required=False, child=serializers.ListField(child=serializers.CharField()))
+    attributes = serializers.DictField(required=False, child=serializers.ListField(child=serializers.IntegerField()))
 
     def validate(self, attrs):
         price_from = attrs.get("price_from")
@@ -331,12 +367,10 @@ class BrandByItemCategoriesSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     name = serializers.CharField()
 
-
 class CommentSerializer(serializers.ModelSerializer):
     customer = CustomerSerializer(read_only=True)
     images = CommentImagesSerializer(source="comment_image", many=True, read_only=True)
     reply_count = serializers.IntegerField(read_only=True)
-
 
     class Meta:
         model = Comment
@@ -418,6 +452,7 @@ class ProductSerializer(serializers.ModelSerializer):
     in_cart_quantity = serializers.SerializerMethodField()
     breadcrumbs = serializers.SerializerMethodField()
     characteristics = ProductCharacteristicsSerializer(source="product_characteristics", many=True, read_only=True)
+    attributes = ProductAttributeValueSerializer(source="product_attribute_values", many=True, read_only=True)
 
     class Meta:
         model = Product
@@ -439,6 +474,7 @@ class ProductSerializer(serializers.ModelSerializer):
             "comments_quantity",
             "questions_quantity",
             "characteristics",
+            "attributes",
             "breadcrumbs",
             "images",
         )
