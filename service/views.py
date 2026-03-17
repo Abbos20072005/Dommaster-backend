@@ -638,9 +638,9 @@ class CommentViewSet(ViewSet):
         if comment:
             raise CustomApiException(error_code=ErrorCodes.INVALID_INPUT, message="Your comment already exist")
 
-        data = request.data.copy()                              # <- we need here copy() to avoid "request data is immutable" error
+        data = request.data.dict() if hasattr(request.data, 'dict') else dict(request.data)
         if hasattr(request.data, 'getlist'):
-            data.setlist('images', request.data.getlist('images'))
+            data['images'] = request.data.getlist('images')
 
         data["customer"] = request.user.id
         data["product"] = param.get("product_id")
