@@ -725,6 +725,7 @@ class BrandDetailSerializer(serializers.ModelSerializer):
 class ProductItemCategoryFilterSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     name = serializers.CharField()
+    image = serializers.ImageField()
 
 class ProductSubCategoryFilterSerializer(serializers.Serializer):
     id = serializers.IntegerField()
@@ -848,6 +849,7 @@ class ProductItemCategoryTreeSerializer(serializers.Serializer):
 class ProductSubCategoryTreeSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     name = serializers.CharField()
+    image = serializers.ImageField()
     product_item_categories = serializers.SerializerMethodField()
 
     def get_product_item_categories(self, obj):
