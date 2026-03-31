@@ -1,5 +1,12 @@
 from django.contrib import admin
-from .models import ClickTransaction, MerchatTransactionsModel, UzumBankTransactionsModel
+from .models import ClickTransaction, MerchatTransactionsModel, UzumBankTransactionsModel, CustomerCard
+
+@admin.register(CustomerCard)
+class CustomerCardAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user', 'card_id', 'is_active')
+    list_filter = ('user', 'card_id', 'is_active')
+    search_fields = ('user', 'card_id')
+    ordering = ('-created_at',)
 
 
 @admin.register(ClickTransaction)
