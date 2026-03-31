@@ -669,7 +669,8 @@ class AtmosCardBindCallbackView(APIView):
         tags=["Atmos"],
     )
     def post(self, request):
-        api_key = request.data.get("api_key")
+        # api_key = request.data.get("api_key")
+        api_key = os.environ["ATMOS_API_KEY_BIND"]
         card_id = request.data.get("card_id")
         account = request.data.get("account")
 
