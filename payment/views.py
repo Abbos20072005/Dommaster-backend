@@ -670,14 +670,14 @@ class AtmosCardBindCallbackView(APIView):
     )
     def post(self, request):
         # api_key = request.data.get("api_key")
-        api_key = os.environ["ATMOS_API_KEY_BIND"]
+        # api_key = os.environ["ATMOS_API_KEY_BIND"]
         card_id = request.data.get("card_id")
         account = request.data.get("account")
 
         print("Atmos card bind callback received: ", request.data)
 
-        if api_key != os.environ["ATMOS_API_KEY_BIND"]:
-            return Response({"status": 0, "message": "Invalid API key"}, status=status.HTTP_403_FORBIDDEN)
+        # if api_key != os.environ["ATMOS_API_KEY_BIND"]:
+        #     return Response({"status": 0, "message": "Invalid API key"}, status=status.HTTP_403_FORBIDDEN)
 
         if not card_id or not account:
             return Response({"status": 0, "message": "card_id and account are required"}, status=status.HTTP_400_BAD_REQUEST)
