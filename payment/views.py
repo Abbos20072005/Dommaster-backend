@@ -676,7 +676,7 @@ class AtmosCardBindCallbackView(APIView):
 
         print("Atmos card bind callback received: ", request.data)
 
-        if api_key != os.environ["ATMOS_KEY"]:
+        if api_key != os.environ["ATMOS_API_KEY_BIND"]:
             return Response({"status": 0, "message": "Invalid API key"}, status=status.HTTP_403_FORBIDDEN)
 
         if not card_id or not account:
