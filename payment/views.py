@@ -696,7 +696,7 @@ class AtmosCardBindCallbackView(APIView):
         except Exception as e:
             card_data = {}
 
-        CustomerCard.objects.update_or_create(
+        card_info, created = CustomerCard.objects.update_or_create(
             card_id=str(card_id),
             defaults={
                 "user": user,
@@ -706,6 +706,9 @@ class AtmosCardBindCallbackView(APIView):
                 "is_active": True,
             }
         )
+
+        print("Card info: ", card_info)
+        print("Created: ", created)
 
         return Response({"status": 1, "message": "Успешно"}, status=status.HTTP_200_OK)
 
