@@ -94,6 +94,7 @@ class FavouriteAdmin(admin.ModelAdmin):
 class ProductImageAdmin(admin.ModelAdmin):
     list_display = ("id", "product")
     list_display_links = ("id", "product")
+    list_filter = ("product__brand",)
 
 
 @admin.register(AddsBrands)
