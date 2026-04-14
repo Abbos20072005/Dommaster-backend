@@ -133,6 +133,10 @@ class ProductImageInline(admin.TabularInline):
     model = ProductImage
     extra = 1
 
+class ProductCharacteristicsInline(admin.TabularInline):
+    model = ProductCharacteristics
+    extra = 1
+
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
     list_display = ("id", "name", "price", "rating", "product_item_category")
@@ -140,7 +144,7 @@ class ProductAdmin(admin.ModelAdmin):
     search_fields = ("name",)
     list_filter = ("price", "rating")
     readonly_fields = ("discount_price",)
-    inlines = (ProductImageInline, ProductAttributeValueInline)
+    inlines = (ProductImageInline, ProductCharacteristicsInline, ProductAttributeValueInline)
 
     def save_model(self, request, obj, form, change):
         if obj.discount:
