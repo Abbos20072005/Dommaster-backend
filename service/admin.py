@@ -142,7 +142,7 @@ class ProductAdmin(admin.ModelAdmin):
     list_display = ("id", "name", "price", "rating", "product_item_category")
     list_display_links = ("id", "name")
     search_fields = ("name",)
-    list_filter = ("price", "rating")
+    list_filter = ("price", "rating", "brand")
     readonly_fields = ("discount_price",)
     inlines = (ProductImageInline, ProductCharacteristicsInline, ProductAttributeValueInline)
 
