@@ -106,6 +106,7 @@ from .serializers import (
     ProductShortSerializer,
     ProducgtCategoryTreeSerializer,
     CategoryAttributeSerializer,
+    ProductDetailSerializer
 )
 
 
@@ -567,13 +568,13 @@ class ProductViewSet(ViewSet):
         tags=["Product"],
     )
     def product_detail(self, request, pk):
-        products = Product.objects.filter(id=pk).first()
+        products = Product.objects.filter(id=pk).first().prefetch_related("cart_product")
         if not products:
             raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
 
         customer = request.user.id
         if not customer:
-            serializer = ProductSerializer(products, context={"request": request})
+            serializer = ProductDetailSerializer(products, context={"request": request})
             return Response(
                 data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK
             )
@@ -586,7 +587,7 @@ class ProductViewSet(ViewSet):
                 customer_id=customer, product_id=products.id
             )
 
-        serializer = ProductSerializer(products, context={"request": request})
+        serializer = ProductDetailSerializer(products, context={"request": request})
         return Response(
             data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK
         )
