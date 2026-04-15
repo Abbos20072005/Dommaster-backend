@@ -568,7 +568,7 @@ class ProductViewSet(ViewSet):
         tags=["Product"],
     )
     def product_detail(self, request, pk):
-        products = Product.objects.filter(id=pk).first().prefetch_related("cart_product")
+        products = Product.objects.filter(id=pk).prefetch_related("cart_product").first()
         if not products:
             raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
 
