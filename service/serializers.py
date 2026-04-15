@@ -436,6 +436,73 @@ class ProductCreateSerializer(serializers.ModelSerializer):
             "quantity"
         )
 
+class ProductDetailSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    description = serializers.CharField()
+    is_favourite = serializers.SerializerMethodField()
+    rating = serializers.FloatField()
+    price = serializers.FloatField()
+    unit = serializers.CharField()
+    quantity = serializers.IntegerField()
+    in_cart = serializers.SerializerMethodField()
+    in_cart_quantity = serializers.SerializerMethodField()
+    discount = serializers.IntegerField()
+    discount_price = serializers.FloatField()
+    breadcrumbs = serializers.SerializerMethodField()
+    comments_quantity = serializers.IntegerField()
+    questions_quantity = serializers.IntegerField()
+    characteristics = ProductCharacteristicsSerializer(source="product_characteristics", many=True, read_only=True)
+    images = ProductImageSerializer(source="product_image", many=True, read_only=True)
+
+    def get_in_cart_quantity(self, obj):
+        request = self.context.get("request")
+        if not request:
+            return 0
+
+        customer = getattr(request.user, 'id', None)
+        token = request.COOKIES.get("cart_token")
+
+        if customer:
+            cart_item = obj.cart_product.filter(cart__customer_id=customer).first()
+            return cart_item.quantity if cart_item else 0
+        elif token:
+            cart_item = obj.cart_product.filter(cart__cart_token=token).first()
+            return cart_item.quantity if cart_item else 0
+        return 0
+
+    def get_breadcrumbs(self, obj):
+        return obj.get_breadcrumbs()
+
+    def get_in_cart(self, obj):
+        request = self.context.get("request")
+        if not request:
+            return False
+
+        customer = getattr(request.user, 'id', None)
+        token = request.COOKIES.get("cart_token")
+
+        if customer:
+            return CartItem.objects.filter(cart__customer_id=customer, product=obj).exists()
+        elif token:
+            return CartItem.objects.filter(cart__cart_token=token, product=obj).exists()
+        return False
+
+    def get_is_favourite(self, obj):
+        request = self.context.get("request")
+        if not request:
+            return False
+
+        customer = getattr(request.user, 'id', None)
+        fav_token = request.COOKIES.get("favourite_token")
+
+        if customer:
+            return Favourites.objects.filter(customer_id=customer, product=obj).exists()
+        elif fav_token:
+            return Favourites.objects.filter(favourite_token=fav_token, product=obj).exists()
+        return False
+    
+
 
 class ProductSerializer(serializers.ModelSerializer):
     def __init__(self, *args, **kwargs):
