@@ -180,6 +180,7 @@ class ProductCharacteristicsCreateSerializer(serializers.ModelSerializer):
 class CategoryAttributeValueSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     value = serializers.CharField()
+    product_count = serializers.IntegerField(read_only=True, default=0)
 
 
 class CategoryAttributeSerializer(serializers.Serializer):

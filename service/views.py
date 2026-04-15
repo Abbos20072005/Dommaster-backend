@@ -10,7 +10,7 @@ from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from .paginations.get_orders import get_orders_paginator
 from rest_framework import status
-from django.db.models import Q, Sum, Exists, OuterRef, Value, BooleanField
+from django.db.models import Q, Sum, Exists, OuterRef, Value, BooleanField, Prefetch
 from .paginations.get_products_pagination import get_products_paginator
 from .paginations.get_comments import get_comments_paginator
 from .paginations.get_question import get_questions_paginator
@@ -48,6 +48,7 @@ from .models import (
     QuestionsReply,
     ProductCharacteristics,
     CategoryAttribute,
+    CategoryAttributeValue,
     ProductAttributeValue,
 )
 from .serializers import (
@@ -624,8 +625,9 @@ class ProductViewSet(ViewSet):
                 sort_by, "-created_at"
             )
 
-        if price_from or price_to:
+        if price_from:
             filters &= Q(price__gte=price_from)
+        if price_to:
             filters &= Q(price__lte=price_to)
 
         if brand:
@@ -639,28 +641,54 @@ class ProductViewSet(ViewSet):
 
         products = Product.objects.filter(filters)
 
+        if attributes:
+            attr_q = Q()
+            num_attrs = 0
+            for attr_id_str, value_ids in attributes.items():
+                if value_ids:
+                    attr_q |= Q(
+                        product_attribute_values__attribute_id=int(attr_id_str),
+                        product_attribute_values__attribute_value_id__in=value_ids,
+                    )
+                    num_attrs += 1
+
+            if num_attrs > 0:
+                products = (
+                    products.filter(attr_q)
+                    .annotate(
+                        matched_attrs=Count(
+                            "product_attribute_values__attribute_id",
+                            filter=attr_q,
+                            distinct=True,
+                        )
+                    )
+                    .filter(matched_attrs=num_attrs)
+                )
+
         available_filters_list = []
         if item_category:
             cat_attrs = (
                 CategoryAttribute.objects.filter(
                     category_id=item_category, is_filterable=True
                 )
-                .prefetch_related("attribute_values")
+                .prefetch_related(
+                    Prefetch(
+                        "attribute_values",
+                        queryset=CategoryAttributeValue.objects.annotate(
+                            product_count=Count(
+                                "productattributevalue__product",
+                                filter=Q(productattributevalue__product__in=products),
+                                distinct=True,
+                            )
+                        ),
+                    )
+                )
                 .order_by("position")
             )
 
             available_filters_list = CategoryAttributeSerializer(
                 cat_attrs, many=True, context={"request": request}
             ).data
-
-        if attributes:
-            for attr_id, value_ids in attributes.items():
-                if value_ids:
-                    matching_ids = ProductAttributeValue.objects.filter(
-                        attribute_id=attr_id, attribute_value_id__in=value_ids
-                    ).values_list("product_id", flat=True)
-
-                    products = products.filter(id__in=matching_ids)
 
         if q and not brand:
             similarity = Greatest(
@@ -1416,6 +1444,8 @@ class CartViewSet(ViewSet):
                     item.delete()
 
                 guest_cart.delete()
+
+            cart.refresh_from_db()
 
         resp = Response(
             data={
