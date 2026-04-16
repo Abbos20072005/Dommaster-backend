@@ -2,6 +2,8 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 from datetime import timedelta
+from django.urls import reverse_lazy
+from django.utils.translation import gettext_lazy as _
 
 load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -23,6 +25,11 @@ ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '127.0.0.1').split(",")
 # Application definition
 
 INSTALLED_APPS = [
+    "unfold",                           # ← обязательно первым
+    "unfold.contrib.filters",          # опционально — кастомные фильтры
+    "unfold.contrib.forms",            # опционально — красивые формы
+    "unfold.contrib.inlines",          # опционально — инлайны
+
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -189,11 +196,12 @@ CACHE_TTL = int(os.getenv("CACHE_TTL", 60 * 5))  # default 5 minutes
 LANGUAGE_CODE = 'ru-ru'
 
 get_text = lambda x: x
-LANGUAGES = {
-    'uz': get_text('Uzbek'),
-    'ru': get_text('Russian'),
-    'en': get_text('English')
-}
+
+LANGUAGES = [
+    ('uz', get_text('Uzbek')),
+    ('ru', get_text('Russian')),
+    ('en', get_text('English')),
+]
 
 MODELTRANSLATION_DEFAULT_LANGUAGE = 'ru'
 MODELTRANSLATION_LANGUAGES = ('uz', 'ru', 'en')
@@ -317,3 +325,99 @@ SERVICE_UZUM_PASSWORD=os.getenv('SERVICE_UZUM_PASSWORD', "")
 
 #web redirected url
 REDIRECTED_URL=os.getenv('REDIRECTED_URL', "")
+
+
+
+
+UNFOLD = {
+    "SITE_TITLE": "Buildex",
+    "SITE_HEADER": "Buildex Admin",
+    "SITE_SUBHEADER": "Buildex management system",
+    "SITE_URL": "/",
+    "SITE_SYMBOL": "speed",  # Material symbol name
+    "SHOW_HISTORY": True,
+    "SHOW_VIEW_ON_SITE": True,
+    "ENVIRONMENT": os.environ.get("DJANGO_ENV", "development"),
+    "SHOW_LANGUAGES": True, # Requires the i18n URL mentioned above
+
+    # ─── Colors (Tailwind-based) ──────────────────────────────────
+    "COLORS": {
+        "primary": {
+            "50": "240 249 255",
+            "100": "224 242 254",
+            "200": "186 230 253",
+            "300": "125 211 252",
+            "400": "56 189 248",
+            "500": "14 165 233",
+            "600": "2 132 199",
+            "700": "3 105 161",
+            "800": "7 89 133",
+            "900": "12 74 110",
+            "950": "8 47 73",
+        },
+    },
+
+    # ─── Sidebar Navigation ──────────────────────────────────────
+    "SIDEBAR": {
+        "show_search": True,
+        "show_all_applications": False,
+        "navigation": [
+            {
+                "title": _("Core Management"),
+                "items": [
+                    {
+                        "title": _("Dashboard"),
+                        "icon": "dashboard",
+                        "link": reverse_lazy("admin:index"),
+                    },
+                    {
+                        "title": _("Users"),
+                        "icon": "person",
+                        "link": reverse_lazy("admin:auth_user_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": _("Business Logic"),
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": _("Listings"),
+                        "icon": "apartment",
+                        # "link": reverse_lazy("admin:properties_listing_changelist"),
+                    },
+                ],
+            },
+        ],
+    },
+
+    # ─── User Profile Menu (Top Right) ────────────────────────────
+    "USER_MENU": [
+        {
+            "title": _("View Website"),
+            "icon": "open_in_new",
+            "link": "/",
+        },
+        {
+            "title": _("Support"),
+            "icon": "help",
+            "link": "https://example.com/support",
+        },
+    ],
+
+    # ─── Top Header Links ─────────────────────────────────────────
+    "TABS": [
+        {
+            "models": [
+                "auth.user",
+                "auth.group",
+            ],
+            "items": [
+                {
+                    "title": _("Access Control"),
+                    "link": reverse_lazy("admin:auth_user_changelist"),
+                },
+            ],
+        },
+    ],
+}

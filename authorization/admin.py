@@ -1,10 +1,11 @@
 from django.contrib import admin
 from .models import Customer, OTP, FcmToken, CustomerAddresses
 from django.contrib.auth.hashers import make_password
+from unfold.admin import ModelAdmin
 
 
 @admin.register(Customer)
-class CustomerAdmin(admin.ModelAdmin):
+class CustomerAdmin(ModelAdmin):
     list_display = ('id', 'full_name', 'phone_number', 'email')
     list_display_links = ('id', 'full_name')
     search_fields = ('full_name', 'phone_number', 'email')
@@ -17,7 +18,7 @@ class CustomerAdmin(admin.ModelAdmin):
 
 
 @admin.register(OTP)
-class OTPAdmin(admin.ModelAdmin):
+class OTPAdmin(ModelAdmin):
     list_display = ("id", "customer", "resend", "count_attempts", "expire_at")
     list_display_links = ("id", "customer")
     search_fields = ("customer",)
@@ -25,13 +26,13 @@ class OTPAdmin(admin.ModelAdmin):
 
 
 @admin.register(FcmToken)
-class FcmTokenAdmin(admin.ModelAdmin):
+class FcmTokenAdmin(ModelAdmin):
     list_display = ("id", "customer")
     list_display_links = ("id", "customer")
     search_fields = ("customer",)
 
 @admin.register(CustomerAddresses)
-class CustomerAddressesAdmin(admin.ModelAdmin):
+class CustomerAddressesAdmin(ModelAdmin):
     list_display = ("id", "customer", "name")
     list_display_links = ("id", "customer")
     search_fields = ("name", "location_name")

@@ -3,15 +3,16 @@ from .models import Product, ProductCategory, ProductSubCategory, ProductItemCat
     OrderItem, Tag, Brand, Sale, AddsBrands, ProductImage, Favourites, Cart, CartItem, Questions, \
     ProductCharacteristics, RecentlyViewedProducts, Service, CommentImages, CommentReply, QuestionsReply, \
     CategoryAttribute, CategoryAttributeValue, ProductAttributeValue
+from unfold.admin import ModelAdmin, TabularInline
 
 @admin.register(QuestionsReply)
-class QuestionsReplyAdmin(admin.ModelAdmin):
+class QuestionsReplyAdmin(ModelAdmin):
     list_display = ("id", "customer", "question", "is_admin", "is_visible")
     list_display_links = ("id", "customer")
     list_filter = ("is_admin", "is_visible")
 
 @admin.register(CommentReply)
-class CommentReplyAdmin(admin.ModelAdmin):
+class CommentReplyAdmin(ModelAdmin):
     list_display = ("id", "customer", "comment", "is_admin", "is_visible")
     list_display_links = ("id", "customer")
     list_filter = ("is_admin", "is_visible")
@@ -21,38 +22,38 @@ class CommentReplyAdmin(admin.ModelAdmin):
         obj.save()
 
 @admin.register(CommentImages)
-class CommentImagesAdmin(admin.ModelAdmin):
+class CommentImagesAdmin(ModelAdmin):
     list_display = ("id", "customer", "comment")
     list_display_links = ("id", "customer")
 
 @admin.register(Service)
-class ServiceAdmin(admin.ModelAdmin):
+class ServiceAdmin(ModelAdmin):
     list_display = ("id", "name")
     list_display_links = ("id", "name")
     search_fields = ("name",)
 
 
 @admin.register(RecentlyViewedProducts)
-class RecentlyViewedProductsAdmin(admin.ModelAdmin):
+class RecentlyViewedProductsAdmin(ModelAdmin):
     list_display = ("id", "customer", "product")
     list_display_links = ("id", "customer")
 
 
 @admin.register(ProductCharacteristics)
-class ProductCharacteristicsAdmin(admin.ModelAdmin):
+class ProductCharacteristicsAdmin(ModelAdmin):
     list_display = ("id", "product", "name", "unit", "value")
     list_display_links = ("id", "product")
     search_fields = ("name",)
     list_filter = ("unit",)
 
 
-class CategoryAttributeValueInline(admin.TabularInline):
+class CategoryAttributeValueInline(TabularInline):
     model = CategoryAttributeValue
     extra = 1
 
 
 @admin.register(CategoryAttribute)
-class CategoryAttributeAdmin(admin.ModelAdmin):
+class CategoryAttributeAdmin(ModelAdmin):
     list_display = ("id", "name", "category", "is_filterable", "position")
     list_display_links = ("id", "name")
     list_filter = ("category", "is_filterable")
@@ -60,45 +61,45 @@ class CategoryAttributeAdmin(admin.ModelAdmin):
     inlines = [CategoryAttributeValueInline]
 
 
-class ProductAttributeValueInline(admin.TabularInline):
+class ProductAttributeValueInline(TabularInline):
     model = ProductAttributeValue
     extra = 1
 
 
 @admin.register(Questions)
-class QuestionsAdmin(admin.ModelAdmin):
+class QuestionsAdmin(ModelAdmin):
     list_display = ("id", "customer", "product", "is_visible")
     list_display_links = ("id", "customer")
     search_fields = ("message",)
 
 
 @admin.register(Cart)
-class CartAdmin(admin.ModelAdmin):
+class CartAdmin(ModelAdmin):
     list_display = ("id", "customer")
     list_display_links = ("id", "customer")
 
 
 @admin.register(CartItem)
-class CartItemAdmin(admin.ModelAdmin):
+class CartItemAdmin(ModelAdmin):
     list_display = ("id", "cart", "product")
     list_display_links = ("id", "cart")
 
 
 @admin.register(Favourites)
-class FavouriteAdmin(admin.ModelAdmin):
+class FavouriteAdmin(ModelAdmin):
     list_display = ("id", "customer", "product")
     list_display_links = ("id", "customer")
 
 
 @admin.register(ProductImage)
-class ProductImageAdmin(admin.ModelAdmin):
+class ProductImageAdmin(ModelAdmin):
     list_display = ("id", "product")
     list_display_links = ("id", "product")
     list_filter = ("product__brand",)
 
 
 @admin.register(AddsBrands)
-class AddsBrandsAdmin(admin.ModelAdmin):
+class AddsBrandsAdmin(ModelAdmin):
     list_display = ("id", "name", "is_visible")
     list_display_links = ("id", "name")
     search_fields = ("name",)
@@ -107,7 +108,7 @@ class AddsBrandsAdmin(admin.ModelAdmin):
 
 
 @admin.register(Sale)
-class SaleAdmin(admin.ModelAdmin):
+class SaleAdmin(ModelAdmin):
     list_display = ("id", "name", "discount_from", "discount_to", "is_main", "is_visible")
     list_display_links = ("id", "name")
     search_fields = ("name",)
@@ -116,7 +117,7 @@ class SaleAdmin(admin.ModelAdmin):
 
 
 @admin.register(Brand)
-class BrandAdmin(admin.ModelAdmin):
+class BrandAdmin(ModelAdmin):
     list_display = ("id", "name", "is_visible")
     list_display_links = ("id", "name")
     search_fields = ("name",)
@@ -124,22 +125,22 @@ class BrandAdmin(admin.ModelAdmin):
 
 
 @admin.register(Tag)
-class TagAdmin(admin.ModelAdmin):
+class TagAdmin(ModelAdmin):
     list_display = ("id", "name", "is_active")
     list_display_links = ("id", "name")
     search_fields = ("name",)
     list_filter = ("is_active",)
 
-class ProductImageInline(admin.TabularInline):
+class ProductImageInline(TabularInline):
     model = ProductImage
     extra = 1
 
-class ProductCharacteristicsInline(admin.TabularInline):
+class ProductCharacteristicsInline(TabularInline):
     model = ProductCharacteristics
     extra = 1
 
 @admin.register(Product)
-class ProductAdmin(admin.ModelAdmin):
+class ProductAdmin(ModelAdmin):
     list_display = ("id", "name", "price", "rating", "product_item_category")
     list_display_links = ("id", "name")
     search_fields = ("name",)
@@ -154,41 +155,41 @@ class ProductAdmin(admin.ModelAdmin):
 
 
 @admin.register(ProductCategory)
-class ProductCategoryAdmin(admin.ModelAdmin):
+class ProductCategoryAdmin(ModelAdmin):
     list_display = ("id", "name")
     list_display_links = ("id", "name")
     search_fields = ("name",)
 
 
 @admin.register(ProductSubCategory)
-class ProductSubCategoryAdmin(admin.ModelAdmin):
+class ProductSubCategoryAdmin(ModelAdmin):
     list_display = ("id", "name", "product_category")
     list_display_links = ("id", "name")
     search_fields = ("name",)
 
 
 @admin.register(ProductItemCategory)
-class ProductItemCategoryAdmin(admin.ModelAdmin):
+class ProductItemCategoryAdmin(ModelAdmin):
     list_display = ("id", "name", "product_sub_category")
     list_display_links = ("id", "name")
     search_fields = ("name",)
 
 
 @admin.register(Comment)
-class CommentAdmin(admin.ModelAdmin):
+class CommentAdmin(ModelAdmin):
     list_display = ("id", "customer", "product_rating", "product")
     list_display_links = ("id", "customer")
     list_filter = ("product_rating",)
 
 
 @admin.register(Order)
-class OrderAdmin(admin.ModelAdmin):
+class OrderAdmin(ModelAdmin):
     list_display = ("id", "customer", "status", "total_price")
     list_display_links = ("id", "customer")
     list_filter = ("status",)
 
 
 @admin.register(OrderItem)
-class OrderItemAdmin(admin.ModelAdmin):
+class OrderItemAdmin(ModelAdmin):
     list_display = ("id", "order", "product", "quantity")
     list_display_links = ("id", "order")
