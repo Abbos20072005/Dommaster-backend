@@ -200,6 +200,7 @@ class Product(BaseModel):
     quantity = models.IntegerField(default=0, verbose_name="Количество")
     comments_quantity = models.IntegerField(default=0, verbose_name="Количество коментариев")
     questions_quantity = models.IntegerField(default=0, verbose_name="Количество вопросов")
+    is_active = models.BooleanField(default=True, verbose_name="Активен")
 
     def __str__(self):
         return self.name
