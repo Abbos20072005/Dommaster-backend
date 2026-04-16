@@ -224,7 +224,9 @@ class CartItemCreateSerializer(serializers.ModelSerializer):
         )
 
     def validate(self, attrs):
-        product = Product.objects.filter(id=attrs.get("product").id).first()
+        product = Product.objects.filter(id=attrs.get("product").id, is_active=True).first()
+        if not product:
+            raise CustomApiException(error_code=ErrorCodes.INVALID_INPUT, message="Product is not available")
         if product.quantity == 0:
             raise CustomApiException(error_code=ErrorCodes.INVALID_INPUT, message="Product is not exist in warehouse")
         elif product and attrs.get("quantity") and product.quantity < attrs.get("quantity"):
@@ -244,7 +246,9 @@ class CartItemUpdateSerializer(serializers.ModelSerializer):
         )
 
     def validate(self, attrs):
-        product = Product.objects.filter(id=attrs.get("product").id).first()
+        product = Product.objects.filter(id=attrs.get("product").id, is_active=True).first()
+        if not product:
+            raise CustomApiException(error_code=ErrorCodes.INVALID_INPUT, message="Product is not available")
         if product and product.quantity == 0:
             raise CustomApiException(error_code=ErrorCodes.INVALID_INPUT, message="Product is not exist in warehouse")
         elif product and attrs.get("quantity") and product.quantity < attrs.get("quantity"):
@@ -276,6 +280,12 @@ class FavouriteCreateSerializer(serializers.ModelSerializer):
             "id",
             "product"
         )
+        
+    def validate(self, attrs):
+        product = attrs.get("product")
+        if not product or not product.is_active:
+            raise CustomApiException(error_code=ErrorCodes.INVALID_INPUT, message="Product is not available")
+        return attrs
 
 
 class SearchByNameSerializer(serializers.Serializer):
@@ -692,7 +702,9 @@ class CartItemSerializer(serializers.ModelSerializer):
         )
 
     def validate(self, attrs):
-        product = Product.objects.filter(id=attrs.get("product").id).first()
+        product = Product.objects.filter(id=attrs.get("product").id, is_active=True).first()
+        if not product:
+            raise CustomApiException(error_code=ErrorCodes.INVALID_INPUT, message="Product is not available")
         if product.quantity == 0:
             raise CustomApiException(error_code=ErrorCodes.INVALID_INPUT, message="Product is not exist in warehouse")
         elif product and attrs.get("quantity") and product.quantity < attrs.get("quantity"):
@@ -739,7 +751,7 @@ class AddsBrandsSerializer(serializers.Serializer):
         return obj.brand.id if obj.brand else None
 
     def get_products(self, obj):
-        qs = obj.products.all()
+        qs = obj.products.filter(is_active=True)
         return ProductShortSerializer(qs, many=True, context=self.context).data
 
 
@@ -755,7 +767,11 @@ class SaleSerializer(serializers.ModelSerializer):
         )
 
 class SaleMainSerializer(serializers.ModelSerializer):
-    products = ProductSerializer(many=True, read_only=True)
+    products = serializers.SerializerMethodField()
+
+    def get_products(self, obj):
+        qs = obj.products.filter(is_active=True)
+        return ProductSerializer(qs, many=True, context=self.context).data
 
     class Meta:
         model = Sale

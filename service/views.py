@@ -253,7 +253,7 @@ class ProductViewSet(ViewSet):
     )
     def most_search(self, request):
         products = (
-            Product.objects.annotate(most_solds=Sum("product_order_item__quantity"))
+            Product.objects.filter(is_active=True).annotate(most_solds=Sum("product_order_item__quantity"))
             .exclude(most_solds=0)
             .order_by("-most_solds")
             .values_list("name", flat=True)[:7]
@@ -293,7 +293,8 @@ class ProductViewSet(ViewSet):
             )
 
         recently_viewed_products = Product.objects.filter(
-            recently_viewed_products__customer_id=request.user.id
+            recently_viewed_products__customer_id=request.user.id,
+            is_active=True
         )
         return Response(
             data={
@@ -333,7 +334,7 @@ class ProductViewSet(ViewSet):
         query = cache.get(cache_key)
         if not query:
             product = (
-                Product.objects.annotate(
+                Product.objects.filter(is_active=True).annotate(
                     similarity=Greatest(
                         TrigramSimilarity("name", param_data),
                         TrigramSimilarity("name_uz", param_data),
@@ -400,7 +401,7 @@ class ProductViewSet(ViewSet):
     )
     def most_sold(self, request):
         products = (
-            Product.objects.annotate(most_solds=Sum("product_order_item__quantity"))
+            Product.objects.filter(is_active=True).annotate(most_solds=Sum("product_order_item__quantity"))
             .exclude(most_solds=0)
             .order_by("-most_solds")[:10]
         )
@@ -568,7 +569,7 @@ class ProductViewSet(ViewSet):
         tags=["Product"],
     )
     def product_detail(self, request, pk):
-        products = Product.objects.filter(id=pk).prefetch_related("cart_product").first()
+        products = Product.objects.filter(id=pk, is_active=True).prefetch_related("cart_product").first()
         if not products:
             raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
 
@@ -639,6 +640,8 @@ class ProductViewSet(ViewSet):
 
         if sale_id:
             filters &= Q(sale_products__id=sale_id)
+
+        filters &= Q(is_active=True)
 
         products = Product.objects.filter(filters)
 
@@ -1329,7 +1332,7 @@ class FavouriteViewSet(ViewSet):
             if not token:
                 token = secrets.token_hex(16)
 
-            favourite = Favourites.objects.filter(favourite_token=token)
+            favourite = Favourites.objects.filter(favourite_token=token, product__is_active=True)
             serializer = FavouriteResponseSerializer(
                 favourite, many=True, context={"request": request}
             )
@@ -1347,7 +1350,7 @@ class FavouriteViewSet(ViewSet):
         guest_favourite = None
         if token:
             guest_favourite = Favourites.objects.filter(
-                favourite_token=token, customer__isnull=True
+                favourite_token=token, customer__isnull=True, product__is_active=True
             )
 
         if guest_favourite:
@@ -1362,7 +1365,7 @@ class FavouriteViewSet(ViewSet):
                             customer_id=customer, product=item.product
                         )
                         item.delete()
-        favourites = Favourites.objects.filter(customer_id=customer)
+        favourites = Favourites.objects.filter(customer_id=customer, product__is_active=True)
         resp = Response(
             data={
                 "result": FavouriteResponseSerializer(
