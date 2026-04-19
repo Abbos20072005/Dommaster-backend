@@ -484,8 +484,8 @@ class AtmosHoldService:
             timeout=5,
         )
         # res.raise_for_status()
-        data = res.json()
-        # print(data)
+        data = res
+        print(data)
         return data
 
     @staticmethod
