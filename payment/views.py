@@ -692,8 +692,7 @@ class AtmosCardBindCallbackView(APIView):
                 access_token=access_token,
                 card_id=card_id,
             )
-            card_data = data.get("payload", {}).get("card", {})
-            print("Card data full: ", data)
+            card_data = data
         except Exception as e:
             card_data = {}
 
