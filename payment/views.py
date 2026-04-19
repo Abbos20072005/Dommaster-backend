@@ -693,11 +693,12 @@ class AtmosCardBindCallbackView(APIView):
                 card_id=card_id,
             )
             card_data = data.get("payload", {}).get("card", {})
-            print("Card data full: ", data)
+            
         except Exception as e:
             card_data = {}
 
         print("Card data: ", card_data)
+        print("Card data full: ", data)
         card_info, created = CustomerCard.objects.update_or_create(
             card_id=str(card_id),
             defaults={
