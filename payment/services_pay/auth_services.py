@@ -485,7 +485,7 @@ class AtmosHoldService:
         )
         # res.raise_for_status()
         data = res.json()
-        print(data)
+        # print(data)
         return data
 
     @staticmethod
