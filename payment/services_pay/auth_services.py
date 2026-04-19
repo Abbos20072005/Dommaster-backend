@@ -473,6 +473,7 @@ class AtmosHoldService:
             json_data["payment_details"] = payment_details
 
         print("Creating hold with data: ", json_data)
+        print("Access token: ", access_token)
             
         res = requests.post(
             url="https://apigw.atmos.uz/hold/create",
@@ -483,8 +484,8 @@ class AtmosHoldService:
             json=json_data,
             timeout=5,
         )
-        # res.raise_for_status()
-        data = res
+        res.raise_for_status()
+        data = res.json()
         print(data)
         return data
 
