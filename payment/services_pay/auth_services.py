@@ -105,6 +105,7 @@ class AtmosBindWithCheckoutService:
             },
             timeout=5,
         )
+        print("Card details response: ", response.json())
         response.raise_for_status()
         return response.json()
 
