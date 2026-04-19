@@ -484,8 +484,8 @@ class AtmosHoldService:
             json=json_data,
             timeout=5,
         )
-        res.raise_for_status()
         print(res.raise_for_status())
+        res.raise_for_status()
         print(res.json())
         data = res.json()
         print(data)
