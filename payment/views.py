@@ -792,9 +792,9 @@ class AtmosCreateHoldView(APIView):
             data = AtmosHoldService.create_hold(
                     access_token=access_token,
                     store_id=int(os.environ["ATMOS_STORE_ID"]),
-                    account=str(order.id),
-                    amount=str(order.total_price * 100),  # in tiins
-                    duration=duration,
+                    account=order.id,
+                    amount=int(order.total_price * 100),  # in tiins
+                    duration=int(duration),
                     card_token=card_token,
                     card_number=card_number,
                     card_expiry=card_expiry,

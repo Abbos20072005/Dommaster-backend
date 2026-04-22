@@ -472,7 +472,7 @@ class AtmosCardService:
 
 class AtmosHoldService:
     @staticmethod
-    def create_hold(access_token: str, store_id: str, account: str, amount: str, duration: str, card_token: str = None, card_number: str = None, card_expiry: str = None, payment_details: str = None):
+    def create_hold(access_token: str, store_id: int, account: int, amount: int, duration: int, card_token: str = None, card_number: str = None, card_expiry: str = None, payment_details: str = None):
         json_data = {
             "store_id": store_id,
             "account": account,
