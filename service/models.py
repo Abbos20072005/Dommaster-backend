@@ -63,7 +63,7 @@ class Brand(BaseModel):
 
 
 class Order(BaseModel):
-    hold_id = models.IntegerField(null=True, blank=True)
+    hold_id = models.BigIntegerField(null=True, blank=True)
     promocode = models.ForeignKey(Promocodes, on_delete=models.SET_NULL, blank=True, null=True, verbose_name="Промокод")
     customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, verbose_name="Покупатель")
     status = models.IntegerField(choices=ORDER_STATUS, default=0, verbose_name="Статус")
