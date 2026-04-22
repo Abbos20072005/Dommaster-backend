@@ -699,7 +699,7 @@ class AtmosCardBindCallbackView(APIView):
             defaults={
                 "user": user,
                 "card_id": matched_card.get("card_id"),
-                "token": matched_card.get("token"),
+                "token": matched_card.get("card_token"),
                 "pan": matched_card.get("pan"),
                 "card_holder": matched_card.get("card_holder"),
                 "expiry": matched_card.get("expiry"),
