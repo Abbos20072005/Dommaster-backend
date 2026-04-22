@@ -87,6 +87,7 @@ class UzumBankTransactionsModel(models.Model):
 class CustomerCard(models.Model):
     user = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="cards")
     card_id = models.CharField(max_length=255, unique=True)
+    token = models.CharField(max_length=255, blank=True, null=True)
     pan = models.CharField(max_length=255, blank=True, null=True)
     card_holder = models.CharField(max_length=255, blank=True, null=True)
     expiry = models.CharField(max_length=10, blank=True, null=True)

@@ -105,7 +105,23 @@ class AtmosBindWithCheckoutService:
             },
             timeout=5,
         )
-        print("Card details response: ", response.json())
+        response.raise_for_status()
+        return response.json()
+
+    @staticmethod
+    def get_cards_list(access_token: str):
+        response = requests.post(
+            url=f"https://apigw.atmos.uz/partner/list-cards",
+            headers={
+                "Authorization": f"Bearer {access_token}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "page": 1,
+                "page_size": 10
+            },
+            timeout=5,
+        )
         response.raise_for_status()
         return response.json()
 

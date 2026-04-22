@@ -684,21 +684,25 @@ class AtmosCardBindCallbackView(APIView):
 
         try:
             access_token = AtmosAuthService.get_access_token()
-            data = AtmosBindWithCheckoutService.get_card_details(
+            data = AtmosBindWithCheckoutService.get_cards_list(
                 access_token=access_token,
-                card_id=card_id,
             )
-            card_data = data
+            cards_data = data.get("cardDataSmallList")
+            
         except Exception as e:
-            card_data = {}
+            cards_data = []
+
+        matched_card = next((card for card in cards_data if str(card.get("card_id")) == str(card_id)), None)
 
         card_info, created = CustomerCard.objects.update_or_create(
             card_id=str(card_id),
             defaults={
                 "user": user,
-                "pan": card_data.get("masked_pan"),
-                "card_holder": card_data.get("masked_card_holder"),
-                "expiry": card_data.get("expiry"),
+                "card_id": matched_card.get("card_id"),
+                "token": matched_card.get("token"),
+                "pan": matched_card.get("pan"),
+                "card_holder": matched_card.get("card_holder"),
+                "expiry": matched_card.get("expiry"),
                 "is_active": True,
             }
         )
