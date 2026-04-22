@@ -461,7 +461,8 @@ class AtmosHoldService:
             "store_id": store_id,
             "account": account,
             "amount": amount,
-            "duration": duration
+            "duration": duration,
+            "payment_details": ""
         }
         if card_token:
             json_data["card_token"] = card_token

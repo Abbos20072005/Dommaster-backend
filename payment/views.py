@@ -669,12 +669,8 @@ class AtmosCardBindCallbackView(APIView):
         tags=["Atmos"],
     )
     def post(self, request):
-        # api_key = request.data.get("api_key")
-        # api_key = os.environ["ATMOS_API_KEY_BIND"]
         card_id = request.data.get("card_id")
         account = request.data.get("account")
-
-        print("Atmos card bind callback received: ", request.data)
 
         # if api_key != os.environ["ATMOS_API_KEY_BIND"]:
         #     return Response({"status": 0, "message": "Invalid API key"}, status=status.HTTP_403_FORBIDDEN)
@@ -696,7 +692,6 @@ class AtmosCardBindCallbackView(APIView):
         except Exception as e:
             card_data = {}
 
-        print("Card data: ", card_data)
         card_info, created = CustomerCard.objects.update_or_create(
             card_id=str(card_id),
             defaults={
@@ -707,9 +702,6 @@ class AtmosCardBindCallbackView(APIView):
                 "is_active": True,
             }
         )
-
-        print("Card info: ", card_info)
-        print("Created: ", created)
 
         return Response({"status": 1, "message": "Успешно"}, status=status.HTTP_200_OK)
 
