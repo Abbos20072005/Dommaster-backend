@@ -762,12 +762,6 @@ class AtmosCreateHoldView(APIView):
         tags=["Atmos"]
     )
     def post(self, request):
-        access_token = AtmosAuthService.get_access_token()
-        if not access_token:
-            return Response({"error": "Failed to authenticate"}, status=status.HTTP_400_BAD_REQUEST)
-        
-        print("Access token obtained: ", access_token)
-
         order_id = request.data.get("order_id")
         card_token = request.data.get("card_token")
         card_number = request.data.get("card_number")
@@ -794,6 +788,7 @@ class AtmosCreateHoldView(APIView):
             )
         
         try:
+            access_token = AtmosAuthService.get_access_token()
             data = AtmosHoldService.create_hold(
                     access_token=access_token,
                     store_id=os.environ["ATMOS_STORE_ID"],
@@ -811,11 +806,11 @@ class AtmosCreateHoldView(APIView):
             return Response(data, status=status.HTTP_400_BAD_REQUEST)
 
         # save hold_id to order
-        order.hold_id = data["hold_id"]
+        order.hold_id = data.get("hold_id")
         order.save()
 
         return Response({
-            "hold_id": data["hold_id"],
+            "hold_id": data.get("hold_id"),
             "message": "OTP sent to card holder"
         }, status=status.HTTP_200_OK)
 
