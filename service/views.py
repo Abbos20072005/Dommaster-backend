@@ -10,7 +10,8 @@ from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from .paginations.get_orders import get_orders_paginator
 from rest_framework import status
-from django.db.models import Q, Sum, Exists, OuterRef, Value, BooleanField, Prefetch
+from django.db.models import Q, Sum, Exists, OuterRef, Value, BooleanField, Prefetch, IntegerField, Subquery
+from django.db.models.functions import Coalesce
 from .paginations.get_products_pagination import get_products_paginator
 from .paginations.get_comments import get_comments_paginator
 from .paginations.get_question import get_questions_paginator
@@ -108,6 +109,72 @@ from .serializers import (
     CategoryAttributeSerializer,
     ProductDetailSerializer
 )
+
+
+def get_optimized_product_qs(base_qs, request):
+    """
+    Annotates a Product queryset with _is_in_cart, _is_favourite, _cart_quantity
+    and applies select_related + prefetch_related to eliminate N+1 queries.
+    """
+    customer_id = getattr(request.user, 'id', None) if request else None
+    cart_token = request.COOKIES.get("cart_token") if request else None
+    fav_token = request.COOKIES.get("favourite_token") if request else None
+
+    # Cart subqueries
+    if customer_id:
+        cart_exists_sq = CartItem.objects.filter(
+            cart__customer_id=customer_id, product_id=OuterRef('pk')
+        )
+        cart_qty_sq = CartItem.objects.filter(
+            cart__customer_id=customer_id, product_id=OuterRef('pk')
+        ).values('quantity')[:1]
+        fav_exists_sq = Favourites.objects.filter(
+            customer_id=customer_id, product_id=OuterRef('pk')
+        )
+    elif cart_token:
+        cart_exists_sq = CartItem.objects.filter(
+            cart__cart_token=cart_token, product_id=OuterRef('pk')
+        )
+        cart_qty_sq = CartItem.objects.filter(
+            cart__cart_token=cart_token, product_id=OuterRef('pk')
+        ).values('quantity')[:1]
+        fav_exists_sq = Favourites.objects.filter(
+            favourite_token=fav_token, product_id=OuterRef('pk')
+        ) if fav_token else Favourites.objects.none()
+    else:
+        cart_exists_sq = CartItem.objects.none()
+        cart_qty_sq = None
+        fav_exists_sq = Favourites.objects.none()
+
+    qs = base_qs.annotate(
+        _is_in_cart=Exists(cart_exists_sq),
+        _is_favourite=Exists(fav_exists_sq),
+    )
+
+    if cart_qty_sq is not None:
+        qs = qs.annotate(
+            _cart_quantity=Coalesce(
+                Subquery(cart_qty_sq, output_field=IntegerField()),
+                Value(0)
+            )
+        )
+    else:
+        qs = qs.annotate(_cart_quantity=Value(0, output_field=IntegerField()))
+
+    # Prefetch related data to avoid N+1 on images, characteristics, attributes
+    qs = qs.select_related(
+        'brand',
+        'product_item_category__product_sub_category__product_category'
+    ).prefetch_related(
+        'product_image',
+        'product_characteristics',
+        Prefetch(
+            'product_attribute_values',
+            queryset=ProductAttributeValue.objects.select_related('attribute', 'attribute_value')
+        ),
+    )
+
+    return qs
 
 
 class MainPageViewSet(ViewSet):
@@ -252,12 +319,20 @@ class ProductViewSet(ViewSet):
         tags=["Product"],
     )
     def most_search(self, request):
-        products = (
+        cache_key = "products:most_search"
+        cached = cache.get(cache_key)
+        if cached:
+            return Response(
+                data={"result": cached, "ok": True}, status=status.HTTP_200_OK
+            )
+
+        products = list(
             Product.objects.filter(is_active=True).annotate(most_solds=Sum("product_order_item__quantity"))
             .exclude(most_solds=0)
             .order_by("-most_solds")
             .values_list("name", flat=True)[:7]
         )
+        cache.set(cache_key, products, timeout=600)
         return Response(
             data={"result": products, "ok": True}, status=status.HTTP_200_OK
         )
@@ -329,7 +404,7 @@ class ProductViewSet(ViewSet):
             return Response(data={"result": [], "ok": True}, status=status.HTTP_200_OK)
 
         param_data = param.strip()
-        cache_key = f"{param_data}"
+        cache_key = f"search:{param_data.lower()}"
 
         query = cache.get(cache_key)
         if not query:
@@ -342,7 +417,7 @@ class ProductViewSet(ViewSet):
                         TrigramSimilarity("name_en", param_data),
                     )
                 )
-                .filter(similarity__gt=0.01)
+                .filter(similarity__gt=0.1)
                 .order_by("-similarity")
                 .values_list("name", flat=True)[:5]
             )
@@ -356,7 +431,7 @@ class ProductViewSet(ViewSet):
                         TrigramSimilarity("name_en", param_data),
                     )
                 )
-                .filter(similarity__gt=0.01)
+                .filter(similarity__gt=0.1)
                 .order_by("-similarity")[:6]
             )
             category_serializer = ProductCategorySearchSerializer(
@@ -372,7 +447,7 @@ class ProductViewSet(ViewSet):
                         TrigramSimilarity("name_en", param_data),
                     )
                 )
-                .filter(similarity__gt=0.01)
+                .filter(similarity__gt=0.1)
                 .order_by("-similarity")[:6]
             )
             brand_serializer = BrandSerializer(
@@ -400,14 +475,24 @@ class ProductViewSet(ViewSet):
         tags=["Product"],
     )
     def most_sold(self, request):
-        products = (
-            Product.objects.filter(is_active=True).annotate(most_solds=Sum("product_order_item__quantity"))
+        cache_key = "products:most_sold"
+        cached = cache.get(cache_key)
+        if cached:
+            return Response(
+                data={"result": cached, "ok": True}, status=status.HTTP_200_OK
+            )
+
+        base_qs = (
+            Product.objects.filter(is_active=True)
+            .annotate(most_solds=Sum("product_order_item__quantity"))
             .exclude(most_solds=0)
             .order_by("-most_solds")[:10]
         )
+        products = get_optimized_product_qs(base_qs, request)
         serializer = ProductShortSerializer(
             products, many=True, context={"request": request}
         )
+        cache.set(cache_key, serializer.data, timeout=600)
         return Response(
             data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK
         )
@@ -569,22 +654,14 @@ class ProductViewSet(ViewSet):
         tags=["Product"],
     )
     def product_detail(self, request, pk):
-        products = Product.objects.filter(id=pk, is_active=True).prefetch_related("cart_product").first()
+        base_qs = Product.objects.filter(id=pk, is_active=True)
+        products = get_optimized_product_qs(base_qs, request).first()
         if not products:
             raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
 
         customer = request.user.id
-        if not customer:
-            serializer = ProductDetailSerializer(products, context={"request": request})
-            return Response(
-                data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK
-            )
-
-        recently_viewed_products = RecentlyViewedProducts.objects.filter(
-            customer_id=customer, product_id=products.id
-        ).first()
-        if not recently_viewed_products:
-            RecentlyViewedProducts.objects.create(
+        if customer:
+            RecentlyViewedProducts.objects.get_or_create(
                 customer_id=customer, product_id=products.id
             )
 
@@ -712,6 +789,9 @@ class ProductViewSet(ViewSet):
             )
         else:
             products = products.order_by(sort)
+
+        # Apply annotations and prefetches to eliminate N+1 queries
+        products = get_optimized_product_qs(products, request)
 
         return Response(
             data={
@@ -1355,16 +1435,19 @@ class FavouriteViewSet(ViewSet):
 
         if guest_favourite:
             with transaction.atomic():
-                for item in guest_favourite.all():
-                    favourite_item = Favourites.objects.filter(
-                        customer_id=customer, product=item.product
-                    ).first()
-
-                    if not favourite_item:
-                        Favourites.objects.create(
-                            customer_id=customer, product=item.product
-                        )
-                        item.delete()
+                existing_product_ids = set(
+                    Favourites.objects.filter(
+                        customer_id=customer
+                    ).values_list('product_id', flat=True)
+                )
+                new_favs = [
+                    Favourites(customer_id=customer, product=item.product)
+                    for item in guest_favourite
+                    if item.product_id not in existing_product_ids
+                ]
+                if new_favs:
+                    Favourites.objects.bulk_create(new_favs)
+                guest_favourite.delete()
         favourites = Favourites.objects.filter(customer_id=customer, product__is_active=True)
         resp = Response(
             data={
@@ -1429,24 +1512,29 @@ class CartViewSet(ViewSet):
 
         if guest_cart:
             with transaction.atomic():
+                existing_items = {
+                    ci.product_id: ci
+                    for ci in CartItem.objects.filter(cart_id=cart.id)
+                }
+                new_items = []
+                items_to_update = []
                 for item in guest_cart.cart_item.all():
-                    cart_item = CartItem.objects.filter(
-                        cart_id=cart.id, product=item.product
-                    ).first()
-
-                    if not cart_item:
-                        CartItem.objects.create(
-                            cart_id=cart.id,
-                            product=item.product,
-                            quantity=item.quantity,
+                    if item.product_id in existing_items:
+                        existing = existing_items[item.product_id]
+                        existing.quantity += item.quantity
+                        items_to_update.append(existing)
+                    else:
+                        new_items.append(
+                            CartItem(
+                                cart_id=cart.id,
+                                product=item.product,
+                                quantity=item.quantity,
+                            )
                         )
-                        item.delete()
-                        continue
-
-                    cart_item.quantity += item.quantity
-                    cart_item.save(update_fields=["quantity"])
-                    item.delete()
-
+                if new_items:
+                    CartItem.objects.bulk_create(new_items)
+                if items_to_update:
+                    CartItem.objects.bulk_update(items_to_update, ['quantity'])
                 guest_cart.delete()
 
             cart.refresh_from_db()
@@ -1615,13 +1703,10 @@ class CartViewSet(ViewSet):
 
         is_delete = bulk_serializer.validated_data.get("is_delete")
 
-        for cart_item in cart_items:
-            if is_delete is True:
-                cart_item.delete()
-                continue
-
-            cart_item.is_checked = bulk_serializer.validated_data.get("is_checked")
-            cart_item.save(update_fields=["is_checked"])
+        if is_delete is True:
+            cart_items.delete()
+        else:
+            cart_items.update(is_checked=bulk_serializer.validated_data.get("is_checked"))
 
         return Response(
             data={
@@ -2046,12 +2131,10 @@ class OrderViewSet(ViewSet):
                     message="Customer location not found",
                 )
 
-            customer_locatioins = CustomerAddresses.objects.filter(
+            # Bulk update: single query instead of loop
+            CustomerAddresses.objects.filter(
                 customer_id=request.user.id
-            ).exclude(id=customer_address_id)
-            for location in customer_locatioins:
-                location.is_default = False
-                location.save(update_fields=["is_default"])
+            ).exclude(id=customer_address_id).update(is_default=False)
 
             customer_location.is_default = True
             customer_location.save(update_fields=["is_default"])
@@ -2094,12 +2177,16 @@ class OrderViewSet(ViewSet):
                 order_location=customer_location,
             )
 
-        cart_items = CartItem.objects.filter(cart_id=cart.id).exclude(is_checked=False)
-        for cart_item in cart_items:
-            OrderItem.objects.create(
-                order=order, product=cart_item.product, quantity=cart_item.quantity
-            )
-            cart_item.delete()
+        # Bulk create OrderItems and delete CartItems in 2 queries instead of N*2
+        cart_items = CartItem.objects.filter(
+            cart_id=cart.id, is_checked=True
+        ).select_related('product')
+        order_items = [
+            OrderItem(order=order, product=item.product, quantity=item.quantity)
+            for item in cart_items
+        ]
+        OrderItem.objects.bulk_create(order_items)
+        cart_items.delete()
 
         payment_link = generate_link(
             order_id=order.id,
@@ -2160,6 +2247,10 @@ class OrderViewSet(ViewSet):
 
         orders = Order.objects.filter(
             Q(status=3) | Q(status=4), customer_id=request.user.id
+        ).prefetch_related(
+            Prefetch('order_items',
+                queryset=OrderItem.objects.select_related('product').prefetch_related('product__product_image')
+            ),
         ).order_by("-created_at")
         return Response(
             data={
@@ -2207,6 +2298,11 @@ class OrderViewSet(ViewSet):
         orders = (
             Order.objects.filter(customer_id=request.user.id)
             .exclude(Q(status=3) | Q(status=4))
+            .prefetch_related(
+                Prefetch('order_items',
+                    queryset=OrderItem.objects.select_related('product').prefetch_related('product__product_image')
+                ),
+            )
             .order_by("-created_at")
         )
         return Response(

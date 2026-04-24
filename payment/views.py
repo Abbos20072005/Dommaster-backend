@@ -633,7 +633,7 @@ class AtmosCardBindCheckoutView(APIView):
         if not access_token:
             return Response({"error": "Failed to authenticate"}, status=status.HTTP_400_BAD_REQUEST)
 
-        print("Access token obtained: ", access_token)
+        # Access token obtained for Atmos API
 
         request_id = str(uuid.uuid4())
         account = str(request.user.id)
@@ -722,7 +722,7 @@ class AtmosCardDetailView(APIView):
         if not access_token:
             return Response({"error": "Failed to authenticate"}, status=status.HTTP_400_BAD_REQUEST)
 
-        print("Access token obtained: ", access_token)
+        # Access token obtained for Atmos API
 
         # card = CustomerCard.objects.filter(card_id=card_id, user=request.user).first()
         # if not card:

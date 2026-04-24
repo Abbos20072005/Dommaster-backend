@@ -1,5 +1,6 @@
 from .models import ProductItemCategory, ProductSubCategory, ProductCategory, Product
 import requests
+import threading
 
 
 def build_breadcrumbs(obj):
@@ -22,24 +23,24 @@ def build_breadcrumbs(obj):
 
     return breadcrumbs
 
-import requests
 
 BOT_URL = "http://localhost:8080/send_order"  # your bot host/port
 SECRET_TOKEN = "supersecrettoken123"
 
-def send_telegram_message(order):
-    order_items = order.order_items.all()
+
+def _send_telegram_message_sync(order_id, customer_id, total_price, items_info):
+    """Internal synchronous function that runs in a separate thread."""
     message_lines = [
         f"<b>🛒 New Order Created</b>",
-        f"🆔 Order ID: {order.id}",
-        f"👤 Customer ID: {order.customer.id if order.customer else 'Unknown'}",
-        f"💰 Total Price: {order.total_price}",
+        f"🆔 Order ID: {order_id}",
+        f"👤 Customer ID: {customer_id}",
+        f"💰 Total Price: {total_price}",
         "📦 Items:"
     ]
 
-    for item in order_items:
+    for item_info in items_info:
         message_lines.append(
-            f" - {item.product.name} (Qty: {item.quantity}) | 👤 Manager: {item.product.telegram_id}"
+            f" - {item_info['name']} (Qty: {item_info['quantity']}) | 👤 Manager: {item_info['telegram_id']}"
         )
 
     message = "\n".join(message_lines)
@@ -54,7 +55,27 @@ def send_telegram_message(order):
     }
 
     try:
-        response = requests.post(BOT_URL, json=payload, headers=headers)
+        response = requests.post(BOT_URL, json=payload, headers=headers, timeout=10)
         response.raise_for_status()
     except Exception as e:
         print("❌ Failed to send message to bot:", str(e))
+
+
+def send_telegram_message(order):
+    """Send Telegram notification asynchronously to avoid blocking the request."""
+    order_items = order.order_items.select_related('product').all()
+    items_info = [
+        {
+            'name': item.product.name,
+            'quantity': item.quantity,
+            'telegram_id': item.product.telegram_id,
+        }
+        for item in order_items
+    ]
+
+    thread = threading.Thread(
+        target=_send_telegram_message_sync,
+        args=(order.id, order.customer_id, order.total_price, items_info),
+        daemon=True
+    )
+    thread.start()

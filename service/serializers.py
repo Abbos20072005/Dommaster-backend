@@ -9,6 +9,67 @@ from exceptions.error_messages import ErrorCodes
 from config import settings
 from base.serializers import PromocodeSerializer
 
+
+class TranslatedSerializerMixin:
+    """Mixin to resolve the current language from the request Accept-Language header."""
+    def get_language(self):
+        request = self.context.get('request')
+        lang = request.META.get('HTTP_ACCEPT_LANGUAGE', 'ru') if request else 'ru'
+        return lang if lang in settings.MODELTRANSLATION_LANGUAGES else 'ru'
+
+
+class ProductAnnotationMixin:
+    """
+    Mixin for product serializers that reads annotation-based fields
+    (_is_in_cart, _is_favourite, _cart_quantity) set at the queryset level
+    in views, eliminating N+1 queries. Falls back to per-object DB queries
+    if annotations are not present (e.g. single-object detail views).
+    """
+    def get_in_cart(self, obj):
+        if hasattr(obj, '_is_in_cart'):
+            return obj._is_in_cart
+        # Fallback for non-annotated querysets
+        request = self.context.get("request")
+        if not request:
+            return False
+        customer = getattr(request.user, 'id', None)
+        token = request.COOKIES.get("cart_token")
+        if customer:
+            return CartItem.objects.filter(cart__customer_id=customer, product=obj).exists()
+        elif token:
+            return CartItem.objects.filter(cart__cart_token=token, product=obj).exists()
+        return False
+
+    def get_is_favourite(self, obj):
+        if hasattr(obj, '_is_favourite'):
+            return obj._is_favourite
+        request = self.context.get("request")
+        if not request:
+            return False
+        customer = getattr(request.user, 'id', None)
+        fav_token = request.COOKIES.get("favourite_token")
+        if customer:
+            return Favourites.objects.filter(customer_id=customer, product=obj).exists()
+        elif fav_token:
+            return Favourites.objects.filter(favourite_token=fav_token, product=obj).exists()
+        return False
+
+    def get_in_cart_quantity(self, obj):
+        if hasattr(obj, '_cart_quantity'):
+            return obj._cart_quantity or 0
+        request = self.context.get("request")
+        if not request:
+            return 0
+        customer = getattr(request.user, 'id', None)
+        token = request.COOKIES.get("cart_token")
+        if customer:
+            cart_item = CartItem.objects.filter(cart__customer_id=customer, product_id=obj.id).first()
+            return cart_item.quantity if cart_item else 0
+        elif token:
+            cart_item = CartItem.objects.filter(cart__cart_token=token, product_id=obj.id).first()
+            return cart_item.quantity if cart_item else 0
+        return 0
+
 class OrderCreateSerializer(serializers.Serializer):
     promocode = serializers.CharField(max_length=15, required=False)
     payment_type = serializers.IntegerField(required=True)
@@ -104,13 +165,10 @@ class CommentReplyUpdateSerializer(serializers.ModelSerializer):
             "reply_comment"
         )
 
-class ServiceSerializer(serializers.ModelSerializer):
+class ServiceSerializer(TranslatedSerializerMixin, serializers.ModelSerializer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        request = self.context.get('request')
-        language = 'ru'
-        if request and request.META.get('HTTP_ACCEPT_LANGUAGE') in settings.MODELTRANSLATION_LANGUAGES:
-            language = request.META.get('HTTP_ACCEPT_LANGUAGE')
+        language = self.get_language()
         self.fields["name"] = serializers.CharField(source=f'name_{language}')
 
     class Meta:
@@ -121,13 +179,10 @@ class ServiceSerializer(serializers.ModelSerializer):
             "icon"
         )
 
-class ServiceDetailSerializer(serializers.ModelSerializer):
+class ServiceDetailSerializer(TranslatedSerializerMixin, serializers.ModelSerializer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        request = self.context.get('request')
-        language = 'ru'
-        if request and request.META.get('HTTP_ACCEPT_LANGUAGE') in settings.MODELTRANSLATION_LANGUAGES:
-            language = request.META.get('HTTP_ACCEPT_LANGUAGE')
+        language = self.get_language()
         self.fields["name"] = serializers.CharField(source=f'name_{language}')
         self.fields["description"] = serializers.CharField(source=f'description_{language}')
 
@@ -140,13 +195,10 @@ class ServiceDetailSerializer(serializers.ModelSerializer):
             "description"
         )
 
-class ProductCharacteristicsSerializer(serializers.ModelSerializer):
+class ProductCharacteristicsSerializer(TranslatedSerializerMixin, serializers.ModelSerializer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        request = self.context.get('request')
-        language = 'ru'
-        if request and request.META.get('HTTP_ACCEPT_LANGUAGE') in settings.MODELTRANSLATION_LANGUAGES:
-            language = request.META.get('HTTP_ACCEPT_LANGUAGE')
+        language = self.get_language()
         self.fields["name"] = serializers.CharField(source=f'name_{language}')
         self.fields["unit"] = serializers.CharField(source=f'unit_{language}')
         self.fields["value"] = serializers.CharField(source=f'value_{language}')
@@ -191,24 +243,18 @@ class CategoryAttributeSerializer(serializers.Serializer):
     values = CategoryAttributeValueSerializer(source="attribute_values", many=True, read_only=True)
 
 
-class ProductAttributeValueSerializer(serializers.Serializer):
+class ProductAttributeValueSerializer(TranslatedSerializerMixin, serializers.Serializer):
     attribute = serializers.SerializerMethodField()
     value = serializers.SerializerMethodField()
     attribute_id = serializers.IntegerField(source="attribute.id", read_only=True)
     value_id = serializers.IntegerField(source="attribute_value.id", read_only=True)
 
     def get_attribute(self, obj):
-        request = self.context.get('request')
-        language = 'ru'
-        if request and request.META.get('HTTP_ACCEPT_LANGUAGE') in settings.MODELTRANSLATION_LANGUAGES:
-            language = request.META.get('HTTP_ACCEPT_LANGUAGE')
+        language = self.get_language()
         return getattr(obj.attribute, f'name_{language}')
 
     def get_value(self, obj):
-        request = self.context.get('request')
-        language = 'ru'
-        if request and request.META.get('HTTP_ACCEPT_LANGUAGE') in settings.MODELTRANSLATION_LANGUAGES:
-            language = request.META.get('HTTP_ACCEPT_LANGUAGE')
+        language = self.get_language()
         return getattr(obj.attribute_value, f'value_{language}')
 
 
@@ -292,13 +338,10 @@ class SearchByNameSerializer(serializers.Serializer):
     name = serializers.CharField(required=False)
 
 
-class AddsBrandsDetailSerializer(serializers.ModelSerializer):
+class AddsBrandsDetailSerializer(TranslatedSerializerMixin, serializers.ModelSerializer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        request = self.context.get('request')
-        language = 'ru'
-        if request and request.META.get('HTTP_ACCEPT_LANGUAGE') in settings.MODELTRANSLATION_LANGUAGES:
-            language = request.META.get('HTTP_ACCEPT_LANGUAGE')
+        language = self.get_language()
         self.fields["title"] = serializers.CharField(source=f'title_{language}')
         self.fields["description"] = serializers.CharField(source=f'description_{language}')
 
@@ -446,7 +489,7 @@ class ProductCreateSerializer(serializers.ModelSerializer):
             "quantity"
         )
 
-class ProductDetailSerializer(serializers.Serializer):
+class ProductDetailSerializer(ProductAnnotationMixin, serializers.Serializer):
     id = serializers.IntegerField()
     name = serializers.CharField()
     description = serializers.CharField()
@@ -465,62 +508,14 @@ class ProductDetailSerializer(serializers.Serializer):
     characteristics = ProductCharacteristicsSerializer(source="product_characteristics", many=True, read_only=True)
     images = ProductImageSerializer(source="product_image", many=True, read_only=True)
 
-    def get_in_cart_quantity(self, obj):
-        request = self.context.get("request")
-        if not request:
-            return 0
-
-        customer = getattr(request.user, 'id', None)
-        token = request.COOKIES.get("cart_token")
-
-        if customer:
-            cart_item = obj.cart_product.filter(cart__customer_id=customer).first()
-            return cart_item.quantity if cart_item else 0
-        elif token:
-            cart_item = obj.cart_product.filter(cart__cart_token=token).first()
-            return cart_item.quantity if cart_item else 0
-        return 0
-
     def get_breadcrumbs(self, obj):
         return obj.get_breadcrumbs()
 
-    def get_in_cart(self, obj):
-        request = self.context.get("request")
-        if not request:
-            return False
 
-        customer = getattr(request.user, 'id', None)
-        token = request.COOKIES.get("cart_token")
-
-        if customer:
-            return CartItem.objects.filter(cart__customer_id=customer, product=obj).exists()
-        elif token:
-            return CartItem.objects.filter(cart__cart_token=token, product=obj).exists()
-        return False
-
-    def get_is_favourite(self, obj):
-        request = self.context.get("request")
-        if not request:
-            return False
-
-        customer = getattr(request.user, 'id', None)
-        fav_token = request.COOKIES.get("favourite_token")
-
-        if customer:
-            return Favourites.objects.filter(customer_id=customer, product=obj).exists()
-        elif fav_token:
-            return Favourites.objects.filter(favourite_token=fav_token, product=obj).exists()
-        return False
-    
-
-
-class ProductSerializer(serializers.ModelSerializer):
+class ProductSerializer(ProductAnnotationMixin, TranslatedSerializerMixin, serializers.ModelSerializer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        request = self.context.get('request')
-        language = 'ru'
-        if request and request.META.get('HTTP_ACCEPT_LANGUAGE') in settings.MODELTRANSLATION_LANGUAGES:
-            language = request.META.get('HTTP_ACCEPT_LANGUAGE')
+        language = self.get_language()
         self.fields["name"] = serializers.CharField(source=f'name_{language}')
         self.fields["description"] = serializers.CharField(source=f'description_{language}')
 
@@ -560,51 +555,7 @@ class ProductSerializer(serializers.ModelSerializer):
     def get_breadcrumbs(self, obj):
         return obj.get_breadcrumbs()
 
-    def get_in_cart(self, obj):
-        request = self.context.get("request")
-        if not request:
-            return False
-
-        customer = getattr(request.user, 'id', None)
-        token = request.COOKIES.get("cart_token")
-
-        if customer:
-            return CartItem.objects.filter(cart__customer_id=customer, product=obj).exists()
-        elif token:
-            return CartItem.objects.filter(cart__cart_token=token, product=obj).exists()
-        return False
-
-    def get_is_favourite(self, obj):
-        request = self.context.get("request")
-        if not request:
-            return False
-
-        customer = getattr(request.user, 'id', None)
-        fav_token = request.COOKIES.get("favourite_token")
-
-        if customer:
-            return Favourites.objects.filter(customer_id=customer, product=obj).exists()
-        elif fav_token:
-            return Favourites.objects.filter(favourite_token=fav_token, product=obj).exists()
-        return False
-
-    def get_in_cart_quantity(self, obj):
-        request = self.context.get("request")
-        if not request:
-            return 0
-
-        customer = getattr(request.user, 'id', None)
-        token = request.COOKIES.get("cart_token")
-
-        if customer:
-            cart_item = CartItem.objects.filter(cart__customer_id=customer, product_id=obj.id).first()
-            return cart_item.quantity if cart_item else 0
-        elif token:
-            cart_item = CartItem.objects.filter(cart__cart_token=token, product_id=obj.id).first()
-            return cart_item.quantity if cart_item else 0
-        return 0
-
-class ProductShortSerializer(serializers.Serializer):
+class ProductShortSerializer(ProductAnnotationMixin, serializers.Serializer):
     id = serializers.IntegerField()
     name = serializers.CharField()
     is_favourite = serializers.SerializerMethodField()
@@ -617,50 +568,6 @@ class ProductShortSerializer(serializers.Serializer):
     discount = serializers.IntegerField()
     discount_price = serializers.FloatField()
     images = ProductImageSerializer(source="product_image", many=True, read_only=True)
-
-    def get_in_cart_quantity(self, obj):
-        request = self.context.get("request")
-        if not request:
-            return 0
-
-        customer = getattr(request.user, 'id', None)
-        token = request.COOKIES.get("cart_token")
-
-        if customer:
-            cart_item = CartItem.objects.filter(cart__customer_id=customer, product_id=obj.id).first()
-            return cart_item.quantity if cart_item else 0
-        elif token:
-            cart_item = CartItem.objects.filter(cart__cart_token=token, product_id=obj.id).first()
-            return cart_item.quantity if cart_item else 0
-        return 0
-
-    def get_in_cart(self, obj):
-        request = self.context.get("request")
-        if not request:
-            return False
-
-        customer = getattr(request.user, 'id', None)
-        token = request.COOKIES.get("cart_token")
-
-        if customer:
-            return CartItem.objects.filter(cart__customer_id=customer, product=obj).exists()
-        elif token:
-            return CartItem.objects.filter(cart__cart_token=token, product=obj).exists()
-        return False
-
-    def get_is_favourite(self, obj):
-        request = self.context.get("request")
-        if not request:
-            return False
-
-        customer = getattr(request.user, 'id', None)
-        fav_token = request.COOKIES.get("favourite_token")
-
-        if customer:
-            return Favourites.objects.filter(customer_id=customer, product=obj).exists()
-        elif fav_token:
-            return Favourites.objects.filter(favourite_token=fav_token, product=obj).exists()
-        return False
 
 class RecentlyViewedProductsSerializer(serializers.ModelSerializer):
     product = ProductSerializer(read_only=True)
@@ -785,13 +692,10 @@ class SaleMainSerializer(serializers.ModelSerializer):
         )
 
 
-class BrandDetailSerializer(serializers.ModelSerializer):
+class BrandDetailSerializer(TranslatedSerializerMixin, serializers.ModelSerializer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        request = self.context.get('request')
-        language = 'ru'
-        if request and request.META.get('HTTP_ACCEPT_LANGUAGE') in settings.MODELTRANSLATION_LANGUAGES:
-            language = request.META.get('HTTP_ACCEPT_LANGUAGE')
+        language = self.get_language()
         self.fields["name"] = serializers.CharField(source=f'name_{language}')
 
     products_count = serializers.IntegerField(read_only=True)
@@ -829,13 +733,10 @@ class ProductCategoryFilterSerializer(serializers.Serializer):
         qs = obj.product_category.filter(product_sub_category__product_item_category__id__isnull=False).distinct()
         return ProductSubCategoryFilterSerializer(qs, many=True, context=self.context).data
 
-class ProductItemCategorySerializer(serializers.ModelSerializer):
+class ProductItemCategorySerializer(TranslatedSerializerMixin, serializers.ModelSerializer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        request = self.context.get('request')
-        language = 'ru'
-        if request and request.META.get('HTTP_ACCEPT_LANGUAGE') in settings.MODELTRANSLATION_LANGUAGES:
-            language = request.META.get('HTTP_ACCEPT_LANGUAGE')
+        language = self.get_language()
         self.fields["name"] = serializers.CharField(source=f'name_{language}')
 
     breadcrumbs = serializers.SerializerMethodField()
@@ -858,13 +759,10 @@ class ProductItemCategorySerializer(serializers.ModelSerializer):
         return obj.get_breadcrumbs()
 
 
-class ProductSubCategorySerializer(serializers.ModelSerializer):
+class ProductSubCategorySerializer(TranslatedSerializerMixin, serializers.ModelSerializer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        request = self.context.get('request')
-        language = 'ru'
-        if request and request.META.get('HTTP_ACCEPT_LANGUAGE') in settings.MODELTRANSLATION_LANGUAGES:
-            language = request.META.get('HTTP_ACCEPT_LANGUAGE')
+        language = self.get_language()
         self.fields["name"] = serializers.CharField(source=f'name_{language}')
 
     product_item_categories = ProductItemCategorySerializer(source="product_sub_category", many=True, read_only=True)
@@ -883,13 +781,10 @@ class ProductSubCategorySerializer(serializers.ModelSerializer):
     def get_breadcrumbs(self, obj):
         return obj.get_breadcrumbs()
 
-class ProductCategorySearchSerializer(serializers.ModelSerializer):
+class ProductCategorySearchSerializer(TranslatedSerializerMixin, serializers.ModelSerializer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        request = self.context.get('request')
-        language = 'ru'
-        if request and request.META.get('HTTP_ACCEPT_LANGUAGE') in settings.MODELTRANSLATION_LANGUAGES:
-            language = request.META.get('HTTP_ACCEPT_LANGUAGE')
+        language = self.get_language()
         self.fields["name"] = serializers.CharField(source=f'name_{language}')
 
     class Meta:
@@ -900,13 +795,10 @@ class ProductCategorySearchSerializer(serializers.ModelSerializer):
             "image"
         )
 
-class ProductCategorySerializer(serializers.ModelSerializer):
+class ProductCategorySerializer(TranslatedSerializerMixin, serializers.ModelSerializer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        request = self.context.get('request')
-        language = 'ru'
-        if request and request.META.get('HTTP_ACCEPT_LANGUAGE') in settings.MODELTRANSLATION_LANGUAGES:
-            language = request.META.get('HTTP_ACCEPT_LANGUAGE')
+        language = self.get_language()
         self.fields["name"] = serializers.CharField(source=f'name_{language}')
 
     sub_categories = ProductSubCategorySerializer(source="product_category", many=True, read_only=True)

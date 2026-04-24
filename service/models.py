@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import F, Sum, Case, When, FloatField as DjangoFloatField, Value
 from rest_framework.reverse import reverse_lazy
 
 from abstract_model.base_model import BaseModel
@@ -78,6 +79,9 @@ class Order(BaseModel):
     class Meta:
         verbose_name = "Заказ"
         verbose_name_plural = "Заказы"
+        indexes = [
+            models.Index(fields=['customer', 'status'], name='idx_order_cust_status'),
+        ]
 
 
 class ProductCategory(BaseModel):
@@ -217,7 +221,7 @@ class Product(BaseModel):
         )
         self.rating = round(agg_data["avg_rating"], 1) if agg_data.get("avg_rating") else 0.0
         self.comments_quantity = agg_data["count_comments"] or 0
-        self.save()
+        self.save(update_fields=["rating", "comments_quantity"])
 
     def update_questions(self):
         from django.db.models import Count
@@ -225,7 +229,7 @@ class Product(BaseModel):
             count_questions=Count("id")
         )
         self.questions_quantity = agg_data["count_questions"] or 0
-        self.save()
+        self.save(update_fields=["questions_quantity"])
 
     class Meta:
         verbose_name = "Продукт"
@@ -235,6 +239,9 @@ class Product(BaseModel):
             GinIndex(fields=['name_uz'], opclasses=['gin_trgm_ops'], name='idx_product_name_uz_trgm'),
             GinIndex(fields=['name_ru'], opclasses=['gin_trgm_ops'], name='idx_product_name_ru_trgm'),
             GinIndex(fields=['name_en'], opclasses=['gin_trgm_ops'], name='idx_product_name_en_trgm'),
+            models.Index(fields=['is_active'], name='idx_product_is_active'),
+            models.Index(fields=['brand'], name='idx_product_brand'),
+            models.Index(fields=['product_item_category'], name='idx_product_item_cat'),
         ]
 
 
@@ -246,14 +253,18 @@ class Favourites(BaseModel):
     def __str__(self):
         return str(self.id)
 
-    def save(self, *args, force_insert=False, force_update=False, using=None, update_fields=None):
+    def save(self, *args, **kwargs):
         if not self.favourite_token:
             self.favourite_token = secrets.token_hex(16)
-        return super().save(*args, force_insert=False, force_update=False, using=None, update_fields=None)
+        return super().save(*args, **kwargs)
 
     class Meta:
         verbose_name = "Избранный"
         verbose_name_plural = "Избранные"
+        indexes = [
+            models.Index(fields=['customer', 'product'], name='idx_fav_cust_prod'),
+            models.Index(fields=['favourite_token'], name='idx_fav_token'),
+        ]
 
 
 class Announcements(BaseModel):
@@ -310,6 +321,9 @@ class Comment(BaseModel):
     class Meta:
         verbose_name = "Коментарий"
         verbose_name_plural = "Коментарии"
+        indexes = [
+            models.Index(fields=['product'], name='idx_comment_product'),
+        ]
 
 
 class CommentReply(BaseModel):
@@ -336,7 +350,7 @@ class CommentImages(BaseModel):
     image = models.ImageField(upload_to="comment/images/", verbose_name="Изображение")
 
     def __str__(self):
-        return str("id")
+        return str(self.id)
 
     class Meta:
         verbose_name = "Изображение комментария"
@@ -442,30 +456,46 @@ class Cart(BaseModel):
     products_total_price = models.FloatField(default=0.0, verbose_name="Общая стоимость продуктов")
 
     def total_items(self):
-        return sum(item.quantity for item in self.cart_item.all())
+        return self.cart_item.aggregate(total=Sum('quantity'))['total'] or 0
 
     def calculate_total_price(self):
-        total = 0.0
-        saved_price_total = 0.0
-        products_total_price = 0.0
-        for item in self.cart_item.all():
-            if item.is_checked is True and item.product and item.product.discount_price:
-                total += item.product.discount_price * item.quantity
-                saved_price_total += (item.product.price - item.product.discount_price) * item.quantity
-                products_total_price += item.product.price * item.quantity
-            elif item.is_checked is True and item.product:
-                total += item.product.price * item.quantity
-                products_total_price += item.product.price * item.quantity
-
-        self.total_price = total
-        self.saved_price = saved_price_total
-        self.products_total_price = products_total_price
+        agg = self.cart_item.filter(
+            is_checked=True, product__isnull=False
+        ).aggregate(
+            total=Sum(
+                Case(
+                    When(
+                        product__discount_price__isnull=False,
+                        then=F('product__discount_price') * F('quantity')
+                    ),
+                    default=F('product__price') * F('quantity'),
+                    output_field=DjangoFloatField()
+                )
+            ),
+            saved=Sum(
+                Case(
+                    When(
+                        product__discount_price__isnull=False,
+                        then=(F('product__price') - F('product__discount_price')) * F('quantity')
+                    ),
+                    default=Value(0.0),
+                    output_field=DjangoFloatField()
+                )
+            ),
+            products_total=Sum(
+                F('product__price') * F('quantity'),
+                output_field=DjangoFloatField()
+            )
+        )
+        self.total_price = agg['total'] or 0.0
+        self.saved_price = agg['saved'] or 0.0
+        self.products_total_price = agg['products_total'] or 0.0
         return self.total_price, self.saved_price, self.products_total_price
 
-    def save(self, *args, force_insert=False, force_update=False, using=None, update_fields=None):
+    def save(self, *args, **kwargs):
         if not self.cart_token:
             self.cart_token = secrets.token_hex(16)
-        return super().save(*args, force_insert=False, force_update=False, using=None, update_fields=None)
+        return super().save(*args, **kwargs)
 
     def __str__(self):
         return str(self.id)

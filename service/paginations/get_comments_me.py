@@ -1,11 +1,10 @@
 from service.serializers import CommentSerializer
 from django.core.paginator import Paginator
-from django.db.models import Count
 
 def get_comments_me_paginator(context: dict, response_data ,page: int, page_size: int):
-    total_count = response_data.aggregate(total_count=Count('id'))['total_count']
     paginator = Paginator(response_data, page_size)
     comments_me_page = paginator.get_page(page)
+    total_count = paginator.count
 
     responses = {
         "totalElements": total_count,

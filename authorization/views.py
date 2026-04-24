@@ -114,7 +114,7 @@ class AuthViewSet(ViewSet):
         serializer_customer.save()
         all_otp = OTP.objects.filter(customer_id=customer_none.id)
         last_otp = all_otp.order_by("-created_at").first()
-        if len(all_otp) >= 3 and last_otp.created_at > datetime.now() - timedelta(hours=12):
+        if all_otp.count() >= 3 and last_otp.created_at > datetime.now() - timedelta(hours=12):
             raise CustomApiException(error_code=ErrorCodes.ATTEMPT_ALREADY_EXISTS,
                                      time=last_otp.created_at + timedelta(hours=12))
 
@@ -127,7 +127,7 @@ class AuthViewSet(ViewSet):
         otp.save()
 
         latest_otp = all_otp.order_by("-created_at").exclude(otp_key=otp.otp_key).first()
-        if latest_otp and latest_otp.created_at < datetime.now() - timedelta(hours=12) and len(all_otp) >= 2:
+        if latest_otp and latest_otp.created_at < datetime.now() - timedelta(hours=12) and all_otp.count() >= 2:
             all_otp.exclude(otp_key=otp.otp_key).delete()
 
         message = (
@@ -225,7 +225,7 @@ class AuthViewSet(ViewSet):
 
         all_otp = OTP.objects.filter(customer_id=customer.id)
         last_otp = all_otp.order_by("-created_at").first()
-        if len(all_otp) >= 3 and last_otp.created_at > datetime.now() - timedelta(hours=12):
+        if all_otp.count() >= 3 and last_otp.created_at > datetime.now() - timedelta(hours=12):
             raise CustomApiException(error_code=ErrorCodes.ATTEMPT_ALREADY_EXISTS,
                                      time=last_otp.created_at + timedelta(hours=12))
 
@@ -235,7 +235,7 @@ class AuthViewSet(ViewSet):
         otp.save()
 
         latest_otp = all_otp.order_by("-created_at").exclude(otp_key=otp.otp_key).first()
-        if latest_otp and latest_otp.created_at < datetime.now() - timedelta(hours=12) and len(all_otp) >= 2:
+        if latest_otp and latest_otp.created_at < datetime.now() - timedelta(hours=12) and all_otp.count() >= 2:
             all_otp.exclude(otp_key=otp.otp_key).delete()
 
         message = (
@@ -350,11 +350,9 @@ class AuthViewSet(ViewSet):
 
         #TODO: need to add the .exclude() to CustomerAddresses query on line 338
         if data.get("is_default") and data.get("is_default") is True:
-            customer_addresses = CustomerAddresses.objects.filter(customer=request.user.id)
-            for address in customer_addresses:
-                if address and address.id != pk:
-                    address.is_default = False
-                    address.save(update_fields=["is_default"])
+            CustomerAddresses.objects.filter(
+                customer=request.user.id
+            ).exclude(id=pk).update(is_default=False)
 
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_202_ACCEPTED)
 
@@ -460,7 +458,7 @@ class OTPViewSet(ViewSet):
         all_otp = otp_check.customer.otp_set.all()
 
         last_otp = all_otp.order_by("-created_at").first()
-        if len(all_otp) >= 3 and last_otp.created_at > datetime.now() - timedelta(hours=12):
+        if all_otp.count() >= 3 and last_otp.created_at > datetime.now() - timedelta(hours=12):
             raise CustomApiException(error_code=ErrorCodes.ATTEMPT_ALREADY_EXISTS,
                                      time=last_otp.created_at + timedelta(hours=12))
 
@@ -482,7 +480,7 @@ class OTPViewSet(ViewSet):
         otp.save()
 
         latest_otp = all_otp.order_by("-created_at").exclude(otp_key=otp.otp_key).first()
-        if latest_otp and latest_otp.created_at < datetime.now() - timedelta(hours=12) and len(all_otp) >= 2:
+        if latest_otp and latest_otp.created_at < datetime.now() - timedelta(hours=12) and all_otp.count() >= 2:
             all_otp.exclude(otp_key=otp.otp_key).delete()
 
         message = (
