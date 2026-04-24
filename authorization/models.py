@@ -16,6 +16,11 @@ class Customer(BaseModel):
     def __str__(self):
         return self.full_name
 
+    @property
+    def is_authenticated(self):
+        """Required by DRF throttling to distinguish authenticated vs anonymous users."""
+        return True
+
     class Meta:
         verbose_name = "Клиент"
         verbose_name_plural = "Клиенты"
