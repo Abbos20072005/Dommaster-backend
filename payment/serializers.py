@@ -2,7 +2,7 @@ from django.conf import settings
 from rest_framework import serializers
 from rest_framework.response import Response
 
-from .models import MerchatTransactionsModel, AccountModel, UzumBankTransactionsModel
+from .models import MerchatTransactionsModel, AccountModel, UzumBankTransactionsModel, CustomerCard
 from .utils.exception_payme import IncorrectAmount, PerformTransactionDoesNotExist
 from .utils.exception_uzumbank import UzumBankAPIException, ErrorCode
 from .utils.logger import logged
@@ -10,27 +10,8 @@ from service.models import Order
 
 class CreateHoldSerializer(serializers.Serializer):
     order_id = serializers.IntegerField()
-    card_token = serializers.CharField(required=False)
-    card_number = serializers.CharField(required=False)
-    card_expiry = serializers.CharField(required=False)
+    card_id = serializers.IntegerField()
     duration = serializers.CharField(default="60")
-
-    def validate(self, attrs):
-        card_token = attrs.get("card_token")
-        card_number = attrs.get("card_number")
-        card_expiry = attrs.get("card_expiry")
-
-        if not card_token and not (card_number and card_expiry):
-            raise serializers.ValidationError(
-                "Provide either card_token or both card_number and card_expiry"
-            )
-
-        if card_token and (card_number or card_expiry):
-            raise serializers.ValidationError(
-                "Provide either card_token or card_number/card_expiry, not both"
-            )
-
-        return attrs
 
     def validate_order_id(self, value):
         try:
@@ -352,3 +333,22 @@ class TransactionResponseSerializer(serializers.ModelSerializer):
         model = UzumBankTransactionsModel
         fields = ['trans_id', 'order_id', 'amount', 'status', 'trans_time',
                   'confirm_time', 'reverse_time']
+
+
+class CustomerCardSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    card_id = serializers.CharField()
+    pan = serializers.CharField()
+    card_holder = serializers.CharField()
+    expiry = serializers.CharField()
+    is_default = serializers.BooleanField()
+    created_at = serializers.DateTimeField()
+
+
+class CustomerCardUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomerCard
+        fields = (
+            "id",
+            "is_default",
+        )

@@ -4,8 +4,8 @@ from unfold.admin import ModelAdmin
 
 @admin.register(CustomerCard)
 class CustomerCardAdmin(ModelAdmin):
-    list_display = ('id', 'user', 'card_id', 'is_active')
-    list_filter = ('user', 'card_id', 'is_active')
+    list_display = ('id', 'user', 'card_id', 'is_default', 'is_active')
+    list_filter = ('user', 'card_id', 'is_default', 'is_active')
     search_fields = ('user', 'card_id')
     ordering = ('-created_at',)
 

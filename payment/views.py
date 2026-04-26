@@ -29,7 +29,9 @@ from .serializers import (
     CreateHoldSerializer,
     ApplyHoldSerializer,
     ChargeHoldSerializer,
-    CancelHoldSerializer
+    CancelHoldSerializer,
+    CustomerCardSerializer,
+    CustomerCardUpdateSerializer
 )
 from .services import UzumBankService, UzumBankErrors
 from .utils.exception_click import ClickErrorCode, ClickError
@@ -42,6 +44,8 @@ from .services_pay.auth_services import AtmosAuthService, AtmosHoldService, Atmo
 import os
 import uuid
 from authorization.models import Customer
+from exceptions.error_exception import CustomApiException
+from exceptions.error_messages import ErrorCodes
 
 
 class PreparePaymentView(APIView):
@@ -763,19 +767,21 @@ class AtmosCreateHoldView(APIView):
     )
     def post(self, request):
         order_id = request.data.get("order_id")
-        card_token = request.data.get("card_token")
-        card_number = request.data.get("card_number")
-        card_expiry = request.data.get("card_expiry")
+        card_id = request.data.get("card_id")
         duration = request.data.get("duration", "60")  # default 60 mins
 
         if not order_id:
             return Response({"error": "order_id is required"}, status=status.HTTP_400_BAD_REQUEST)
 
-        if not card_token and not (card_number and card_expiry):
-            return Response(
-                {"error": "Provide either card_token or both card_number and card_expiry"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        if not card_id:
+            return Response({"error": "card_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        card = CustomerCard.objects.filter(id=card_id, user=request.user.id, is_active=True).first()
+        if not card:
+            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
+
+        if not card.token:
+            return Response({"error": "Card token not found"}, status=status.HTTP_400_BAD_REQUEST)
 
         order = Order.objects.filter(id=order_id).first()
         if not order:
@@ -795,9 +801,7 @@ class AtmosCreateHoldView(APIView):
                     account=order.id,
                     amount=int(order.total_price * 100),  # in tiins
                     duration=int(duration),
-                    card_token=card_token,
-                    card_number=card_number,
-                    card_expiry=card_expiry,
+                    card_token=card.token,
                 )
         except Exception as e:
             return Response({"error": f"{e}"}, status=status.HTTP_400_BAD_REQUEST)
@@ -829,7 +833,7 @@ class AtmosApplyHoldView(APIView):
             return Response({"error": "Failed to authenticate"}, status=status.HTTP_400_BAD_REQUEST)
 
         order_id = request.data.get("order_id")
-        otp = request.data.get("otp")
+        otp = request.data.get("otp", "111111")
 
         if not order_id or not otp:
             return Response({"error": "order_id and otp are required"}, status=status.HTTP_400_BAD_REQUEST)
@@ -968,3 +972,73 @@ class AtmosCancelHoldView(APIView):
         order.save()
 
         return Response({"message": "Hold cancelled, funds released"}, status=status.HTTP_200_OK)
+
+
+class CustomerCardViewSet(ViewSet):
+    @swagger_auto_schema(
+        operation_summary="Get customer cards list",
+        operation_description="Get customer cards list",
+        responses={200: CustomerCardSerializer(many=True)},
+        tags=["CustomerCard"],
+    )
+    def cards_list(self, request):
+        cards = CustomerCard.objects.filter(user=request.user.id, is_active=True)
+        serializer = CustomerCardSerializer(cards, many=True, context={"request": request})
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        operation_summary="Get customer card detail",
+        operation_description="Get customer card detail",
+        responses={200: CustomerCardSerializer()},
+        tags=["CustomerCard"],
+    )
+    def card_detail(self, request, pk):
+        card = CustomerCard.objects.filter(id=pk, user=request.user.id, is_active=True).first()
+        if not card:
+            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
+
+        serializer = CustomerCardSerializer(card, context={"request": request})
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        operation_summary="Update customer card",
+        operation_description="Update customer card",
+        request_body=CustomerCardUpdateSerializer(),
+        responses={202: CustomerCardUpdateSerializer()},
+        tags=["CustomerCard"],
+    )
+    def card_update(self, request, pk):
+        data = request.data
+        card = CustomerCard.objects.filter(id=pk, user=request.user.id, is_active=True).first()
+        if not card:
+            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
+
+        serializer = CustomerCardUpdateSerializer(card, data=data, partial=True, context={"request": request})
+        if not serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
+
+        serializer.save()
+
+        if data.get("is_default") and data.get("is_default") is True:
+            CustomerCard.objects.filter(
+                user=request.user.id, is_active=True
+            ).exclude(id=pk).update(is_default=False)
+
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_202_ACCEPTED)
+
+    @swagger_auto_schema(
+        operation_summary="Delete customer card",
+        operation_description="Delete customer card",
+        responses={204: "Customer card successfully deleted"},
+        tags=["CustomerCard"],
+    )
+    def card_delete(self, request, pk):
+        card = CustomerCard.objects.filter(id=pk, user=request.user.id, is_active=True).first()
+        if not card:
+            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
+
+        card.is_active = False
+        card.is_default = False
+        card.save(update_fields=["is_active", "is_default"])
+        return Response(data={"result": "Customer card successfully deleted", "ok": True},
+                        status=status.HTTP_204_NO_CONTENT)

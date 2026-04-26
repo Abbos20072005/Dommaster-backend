@@ -14,7 +14,8 @@ from .views import (
     AtmosCancelHoldView,
     AtmosCardDetailView,
     AtmosCardBindCheckoutView,
-    AtmosCardBindCallbackView
+    AtmosCardBindCallbackView,
+    CustomerCardViewSet
 )
 
 urlpatterns = [
@@ -36,4 +37,7 @@ urlpatterns = [
     path("payment/hold/apply/", AtmosApplyHoldView.as_view()),
     path("payment/hold/charge/", AtmosChargeHoldView.as_view()),
     path("payment/hold/cancel/", AtmosCancelHoldView.as_view()),
+
+    path("customer/cards/", CustomerCardViewSet.as_view({"get": "cards_list"}), name="customer-cards-list"),
+    path("customer/cards/<int:pk>/", CustomerCardViewSet.as_view({"get": "card_detail", "patch": "card_update", "delete": "card_delete"}), name="customer-card-detail"),
 ]

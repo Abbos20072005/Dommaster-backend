@@ -92,10 +92,11 @@ class CustomerCard(models.Model):
     card_holder = models.CharField(max_length=255, blank=True, null=True)
     expiry = models.CharField(max_length=10, blank=True, null=True)
     is_active = models.BooleanField(default=True)
+    is_default = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ["-created_at"]
+        ordering = ["-is_default", "-created_at"]
 
     def __str__(self):
         return f"{self.user} — {self.pan or self.card_id}"
