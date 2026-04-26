@@ -811,11 +811,27 @@ class AtmosCreateHoldView(APIView):
 
         # save hold_id to order
         order.hold_id = data.get("hold_id")
+
+        try:
+            apply_data = AtmosHoldService.apply_hold(
+                access_token=access_token,
+                hold_id=order.hold_id,
+                otp="111111",
+            )
+        except Exception as e:
+            return Response({"error": f"Failed to apply hold: {e}"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if apply_data.get("result", {}).get("code") != "OK":
+            return Response(apply_data, status=status.HTTP_400_BAD_REQUEST)
+
+        # funds are now frozen
+        order.payment_status = 1
         order.save()
 
         return Response({
-            "hold_id": data.get("hold_id"),
-            "message": "OTP sent to card holder"
+            "message": "Funds frozen successfully",
+            "hold_id": order.hold_id,
+            "hold_till": apply_data.get("hold_till"),
         }, status=status.HTTP_200_OK)
 
 
