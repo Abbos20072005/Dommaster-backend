@@ -775,6 +775,9 @@ class AtmosCreateHoldView(APIView):
         order_id = request.data.get("order_id")
         duration = request.data.get("duration", "60")  # default 60 mins
 
+        access_token = AtmosAuthService.get_access_token()
+        print("access_token :", access_token)
+
         if not order_id:
             return Response({"error": "order_id is required"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -796,8 +799,6 @@ class AtmosCreateHoldView(APIView):
             )
         
         try:
-            access_token = AtmosAuthService.get_access_token()
-            print("access_token :", access_token)
             data = AtmosHoldService.create_hold(
                     access_token=access_token,
                     store_id=int(os.environ["ATMOS_STORE_ID"]),
