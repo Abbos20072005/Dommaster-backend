@@ -698,6 +698,8 @@ class AtmosCardBindCallbackView(APIView):
 
         matched_card = next((card for card in cards_data if str(card.get("card_id")) == str(card_id)), None)
 
+        has_cards = CustomerCard.objects.filter(user=user, is_active=True).exists()
+
         card_info, created = CustomerCard.objects.update_or_create(
             card_id=str(card_id),
             defaults={
@@ -710,6 +712,10 @@ class AtmosCardBindCallbackView(APIView):
                 "is_active": True,
             }
         )
+
+        if created and not has_cards:
+            card_info.is_default = True
+            card_info.save(update_fields=["is_default"])
 
         return Response({"status": 1, "message": "Успешно"}, status=status.HTTP_200_OK)
 
