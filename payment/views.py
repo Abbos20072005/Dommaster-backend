@@ -797,6 +797,7 @@ class AtmosCreateHoldView(APIView):
         
         try:
             access_token = AtmosAuthService.get_access_token()
+            print("access_token :", access_token)
             data = AtmosHoldService.create_hold(
                     access_token=access_token,
                     store_id=int(os.environ["ATMOS_STORE_ID"]),
