@@ -776,9 +776,9 @@ class AtmosCreateHoldView(APIView):
         if not card_id:
             return Response({"error": "card_id is required"}, status=status.HTTP_400_BAD_REQUEST)
 
-        card = CustomerCard.objects.filter(id=card_id, user=request.user.id, is_active=True).first()
+        card = CustomerCard.objects.filter(id=card_id, user_id=request.user.id, is_active=True).first()
         if not card:
-            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
+            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND, message="Customer card not found")
 
         if not card.token:
             return Response({"error": "Card token not found"}, status=status.HTTP_400_BAD_REQUEST)
