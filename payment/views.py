@@ -773,16 +773,12 @@ class AtmosCreateHoldView(APIView):
     )
     def post(self, request):
         order_id = request.data.get("order_id")
-        card_id = request.data.get("card_id")
         duration = request.data.get("duration", "60")  # default 60 mins
 
         if not order_id:
             return Response({"error": "order_id is required"}, status=status.HTTP_400_BAD_REQUEST)
 
-        if not card_id:
-            return Response({"error": "card_id is required"}, status=status.HTTP_400_BAD_REQUEST)
-
-        card = CustomerCard.objects.filter(id=card_id, user_id=request.user.id, is_active=True).first()
+        card = CustomerCard.objects.filter(user_id=request.user.id, is_active=True, is_default=True).first()
         if not card:
             raise CustomApiException(error_code=ErrorCodes.NOT_FOUND, message="Customer card not found")
 
@@ -830,7 +826,6 @@ class AtmosCreateHoldView(APIView):
         if apply_data.get("result", {}).get("code") != "OK":
             return Response(apply_data, status=status.HTTP_400_BAD_REQUEST)
 
-        # funds are now frozen
         order.payment_status = 1
         order.save()
 

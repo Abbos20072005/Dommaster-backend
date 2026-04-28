@@ -10,7 +10,6 @@ from service.models import Order
 
 class CreateHoldSerializer(serializers.Serializer):
     order_id = serializers.IntegerField()
-    card_id = serializers.IntegerField()
     duration = serializers.CharField(default="60")
 
     def validate_order_id(self, value):
