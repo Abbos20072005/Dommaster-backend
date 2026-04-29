@@ -9,10 +9,8 @@ from .views import (
     UzumBankReverseView,
     UzumBankStatusView,
     AtmosCreateHoldView,
-    AtmosApplyHoldView,
     AtmosChargeHoldView,
     AtmosCancelHoldView,
-    AtmosCardDetailView,
     AtmosCardBindCheckoutView,
     AtmosCardBindCallbackView,
     CustomerCardViewSet
