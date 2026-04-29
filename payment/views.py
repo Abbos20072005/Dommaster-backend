@@ -19,7 +19,7 @@ from .methods.check_transaction import CheckTransaction
 from .methods.create_transaction import CreateTransaction
 from .methods.get_statement_transaction import GetStatement
 from .methods.perform_transaction import PerformTransaction
-from .models import ClickTransaction, UzumBankTransactionsModel, CustomerCard
+from .models import ClickTransaction, UzumBankTransactionsModel, CustomerCard, AtmosTransaction
 from .serializers import (
     UzumBankCheckSerializer,
     UzumBankCreateSerializer,
@@ -829,6 +829,7 @@ class AtmosCreateHoldView(APIView):
             return Response(apply_data, status=status.HTTP_400_BAD_REQUEST)
 
         order.payment_status = 1
+        order.status = 1
         order.save()
 
         return Response({
@@ -884,6 +885,7 @@ class AtmosApplyHoldView(APIView):
 
         # funds are now frozen
         order.payment_status = 1
+        order.status = 1  # Collecting
         order.save()
 
         return Response({
@@ -937,14 +939,41 @@ class AtmosChargeHoldView(APIView):
         if data.get("result", {}).get("code") != "OK":
             return Response(data, status=status.HTTP_400_BAD_REQUEST)
 
-        # money moved, order is paid
+        ofd_url = data.get("ofd_url")
+        store_transaction = data.get("store_transaction") or {}
+        store_info = store_transaction.get("store") or {}
+
+        # save transaction details
+        AtmosTransaction.objects.create(
+            order=order,
+            success_trans_id=store_transaction.get("success_trans_id", 0),
+            trans_id=store_transaction.get("trans_id", 0),
+            store_id=store_info.get("id"),
+            store_name=store_info.get("name", ""),
+            terminal_id=store_transaction.get("terminal_id", ""),
+            account=store_transaction.get("account", ""),
+            amount=store_transaction.get("amount", 0),
+            confirmed=store_transaction.get("confirmed", False),
+            prepay_time=store_transaction.get("prepay_time"),
+            confirm_time=store_transaction.get("confirm_time"),
+            ofd_url=ofd_url,
+            commission_value=store_transaction.get("commission_value", "0"),
+            commission_type=store_transaction.get("commission_type", ""),
+            total=store_transaction.get("total"),
+            status_code=store_transaction.get("status_code", ""),
+            status_message=store_transaction.get("status_message", ""),
+            pc_type=store_transaction.get("pc_type", ""),
+        )
+
         order.payment_status = 2
+        order.status = 2
+        order.ofd_url = ofd_url
         order.save()
 
         return Response({
             "message": "Payment successful",
-            "ofd_url": data.get("ofd_url"),
-            "transaction": data.get("store_transaction"),
+            "ofd_url": ofd_url,
+            "transaction": store_transaction,
         }, status=status.HTTP_200_OK)
 
 

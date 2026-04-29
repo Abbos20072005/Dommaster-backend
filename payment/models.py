@@ -100,3 +100,37 @@ class CustomerCard(models.Model):
 
     def __str__(self):
         return f"{self.user} — {self.pan or self.card_id}"
+
+
+class AtmosTransaction(models.Model):
+    order = models.ForeignKey(
+        "service.Order", on_delete=models.CASCADE,
+        related_name="atmos_transactions", verbose_name="Заказ"
+    )
+    success_trans_id = models.BigIntegerField(verbose_name="ID успешной транзакции")
+    trans_id = models.BigIntegerField(verbose_name="ID транзакции")
+    store_id = models.IntegerField(null=True, blank=True, verbose_name="ID магазина")
+    store_name = models.CharField(max_length=255, null=True, blank=True, verbose_name="Название магазина")
+    terminal_id = models.CharField(max_length=255, blank=True, default="", verbose_name="ID терминала")
+    account = models.CharField(max_length=255, verbose_name="Аккаунт")
+    amount = models.BigIntegerField(verbose_name="Сумма")
+    confirmed = models.BooleanField(default=False, verbose_name="Подтверждено")
+    prepay_time = models.BigIntegerField(null=True, blank=True, verbose_name="Время предоплаты")
+    confirm_time = models.BigIntegerField(null=True, blank=True, verbose_name="Время подтверждения")
+    ofd_url = models.URLField(max_length=500, blank=True, null=True, verbose_name="Ссылка на чек")
+    commission_value = models.CharField(max_length=50, blank=True, default="0", verbose_name="Комиссия")
+    commission_type = models.CharField(max_length=50, blank=True, default="", verbose_name="Тип комиссии")
+    total = models.BigIntegerField(null=True, blank=True, verbose_name="Итого")
+    status_code = models.CharField(max_length=10, blank=True, default="", verbose_name="Код статуса")
+    status_message = models.CharField(max_length=255, blank=True, default="", verbose_name="Сообщение статуса")
+    pc_type = models.CharField(max_length=50, blank=True, default="", verbose_name="Тип платежной системы")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Транзакция Atmos"
+        verbose_name_plural = "Транзакции Atmos"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Atmos #{self.trans_id} — Order #{self.order_id}"

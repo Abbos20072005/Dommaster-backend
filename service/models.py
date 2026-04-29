@@ -72,6 +72,7 @@ class Order(BaseModel):
     payment_status = models.IntegerField(choices=PAYMENT_STATUS, default=0, verbose_name="Статус оплаты")
     order_location = models.ForeignKey(CustomerAddresses, on_delete=models.SET_NULL, blank=True, null=True,
                                        verbose_name="Локация доставки")
+    ofd_url = models.URLField(max_length=500, blank=True, null=True, verbose_name="Ссылка на чек")
 
     def __str__(self):
         return str(self.id)
