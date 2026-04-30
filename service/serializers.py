@@ -933,6 +933,7 @@ class OrderDetailSerializer(serializers.ModelSerializer):
             "promocode",
             "total_price",
             "order_location",
+            "ofd_url",
             "created_at",
             "order_items"
         )
