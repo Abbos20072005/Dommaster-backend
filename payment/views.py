@@ -772,7 +772,7 @@ class AtmosCreateHoldView(APIView):
     )
     def post(self, request):
         order_id = request.data.get("order_id")
-        duration = request.data.get("duration", "60")  # default 60 mins
+        duration = os.environ["ATMOS_HOLD_DURATION"]
 
         access_token = AtmosAuthService.get_access_token()
         print("access_token :", access_token)
