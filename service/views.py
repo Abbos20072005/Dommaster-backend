@@ -107,7 +107,8 @@ from .serializers import (
     ProductShortSerializer,
     ProducgtCategoryTreeSerializer,
     CategoryAttributeSerializer,
-    ProductDetailSerializer
+    ProductDetailSerializer,
+    ProductUpdateSerializer
 )
 
 
@@ -228,6 +229,35 @@ class MainPageViewSet(ViewSet):
 
 
 class ProductViewSet(ViewSet):
+    @swagger_auto_schema(
+        operation_summary="Product update",
+        operation_description="Product update",
+        request_body=ProductUpdateSerializer(),
+        responses={200: ProductSerializer()},
+        tags=["Product"],
+    )
+    def product_update(self, request, pk):
+        product = Product.objects.filter(id=pk).first()
+        if not product:
+            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
+
+        serializer = ProductUpdateSerializer(
+            product, data=request.data, partial=True, context={"request": request}
+        )
+        if not serializer.is_valid():
+            raise CustomApiException(
+                error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors
+            )
+
+        serializer.save()
+        return Response(
+            data={
+                "result": ProductSerializer(product, context={"request": request}).data,
+                "ok": True,
+            },
+            status=status.HTTP_200_OK,
+        )
+    
     @swagger_auto_schema(
         operation_summary="Product create",
         operation_description="Product create",

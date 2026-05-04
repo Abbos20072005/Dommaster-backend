@@ -489,6 +489,14 @@ class ProductCreateSerializer(serializers.ModelSerializer):
             "quantity"
         )
 
+class ProductUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Product
+        fields = (
+            "id",
+            "name_ru"
+        )
+
 class ProductDetailSerializer(ProductAnnotationMixin, serializers.Serializer):
     id = serializers.IntegerField()
     name = serializers.CharField()
