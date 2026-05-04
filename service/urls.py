@@ -15,6 +15,11 @@ from .views import (
 
 urlpatterns = [
     path(
+        "products/<int:pk>/update/",
+        ProductViewSet.as_view({"patch": "product_update"}),
+        name="product_update",
+    ),
+    path(
         "categories/",
         ProductViewSet.as_view({"get": "categories_list"}),
         name="categories_list",
