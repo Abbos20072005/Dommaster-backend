@@ -515,6 +515,7 @@ class ProductDetailSerializer(ProductAnnotationMixin, serializers.Serializer):
     questions_quantity = serializers.IntegerField()
     characteristics = ProductCharacteristicsSerializer(source="product_characteristics", many=True, read_only=True)
     images = ProductImageSerializer(source="product_image", many=True, read_only=True)
+    brand = BrandSerializer(read_only=True)
 
     def get_breadcrumbs(self, obj):
         return obj.get_breadcrumbs()
@@ -534,12 +535,14 @@ class ProductSerializer(ProductAnnotationMixin, TranslatedSerializerMixin, seria
     breadcrumbs = serializers.SerializerMethodField()
     characteristics = ProductCharacteristicsSerializer(source="product_characteristics", many=True, read_only=True)
     attributes = ProductAttributeValueSerializer(source="product_attribute_values", many=True, read_only=True)
+    brand = BrandSerializer(read_only=True)
 
     class Meta:
         model = Product
         fields = (
             "id",
             "product_item_category",
+            "brand",
             "name",
             "is_favourite",
             "in_cart",
@@ -575,6 +578,7 @@ class ProductShortSerializer(ProductAnnotationMixin, serializers.Serializer):
     in_cart_quantity = serializers.SerializerMethodField()
     discount = serializers.IntegerField()
     discount_price = serializers.FloatField()
+    brand = BrandSerializer(read_only=True)
     images = ProductImageSerializer(source="product_image", many=True, read_only=True)
 
 class RecentlyViewedProductsSerializer(serializers.ModelSerializer):
