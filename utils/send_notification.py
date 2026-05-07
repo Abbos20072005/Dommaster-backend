@@ -24,7 +24,7 @@ def push_notification(message_title: str, message_body: str, fcm: str) -> bool:
     """
     push_service = FCMNotification(
         service_account_file=os.getcwd() + '/utils/dommaster_service_key.json',
-        project_id="dommaster-2d7e4"
+        project_id="buildexgo"
     )
     try:
         result = push_service.notify(
