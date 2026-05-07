@@ -16,7 +16,7 @@ ORDER_STATUS = (
     (0, "Pending"),
     (1, "Collecting"),
     (2, "Delivering"),
-    (3, "Delivered"),
+    (3, "Completed"),
     (4, "Canceled")
 )
 
