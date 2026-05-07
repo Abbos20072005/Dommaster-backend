@@ -1,3 +1,4 @@
+from utils.send_notification import send_notification_to_customer
 from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
 from drf_yasg import openapi
@@ -584,6 +585,7 @@ class ProductViewSet(ViewSet):
 
         cache_key_main = f"categories:lists"
         cached_data = cache.get(cache_key_main)
+        send_notification_to_customer(customer_id=request.user.id)
         if cached_data:
             return Response(
                 data={"result": cached_data, "ok": True}, status=status.HTTP_200_OK
