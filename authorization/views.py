@@ -18,7 +18,7 @@ from .serializers import CustomerSerializer, LoginSerializer, RegisterSerializer
     FCMTokenRequestSerializer, FCMTokenDeleteSerializer
 from django.utils import timezone
 from integration.eskiz import EskizOTP
-
+from utils.send_notification import send_notification_to_customer
 
 class AuthViewSet(ViewSet):
     @swagger_auto_schema(
@@ -102,8 +102,8 @@ class AuthViewSet(ViewSet):
                 f'\nexpires: {otp.expire_at}')
             send_notification(message)
             # EskizOTP.send_otp_service("998200220280", "Это тест от Eskiz")
-            # fcm_token = FcmToken.objects.create(cusomer=customer_save, fcm_token=request.data.get("device_id", ""))
-            # fcm_token.save()
+            fcm_token = FcmToken.objects.create(cusomer=customer_save, fcm_token=request.data.get("device_id", ""))
+            fcm_token.save()
             return Response(data={"result": {"otp_key": otp.otp_key}, "ok": True}, status=status.HTTP_201_CREATED)
 
         serializer_customer = CustomerSerializer(customer_none, data=serializer.validated_data, partial=True,
@@ -136,8 +136,8 @@ class AuthViewSet(ViewSet):
             f'\nReset: {otp.resend}'
             f'\nexpires: {otp.expire_at}')
         send_notification(message)
-        # fcm_token = FcmToken.objects.create(cusomer=customer_none, fcm_token=request.data.get("device_id", ""))
-        # fcm_token.save()
+        fcm_token = FcmToken.objects.create(cusomer=customer_none, fcm_token=request.data.get("device_id", ""))
+        fcm_token.save()
         return Response(data={"result": {"otp_key": otp.otp_key}, 'ok': True}, status=status.HTTP_201_CREATED)
 
     @swagger_auto_schema(
@@ -433,6 +433,8 @@ class OTPViewSet(ViewSet):
 
         refresh = RefreshToken.for_user(otp_check.customer)
         access_token = str(refresh.access_token)
+
+        send_notification_to_customer(otp_check.customer.id)
         return Response(data={"result": {"access_token": access_token, "refresh_token": str(refresh)}, "ok": True},
                         status=status.HTTP_200_OK)
 

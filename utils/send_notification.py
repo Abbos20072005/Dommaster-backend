@@ -39,11 +39,11 @@ def push_notification(message_title: str, message_body: str, fcm: str) -> bool:
         return False
 
 
-def send_notification_to_customer(customer_id, enum_code):
+def send_notification_to_customer(customer_id, enum_code=None):
     fcm_tokens = FcmToken.objects.filter(customer_id=customer_id)
     count = 0
     for token in fcm_tokens:
-        result = push_notification(message_title="Dommaster", message_body="message", fcm=token.fcm_token)
+        result = push_notification(message_title="Buildex", message_body="message", fcm=token.fcm_token)
         if not result:
             token.delete()
             continue
