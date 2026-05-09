@@ -578,6 +578,7 @@ class ProductShortSerializer(ProductAnnotationMixin, serializers.Serializer):
     in_cart_quantity = serializers.SerializerMethodField()
     discount = serializers.IntegerField()
     discount_price = serializers.FloatField()
+    comments_quantity = serializers.IntegerField()
     brand = BrandSerializer(read_only=True)
     images = ProductImageSerializer(source="product_image", many=True, read_only=True)
 
