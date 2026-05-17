@@ -228,6 +228,12 @@ urlpatterns = [
         ),
     ),
     path(
+        "item-categories/all/",
+        ProductViewSet.as_view(
+            {"get": "all_item_categories"}, name="all_item_categories"
+        ),
+    ),
+    path(
         "item-categories/create/",
         ProductViewSet.as_view(
             {"post": "item_categories_create"}, name="item_categories_create"

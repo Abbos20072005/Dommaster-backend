@@ -586,6 +586,7 @@ class ProductViewSet(ViewSet):
         cache_key_main = f"categories:lists"
         cached_data = cache.get(cache_key_main)
         send_notification_to_customer(customer_id=request.user.id)
+        print("sent")
         if cached_data:
             return Response(
                 data={"result": cached_data, "ok": True}, status=status.HTTP_200_OK
@@ -680,6 +681,21 @@ class ProductViewSet(ViewSet):
         )
 
     @swagger_auto_schema(
+        operation_summary="All item categories",
+        operation_description="All item categories",
+        responses={200: ProductItemCategorySerializer(many=True)},
+        tags=["Product"],
+    )
+    def all_item_categories(self, request):
+        item_categories = ProductItemCategory.objects.all()
+        serializer = ProductItemCategorySerializer(
+            item_categories, many=True, context={"request": request}
+        )
+        return Response(
+            data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK
+        )
+
+    @swagger_auto_schema(
         operation_summary="Product detail",
         operation_description="Product detail",
         responses={200: ProductSerializer()},
@@ -752,7 +768,7 @@ class ProductViewSet(ViewSet):
 
         filters &= Q(is_active=True)
 
-        products = Product.objects.filter(filters)
+        products = Product.objects.filter(filters, is_active=True)
 
         if attributes:
             attr_q = Q()
@@ -804,21 +820,21 @@ class ProductViewSet(ViewSet):
             ).data
 
         if q and not brand:
-            similarity = Greatest(
-                TrigramSimilarity("name", q),
-                TrigramSimilarity("name_uz", q),
-                TrigramSimilarity("name_ru", q),
-                TrigramSimilarity("name_en", q),
-                TrigramSimilarity("brand__name", q),
-                TrigramSimilarity("brand__name_uz", q),
-                TrigramSimilarity("brand__name_ru", q),
-                TrigramSimilarity("brand__name_en", q),
-            )
-            products = (
-                products.annotate(similarity=similarity)
-                .filter(similarity__gt=0.3)
-                .order_by("-similarity", sort)
-            )
+            products = products.select_related("brand").annotate(
+                sim_name=TrigramSimilarity("name", q),
+                sim_name_uz=TrigramSimilarity("name_uz", q),
+                sim_name_ru=TrigramSimilarity("name_ru", q),
+                sim_name_en=TrigramSimilarity("name_en", q),
+                sim_brand_name=TrigramSimilarity("brand__name", q),
+                sim_brand_uz=TrigramSimilarity("brand__name_uz", q),
+                sim_brand_ru=TrigramSimilarity("brand__name_ru", q),
+                sim_brand_en=TrigramSimilarity("brand__name_en", q),
+            ).annotate(
+                similarity=Greatest(
+                    "sim_name", "sim_name_uz", "sim_name_ru", "sim_name_en",
+                    "sim_brand_name", "sim_brand_uz", "sim_brand_ru", "sim_brand_en",
+                )
+            ).filter(similarity__gt=0.3).order_by("-similarity", sort)
         else:
             products = products.order_by(sort)
 
