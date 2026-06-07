@@ -19,7 +19,7 @@ from .paginations.get_question import get_questions_paginator
 from .paginations.get_comment_replies import get_comment_replies_paginator
 from django.db.models import Count
 from django.core.cache import cache
-from django.contrib.postgres.search import TrigramSimilarity
+from django.contrib.postgres.search import TrigramSimilarity, SearchVector, SearchQuery, SearchRank
 from django.db.models.functions import Greatest
 import secrets
 from django.db import transaction
@@ -435,7 +435,7 @@ class ProductViewSet(ViewSet):
             return Response(data={"result": [], "ok": True}, status=status.HTTP_200_OK)
 
         param_data = param.strip()
-        cache_key = f"search:{param_data.lower()}"
+        cache_key = f"search:v2:{param_data.lower()}"
 
         query = cache.get(cache_key)
         if not query:
@@ -446,10 +446,14 @@ class ProductViewSet(ViewSet):
                         TrigramSimilarity("name_uz", param_data),
                         TrigramSimilarity("name_ru", param_data),
                         TrigramSimilarity("name_en", param_data),
-                    )
+                    ),
+                    fts_rank=SearchRank(
+                        SearchVector('name', 'name_uz', 'name_ru', 'name_en', config='russian'),
+                        SearchQuery(param_data, config='russian'),
+                    ),
                 )
-                .filter(similarity__gt=0.1)
-                .order_by("-similarity")
+                .filter(Q(similarity__gt=0.1) | Q(fts_rank__gte=0.01))
+                .order_by("-fts_rank", "-similarity")
                 .values_list("name", flat=True)[:5]
             )
 
@@ -820,6 +824,9 @@ class ProductViewSet(ViewSet):
             ).data
 
         if q and not brand:
+            search_vector = SearchVector('name', 'name_uz', 'name_ru', 'name_en', config='russian')
+            search_query = SearchQuery(q, config='russian')
+
             products = products.select_related("brand").annotate(
                 sim_name=TrigramSimilarity("name", q),
                 sim_name_uz=TrigramSimilarity("name_uz", q),
@@ -833,8 +840,11 @@ class ProductViewSet(ViewSet):
                 similarity=Greatest(
                     "sim_name", "sim_name_uz", "sim_name_ru", "sim_name_en",
                     "sim_brand_name", "sim_brand_uz", "sim_brand_ru", "sim_brand_en",
-                )
-            ).filter(similarity__gt=0.3).order_by("-similarity", sort)
+                ),
+                rank=SearchRank(search_vector, search_query),
+            ).filter(
+                Q(similarity__gt=0.3) | Q(rank__gte=0.01)
+            ).order_by("-rank", "-similarity", sort)
         else:
             products = products.order_by(sort)
 
