@@ -838,7 +838,7 @@ class ProductViewSet(ViewSet):
                     "sim_brand_name", "sim_brand_uz", "sim_brand_ru", "sim_brand_en",
                 )
             ).filter(
-                Q(similarity__gt=0.3) |
+                Q(similarity__gt=0.15) |
                 Q(name__icontains=q) | Q(name_uz__icontains=q) | Q(name_ru__icontains=q) | Q(name_en__icontains=q) |
                 Q(brand__name__icontains=q) | Q(brand__name_uz__icontains=q) | Q(brand__name_ru__icontains=q) | Q(brand__name_en__icontains=q)
             ).order_by("-similarity", sort)
