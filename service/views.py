@@ -19,7 +19,7 @@ from .paginations.get_question import get_questions_paginator
 from .paginations.get_comment_replies import get_comment_replies_paginator
 from django.db.models import Count
 from django.core.cache import cache
-from django.contrib.postgres.search import TrigramSimilarity, SearchVector, SearchQuery, SearchRank
+from django.contrib.postgres.search import TrigramSimilarity, TrigramWordSimilarity, SearchVector, SearchQuery, SearchRank
 from django.db.models.functions import Greatest
 import secrets
 from django.db import transaction
@@ -443,9 +443,13 @@ class ProductViewSet(ViewSet):
                 Product.objects.filter(is_active=True).annotate(
                     similarity=Greatest(
                         TrigramSimilarity("name", param_data),
+                        TrigramWordSimilarity("name", param_data),
                         TrigramSimilarity("name_uz", param_data),
+                        TrigramWordSimilarity("name_uz", param_data),
                         TrigramSimilarity("name_ru", param_data),
+                        TrigramWordSimilarity("name_ru", param_data),
                         TrigramSimilarity("name_en", param_data),
+                        TrigramWordSimilarity("name_en", param_data),
                     ),
                     fts_rank=SearchRank(
                         SearchVector('name', 'name_uz', 'name_ru', 'name_en', config='russian'),
@@ -829,21 +833,35 @@ class ProductViewSet(ViewSet):
 
             products = products.select_related("brand").annotate(
                 sim_name=TrigramSimilarity("name", q),
+                sim_word_name=TrigramWordSimilarity("name", q),
                 sim_name_uz=TrigramSimilarity("name_uz", q),
+                sim_word_name_uz=TrigramWordSimilarity("name_uz", q),
                 sim_name_ru=TrigramSimilarity("name_ru", q),
+                sim_word_name_ru=TrigramWordSimilarity("name_ru", q),
                 sim_name_en=TrigramSimilarity("name_en", q),
+                sim_word_name_en=TrigramWordSimilarity("name_en", q),
                 sim_brand_name=TrigramSimilarity("brand__name", q),
+                sim_word_brand_name=TrigramWordSimilarity("brand__name", q),
                 sim_brand_uz=TrigramSimilarity("brand__name_uz", q),
+                sim_word_brand_uz=TrigramWordSimilarity("brand__name_uz", q),
                 sim_brand_ru=TrigramSimilarity("brand__name_ru", q),
+                sim_word_brand_ru=TrigramWordSimilarity("brand__name_ru", q),
                 sim_brand_en=TrigramSimilarity("brand__name_en", q),
+                sim_word_brand_en=TrigramWordSimilarity("brand__name_en", q),
             ).annotate(
                 similarity=Greatest(
-                    "sim_name", "sim_name_uz", "sim_name_ru", "sim_name_en",
-                    "sim_brand_name", "sim_brand_uz", "sim_brand_ru", "sim_brand_en",
+                    "sim_name", "sim_word_name",
+                    "sim_name_uz", "sim_word_name_uz",
+                    "sim_name_ru", "sim_word_name_ru",
+                    "sim_name_en", "sim_word_name_en",
+                    "sim_brand_name", "sim_word_brand_name",
+                    "sim_brand_uz", "sim_word_brand_uz",
+                    "sim_brand_ru", "sim_word_brand_ru",
+                    "sim_brand_en", "sim_word_brand_en",
                 ),
                 rank=SearchRank(search_vector, search_query),
             ).filter(
-                Q(similarity__gt=0.3) | Q(rank__gte=0.01)
+                Q(similarity__gt=0.1) | Q(rank__gte=0.01)
             ).order_by("-rank", "-similarity", sort)
         else:
             products = products.order_by(sort)
