@@ -27,6 +27,11 @@ PAYMENT_STATUS = (
     (3, "Cancelled"),
 )
 
+DELIVERY_TYPE = (
+    (0, "Delivery"),
+    (1, "Pickup"),
+)
+
 
 class AddsBrands(BaseModel):
     name = models.CharField(max_length=450, verbose_name="Название")
@@ -72,6 +77,7 @@ class Order(BaseModel):
     payment_status = models.IntegerField(choices=PAYMENT_STATUS, default=0, verbose_name="Статус оплаты")
     order_location = models.ForeignKey(CustomerAddresses, on_delete=models.SET_NULL, blank=True, null=True,
                                        verbose_name="Локация доставки")
+    delivery_type = models.IntegerField(choices=DELIVERY_TYPE, default=0, verbose_name="Тип доставки")
     ofd_url = models.URLField(max_length=500, blank=True, null=True, verbose_name="Ссылка на чек")
 
     def __str__(self):
@@ -86,7 +92,7 @@ class Order(BaseModel):
 
 
 class ProductCategory(BaseModel):
-    name = models.CharField(max_length=150, verbose_name="Название")
+    name = models.CharField(max_length=255, verbose_name="Название")
     icon = models.ImageField(upload_to="product_category/icon/")
     image = models.ImageField(upload_to="product_category", verbose_name="Изображение")
 

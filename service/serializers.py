@@ -75,6 +75,7 @@ class OrderCreateSerializer(serializers.Serializer):
     payment_type = serializers.IntegerField(required=True)
     is_web = serializers.BooleanField(required=False)
     address_id = serializers.IntegerField(required=False)
+    delivery_type = serializers.IntegerField(required=False, default=0)
 
 class OrderCancelSerializer(serializers.Serializer):
     order_id = serializers.IntegerField(required=True)
@@ -916,6 +917,7 @@ class OrderSerializer(serializers.ModelSerializer):
             "customer",
             "status",
             "total_price",
+            "delivery_type",
             "order_location",
             "created_at",
             "order_items"
@@ -945,6 +947,7 @@ class OrderDetailSerializer(serializers.ModelSerializer):
             "status",
             "promocode",
             "total_price",
+            "delivery_type",
             "order_location",
             "ofd_url",
             "created_at",
