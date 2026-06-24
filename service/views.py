@@ -1591,6 +1591,8 @@ class CartViewSet(ViewSet):
                 guest_cart.delete()
 
             cart.refresh_from_db()
+            cart.calculate_total_price()
+            cart.save(update_fields=["total_price", "saved_price", "products_total_price"])
 
         resp = Response(
             data={

@@ -796,7 +796,15 @@ class AtmosCreateHoldView(APIView):
                 {"error": f"Order is already in {order.payment_status} state"},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+        # Pre-check product quantities before holding any funds
+        items = order.order_items.select_related('product').all()
+        for item in items:
+            if item.product.quantity < item.quantity:
+                raise CustomApiException(
+                    error_code=ErrorCodes.INVALID_INPUT,
+                    message=f"Not enough quantity for product: {item.product.name}"
+                )
+
         try:
             data = AtmosHoldService.create_hold(
                     access_token=access_token,
