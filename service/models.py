@@ -575,3 +575,34 @@ class RecentlyViewedProducts(BaseModel):
         verbose_name = "Недавно просмотренный продукт"
         verbose_name_plural = "Недавно просмотренные продукты"
         ordering = ("-created_at",)
+
+
+class ProductVariantGroup(BaseModel):
+    DISPLAY_TYPES = (
+        ("text", "Text"),
+        ("image", "Image"),
+    )
+    name = models.CharField(max_length=255, verbose_name="Название группы")
+    display_type = models.CharField(max_length=10, choices=DISPLAY_TYPES, default="text", verbose_name="Тип отображения")
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name = "Группа вариантов"
+        verbose_name_plural = "Группы вариантов"
+
+
+class ProductVariantItem(BaseModel):
+    group = models.ForeignKey(ProductVariantGroup, on_delete=models.CASCADE, related_name="items", verbose_name="Группа")
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="variant_items", verbose_name="Продукт")
+    display_value = models.CharField(max_length=255, verbose_name="Значение (текст)")
+
+    def __str__(self):
+        return f"{self.group.name} - {self.display_value}"
+
+    class Meta:
+        verbose_name = "Элемент варианта"
+        verbose_name_plural = "Элементы вариантов"
+        unique_together = ("group", "product")
+        ordering = ("created_at",)

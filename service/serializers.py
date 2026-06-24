@@ -3,7 +3,7 @@ from authorization.serializers import CustomerSerializer, CustomerAddressesSeria
 from .models import Product, ProductCategory, ProductItemCategory, ProductSubCategory, ProductImage, Comment, \
     Order, OrderItem, Brand, Sale, AddsBrands, Favourites, Cart, CartItem, ProductCharacteristics, Questions, \
     RecentlyViewedProducts, Service, CommentReply, CommentImages, QuestionsReply, CategoryAttribute, \
-    CategoryAttributeValue, ProductAttributeValue
+    CategoryAttributeValue, ProductAttributeValue, ProductVariantGroup, ProductVariantItem
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from config import settings
@@ -498,6 +498,46 @@ class ProductUpdateSerializer(serializers.ModelSerializer):
             "name_ru"
         )
 
+
+class ProductVariantItemSerializer(TranslatedSerializerMixin, serializers.Serializer):
+    id = serializers.IntegerField()
+    product_id = serializers.IntegerField(source="product.id")
+    display_value = serializers.SerializerMethodField()
+    image = serializers.SerializerMethodField()
+    is_current = serializers.SerializerMethodField()
+
+    def get_display_value(self, obj):
+        language = self.get_language()
+        return getattr(obj, f'display_value_{language}', obj.display_value)
+
+    def get_image(self, obj):
+        if obj.group.display_type == 'image':
+            request = self.context.get("request")
+            first_image = obj.product.product_image.first()
+            if first_image and request:
+                return request.build_absolute_uri(first_image.image.url)
+        return None
+
+    def get_is_current(self, obj):
+        return obj.product_id == self.context.get("current_product_id")
+
+
+class ProductVariantGroupSerializer(TranslatedSerializerMixin, serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.SerializerMethodField()
+    display_type = serializers.CharField()
+    items = serializers.SerializerMethodField()
+
+    def get_name(self, obj):
+        language = self.get_language()
+        return getattr(obj, f'name_{language}', obj.name)
+
+    def get_items(self, obj):
+        items = obj.items.filter(product__is_active=True).prefetch_related('product__product_image')
+        return ProductVariantItemSerializer(
+            items, many=True, context=self.context
+        ).data
+
 class ProductDetailSerializer(ProductAnnotationMixin, serializers.Serializer):
     id = serializers.IntegerField()
     name = serializers.CharField()
@@ -517,9 +557,22 @@ class ProductDetailSerializer(ProductAnnotationMixin, serializers.Serializer):
     characteristics = ProductCharacteristicsSerializer(source="product_characteristics", many=True, read_only=True)
     images = ProductImageSerializer(source="product_image", many=True, read_only=True)
     brand = BrandSerializer(read_only=True)
+    variant_groups = serializers.SerializerMethodField()
 
     def get_breadcrumbs(self, obj):
         return obj.get_breadcrumbs()
+
+    def get_variant_groups(self, obj):
+        group_ids = obj.variant_items.values_list('group_id', flat=True)
+        if not group_ids:
+            return []
+        groups = ProductVariantGroup.objects.filter(id__in=group_ids).prefetch_related(
+            'items__product__product_image',
+            'items__group'
+        ).distinct()
+        return ProductVariantGroupSerializer(
+            groups, many=True, context={**self.context, "current_product_id": obj.id}
+        ).data
 
 
 class ProductSerializer(ProductAnnotationMixin, TranslatedSerializerMixin, serializers.ModelSerializer):

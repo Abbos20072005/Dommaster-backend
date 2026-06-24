@@ -2,7 +2,7 @@ from django.contrib import admin
 from .models import Product, ProductCategory, ProductSubCategory, ProductItemCategory, Comment, Order, \
     OrderItem, Tag, Brand, Sale, AddsBrands, ProductImage, Favourites, Cart, CartItem, Questions, \
     ProductCharacteristics, RecentlyViewedProducts, Service, CommentImages, CommentReply, QuestionsReply, \
-    CategoryAttribute, CategoryAttributeValue, ProductAttributeValue
+    CategoryAttribute, CategoryAttributeValue, ProductAttributeValue, ProductVariantGroup, ProductVariantItem
 from unfold.admin import ModelAdmin, TabularInline
 
 @admin.register(QuestionsReply)
@@ -193,3 +193,15 @@ class OrderAdmin(ModelAdmin):
 class OrderItemAdmin(ModelAdmin):
     list_display = ("id", "order", "product", "quantity")
     list_display_links = ("id", "order")
+
+class ProductVariantItemInline(TabularInline):
+    model = ProductVariantItem
+    extra = 1
+    autocomplete_fields = ("product",)
+
+@admin.register(ProductVariantGroup)
+class ProductVariantGroupAdmin(ModelAdmin):
+    list_display = ("id", "name", "display_type")
+    list_display_links = ("id", "name")
+    search_fields = ("name",)
+    inlines = [ProductVariantItemInline]

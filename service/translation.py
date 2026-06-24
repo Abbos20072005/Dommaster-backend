@@ -1,6 +1,6 @@
 from modeltranslation.translator import translator, TranslationOptions
 from .models import Product, Service, ProductCharacteristics, AddsBrands, Brand, ProductCategory, ProductSubCategory, \
-    ProductItemCategory, CategoryAttribute, CategoryAttributeValue
+    ProductItemCategory, CategoryAttribute, CategoryAttributeValue, ProductVariantGroup, ProductVariantItem
 
 
 class ProductItemCategoryOption(TranslationOptions):
@@ -53,3 +53,13 @@ translator.register(CategoryAttribute, CategoryAttributeOption)
 translator.register(CategoryAttributeValue, CategoryAttributeValueOption)
 translator.register(Product, ProductTranslationOption)
 translator.register(Service, ServiceTranslationOption)
+
+
+class ProductVariantGroupOption(TranslationOptions):
+    fields = ("name",)
+
+class ProductVariantItemOption(TranslationOptions):
+    fields = ("display_value",)
+
+translator.register(ProductVariantGroup, ProductVariantGroupOption)
+translator.register(ProductVariantItem, ProductVariantItemOption)

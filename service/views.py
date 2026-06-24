@@ -170,6 +170,7 @@ def get_optimized_product_qs(base_qs, request):
     ).prefetch_related(
         'product_image',
         'product_characteristics',
+        'variant_items',
         Prefetch(
             'product_attribute_values',
             queryset=ProductAttributeValue.objects.select_related('attribute', 'attribute_value')
