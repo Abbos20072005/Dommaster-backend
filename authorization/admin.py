@@ -2,6 +2,7 @@ from django.contrib import admin
 from .models import Customer, OTP, FcmToken, CustomerAddresses, PasswordResetToken
 from django.contrib.auth.hashers import make_password
 from unfold.admin import ModelAdmin
+from base.admin_actions import mark_verified, mark_unverified, mark_default
 
 
 @admin.register(Customer)
@@ -11,6 +12,7 @@ class CustomerAdmin(ModelAdmin):
     search_fields = ('full_name', 'phone_number', 'email')
     list_filter = ('verified', 'created_at')
     date_hierarchy = "created_at"
+    actions = [mark_verified, mark_unverified]
 
     def save_model(self, request, obj, form, change):
         password = form.cleaned_data.get('password')
@@ -47,6 +49,7 @@ class CustomerAddressesAdmin(ModelAdmin):
     list_filter = ("is_default", "created_at")
     autocomplete_fields = ("customer",)
     date_hierarchy = "created_at"
+    actions = [mark_default]
 
 
 @admin.register(PasswordResetToken)

@@ -5,6 +5,8 @@ from .models import Product, ProductCategory, ProductSubCategory, ProductItemCat
     CategoryAttribute, CategoryAttributeValue, ProductAttributeValue, ProductVariantGroup, ProductVariantItem, \
     Announcements
 from unfold.admin import ModelAdmin, TabularInline
+from base.admin_actions import make_visible, make_hidden, activate, deactivate, \
+    mark_as_main, mark_as_not_main, status_collecting, status_delivering, status_completed, status_canceled
 
 
 @admin.register(QuestionsReply)
@@ -15,6 +17,7 @@ class QuestionsReplyAdmin(ModelAdmin):
     list_filter = ("is_admin", "is_visible", "created_at")
     autocomplete_fields = ("customer", "question")
     date_hierarchy = "created_at"
+    actions = [make_visible, make_hidden]
 
 
 @admin.register(CommentReply)
@@ -25,6 +28,7 @@ class CommentReplyAdmin(ModelAdmin):
     list_filter = ("is_admin", "is_visible", "created_at")
     autocomplete_fields = ("customer", "comment")
     date_hierarchy = "created_at"
+    actions = [make_visible, make_hidden]
 
     def save_model(self, request, obj, form, change):
         obj.is_admin = True
@@ -96,6 +100,7 @@ class QuestionsAdmin(ModelAdmin):
     list_filter = ("is_visible", "created_at")
     autocomplete_fields = ("customer", "product")
     date_hierarchy = "created_at"
+    actions = [make_visible, make_hidden]
 
 
 @admin.register(Cart)
@@ -145,6 +150,7 @@ class AddsBrandsAdmin(ModelAdmin):
     list_filter = ("is_visible", "created_at")
     autocomplete_fields = ("products", "brand")
     date_hierarchy = "created_at"
+    actions = [make_visible, make_hidden]
 
 
 @admin.register(Sale)
@@ -155,6 +161,7 @@ class SaleAdmin(ModelAdmin):
     list_filter = ("is_main", "is_visible", "discount_from", "discount_to")
     autocomplete_fields = ("products",)
     date_hierarchy = "created_at"
+    actions = [make_visible, make_hidden, mark_as_main, mark_as_not_main]
 
 
 @admin.register(Brand)
@@ -164,6 +171,7 @@ class BrandAdmin(ModelAdmin):
     search_fields = ("name",)
     list_filter = ("is_visible", "created_at")
     date_hierarchy = "created_at"
+    actions = [make_visible, make_hidden]
 
 
 @admin.register(Tag)
@@ -173,6 +181,7 @@ class TagAdmin(ModelAdmin):
     search_fields = ("name",)
     list_filter = ("is_active", "created_at")
     date_hierarchy = "created_at"
+    actions = [activate, deactivate]
 
 
 class ProductImageInline(TabularInline):
@@ -196,6 +205,7 @@ class ProductAdmin(ModelAdmin):
     inlines = (ProductImageInline, ProductCharacteristicsInline, ProductAttributeValueInline)
     date_hierarchy = "created_at"
     list_per_page = 25
+    actions = [activate, deactivate]
 
     def save_model(self, request, obj, form, change):
         if obj.discount:
@@ -240,6 +250,7 @@ class CommentAdmin(ModelAdmin):
     list_filter = ("product_rating", "is_visible", "created_at")
     autocomplete_fields = ("customer", "product")
     date_hierarchy = "created_at"
+    actions = [make_visible, make_hidden]
 
 
 @admin.register(Order)
@@ -251,6 +262,7 @@ class OrderAdmin(ModelAdmin):
     autocomplete_fields = ("customer", "promocode", "order_location")
     date_hierarchy = "created_at"
     list_per_page = 25
+    actions = [status_collecting, status_delivering, status_completed, status_canceled]
 
 
 @admin.register(OrderItem)

@@ -1,6 +1,7 @@
 from django.contrib import admin
 from .models import ClickTransaction, MerchatTransactionsModel, UzumBankTransactionsModel, CustomerCard, AtmosTransaction
 from unfold.admin import ModelAdmin
+from base.admin_actions import activate, deactivate, mark_default
 
 
 @admin.register(CustomerCard)
@@ -11,6 +12,7 @@ class CustomerCardAdmin(ModelAdmin):
     autocomplete_fields = ('user',)
     ordering = ('-created_at',)
     date_hierarchy = "created_at"
+    actions = [activate, deactivate, mark_default]
 
 
 @admin.register(ClickTransaction)
