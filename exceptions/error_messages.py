@@ -24,6 +24,7 @@ class ErrorCodes(Enum):
     PROMOCODE_EXPIRED = 19
     OTP_NOT_FOUND = 20
     PRODUCT_QUANTITY_NOT_ENOUGH = 21
+    REFRESH_TOKEN_INVALID = 22
 
 
 error_messages = {
@@ -49,7 +50,8 @@ error_messages = {
     18: {"result": "Old password not match your current password", "http_status": status.HTTP_400_BAD_REQUEST},
     19: {"result": "Promocode expired", "http_status": status.HTTP_400_BAD_REQUEST},
     20: {"result": "Otp not found", "http_status": status.HTTP_400_BAD_REQUEST},
-    21: {"result": "Product does not enough in warehouse", "http_status": status.HTTP_400_BAD_REQUEST}
+    21: {"result": "Product does not enough in warehouse", "http_status": status.HTTP_400_BAD_REQUEST},
+    22: {"result": "Refresh token is invalid or expired", "http_status": status.HTTP_401_UNAUTHORIZED}
 }
 
 

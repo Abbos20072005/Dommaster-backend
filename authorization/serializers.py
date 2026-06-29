@@ -98,6 +98,10 @@ class CustomerAddressesCreateSerializer(serializers.ModelSerializer):
             "longitude"
         )
 
+class TokenRefreshSerializer(serializers.Serializer):
+    refresh = serializers.CharField(required=True)
+
+
 class CustomerAddressesUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomerAddresses

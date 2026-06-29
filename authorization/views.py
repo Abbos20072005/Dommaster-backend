@@ -11,11 +11,12 @@ from drf_yasg.utils import swagger_auto_schema
 from datetime import datetime, timedelta
 from django.contrib.auth.hashers import check_password, make_password
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from .utils import otp_code_generator
 from .serializers import CustomerSerializer, LoginSerializer, RegisterSerializer, OTPVerifySerializer, \
     OTPResendSerializer, ChangePasswordSerializer, ForgotPasswordSerializer, CustomerAddressesSerializer, \
     CustomerAddressesUpdateSerializer, CustomerAddressesCreateSerializer, ResetPasswordSerializer, FCMTokenSerializer, \
-    FCMTokenRequestSerializer, FCMTokenDeleteSerializer
+    FCMTokenRequestSerializer, FCMTokenDeleteSerializer, TokenRefreshSerializer
 from django.utils import timezone
 from integration.eskiz import EskizOTP
 from utils.send_notification import send_notification_to_customer
@@ -62,6 +63,34 @@ class AuthViewSet(ViewSet):
         customer.save()
 
         return Response(data={'access_token': str(access_token), 'refresh_token': str(refresh), 'ok': True},
+                        status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        operation_summary="Refresh token",
+        operation_description="Get new access and refresh tokens using refresh token",
+        request_body=TokenRefreshSerializer(),
+        responses={200: TokenRefreshSerializer()},
+        tags=["Auth"]
+    )
+    def refresh_token(self, request):
+        serializer = TokenRefreshSerializer(data=request.data)
+        if not serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
+
+        refresh_token = serializer.validated_data.get("refresh")
+        try:
+            refresh = RefreshToken(refresh_token)
+        except (TokenError, InvalidToken):
+            raise CustomApiException(error_code=ErrorCodes.REFRESH_TOKEN_INVALID)
+
+        customer = Customer.objects.filter(id=refresh.payload.get("user_id")).first()
+        if not customer:
+            raise CustomApiException(error_code=ErrorCodes.USER_DOES_NOT_EXIST)
+
+        new_refresh = RefreshToken.for_user(customer)
+        new_access = str(new_refresh.access_token)
+
+        return Response(data={"access_token": new_access, "refresh_token": str(new_refresh), "ok": True},
                         status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
