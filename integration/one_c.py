@@ -16,7 +16,7 @@ from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from service.models import (
     Product, ProductImage, ProductCharacteristics,
-    ProductCategory, ProductSubCategory, ProductItemCategory,
+    ProductItemCategory,
     Brand, ProductItemCategoryFilterSchema, ProductFilterNumericValue,
 )
 
@@ -25,7 +25,6 @@ load_dotenv()
 INTEGRATION_API_KEY = os.getenv("INTEGRATION_1C_API_KEY", "default-1c-api-key-change-me")
 
 NUMERIC_UNITS = {"kg", "g", "l", "m", "sm", "cm", "mm", "kw", "w", "v", "a"}
-RANGE_UNITS = NUMERIC_UNITS | {"шт", "pcs"}
 
 
 def decode_base64_image(base64_string):
@@ -59,58 +58,6 @@ def get_or_create_brand(guid):
         guid=guid,
     )
     return brand
-
-
-def get_or_create_category_hierarchy(category_ru, sub_category_ru, item_category_ru):
-    cat = None
-    if category_ru:
-        cat = ProductCategory.objects.filter(name=category_ru).first()
-        if not cat:
-            cat = ProductCategory.objects.create(name=category_ru)
-
-    sub = None
-    if sub_category_ru and cat:
-        sub = ProductSubCategory.objects.filter(
-            name=sub_category_ru, product_category=cat
-        ).first()
-        if not sub:
-            sub = ProductSubCategory.objects.create(
-                name=sub_category_ru, product_category=cat
-            )
-
-    item = None
-    if item_category_ru and sub:
-        item = ProductItemCategory.objects.filter(
-            name=item_category_ru, product_sub_category=sub
-        ).first()
-        if not item:
-            item = ProductItemCategory.objects.create(
-                name=item_category_ru, product_sub_category=sub
-            )
-    elif item_category_ru and cat and not sub:
-        item = ProductItemCategory.objects.filter(
-            name=item_category_ru, product_sub_category__product_category=cat
-        ).first()
-        if not item:
-            sub = ProductSubCategory.objects.create(
-                name=item_category_ru, product_category=cat
-            )
-            item = ProductItemCategory.objects.create(
-                name=item_category_ru, product_sub_category=sub
-            )
-
-    if not item and item_category_ru:
-        item = ProductItemCategory.objects.filter(name=item_category_ru).first()
-        if not item:
-            cat = ProductCategory.objects.create(name=item_category_ru)
-            sub = ProductSubCategory.objects.create(
-                name=item_category_ru, product_category=cat
-            )
-            item = ProductItemCategory.objects.create(
-                name=item_category_ru, product_sub_category=sub
-            )
-
-    return item
 
 
 def make_filter_key(name_ru):
@@ -161,7 +108,6 @@ class OneCProductInputSerializer(serializers.Serializer):
     description = serializers.CharField(required=False, allow_blank=True)
     description_uz = serializers.CharField(required=False, allow_blank=True)
     description_en = serializers.CharField(required=False, allow_blank=True)
-    short_description = serializers.CharField(required=False, allow_blank=True)
     price = serializers.FloatField(required=True)
     unit = serializers.ChoiceField(choices=[
         "kg", "l", "sm", "pcs", "m", "g", "pkg", "set"
@@ -169,9 +115,6 @@ class OneCProductInputSerializer(serializers.Serializer):
     quantity = serializers.IntegerField(default=0)
     discount_price = serializers.FloatField(required=False, allow_null=True)
     discount = serializers.IntegerField(required=False, allow_null=True)
-    category_ru = serializers.CharField(required=False, allow_blank=True)
-    sub_category_ru = serializers.CharField(required=False, allow_blank=True)
-    item_category_ru = serializers.CharField(required=False, allow_blank=True)
     item_category_id = serializers.IntegerField(required=False, allow_null=True)
     brand_guid = serializers.CharField(required=False, allow_blank=True)
     vendor_code = serializers.CharField(required=False, allow_blank=True)
@@ -185,7 +128,6 @@ class OneCProductInputSerializer(serializers.Serializer):
         required=False, default=list,
         child=serializers.CharField()
     )
-    telegram_id = serializers.CharField(required=False, allow_blank=True)
     is_active = serializers.BooleanField(default=True)
 
 
@@ -220,11 +162,7 @@ class OneCIntegrationViewSet(ViewSet):
                         message=f"item_category_id {item_category_id} not found"
                     )
             else:
-                item_category = get_or_create_category_hierarchy(
-                    data.get("category_ru", ""),
-                    data.get("sub_category_ru", ""),
-                    data.get("item_category_ru", ""),
-                )
+                item_category = None
 
             brand = get_or_create_brand(data.get("brand_guid"))
 
@@ -238,14 +176,12 @@ class OneCIntegrationViewSet(ViewSet):
                 "description": data.get("description", ""),
                 "description_uz": data.get("description_uz", ""),
                 "description_en": data.get("description_en", ""),
-                "short_description": data.get("short_description", ""),
                 "price": data.get("price", 0.0),
                 "unit": data.get("unit", "pcs"),
                 "quantity": data.get("quantity", 0),
                 "discount_price": data.get("discount_price"),
                 "discount": data.get("discount"),
                 "is_active": data.get("is_active", True),
-                "telegram_id": data.get("telegram_id", ""),
                 "vendor_code": data.get("vendor_code", ""),
                 "barcode": data.get("barcode", ""),
             }
