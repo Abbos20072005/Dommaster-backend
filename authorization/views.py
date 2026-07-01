@@ -49,8 +49,14 @@ class AuthViewSet(ViewSet):
         if not login_serializer.is_valid():
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=login_serializer.errors)
 
-        customer = Customer.objects.filter(Q(email=login_serializer.validated_data.get('email')) | Q(
-            phone_number=login_serializer.validated_data.get("phone_number"))).first()
+        login_email = login_serializer.validated_data.get("email")
+        login_phone = login_serializer.validated_data.get("phone_number")
+
+        lookup = Q(phone_number=login_phone)
+        if login_email:
+            lookup |= Q(email=login_email)
+
+        customer = Customer.objects.filter(lookup).first()
 
         if not customer:
             raise CustomApiException(error_code=ErrorCodes.USER_DOES_NOT_EXIST)
@@ -105,15 +111,18 @@ class AuthViewSet(ViewSet):
         if not serializer.is_valid():
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
 
-        customer = Customer.objects.filter(
-            Q(email=request.data.get("email")) | Q(phone_number=request.data.get('phone_number')),
-            verified=True).first()
+        email = request.data.get("email")
+        phone = request.data.get("phone_number")
+
+        lookup = Q(phone_number=phone)
+        if email:
+            lookup |= Q(email=email)
+
+        customer = Customer.objects.filter(lookup, verified=True).first()
         if customer:
             raise CustomApiException(error_code=ErrorCodes.ALREADY_EXISTS)
 
-        customer_none = Customer.objects.filter(
-            Q(email=request.data.get("email")) | Q(phone_number=request.data.get('phone_number')),
-            verified=False).first()
+        customer_none = Customer.objects.filter(lookup, verified=False).first()
 
         if customer_none is None:
             customer_save = serializer.save()

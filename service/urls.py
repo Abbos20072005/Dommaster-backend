@@ -217,9 +217,9 @@ urlpatterns = [
         name="product_characteristics",
     ),
     path(
-        "item-category/<int:pk>/attributes/",
-        ProductViewSet.as_view({"get": "category_attributes"}),
-        name="category_attributes",
+        "item-category/<int:pk>/filters/",
+        ProductViewSet.as_view({"get": "available_filters"}),
+        name="available_filters",
     ),
     path(
         "sub-categories/create/",

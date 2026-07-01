@@ -2,8 +2,8 @@ from rest_framework import serializers
 from authorization.serializers import CustomerSerializer, CustomerAddressesSerializer
 from .models import Product, ProductCategory, ProductItemCategory, ProductSubCategory, ProductImage, Comment, \
     Order, OrderItem, Brand, Sale, AddsBrands, Favourites, Cart, CartItem, ProductCharacteristics, Questions, \
-    RecentlyViewedProducts, Service, CommentReply, CommentImages, QuestionsReply, CategoryAttribute, \
-    CategoryAttributeValue, ProductAttributeValue, ProductVariantGroup, ProductVariantItem
+    RecentlyViewedProducts, Service, CommentReply, CommentImages, QuestionsReply, \
+    ProductVariantGroup, ProductVariantItem, ProductItemCategoryFilterSchema
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from config import settings
@@ -230,35 +230,6 @@ class ProductCharacteristicsCreateSerializer(serializers.ModelSerializer):
         )
 
 
-class CategoryAttributeValueSerializer(serializers.Serializer):
-    id = serializers.IntegerField()
-    value = serializers.CharField()
-    product_count = serializers.IntegerField(read_only=True, default=0)
-
-
-class CategoryAttributeSerializer(serializers.Serializer):
-    id = serializers.IntegerField()
-    name = serializers.CharField()
-    is_filterable = serializers.BooleanField()
-    position = serializers.IntegerField()
-    values = CategoryAttributeValueSerializer(source="attribute_values", many=True, read_only=True)
-
-
-class ProductAttributeValueSerializer(TranslatedSerializerMixin, serializers.Serializer):
-    attribute = serializers.SerializerMethodField()
-    value = serializers.SerializerMethodField()
-    attribute_id = serializers.IntegerField(source="attribute.id", read_only=True)
-    value_id = serializers.IntegerField(source="attribute_value.id", read_only=True)
-
-    def get_attribute(self, obj):
-        language = self.get_language()
-        return getattr(obj.attribute, f'name_{language}')
-
-    def get_value(self, obj):
-        language = self.get_language()
-        return getattr(obj.attribute_value, f'value_{language}')
-
-
 class CartItemCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = CartItem
@@ -402,7 +373,7 @@ class FilterSerializer(PaginationSerializer):
     brand = serializers.IntegerField(required=False)
     item_category = serializers.IntegerField(required=False)
     sale_id = serializers.IntegerField(required=False)
-    attributes = serializers.DictField(required=False, child=serializers.ListField(child=serializers.IntegerField()))
+    filters = serializers.JSONField(required=False, default=dict)
 
     def validate(self, attrs):
         price_from = attrs.get("price_from")
@@ -411,6 +382,21 @@ class FilterSerializer(PaginationSerializer):
             raise CustomApiException(error_code=ErrorCodes.INVALID_INPUT,
                                      message="Price_from could not be more than price_to")
         return attrs
+
+
+class FilterValueSerializer(serializers.Serializer):
+    value = serializers.CharField()
+    count = serializers.IntegerField()
+
+
+class AvailableFilterSerializer(serializers.Serializer):
+    key = serializers.CharField()
+    label = serializers.CharField()
+    type = serializers.CharField()
+    unit = serializers.CharField(required=False, default="")
+    min = serializers.FloatField(required=False)
+    max = serializers.FloatField(required=False)
+    values = FilterValueSerializer(many=True, required=False)
 
 
 class BrandSerializer(serializers.Serializer):
@@ -588,7 +574,6 @@ class ProductSerializer(ProductAnnotationMixin, TranslatedSerializerMixin, seria
     in_cart_quantity = serializers.SerializerMethodField()
     breadcrumbs = serializers.SerializerMethodField()
     characteristics = ProductCharacteristicsSerializer(source="product_characteristics", many=True, read_only=True)
-    attributes = ProductAttributeValueSerializer(source="product_attribute_values", many=True, read_only=True)
     brand = BrandSerializer(read_only=True)
 
     class Meta:
@@ -612,7 +597,6 @@ class ProductSerializer(ProductAnnotationMixin, TranslatedSerializerMixin, seria
             "comments_quantity",
             "questions_quantity",
             "characteristics",
-            "attributes",
             "breadcrumbs",
             "images",
         )

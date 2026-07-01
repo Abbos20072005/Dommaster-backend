@@ -55,7 +55,8 @@ class RegisterSerializer(serializers.ModelSerializer):
         model = Customer
         fields = ("id", "full_name", "email", "phone_number", "password")
         extra_kwargs = {
-            "password": {"write_only": True}
+            "password": {"write_only": True},
+            "email": {"required": False, "allow_blank": True, "allow_null": True},
         }
 
     def create(self, validated_data):

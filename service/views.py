@@ -11,7 +11,7 @@ from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from .paginations.get_orders import get_orders_paginator
 from rest_framework import status
-from django.db.models import Q, Sum, Exists, OuterRef, Value, BooleanField, Prefetch, IntegerField, Subquery
+from django.db.models import Q, Sum, Exists, OuterRef, Value, BooleanField, Prefetch, IntegerField, Subquery, Min, Max, F
 from django.db.models.functions import Coalesce
 from .paginations.get_products_pagination import get_products_paginator
 from .paginations.get_comments import get_comments_paginator
@@ -49,9 +49,8 @@ from .models import (
     CommentImages,
     QuestionsReply,
     ProductCharacteristics,
-    CategoryAttribute,
-    CategoryAttributeValue,
-    ProductAttributeValue,
+    ProductItemCategoryFilterSchema,
+    ProductFilterNumericValue,
 )
 from .serializers import (
     ProductCategorySerializer,
@@ -107,9 +106,9 @@ from .serializers import (
     ProductCategoryFilterSerializer,
     ProductShortSerializer,
     ProducgtCategoryTreeSerializer,
-    CategoryAttributeSerializer,
     ProductDetailSerializer,
-    ProductUpdateSerializer
+    ProductUpdateSerializer,
+    AvailableFilterSerializer,
 )
 
 
@@ -163,7 +162,7 @@ def get_optimized_product_qs(base_qs, request):
     else:
         qs = qs.annotate(_cart_quantity=Value(0, output_field=IntegerField()))
 
-    # Prefetch related data to avoid N+1 on images, characteristics, attributes
+    # Prefetch related data to avoid N+1 on images, characteristics
     qs = qs.select_related(
         'brand',
         'product_item_category__product_sub_category__product_category'
@@ -171,10 +170,6 @@ def get_optimized_product_qs(base_qs, request):
         'product_image',
         'product_characteristics',
         'variant_items',
-        Prefetch(
-            'product_attribute_values',
-            queryset=ProductAttributeValue.objects.select_related('attribute', 'attribute_value')
-        ),
     )
 
     return qs
@@ -239,7 +234,7 @@ class ProductViewSet(ViewSet):
         tags=["Product"],
     )
     def product_update(self, request, pk):
-        product = Product.objects.filter(id=pk).first()
+        product = Product.objects.filter(id=pk, is_active=True).first()
         if not product:
             raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
 
@@ -746,7 +741,7 @@ class ProductViewSet(ViewSet):
         brand = serializer.validated_data.get("brand")
         item_category = serializer.validated_data.get("item_category")
         sale_id = serializer.validated_data.get("sale_id")
-        attributes = serializer.validated_data.get("attributes")
+        filters_data = serializer.validated_data.get("filters", {})
 
         filters = Q()
 
@@ -774,53 +769,71 @@ class ProductViewSet(ViewSet):
 
         products = Product.objects.filter(filters, is_active=True)
 
-        if attributes:
-            attr_q = Q()
-            num_attrs = 0
-            for attr_id_str, value_ids in attributes.items():
-                if value_ids:
-                    attr_q |= Q(
-                        product_attribute_values__attribute_id=int(attr_id_str),
-                        product_attribute_values__attribute_value_id__in=value_ids,
-                    )
-                    num_attrs += 1
+        if filters_data and item_category:
+            for key, value in filters_data.items():
+                schema = ProductItemCategoryFilterSchema.objects.filter(
+                    item_category=item_category, key=key
+                ).first()
+                if not schema:
+                    continue
 
-            if num_attrs > 0:
-                products = (
-                    products.filter(attr_q)
-                    .annotate(
-                        matched_attrs=Count(
-                            "product_attribute_values__attribute_id",
-                            filter=attr_q,
-                            distinct=True,
-                        )
-                    )
-                    .filter(matched_attrs=num_attrs)
-                )
+                if schema.type == "range" and isinstance(value, dict):
+                    numeric_qs = ProductFilterNumericValue.objects.filter(schema=schema)
+                    if value.get("min") is not None:
+                        numeric_qs = numeric_qs.filter(value__gte=value["min"])
+                    if value.get("max") is not None:
+                        numeric_qs = numeric_qs.filter(value__lte=value["max"])
+                    products = products.filter(id__in=numeric_qs.values("product_id"))
+
+                else:
+                    if not isinstance(value, list):
+                        value = [value]
+                    or_q = Q()
+                    for v in value:
+                        or_q |= Q(filter_data__contains={key: v})
+                    products = products.filter(or_q)
 
         available_filters_list = []
         if item_category:
-            cat_attrs = (
-                CategoryAttribute.objects.filter(
-                    category_id=item_category, is_filterable=True
-                )
-                .prefetch_related(
-                    Prefetch(
-                        "attribute_values",
-                        queryset=CategoryAttributeValue.objects.annotate(
-                            product_count=Count(
-                                "productattributevalue__product",
-                                filter=Q(productattributevalue__product__in=products),
-                                distinct=True,
-                            )
-                        ),
-                    )
-                )
-                .order_by("position")
-            )
+            schemas = ProductItemCategoryFilterSchema.objects.filter(
+                item_category_id=item_category, is_filterable=True
+            ).order_by("position")
 
-            available_filters_list = CategoryAttributeSerializer(
-                cat_attrs, many=True, context={"request": request}
+            available_filters = []
+            for schema in schemas:
+                if schema.type == "range":
+                    agg = ProductFilterNumericValue.objects.filter(
+                        schema=schema, product__in=products
+                    ).aggregate(min_val=Min("value"), max_val=Max("value"))
+                    if agg["min_val"] is None:
+                        continue
+                    available_filters.append({
+                        "key": schema.key,
+                        "label": schema.label,
+                        "type": "range",
+                        "unit": schema.unit,
+                        "min": agg["min_val"],
+                        "max": agg["max_val"],
+                    })
+                else:
+                    values = (
+                        products.filter(filter_data__has_key=schema.key)
+                        .values(val=F(f"filter_data__{schema.key}"))
+                        .annotate(count=Count("id"))
+                        .order_by("-count")
+                    )
+                    if not values:
+                        continue
+                    available_filters.append({
+                        "key": schema.key,
+                        "label": schema.label,
+                        "type": schema.type,
+                        "unit": schema.unit,
+                        "values": [{"value": v["val"], "count": v["count"]} for v in values],
+                    })
+
+            available_filters_list = AvailableFilterSerializer(
+                available_filters, many=True
             ).data
 
         if q and not brand:
@@ -846,7 +859,6 @@ class ProductViewSet(ViewSet):
         else:
             products = products.order_by(sort)
 
-        # Apply annotations and prefetches to eliminate N+1 queries
         products = get_optimized_product_qs(products, request)
 
         return Response(
@@ -864,25 +876,56 @@ class ProductViewSet(ViewSet):
         )
 
     @swagger_auto_schema(
-        operation_summary="Category attributes",
-        operation_description="Get filterable attributes and values for a specific item category",
-        responses={200: CategoryAttributeSerializer(many=True)},
+        operation_summary="Available filters",
+        operation_description="Get available filters and their values/counts for an item category",
+        responses={200: AvailableFilterSerializer(many=True)},
         tags=["Product"],
     )
-    def category_attributes(self, request, pk):
-        attrs = (
-            CategoryAttribute.objects.filter(category_id=pk, is_filterable=True)
-            .prefetch_related("attribute_values")
-            .order_by("position")
+    def available_filters(self, request, pk):
+        schemas = ProductItemCategoryFilterSchema.objects.filter(
+            item_category_id=pk, is_filterable=True
+        ).order_by("position")
+
+        products = Product.objects.filter(
+            product_item_category_id=pk, is_active=True
         )
 
-        serializer = CategoryAttributeSerializer(
-            attrs, many=True, context={"request": request}
-        )
+        result = []
+        for schema in schemas:
+            if schema.type == "range":
+                agg = ProductFilterNumericValue.objects.filter(
+                    schema=schema, product__in=products
+                ).aggregate(min_val=Min("value"), max_val=Max("value"))
+                if agg["min_val"] is None:
+                    continue
+                result.append({
+                    "key": schema.key,
+                    "label": schema.label,
+                    "type": "range",
+                    "unit": schema.unit,
+                    "min": agg["min_val"],
+                    "max": agg["max_val"],
+                })
+            else:
+                values = (
+                    products.filter(filter_data__has_key=schema.key)
+                    .values(val=F(f"filter_data__{schema.key}"))
+                    .annotate(count=Count("id"))
+                    .order_by("-count")
+                )
+                if not values:
+                    continue
+                result.append({
+                    "key": schema.key,
+                    "label": schema.label,
+                    "type": schema.type,
+                    "unit": schema.unit,
+                    "values": [{"value": v["val"], "count": v["count"]} for v in values],
+                })
+
         return Response(
-            data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK
+            data={"result": AvailableFilterSerializer(result, many=True).data, "ok": True}
         )
-
 
 class CommentViewSet(ViewSet):
     @swagger_auto_schema(
@@ -1119,7 +1162,7 @@ class CommentViewSet(ViewSet):
     )
     def comment_create(self, request):
         param = request.query_params
-        product = Product.objects.filter(id=param.get("product_id")).first()
+        product = Product.objects.filter(id=param.get("product_id"), is_active=True).first()
         if not product:
             raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
 

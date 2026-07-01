@@ -53,6 +53,7 @@ class Brand(BaseModel):
     name = models.CharField(max_length=150, verbose_name="Название")
     image = models.ImageField(upload_to="brand/image/", verbose_name="Изображение")
     is_visible = models.BooleanField(default=True, verbose_name="Виден")
+    guid = models.CharField(max_length=100, blank=True, null=True, unique=True, verbose_name="GUID из 1С")
 
     def __str__(self):
         return self.name
@@ -212,6 +213,10 @@ class Product(BaseModel):
     comments_quantity = models.IntegerField(default=0, verbose_name="Количество коментариев")
     questions_quantity = models.IntegerField(default=0, verbose_name="Количество вопросов")
     is_active = models.BooleanField(default=True, verbose_name="Активен")
+    filter_data = models.JSONField(default=dict, blank=True)
+    vendor_code = models.CharField(max_length=100, blank=True, null=True, verbose_name="Артикул")
+    barcode = models.CharField(max_length=100, blank=True, null=True, verbose_name="Штрихкод")
+    guid = models.CharField(max_length=100, blank=True, null=True, unique=True, verbose_name="GUID из 1С")
 
     def __str__(self):
         return self.name
@@ -393,66 +398,54 @@ class ProductCharacteristics(BaseModel):
         verbose_name_plural = "Характеристики продуктов"
 
 
-class CategoryAttribute(BaseModel):
-    """Defines which filterable attributes a category has (e.g., 'Voltage' for Drills)"""
-    category = models.ForeignKey(
+class ProductItemCategoryFilterSchema(BaseModel):
+    item_category = models.ForeignKey(
         ProductItemCategory, on_delete=models.CASCADE,
-        related_name="category_attributes",
+        related_name="filter_schemas",
         verbose_name="Категория"
     )
-    name = models.CharField(max_length=150, verbose_name="Название")
-    is_filterable = models.BooleanField(default=True, verbose_name="Фильтруемый")
+    key = models.SlugField(max_length=100, verbose_name="Ключ (slug)")
+    source_name_ru = models.CharField(max_length=150, verbose_name="Название в 1С")
+    label = models.CharField(max_length=150, verbose_name="Название")
+    type = models.CharField(max_length=20, choices=[
+        ("checkbox", "Multi-select"),
+        ("radio", "Single select"),
+        ("range", "Range slider"),
+    ], default="checkbox", verbose_name="Тип фильтра")
+    unit = models.CharField(max_length=50, blank=True, verbose_name="Единица измерения")
     position = models.IntegerField(default=0, verbose_name="Позиция")
+    is_filterable = models.BooleanField(default=True, verbose_name="Фильтруемый")
+    type_locked = models.BooleanField(default=False, verbose_name="Тип зафиксирован")
 
     def __str__(self):
-        return f"{self.category.name} — {self.name}"
+        return f"{self.item_category.name} — {self.label}"
 
     class Meta:
-        verbose_name = "Атрибут категории"
-        verbose_name_plural = "Атрибуты категорий"
+        verbose_name = "Схема фильтра категории"
+        verbose_name_plural = "Схемы фильтров категорий"
+        unique_together = ("item_category", "key")
         ordering = ("position",)
 
 
-class CategoryAttributeValue(BaseModel):
-    """Predefined allowed values per attribute (e.g., '110V', '220V')"""
-    attribute = models.ForeignKey(
-        CategoryAttribute, on_delete=models.CASCADE,
-        related_name="attribute_values",
-        verbose_name="Атрибут"
-    )
-    value = models.CharField(max_length=150, verbose_name="Значение")
+class ProductFilterNumericValue(BaseModel):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE,
+                                 related_name="numeric_filter_values",
+                                 verbose_name="Продукт")
+    schema = models.ForeignKey(ProductItemCategoryFilterSchema,
+                                on_delete=models.CASCADE,
+                                verbose_name="Схема фильтра")
+    value = models.FloatField(verbose_name="Значение")
 
     def __str__(self):
-        return f"{self.attribute.name}: {self.value}"
+        return f"{self.product.name} — {self.schema.key}: {self.value}"
 
     class Meta:
-        verbose_name = "Значение атрибута"
-        verbose_name_plural = "Значения атрибутов"
-
-
-class ProductAttributeValue(BaseModel):
-    """Links a product to its attribute values"""
-    product = models.ForeignKey(
-        Product, on_delete=models.CASCADE,
-        related_name="product_attribute_values",
-        verbose_name="Продукт"
-    )
-    attribute = models.ForeignKey(
-        CategoryAttribute, on_delete=models.CASCADE,
-        verbose_name="Атрибут"
-    )
-    attribute_value = models.ForeignKey(
-        CategoryAttributeValue, on_delete=models.CASCADE,
-        verbose_name="Значение атрибута"
-    )
-
-    def __str__(self):
-        return f"{self.product.name} — {self.attribute.name}: {self.attribute_value.value}"
-
-    class Meta:
-        verbose_name = "Значение атрибута продукта"
-        verbose_name_plural = "Значения атрибутов продуктов"
-        unique_together = ("product", "attribute", "attribute_value")
+        verbose_name = "Числовое значение фильтра"
+        verbose_name_plural = "Числовые значения фильтров"
+        unique_together = ("product", "schema")
+        indexes = [
+            models.Index(fields=["schema", "value"], name="idx_num_filt_schema_val"),
+        ]
 
 
 class Cart(BaseModel):

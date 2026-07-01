@@ -31,6 +31,7 @@ urlpatterns = [
     path("api/v1/auth/", include("authorization.urls")),
     path("api/v1/base/", include("base.urls")),
     path("api/v1/", include("service.urls")),
+    path("api/v1/integration/", include("integration.urls")),
     path("", include("payment.urls")),
 
     re_path(r'static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT}),

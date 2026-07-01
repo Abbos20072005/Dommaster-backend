@@ -2,8 +2,8 @@ from django.contrib import admin
 from .models import Product, ProductCategory, ProductSubCategory, ProductItemCategory, Comment, Order, \
     OrderItem, Tag, Brand, Sale, AddsBrands, ProductImage, Favourites, Cart, CartItem, Questions, \
     ProductCharacteristics, RecentlyViewedProducts, Service, CommentImages, CommentReply, QuestionsReply, \
-    CategoryAttribute, CategoryAttributeValue, ProductAttributeValue, ProductVariantGroup, ProductVariantItem, \
-    Announcements
+    ProductVariantGroup, ProductVariantItem, \
+    Announcements, ProductItemCategoryFilterSchema, ProductFilterNumericValue
 from unfold.admin import ModelAdmin, TabularInline
 from base.admin_actions import make_visible, make_hidden, activate, deactivate, \
     mark_as_main, mark_as_not_main, status_collecting, status_delivering, status_completed, status_canceled
@@ -70,26 +70,6 @@ class ProductCharacteristicsAdmin(ModelAdmin):
     search_fields = ("name", "value", "product__name")
     list_filter = ("unit",)
     autocomplete_fields = ("product",)
-
-
-class CategoryAttributeValueInline(TabularInline):
-    model = CategoryAttributeValue
-    extra = 1
-
-
-@admin.register(CategoryAttribute)
-class CategoryAttributeAdmin(ModelAdmin):
-    list_display = ("id", "name", "category", "is_filterable", "position")
-    list_display_links = ("id", "name")
-    list_filter = ("category", "is_filterable")
-    search_fields = ("name", "category__name")
-    autocomplete_fields = ("category",)
-    inlines = [CategoryAttributeValueInline]
-
-
-class ProductAttributeValueInline(TabularInline):
-    model = ProductAttributeValue
-    extra = 1
 
 
 @admin.register(Questions)
@@ -202,7 +182,7 @@ class ProductAdmin(ModelAdmin):
     list_filter = ("brand", "product_item_category", "is_active", "unit", "created_at")
     readonly_fields = ("discount_price",)
     autocomplete_fields = ("brand", "product_item_category")
-    inlines = (ProductImageInline, ProductCharacteristicsInline, ProductAttributeValueInline)
+    inlines = (ProductImageInline, ProductCharacteristicsInline)
     date_hierarchy = "created_at"
     list_per_page = 25
     actions = [activate, deactivate]
@@ -289,6 +269,31 @@ class ProductVariantGroupAdmin(ModelAdmin):
     list_filter = ("display_type", "created_at")
     inlines = [ProductVariantItemInline]
     date_hierarchy = "created_at"
+
+
+class ProductFilterNumericValueInline(TabularInline):
+    model = ProductFilterNumericValue
+    extra = 0
+    autocomplete_fields = ("product",)
+
+
+@admin.register(ProductItemCategoryFilterSchema)
+class ProductItemCategoryFilterSchemaAdmin(ModelAdmin):
+    list_display = ("id", "item_category", "key", "label_ru", "type", "unit", "position", "is_filterable", "type_locked")
+    list_display_links = ("id", "key")
+    search_fields = ("key", "label_ru", "item_category__name")
+    list_filter = ("type", "is_filterable", "type_locked", "item_category")
+    autocomplete_fields = ("item_category",)
+    inlines = [ProductFilterNumericValueInline]
+
+
+@admin.register(ProductFilterNumericValue)
+class ProductFilterNumericValueAdmin(ModelAdmin):
+    list_display = ("id", "product", "schema", "value")
+    list_display_links = ("id", "product")
+    search_fields = ("product__name", "schema__key")
+    list_filter = ("schema__item_category",)
+    autocomplete_fields = ("product", "schema")
 
 
 @admin.register(Announcements)

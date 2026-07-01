@@ -25,6 +25,9 @@ class ErrorCodes(Enum):
     OTP_NOT_FOUND = 20
     PRODUCT_QUANTITY_NOT_ENOUGH = 21
     REFRESH_TOKEN_INVALID = 22
+    INTEGRATION_API_KEY_INVALID = 23
+    INTEGRATION_INVALID_DATA = 24
+    INTEGRATION_IMAGE_DECODE_FAILED = 25
 
 
 error_messages = {
@@ -51,7 +54,10 @@ error_messages = {
     19: {"result": "Promocode expired", "http_status": status.HTTP_400_BAD_REQUEST},
     20: {"result": "Otp not found", "http_status": status.HTTP_400_BAD_REQUEST},
     21: {"result": "Product does not enough in warehouse", "http_status": status.HTTP_400_BAD_REQUEST},
-    22: {"result": "Refresh token is invalid or expired", "http_status": status.HTTP_401_UNAUTHORIZED}
+    22: {"result": "Refresh token is invalid or expired", "http_status": status.HTTP_401_UNAUTHORIZED},
+    23: {"result": "Invalid integration API key", "http_status": status.HTTP_401_UNAUTHORIZED},
+    24: {"result": "Invalid integration data", "http_status": status.HTTP_400_BAD_REQUEST},
+    25: {"result": "Failed to decode image", "http_status": status.HTTP_400_BAD_REQUEST}
 }
 
 
