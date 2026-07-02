@@ -279,7 +279,7 @@ class ProductFilterNumericValueInline(TabularInline):
 
 @admin.register(ProductItemCategoryFilterSchema)
 class ProductItemCategoryFilterSchemaAdmin(ModelAdmin):
-    list_display = ("id", "item_category", "key", "label_ru", "type", "unit", "position", "is_filterable", "type_locked")
+    list_display = ("id", "item_category", "key", "label_ru", "type", "unit", "position", "is_filterable", "show_as_chip", "type_locked")
     list_display_links = ("id", "key")
     search_fields = ("key", "label_ru", "item_category__name")
     list_filter = ("type", "is_filterable", "type_locked", "item_category")

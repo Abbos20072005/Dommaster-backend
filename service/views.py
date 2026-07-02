@@ -812,13 +812,15 @@ class ProductViewSet(ViewSet):
                         "label": schema.label,
                         "type": "range",
                         "unit": schema.unit,
+                        "show_as_chip": schema.show_as_chip,
                         "min": agg["min_val"],
                         "max": agg["max_val"],
                     })
                 else:
                     values = (
                         products.filter(filter_data__has_key=schema.key)
-                        .values(val=F(f"filter_data__{schema.key}"))
+                        .annotate(val=F(f"filter_data__{schema.key}"))
+                        .values("val")
                         .annotate(count=Count("id"))
                         .order_by("-count")
                     )
@@ -829,6 +831,7 @@ class ProductViewSet(ViewSet):
                         "label": schema.label,
                         "type": schema.type,
                         "unit": schema.unit,
+                        "show_as_chip": schema.show_as_chip,
                         "values": [{"value": v["val"], "count": v["count"]} for v in values],
                     })
 
@@ -903,13 +906,15 @@ class ProductViewSet(ViewSet):
                     "label": schema.label,
                     "type": "range",
                     "unit": schema.unit,
+                    "show_as_chip": schema.show_as_chip,
                     "min": agg["min_val"],
                     "max": agg["max_val"],
                 })
             else:
                 values = (
                     products.filter(filter_data__has_key=schema.key)
-                    .values(val=F(f"filter_data__{schema.key}"))
+                    .annotate(val=F(f"filter_data__{schema.key}"))
+                    .values("val")
                     .annotate(count=Count("id"))
                     .order_by("-count")
                 )
@@ -920,6 +925,7 @@ class ProductViewSet(ViewSet):
                     "label": schema.label,
                     "type": schema.type,
                     "unit": schema.unit,
+                    "show_as_chip": schema.show_as_chip,
                     "values": [{"value": v["val"], "count": v["count"]} for v in values],
                 })
 

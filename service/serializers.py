@@ -394,6 +394,7 @@ class AvailableFilterSerializer(serializers.Serializer):
     label = serializers.CharField()
     type = serializers.CharField()
     unit = serializers.CharField(required=False, default="")
+    show_as_chip = serializers.BooleanField(default=False)
     min = serializers.FloatField(required=False)
     max = serializers.FloatField(required=False)
     values = FilterValueSerializer(many=True, required=False)
