@@ -404,7 +404,7 @@ class ProductItemCategoryFilterSchema(BaseModel):
         related_name="filter_schemas",
         verbose_name="Категория"
     )
-    key = models.SlugField(max_length=100, verbose_name="Ключ (slug)")
+    key = models.SlugField(max_length=100, allow_unicode=True, verbose_name="Ключ (slug)")
     source_name_ru = models.CharField(max_length=150, verbose_name="Название в 1С")
     label = models.CharField(max_length=150, verbose_name="Название")
     type = models.CharField(max_length=20, choices=[
