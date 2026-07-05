@@ -109,6 +109,7 @@ from .serializers import (
     ProductDetailSerializer,
     ProductUpdateSerializer,
     AvailableFilterSerializer,
+    QuickFilterSerializer,
 )
 
 
@@ -794,6 +795,7 @@ class ProductViewSet(ViewSet):
                     products = products.filter(or_q)
 
         available_filters_list = []
+        quick_filters = []
         if item_category:
             schemas = ProductItemCategoryFilterSchema.objects.filter(
                 item_category_id=item_category, is_filterable=True
@@ -812,12 +814,11 @@ class ProductViewSet(ViewSet):
                         "label": schema.label,
                         "type": "range",
                         "unit": schema.unit,
-                        "show_as_chip": schema.show_as_chip,
                         "min": agg["min_val"],
                         "max": agg["max_val"],
                     })
                 else:
-                    values = (
+                    values = list(
                         products.filter(filter_data__has_key=schema.key)
                         .annotate(val=F(f"filter_data__{schema.key}"))
                         .values("val")
@@ -831,9 +832,21 @@ class ProductViewSet(ViewSet):
                         "label": schema.label,
                         "type": schema.type,
                         "unit": schema.unit,
-                        "show_as_chip": schema.show_as_chip,
                         "values": [{"value": v["val"], "count": v["count"]} for v in values],
                     })
+
+                    if schema.is_quick_filter:
+                        _values = values
+                        if schema.max_quick_filters:
+                            _values = values[:schema.max_quick_filters]
+                        for v in _values:
+                            label = f"{v['val']} {schema.unit}".strip() if schema.unit else v["val"]
+                            quick_filters.append({
+                                "key": schema.key,
+                                "label": label,
+                                "value": v["val"],
+                                "count": v["count"],
+                            })
 
             available_filters_list = AvailableFilterSerializer(
                 available_filters, many=True
@@ -873,6 +886,7 @@ class ProductViewSet(ViewSet):
                     context={"request": request},
                 ),
                 "available_filters": available_filters_list,
+                "quick_filters": QuickFilterSerializer(quick_filters, many=True).data,
                 "ok": True,
             },
             status=status.HTTP_200_OK,
@@ -894,6 +908,7 @@ class ProductViewSet(ViewSet):
         )
 
         result = []
+        quick_filters = []
         for schema in schemas:
             if schema.type == "range":
                 agg = ProductFilterNumericValue.objects.filter(
@@ -906,12 +921,11 @@ class ProductViewSet(ViewSet):
                     "label": schema.label,
                     "type": "range",
                     "unit": schema.unit,
-                    "show_as_chip": schema.show_as_chip,
                     "min": agg["min_val"],
                     "max": agg["max_val"],
                 })
             else:
-                values = (
+                values = list(
                     products.filter(filter_data__has_key=schema.key)
                     .annotate(val=F(f"filter_data__{schema.key}"))
                     .values("val")
@@ -925,12 +939,28 @@ class ProductViewSet(ViewSet):
                     "label": schema.label,
                     "type": schema.type,
                     "unit": schema.unit,
-                    "show_as_chip": schema.show_as_chip,
                     "values": [{"value": v["val"], "count": v["count"]} for v in values],
                 })
 
+                if schema.is_quick_filter:
+                    _values = values
+                    if schema.max_quick_filters:
+                        _values = values[:schema.max_quick_filters]
+                    for v in _values:
+                        label = f"{v['val']} {schema.unit}".strip() if schema.unit else v["val"]
+                        quick_filters.append({
+                            "key": schema.key,
+                            "label": label,
+                            "value": v["val"],
+                            "count": v["count"],
+                        })
+
         return Response(
-            data={"result": AvailableFilterSerializer(result, many=True).data, "ok": True}
+            data={
+                "result": AvailableFilterSerializer(result, many=True).data,
+                "quick_filters": QuickFilterSerializer(quick_filters, many=True).data,
+                "ok": True,
+            }
         )
 
 class CommentViewSet(ViewSet):

@@ -415,7 +415,8 @@ class ProductItemCategoryFilterSchema(BaseModel):
     unit = models.CharField(max_length=50, blank=True, verbose_name="Единица измерения")
     position = models.IntegerField(default=0, verbose_name="Позиция")
     is_filterable = models.BooleanField(default=True, verbose_name="Фильтруемый")
-    show_as_chip = models.BooleanField(default=False, verbose_name="Показывать как чип")
+    is_quick_filter = models.BooleanField(default=False, verbose_name="Быстрый фильтр (чип)")
+    max_quick_filters = models.PositiveIntegerField(default=0, verbose_name="Макс. кол-во быстрых фильтров")
     type_locked = models.BooleanField(default=False, verbose_name="Тип зафиксирован")
 
     def __str__(self):

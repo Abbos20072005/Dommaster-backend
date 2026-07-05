@@ -183,6 +183,17 @@ class ProductAdmin(ModelAdmin):
     readonly_fields = ("discount_price",)
     autocomplete_fields = ("brand", "product_item_category")
     inlines = (ProductImageInline, ProductCharacteristicsInline)
+    fieldsets = (
+        (None, {
+            "fields": ("name", "price", "discount", "discount_price", "quantity",
+                       "rating", "is_active", "brand", "product_item_category", "unit")
+        }),
+        ("Данные для фильтров", {
+            "classes": ("collapse",),
+            "fields": ("filter_data",),
+            "description": "Формат: {\"ключ_фильтра\": \"значение\"}. Для checkbox/radio фильтров."
+        }),
+    )
     date_hierarchy = "created_at"
     list_per_page = 25
     actions = [activate, deactivate]
@@ -279,7 +290,7 @@ class ProductFilterNumericValueInline(TabularInline):
 
 @admin.register(ProductItemCategoryFilterSchema)
 class ProductItemCategoryFilterSchemaAdmin(ModelAdmin):
-    list_display = ("id", "item_category", "key", "label_ru", "type", "unit", "position", "is_filterable", "show_as_chip", "type_locked")
+    list_display = ("id", "item_category", "key", "label_ru", "type", "unit", "position", "is_filterable", "is_quick_filter", "max_quick_filters", "type_locked")
     list_display_links = ("id", "key")
     search_fields = ("key", "label_ru", "item_category__name")
     list_filter = ("type", "is_filterable", "type_locked", "item_category")
