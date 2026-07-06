@@ -886,8 +886,9 @@ class ProductViewSet(ViewSet):
         else:
             products = products.order_by(sort)
 
-        if q and not item_category:
-            cat_ids = list(products.values_list(
+        has_filters = any([q, brand, price_from, price_to, sale_id, filters_data])
+        if not item_category and has_filters:
+            cat_ids = list(products.order_by().values_list(
                 "product_item_category", flat=True
             ).distinct())
 
