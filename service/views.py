@@ -21,6 +21,7 @@ from django.db.models import Count
 from django.core.cache import cache
 from django.contrib.postgres.search import TrigramSimilarity
 from django.db.models.functions import Greatest
+from collections import OrderedDict
 import secrets
 from django.db import transaction
 from base.models import Promocodes
@@ -770,16 +771,26 @@ class ProductViewSet(ViewSet):
 
         products = Product.objects.filter(filters, is_active=True)
 
-        if filters_data and item_category:
+        if filters_data:
             for key, value in filters_data.items():
-                schema = ProductItemCategoryFilterSchema.objects.filter(
-                    item_category=item_category, key=key
-                ).first()
+                if item_category:
+                    schema = ProductItemCategoryFilterSchema.objects.filter(
+                        item_category=item_category, key=key
+                    ).first()
+                else:
+                    schema = ProductItemCategoryFilterSchema.objects.filter(
+                        key=key
+                    ).first()
                 if not schema:
                     continue
 
                 if schema.type == "range" and isinstance(value, dict):
-                    numeric_qs = ProductFilterNumericValue.objects.filter(schema=schema)
+                    schema_ids = list(ProductItemCategoryFilterSchema.objects.filter(
+                        key=key
+                    ).values_list("id", flat=True))
+                    numeric_qs = ProductFilterNumericValue.objects.filter(
+                        schema_id__in=schema_ids, product__in=products
+                    )
                     if value.get("min") is not None:
                         numeric_qs = numeric_qs.filter(value__gte=value["min"])
                     if value.get("max") is not None:
@@ -874,6 +885,75 @@ class ProductViewSet(ViewSet):
             ).order_by("-similarity", sort)
         else:
             products = products.order_by(sort)
+
+        if q and not item_category:
+            cat_ids = list(products.values_list(
+                "product_item_category", flat=True
+            ).distinct())
+
+            if cat_ids:
+                schemas = ProductItemCategoryFilterSchema.objects.filter(
+                    item_category_id__in=cat_ids, is_filterable=True
+                ).order_by("position")
+
+                schema_groups = OrderedDict()
+                for schema in schemas:
+                    if schema.key not in schema_groups:
+                        schema_groups[schema.key] = {
+                            "schema": schema,
+                            "schema_ids": [],
+                        }
+                    schema_groups[schema.key]["schema_ids"].append(schema.id)
+
+                available_filters = []
+                for key, group in schema_groups.items():
+                    first = group["schema"]
+                    if first.type == "range":
+                        agg = ProductFilterNumericValue.objects.filter(
+                            schema_id__in=group["schema_ids"], product__in=products
+                        ).aggregate(min_val=Min("value"), max_val=Max("value"))
+                        if agg["min_val"] is None:
+                            continue
+                        available_filters.append({
+                            "key": key,
+                            "label": first.label,
+                            "type": "range",
+                            "unit": first.unit,
+                            "min": agg["min_val"],
+                            "max": agg["max_val"],
+                        })
+                    else:
+                        values_list = list(
+                            products.filter(filter_data__has_key=key)
+                            .annotate(val=F(f"filter_data__{key}"))
+                            .values("val")
+                            .annotate(count=Count("id"))
+                            .order_by("-count")
+                        )
+                        if not values_list:
+                            continue
+                        available_filters.append({
+                            "key": key,
+                            "label": first.label,
+                            "type": first.type,
+                            "unit": first.unit,
+                            "values": [{"value": v["val"], "count": v["count"]} for v in values_list],
+                        })
+
+                        if first.is_quick_filter:
+                            _values = values_list
+                            if first.max_quick_filters:
+                                _values = values_list[:first.max_quick_filters]
+                            for v in _values:
+                                label = f"{v['val']} {first.unit}".strip() if first.unit else v["val"]
+                                quick_filters.append({
+                                    "key": key,
+                                    "label": label,
+                                    "value": v["val"],
+                                    "count": v["count"],
+                                })
+
+                available_filters_list = AvailableFilterSerializer(available_filters, many=True).data
 
         products = get_optimized_product_qs(products, request)
 
