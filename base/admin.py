@@ -1,5 +1,6 @@
 from django.contrib import admin
-from .models import Banner, Chat, AboutUs, Messages, Promocodes, News, Articles, Reviews, Video, DeleteButton, LoyaltyCard, Notification
+from .models import Banner, Chat, AboutUs, Messages, Promocodes, News, Articles, Reviews, Video, DeleteButton, \
+    LoyaltyCard, Notification, BaseInformation
 from base.admin_actions import make_visible, make_hidden, activate, deactivate, mark_as_answer
 
 
@@ -124,3 +125,8 @@ class NotificationAdmin(admin.ModelAdmin):
     search_fields = ("title", "description")
     list_filter = ("created_at",)
     date_hierarchy = "created_at"
+
+
+@admin.register(BaseInformation)
+class BaseInformationAdmin(admin.ModelAdmin):
+    list_display = ("id", "phone_number", "additional_phone_number", "email", "created_at")

@@ -10,8 +10,10 @@ from .paginations.get_articles import get_articles_paginator
 from .paginations.get_reviews import get_reviews_paginator
 from .serializers import BannerSerializer, MessageSerializer, MessageCreateSerializer, AboutUsSerializer, \
     ChatCreateSerializer, PromocodeRequestSerializer, NewsSerializer, NewsDetailSerializer, ArticlesSerializer, \
-    ArticlesDetailSerializer, ReviewsSerializer, ReviewsDetailSerializer, VideoSerializer, PromocodeSerializer, DeleteButtonSerializer
-from .models import Banner, Chat, AboutUs, Messages, Promocodes, News, Articles, Reviews, Video, DeleteButton
+    ArticlesDetailSerializer, ReviewsSerializer, ReviewsDetailSerializer, VideoSerializer, PromocodeSerializer, \
+    DeleteButtonSerializer, BaseInformationSerializer
+from .models import Banner, Chat, AboutUs, Messages, Promocodes, News, Articles, Reviews, Video, DeleteButton, \
+    BaseInformation
 from service.models import Cart
 from drf_yasg import openapi
 from datetime import date
@@ -342,3 +344,16 @@ class DeleteButtonViewSet(ViewSet):
     def delete_button(self, request):
         delete_button = DeleteButton.objects.last()
         return Response(data={"result": DeleteButtonSerializer(delete_button).data, "ok": True}, status=status.HTTP_200_OK)
+
+
+class BaseInformationViewSet(ViewSet):
+    @swagger_auto_schema(
+        operation_summary="Base Information",
+        operation_description="Base Information",
+        responses={200: BaseInformationSerializer()},
+        tags=["Base"]
+    )
+    def base_info(self, request):
+        base_info = BaseInformation.objects.last()
+        serializer = BaseInformationSerializer(base_info, context={"request": request})
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)

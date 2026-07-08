@@ -163,3 +163,26 @@ class DeleteButton(BaseModel):
     def __str__(self):
         return str(self.id)
 
+
+class BaseInformation(BaseModel):
+    phone_number = models.CharField(max_length=20, verbose_name="Номер телефона")
+    additional_phone_number = models.CharField(max_length=20, blank=True, null=True,
+                                               verbose_name="Дополнительный номер телефона")
+    email = models.EmailField(verbose_name="Электронная почта")
+    address = models.CharField(max_length=500, blank=True, null=True, verbose_name="Адрес")
+    working_hours = models.CharField(max_length=255, blank=True, null=True, verbose_name="Рабочее время")
+    telegram = models.URLField(blank=True, null=True, verbose_name="Telegram")
+    instagram = models.URLField(blank=True, null=True, verbose_name="Instagram")
+    facebook = models.URLField(blank=True, null=True, verbose_name="Facebook")
+    youtube = models.URLField(blank=True, null=True, verbose_name="YouTube")
+    telegram_support = models.URLField(blank=True, null=True, verbose_name="Telegram поддержка")
+    google_play_url = models.URLField(blank=True, null=True, verbose_name="Google Play ссылка")
+    app_store_url = models.URLField(blank=True, null=True, verbose_name="App Store ссылка")
+
+    def __str__(self):
+        return f"Base Information #{self.id}"
+
+    class Meta:
+        verbose_name = "Базовая информация"
+        verbose_name_plural = "Базовая информация"
+

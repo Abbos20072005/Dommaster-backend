@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import Banner, Chat, LoyaltyCard, AboutUs, Messages, Promocodes, News, Articles, Reviews, Video, DeleteButton
+from .models import Banner, Chat, LoyaltyCard, AboutUs, Messages, Promocodes, News, Articles, Reviews, Video, DeleteButton, \
+    BaseInformation
 from config import settings
 
 
@@ -218,4 +219,24 @@ class AboutUsSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "description"
+        )
+
+
+class BaseInformationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BaseInformation
+        fields = (
+            "id",
+            "phone_number",
+            "additional_phone_number",
+            "email",
+            "address",
+            "working_hours",
+            "telegram",
+            "instagram",
+            "facebook",
+            "youtube",
+            "telegram_support",
+            "google_play_url",
+            "app_store_url",
         )
