@@ -564,7 +564,7 @@ class ProductViewSet(ViewSet):
                 )
 
             if not brand_id:
-                categories = ProductCategory.objects.all()
+                categories = ProductCategory.objects.all().order_by("position")
                 serializer = ProductCategoryListSerializer(
                     categories, many=True, context={"request": request}
                 )
@@ -572,7 +572,7 @@ class ProductViewSet(ViewSet):
                 categories = ProductCategory.objects.filter(
                     product_category__product_sub_category__product_item_category__brand_id=brand_id,
                     product_category__product_sub_category__product_item_category__id__isnull=False,
-                ).distinct()
+                ).distinct().order_by("position")
                 serializer = ProductCategoryFilterSerializer(
                     categories, many=True, context={"request": request}
                 )
@@ -595,7 +595,7 @@ class ProductViewSet(ViewSet):
 
         categories = ProductCategory.objects.all().prefetch_related(
             "product_category__product_sub_category"
-        )
+        ).order_by("position")
         serializer = ProducgtCategoryTreeSerializer(
             categories, many=True, context={"request": request}
         )

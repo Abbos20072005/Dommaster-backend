@@ -785,6 +785,7 @@ class ProductSubCategoryFilterSerializer(serializers.Serializer):
 class ProductCategoryFilterSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     name = serializers.CharField()
+    position = serializers.IntegerField()
     sub_categories = serializers.SerializerMethodField()
 
     def get_sub_categories(self, obj):
@@ -850,7 +851,8 @@ class ProductCategorySearchSerializer(TranslatedSerializerMixin, serializers.Mod
         fields = (
             "id",
             "name",
-            "image"
+            "image",
+            "position"
         )
 
 class ProductCategorySerializer(TranslatedSerializerMixin, serializers.ModelSerializer):
@@ -869,6 +871,7 @@ class ProductCategorySerializer(TranslatedSerializerMixin, serializers.ModelSeri
             "name",
             "image",
             "icon",
+            "position",
             "breadcrumbs",
             "sub_categories"
         )
@@ -896,6 +899,7 @@ class ProducgtCategoryTreeSerializer(serializers.Serializer):
     name = serializers.CharField()
     image = serializers.ImageField()
     icon = serializers.ImageField()
+    position = serializers.IntegerField()
     sub_categories = serializers.SerializerMethodField()
 
     def get_sub_categories(self, obj):
@@ -909,6 +913,7 @@ class ProductCategoryListSerializer(serializers.Serializer):
     name = serializers.CharField()
     icon = serializers.ImageField()
     image = serializers.ImageField()
+    position = serializers.IntegerField()
 
 class ProductSubCategoryCreateSerializer(serializers.ModelSerializer):
     class Meta:

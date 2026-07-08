@@ -96,6 +96,7 @@ class ProductCategory(BaseModel):
     name = models.CharField(max_length=255, verbose_name="Название")
     icon = models.ImageField(upload_to="product_category/icon/")
     image = models.ImageField(upload_to="product_category", verbose_name="Изображение")
+    position = models.IntegerField(default=0, verbose_name="Позиция")
 
     def __str__(self):
         return self.name
@@ -107,6 +108,7 @@ class ProductCategory(BaseModel):
     class Meta:
         verbose_name = "Категория продуктов"
         verbose_name_plural = "Категории продуктов"
+        ordering = ("position",)
         indexes = [
             GinIndex(fields=['name'], opclasses=['gin_trgm_ops'], name='idx_category_name_trgm'),
             GinIndex(fields=['name_uz'], opclasses=['gin_trgm_ops'], name='idx_category_name_uz_trgm'),
