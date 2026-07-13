@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.db.models import Count
 from .models import Product, ProductCategory, ProductSubCategory, ProductItemCategory, Comment, Order, \
     OrderItem, Tag, Brand, Sale, AddsBrands, ProductImage, Favourites, Cart, CartItem, Questions, \
     ProductCharacteristics, RecentlyViewedProducts, Service, CommentImages, CommentReply, QuestionsReply, \
@@ -112,14 +113,34 @@ class FavouriteAdmin(ModelAdmin):
     date_hierarchy = "created_at"
 
 
+class BrandProductImageFilter(admin.SimpleListFilter):
+    title = "Бренд"
+    parameter_name = "brand"
+
+    def lookups(self, request, model_admin):
+        return Brand.objects.filter(product_brand__isnull=False).distinct().values_list("id", "name")
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(product__brand_id=self.value())
+        return queryset
+
+
 @admin.register(ProductImage)
 class ProductImageAdmin(ModelAdmin):
-    list_display = ("id", "product", "created_at")
+    list_display = ("id", "product", "get_brand", "created_at")
     list_display_links = ("id", "product")
     search_fields = ("product__name",)
-    list_filter = ("created_at",)
+    list_filter = (BrandProductImageFilter, "created_at")
     autocomplete_fields = ("product",)
     date_hierarchy = "created_at"
+
+    @admin.display(description="Бренд")
+    def get_brand(self, obj):
+        return obj.product.brand.name if obj.product and obj.product.brand else "-"
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related("product__brand")
 
 
 @admin.register(AddsBrands)
@@ -146,12 +167,21 @@ class SaleAdmin(ModelAdmin):
 
 @admin.register(Brand)
 class BrandAdmin(ModelAdmin):
-    list_display = ("id", "name", "is_visible", "created_at")
+    list_display = ("id", "name", "product_images_count", "is_visible", "created_at")
     list_display_links = ("id", "name")
     search_fields = ("name",)
     list_filter = ("is_visible", "created_at")
     date_hierarchy = "created_at"
     actions = [make_visible, make_hidden]
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).annotate(
+            _product_images_count=Count("product_brand__product_image", distinct=True)
+        )
+
+    @admin.display(description="Изображений", ordering="_product_images_count")
+    def product_images_count(self, obj):
+        return obj._product_images_count
 
 
 @admin.register(Tag)
