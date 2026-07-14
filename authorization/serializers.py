@@ -71,7 +71,8 @@ class CustomerSerializer(serializers.ModelSerializer):
             "id",
             "full_name",
             "phone_number",
-            "email"
+            "email",
+            "role"
         )
 
 class CustomerAddressesSerializer(serializers.ModelSerializer):

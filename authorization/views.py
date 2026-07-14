@@ -65,7 +65,9 @@ class AuthViewSet(ViewSet):
             raise CustomApiException(error_code=ErrorCodes.INCORRECT_PASSWORD)
 
         refresh = RefreshToken.for_user(customer)
+        refresh['role'] = customer.role
         access_token = refresh.access_token
+        access_token['role'] = customer.role
         customer.save()
 
         return Response(data={'access_token': str(access_token), 'refresh_token': str(refresh), 'ok': True},
@@ -94,9 +96,11 @@ class AuthViewSet(ViewSet):
             raise CustomApiException(error_code=ErrorCodes.USER_DOES_NOT_EXIST)
 
         new_refresh = RefreshToken.for_user(customer)
-        new_access = str(new_refresh.access_token)
+        new_refresh['role'] = customer.role
+        new_access = new_refresh.access_token
+        new_access['role'] = customer.role
 
-        return Response(data={"access_token": new_access, "refresh_token": str(new_refresh), "ok": True},
+        return Response(data={"access_token": str(new_access), "refresh_token": str(new_refresh), "ok": True},
                         status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
@@ -470,10 +474,12 @@ class OTPViewSet(ViewSet):
         all_otp.delete()
 
         refresh = RefreshToken.for_user(otp_check.customer)
-        access_token = str(refresh.access_token)
+        refresh['role'] = otp_check.customer.role
+        access_token = refresh.access_token
+        access_token['role'] = otp_check.customer.role
 
         send_notification_to_customer(otp_check.customer.id)
-        return Response(data={"result": {"access_token": access_token, "refresh_token": str(refresh)}, "ok": True},
+        return Response(data={"result": {"access_token": str(access_token), "refresh_token": str(refresh)}, "ok": True},
                         status=status.HTTP_200_OK)
 
     @swagger_auto_schema(

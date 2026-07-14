@@ -1,7 +1,6 @@
 from rest_framework_simplejwt.authentication import JWTAuthentication, AuthUser
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
-from utils.check_user_token import get_role
 from .models import Customer
 
 

@@ -6,12 +6,17 @@ from django.utils import timezone
 
 
 class Customer(BaseModel):
+    class Role(models.TextChoices):
+        USER = 'user', 'User'
+        PRORAB = 'prorab', 'Prorab'
+
     full_name = models.CharField(max_length=150, verbose_name="Полное имя")
     phone_number = models.CharField(max_length=14, validators=[validate_number],
                                     verbose_name="Номер телефона")
     email = models.EmailField(blank=True, null=True, verbose_name="Электронная почта")
     password = models.CharField(verbose_name="Пароль")
     verified = models.BooleanField(default=False, verbose_name="Подтвержден")
+    role = models.CharField(max_length=20, choices=Role.choices, default=Role.USER, verbose_name="Роль")
 
     def __str__(self):
         return self.full_name
