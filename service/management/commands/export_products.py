@@ -61,9 +61,7 @@ class Command(BaseCommand):
         ]
         ws.append(headers)
 
-        qs = Product.objects.filter(
-            is_active=True,
-        ).select_related(
+        qs = Product.objects.all().select_related(
             "brand",
             "product_item_category__product_sub_category__product_category",
         ).prefetch_related(
