@@ -478,7 +478,7 @@ class OTPViewSet(ViewSet):
         access_token = refresh.access_token
         access_token['role'] = otp_check.customer.role
 
-        send_notification_to_customer(otp_check.customer.id)
+        # send_notification_to_customer(otp_check.customer.id)
         return Response(data={"result": {"access_token": str(access_token), "refresh_token": str(refresh)}, "ok": True},
                         status=status.HTTP_200_OK)
 

@@ -14,19 +14,11 @@ def send_notification(message: str) -> None:
 
 
 def push_notification(message_title: str, message_body: str, fcm: str) -> bool:
-    """
-    Sends a push notification to a user.
-
-    :param message_title: The title of the notification message.
-    :param message_body: The body/content of the notification message.
-    :param fcm: The FCM (Firebase Cloud Messaging) token of the user to receive the notification.
-    :return: True if the push notification was successful, otherwise False.
-    """
-    push_service = FCMNotification(
-        service_account_file=os.getcwd() + '/utils/dommaster_service_key.json',
-        project_id="buildexgo"
-    )
     try:
+        push_service = FCMNotification(
+            service_account_file=os.getcwd() + '/utils/dommaster_service_key.json',
+            project_id="buildexgo"
+        )
         result = push_service.notify(
             fcm_token=fcm,
             notification_title=message_title,
