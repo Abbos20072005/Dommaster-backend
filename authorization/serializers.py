@@ -53,10 +53,11 @@ class LoginSerializer(serializers.Serializer):
 class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = Customer
-        fields = ("id", "full_name", "email", "phone_number", "password")
+        fields = ("id", "full_name", "email", "phone_number", "password", "role")
         extra_kwargs = {
             "password": {"write_only": True},
             "email": {"required": False, "allow_blank": True, "allow_null": True},
+            "role": {"required": False},
         }
 
     def create(self, validated_data):
