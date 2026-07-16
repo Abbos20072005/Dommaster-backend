@@ -73,6 +73,7 @@ class ProductAnnotationMixin:
 class OrderCreateSerializer(serializers.Serializer):
     promocode = serializers.CharField(max_length=15, required=False)
     payment_type = serializers.IntegerField(required=True)
+    payment_method = serializers.CharField(required=True)
     is_web = serializers.BooleanField(required=False)
     address_id = serializers.IntegerField(required=False)
     delivery_type = serializers.IntegerField(required=False, default=0)
@@ -82,6 +83,7 @@ class OrderCancelSerializer(serializers.Serializer):
 
 class OrderPaySerializer(serializers.Serializer):
     payment_type = serializers.IntegerField(required=True)
+    payment_method = serializers.CharField(required=True)
     is_web = serializers.BooleanField(required=False)
     order_id = serializers.IntegerField(required=True)
 
@@ -967,6 +969,8 @@ class OrderSerializer(serializers.ModelSerializer):
             "status",
             "total_price",
             "delivery_type",
+            "payment_type",
+            "payment_method",
             "order_location",
             "created_at",
             "order_items"
@@ -997,6 +1001,8 @@ class OrderDetailSerializer(serializers.ModelSerializer):
             "promocode",
             "total_price",
             "delivery_type",
+            "payment_type",
+            "payment_method",
             "order_location",
             "ofd_url",
             "created_at",

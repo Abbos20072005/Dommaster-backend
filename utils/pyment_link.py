@@ -4,7 +4,7 @@ from django.conf import settings
 from service.models import Order
 
 
-def generate_link(order_id: int, total_price: int, type_pyment: int, is_web: bool = False):
+def generate_link(order_id: int, total_price: int, type_pyment: int, is_web: bool = False, payment_method: str = None):
     if type_pyment == 1:
 
         url = (
@@ -37,10 +37,12 @@ def generate_link(order_id: int, total_price: int, type_pyment: int, is_web: boo
             url_prefix += f'&successUrl={settings.REDIRECTED_URL.format(order_id)}'
         url = f'https://www.uzumbank.uz/open-service{url_prefix}'
         return url
-    
+
     elif type_pyment == 4:
         order = Order.objects.filter(id=order_id).first()
         order.status = 1
-        order.save(update_fields=["status"])
+        order.payment_type = 4
+        order.payment_method = payment_method
+        order.save(update_fields=["status", "payment_type", "payment_method"])
         return None
     return None

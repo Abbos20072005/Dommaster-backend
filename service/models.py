@@ -32,6 +32,18 @@ DELIVERY_TYPE = (
     (1, "Pickup"),
 )
 
+PAYMENT_TYPE = (
+    (1, "Click"),
+    (2, "Payme"),
+    (3, "Uzum Bank"),
+    (4, "При получении"),
+)
+
+CASH_PAYMENT_METHOD = (
+    ("cash", "Наличные"),
+    ("card", "Карта"),
+)
+
 
 class AddsBrands(BaseModel):
     name = models.CharField(max_length=450, verbose_name="Название")
@@ -79,6 +91,8 @@ class Order(BaseModel):
     order_location = models.ForeignKey(CustomerAddresses, on_delete=models.SET_NULL, blank=True, null=True,
                                        verbose_name="Локация доставки")
     delivery_type = models.IntegerField(choices=DELIVERY_TYPE, default=0, verbose_name="Тип доставки")
+    payment_type = models.IntegerField(choices=PAYMENT_TYPE, null=True, blank=True, verbose_name="Тип оплаты")
+    payment_method = models.CharField(max_length=10, choices=CASH_PAYMENT_METHOD, blank=True, null=True, verbose_name="Способ оплаты при получении")
     ofd_url = models.URLField(max_length=500, blank=True, null=True, verbose_name="Ссылка на чек")
 
     def __str__(self):

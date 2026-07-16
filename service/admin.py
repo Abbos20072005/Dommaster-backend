@@ -276,10 +276,10 @@ class CommentAdmin(ModelAdmin):
 
 @admin.register(Order)
 class OrderAdmin(ModelAdmin):
-    list_display = ("id", "customer", "status", "payment_status", "delivery_type", "total_price", "created_at")
+    list_display = ("id", "customer", "status", "payment_status", "payment_type", "payment_method", "delivery_type", "total_price", "created_at")
     list_display_links = ("id", "customer")
     search_fields = ("customer__full_name", "customer__phone_number", "id")
-    list_filter = ("status", "payment_status", "delivery_type", "created_at")
+    list_filter = ("status", "payment_status", "payment_type", "payment_method", "delivery_type", "created_at")
     autocomplete_fields = ("customer", "promocode", "order_location")
     date_hierarchy = "created_at"
     list_per_page = 25

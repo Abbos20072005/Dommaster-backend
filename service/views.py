@@ -2278,11 +2278,20 @@ class OrderViewSet(ViewSet):
         if not order:
             raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
 
+        payment_type = data_serializer.validated_data.get("payment_type")
+        payment_method = data_serializer.validated_data.get("payment_method")
+
+        order.payment_type = payment_type
+        if payment_type == 4:
+            order.payment_method = payment_method
+        order.save(update_fields=["payment_type", "payment_method"])
+
         payment_link = generate_link(
             order_id=order.id,
             total_price=order.total_price,
-            type_pyment=data_serializer.validated_data.get("payment_type"),
+            type_pyment=payment_type,
             is_web=data_serializer.validated_data.get("is_web"),
+            payment_method=payment_method,
         )
         return Response(
             data={"result": payment_link, "ok": True}, status=status.HTTP_200_OK
@@ -2406,11 +2415,20 @@ class OrderViewSet(ViewSet):
         OrderItem.objects.bulk_create(order_items)
         cart_items.delete()
 
+        payment_type = serializer.validated_data.get("payment_type")
+        payment_method = serializer.validated_data.get("payment_method")
+
+        order.payment_type = payment_type
+        if payment_type == 4:
+            order.payment_method = payment_method
+        order.save(update_fields=["payment_type", "payment_method"])
+
         payment_link = generate_link(
             order_id=order.id,
             total_price=order.total_price,
-            type_pyment=serializer.validated_data.get("payment_type"),
+            type_pyment=payment_type,
             is_web=serializer.validated_data.get("is_web"),
+            payment_method=payment_method,
         )
         return Response(
             data={"result": payment_link, "order_id": order.id, "ok": True},
