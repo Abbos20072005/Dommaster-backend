@@ -137,13 +137,13 @@ class AuthViewSet(ViewSet):
             otp = OTP.objects.create(customer_id=customer_save.id, otp_code=otp_code, resend=False)
             otp.expire_at = otp.created_at + timedelta(minutes=1)
             otp.save()
-            message = (
-                f' Project: Dommaster \nuser: {customer_save.id} \nphone_number: {customer_save.phone_number}\ncode: {otp.otp_code} '
-                f'\notp_key: {otp.otp_key} '
-                f'\nReset: {otp.resend}'
-                f'\nexpires: {otp.expire_at}')
-            send_notification(message)
-            # EskizOTP.send_otp_service("998200220280", "Это тест от Eskiz")
+            # message = (
+            #     f' Project: Dommaster \nuser: {customer_save.id} \nphone_number: {customer_save.phone_number}\ncode: {otp.otp_code} '
+            #     f'\notp_key: {otp.otp_key} '
+            #     f'\nReset: {otp.resend}'
+            #     f'\nexpires: {otp.expire_at}')
+            # send_notification(message)
+            EskizOTP.send_otp_service(customer_save.phone_number, f"Код подтверждения для регистрации в приложение Buildex Go: {otp.otp_code}")
             fcm_token = FcmToken.objects.create(customer=customer_save, fcm_token=request.data.get("device_id", ""))
             fcm_token.save()
             return Response(data={"result": {"otp_key": otp.otp_key}, "ok": True}, status=status.HTTP_201_CREATED)
@@ -172,12 +172,13 @@ class AuthViewSet(ViewSet):
         if latest_otp and latest_otp.created_at < datetime.now() - timedelta(hours=12) and all_otp.count() >= 2:
             all_otp.exclude(otp_key=otp.otp_key).delete()
 
-        message = (
-            f' Project: Dommaster \nuser: {customer_none.id} \nphone_number: {customer_none.phone_number}\ncode: {otp.otp_code} '
-            f'\notp_key: {otp.otp_key} '
-            f'\nReset: {otp.resend}'
-            f'\nexpires: {otp.expire_at}')
-        send_notification(message)
+        # message = (
+        #     f' Project: Dommaster \nuser: {customer_none.id} \nphone_number: {customer_none.phone_number}\ncode: {otp.otp_code} '
+        #     f'\notp_key: {otp.otp_key} '
+        #     f'\nReset: {otp.resend}'
+        #     f'\nexpires: {otp.expire_at}')
+        # send_notification(message)
+        EskizOTP.send_otp_service(customer_none.phone_number, f"Код подтверждения для регистрации в приложение Buildex Go: {otp.otp_code}")
         fcm_token = FcmToken.objects.create(customer=customer_none, fcm_token=request.data.get("device_id", ""))
         fcm_token.save()
         return Response(data={"result": {"otp_key": otp.otp_key}, 'ok': True}, status=status.HTTP_201_CREATED)
@@ -280,12 +281,13 @@ class AuthViewSet(ViewSet):
         if latest_otp and latest_otp.created_at < datetime.now() - timedelta(hours=12) and all_otp.count() >= 2:
             all_otp.exclude(otp_key=otp.otp_key).delete()
 
-        message = (
-            f' Project: Dommaster \nuser: {customer.id} \nphone_number: {customer.phone_number}\ncode: {otp.otp_code} '
-            f'\notp_key: {otp.otp_key} '
-            f'\nReset: {otp.resend}'
-            f'\nexpires: {otp.expire_at}')
-        send_notification(message)
+        # message = (
+        #     f' Project: Dommaster \nuser: {customer.id} \nphone_number: {customer.phone_number}\ncode: {otp.otp_code} '
+        #     f'\notp_key: {otp.otp_key} '
+        #     f'\nReset: {otp.resend}'
+        #     f'\nexpires: {otp.expire_at}')
+        # send_notification(message)
+        EskizOTP.send_otp_service(customer.phone_number, f"Код подтверждения для регистрации в приложение Buildex Go: {otp.otp_code}")
         return Response(data={"result": {"otp_key": otp.otp_key}, "ok": True},
                         status=status.HTTP_200_OK)
 
@@ -529,12 +531,13 @@ class OTPViewSet(ViewSet):
         if latest_otp and latest_otp.created_at < datetime.now() - timedelta(hours=12) and all_otp.count() >= 2:
             all_otp.exclude(otp_key=otp.otp_key).delete()
 
-        message = (
-            f' Project: Dommaster \nuser: {otp_check.customer.id} \nphone_number: {otp_check.customer.phone_number}\ncode: {otp.otp_code} '
-            f'\notp_key: {otp.otp_key} '
-            f'\nReset: {otp.resend}'
-            f'\nexpires: {otp.expire_at}')
-        send_notification(message)
+        # message = (
+        #     f' Project: Dommaster \nuser: {otp_check.customer.id} \nphone_number: {otp_check.customer.phone_number}\ncode: {otp.otp_code} '
+        #     f'\notp_key: {otp.otp_key} '
+        #     f'\nReset: {otp.resend}'
+        #     f'\nexpires: {otp.expire_at}')
+        # send_notification(message)
+        EskizOTP.send_otp_service(otp_check.customer.phone_number, f"Код подтверждения для регистрации в приложение Buildex Go: {otp.otp_code}")
 
         return Response(data={"result": {"otp_key": otp.otp_key}, "ok": True}, status=status.HTTP_200_OK)
 
