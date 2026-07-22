@@ -16,7 +16,7 @@ from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from service.models import (
     Product, ProductImage, ProductCharacteristics,
-    ProductItemCategory,
+    ProductCategory, ProductSubCategory, ProductItemCategory,
     Brand, ProductItemCategoryFilterSchema, ProductFilterNumericValue,
 )
 
@@ -129,6 +129,43 @@ class OneCProductInputSerializer(serializers.Serializer):
         child=serializers.CharField()
     )
     is_active = serializers.BooleanField(default=True)
+
+
+class OneCBrandInputSerializer(serializers.Serializer):
+    api_key = serializers.CharField(required=True, write_only=True)
+    name = serializers.CharField(required=True)
+    name_uz = serializers.CharField(required=False, allow_blank=True)
+    name_en = serializers.CharField(required=False, allow_blank=True)
+    guid = serializers.CharField(required=True)
+    image_base64 = serializers.CharField(required=False, allow_blank=True)
+
+
+class OneCCategoryInputSerializer(serializers.Serializer):
+    api_key = serializers.CharField(required=True, write_only=True)
+    name = serializers.CharField(required=True)
+    name_uz = serializers.CharField(required=False, allow_blank=True)
+    name_en = serializers.CharField(required=False, allow_blank=True)
+    image_base64 = serializers.CharField(required=False, allow_blank=True)
+    icon_base64 = serializers.CharField(required=False, allow_blank=True)
+    position = serializers.IntegerField(default=0)
+
+
+class OneCSubCategoryInputSerializer(serializers.Serializer):
+    api_key = serializers.CharField(required=True, write_only=True)
+    product_category_id = serializers.IntegerField(required=True)
+    name = serializers.CharField(required=True)
+    name_uz = serializers.CharField(required=False, allow_blank=True)
+    name_en = serializers.CharField(required=False, allow_blank=True)
+    image_base64 = serializers.CharField(required=False, allow_blank=True)
+
+
+class OneCItemCategoryInputSerializer(serializers.Serializer):
+    api_key = serializers.CharField(required=True, write_only=True)
+    product_sub_category_id = serializers.IntegerField(required=True)
+    name = serializers.CharField(required=True)
+    name_uz = serializers.CharField(required=False, allow_blank=True)
+    name_en = serializers.CharField(required=False, allow_blank=True)
+    image_base64 = serializers.CharField(required=False, allow_blank=True)
 
 
 class OneCIntegrationViewSet(ViewSet):
@@ -262,6 +299,197 @@ class OneCIntegrationViewSet(ViewSet):
                     "product_id": product.id,
                     "name": product.name,
                     "created": created if product_guid else True,
+                },
+                "ok": True,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+    @swagger_auto_schema(
+        operation_summary="1C Brand create",
+        operation_description="Create or update brand from 1C",
+        request_body=OneCBrandInputSerializer(),
+        responses={201: "Brand created"},
+        tags=["1C Integration"]
+    )
+    def brand_create(self, request):
+        serializer = OneCBrandInputSerializer(data=request.data)
+        if not serializer.is_valid():
+            raise CustomApiException(
+                error_code=ErrorCodes.INTEGRATION_INVALID_DATA,
+                message=serializer.errors
+            )
+
+        data = serializer.validated_data
+
+        if data.get("api_key") != INTEGRATION_API_KEY:
+            raise CustomApiException(error_code=ErrorCodes.INTEGRATION_API_KEY_INVALID)
+
+        with transaction.atomic():
+            guid = data.get("guid")
+            defaults = {
+                "name": data.get("name"),
+                "name_uz": data.get("name_uz") or data.get("name"),
+                "name_en": data.get("name_en") or data.get("name"),
+            }
+
+            image_base64 = data.get("image_base64")
+            brand, created = Brand.objects.update_or_create(
+                guid=guid,
+                defaults=defaults,
+            )
+
+            if image_base64:
+                content_file = decode_base64_image(image_base64)
+                brand.image.save(content_file.name, content_file, save=True)
+
+        return Response(
+            data={
+                "result": {
+                    "brand_id": brand.id,
+                    "name": brand.name,
+                    "created": created,
+                },
+                "ok": True,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+    @swagger_auto_schema(
+        operation_summary="1C Category create",
+        operation_description="Create category from 1C",
+        request_body=OneCCategoryInputSerializer(),
+        responses={201: "Category created"},
+        tags=["1C Integration"]
+    )
+    def category_create(self, request):
+        serializer = OneCCategoryInputSerializer(data=request.data)
+        if not serializer.is_valid():
+            raise CustomApiException(
+                error_code=ErrorCodes.INTEGRATION_INVALID_DATA,
+                message=serializer.errors
+            )
+
+        data = serializer.validated_data
+
+        if data.get("api_key") != INTEGRATION_API_KEY:
+            raise CustomApiException(error_code=ErrorCodes.INTEGRATION_API_KEY_INVALID)
+
+        with transaction.atomic():
+            category = ProductCategory.objects.create(
+                name=data.get("name"),
+                name_uz=data.get("name_uz") or data.get("name"),
+                name_en=data.get("name_en") or data.get("name"),
+                position=data.get("position", 0),
+            )
+
+            for field, base64_key in [("image", "image_base64"), ("icon", "icon_base64")]:
+                raw = data.get(base64_key)
+                if raw:
+                    content_file = decode_base64_image(raw)
+                    getattr(category, field).save(content_file.name, content_file, save=True)
+
+        return Response(
+            data={
+                "result": {
+                    "category_id": category.id,
+                    "name": category.name,
+                },
+                "ok": True,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+    @swagger_auto_schema(
+        operation_summary="1C Sub-category create",
+        operation_description="Create sub-category from 1C",
+        request_body=OneCSubCategoryInputSerializer(),
+        responses={201: "Sub-category created"},
+        tags=["1C Integration"]
+    )
+    def sub_category_create(self, request):
+        serializer = OneCSubCategoryInputSerializer(data=request.data)
+        if not serializer.is_valid():
+            raise CustomApiException(
+                error_code=ErrorCodes.INTEGRATION_INVALID_DATA,
+                message=serializer.errors
+            )
+
+        data = serializer.validated_data
+
+        if data.get("api_key") != INTEGRATION_API_KEY:
+            raise CustomApiException(error_code=ErrorCodes.INTEGRATION_API_KEY_INVALID)
+
+        product_category = ProductCategory.objects.filter(id=data.get("product_category_id")).first()
+        if not product_category:
+            raise CustomApiException(error_code=ErrorCodes.INTEGRATION_CATEGORY_NOT_FOUND)
+
+        with transaction.atomic():
+            sub_category = ProductSubCategory.objects.create(
+                product_category=product_category,
+                name=data.get("name"),
+                name_uz=data.get("name_uz") or data.get("name"),
+                name_en=data.get("name_en") or data.get("name"),
+            )
+
+            image_base64 = data.get("image_base64")
+            if image_base64:
+                content_file = decode_base64_image(image_base64)
+                sub_category.image.save(content_file.name, content_file, save=True)
+
+        return Response(
+            data={
+                "result": {
+                    "sub_category_id": sub_category.id,
+                    "name": sub_category.name,
+                },
+                "ok": True,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+    @swagger_auto_schema(
+        operation_summary="1C Item-category create",
+        operation_description="Create item-category from 1C",
+        request_body=OneCItemCategoryInputSerializer(),
+        responses={201: "Item-category created"},
+        tags=["1C Integration"]
+    )
+    def item_category_create(self, request):
+        serializer = OneCItemCategoryInputSerializer(data=request.data)
+        if not serializer.is_valid():
+            raise CustomApiException(
+                error_code=ErrorCodes.INTEGRATION_INVALID_DATA,
+                message=serializer.errors
+            )
+
+        data = serializer.validated_data
+
+        if data.get("api_key") != INTEGRATION_API_KEY:
+            raise CustomApiException(error_code=ErrorCodes.INTEGRATION_API_KEY_INVALID)
+
+        product_sub_category = ProductSubCategory.objects.filter(id=data.get("product_sub_category_id")).first()
+        if not product_sub_category:
+            raise CustomApiException(error_code=ErrorCodes.INTEGRATION_SUB_CATEGORY_NOT_FOUND)
+
+        with transaction.atomic():
+            item_category = ProductItemCategory.objects.create(
+                product_sub_category=product_sub_category,
+                name=data.get("name"),
+                name_uz=data.get("name_uz") or data.get("name"),
+                name_en=data.get("name_en") or data.get("name"),
+            )
+
+            image_base64 = data.get("image_base64")
+            if image_base64:
+                content_file = decode_base64_image(image_base64)
+                item_category.image.save(content_file.name, content_file, save=True)
+
+        return Response(
+            data={
+                "result": {
+                    "item_category_id": item_category.id,
+                    "name": item_category.name,
                 },
                 "ok": True,
             },

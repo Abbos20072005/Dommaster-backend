@@ -28,6 +28,8 @@ class ErrorCodes(Enum):
     INTEGRATION_API_KEY_INVALID = 23
     INTEGRATION_INVALID_DATA = 24
     INTEGRATION_IMAGE_DECODE_FAILED = 25
+    INTEGRATION_CATEGORY_NOT_FOUND = 26
+    INTEGRATION_SUB_CATEGORY_NOT_FOUND = 27
 
 
 error_messages = {
@@ -57,7 +59,9 @@ error_messages = {
     22: {"result": "Refresh token is invalid or expired", "http_status": status.HTTP_401_UNAUTHORIZED},
     23: {"result": "Invalid integration API key", "http_status": status.HTTP_401_UNAUTHORIZED},
     24: {"result": "Invalid integration data", "http_status": status.HTTP_400_BAD_REQUEST},
-    25: {"result": "Failed to decode image", "http_status": status.HTTP_400_BAD_REQUEST}
+    25: {"result": "Failed to decode image", "http_status": status.HTTP_400_BAD_REQUEST},
+    26: {"result": "Category not found", "http_status": status.HTTP_404_NOT_FOUND},
+    27: {"result": "Sub category not found", "http_status": status.HTTP_404_NOT_FOUND},
 }
 
 
