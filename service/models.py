@@ -273,6 +273,18 @@ class Product(BaseModel):
         ]
 
 
+class ProductUnit(BaseModel):
+    name = models.CharField(max_length=50, verbose_name="Название")
+    is_active = models.BooleanField(default=True, verbose_name="Активен")
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name = "Единица измерения"
+        verbose_name_plural = "Единицы измерения"
+
+
 class Favourites(BaseModel):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, blank=True, null=True, verbose_name="Клиент")
     favourite_token = models.CharField(max_length=64, blank=True, null=True, verbose_name="Токен карзины")

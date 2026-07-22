@@ -4,7 +4,7 @@ from .models import Product, ProductCategory, ProductSubCategory, ProductItemCat
     OrderItem, Tag, Brand, Sale, AddsBrands, ProductImage, Favourites, Cart, CartItem, Questions, \
     ProductCharacteristics, RecentlyViewedProducts, Service, CommentImages, CommentReply, QuestionsReply, \
     ProductVariantGroup, ProductVariantItem, \
-    Announcements, ProductItemCategoryFilterSchema, ProductFilterNumericValue
+    Announcements, ProductItemCategoryFilterSchema, ProductFilterNumericValue, ProductUnit
 from unfold.admin import ModelAdmin, TabularInline
 from base.admin_actions import make_visible, make_hidden, activate, deactivate, \
     mark_as_main, mark_as_not_main, status_collecting, status_delivering, status_completed, status_canceled
@@ -344,3 +344,12 @@ class AnnouncementsAdmin(ModelAdmin):
     search_fields = ("title", "description")
     list_filter = ("created_at",)
     date_hierarchy = "created_at"
+
+
+@admin.register(ProductUnit)
+class ProductUnitAdmin(ModelAdmin):
+    list_display = ("id", "name", "is_active", "created_at")
+    list_display_links = ("id", "name")
+    search_fields = ("name",)
+    list_filter = ("is_active",)
+    actions = [activate, deactivate]

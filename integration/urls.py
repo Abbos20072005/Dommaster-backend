@@ -27,4 +27,9 @@ urlpatterns = [
         OneCIntegrationViewSet.as_view({"post": "item_category_create"}),
         name="one_c_item_category_create",
     ),
+    path(
+        "1c/unit/create/",
+        OneCIntegrationViewSet.as_view({"post": "unit_create"}),
+        name="one_c_unit_create",
+    ),
 ]

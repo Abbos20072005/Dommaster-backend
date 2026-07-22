@@ -17,7 +17,7 @@ from exceptions.error_messages import ErrorCodes
 from service.models import (
     Product, ProductImage, ProductCharacteristics,
     ProductCategory, ProductSubCategory, ProductItemCategory,
-    Brand, ProductItemCategoryFilterSchema, ProductFilterNumericValue,
+    Brand, ProductUnit, ProductItemCategoryFilterSchema, ProductFilterNumericValue,
 )
 
 load_dotenv()
@@ -136,7 +136,7 @@ class OneCBrandInputSerializer(serializers.Serializer):
     name = serializers.CharField(required=True)
     name_uz = serializers.CharField(required=False, allow_blank=True)
     name_en = serializers.CharField(required=False, allow_blank=True)
-    image_base64 = serializers.CharField(required=False, allow_blank=True)
+    image_base64 = serializers.CharField(required=True)
 
 
 class OneCCategoryInputSerializer(serializers.Serializer):
@@ -144,7 +144,7 @@ class OneCCategoryInputSerializer(serializers.Serializer):
     name = serializers.CharField(required=True)
     name_uz = serializers.CharField(required=False, allow_blank=True)
     name_en = serializers.CharField(required=False, allow_blank=True)
-    image_base64 = serializers.CharField(required=False, allow_blank=True)
+    image_base64 = serializers.CharField(required=True)
     icon_base64 = serializers.CharField(required=False, allow_blank=True)
     position = serializers.IntegerField(default=0)
 
@@ -155,7 +155,7 @@ class OneCSubCategoryInputSerializer(serializers.Serializer):
     name = serializers.CharField(required=True)
     name_uz = serializers.CharField(required=False, allow_blank=True)
     name_en = serializers.CharField(required=False, allow_blank=True)
-    image_base64 = serializers.CharField(required=False, allow_blank=True)
+    image_base64 = serializers.CharField(required=True)
 
 
 class OneCItemCategoryInputSerializer(serializers.Serializer):
@@ -164,7 +164,14 @@ class OneCItemCategoryInputSerializer(serializers.Serializer):
     name = serializers.CharField(required=True)
     name_uz = serializers.CharField(required=False, allow_blank=True)
     name_en = serializers.CharField(required=False, allow_blank=True)
-    image_base64 = serializers.CharField(required=False, allow_blank=True)
+    image_base64 = serializers.CharField(required=True)
+
+
+class OneCUnitInputSerializer(serializers.Serializer):
+    api_key = serializers.CharField(required=True, write_only=True)
+    name = serializers.CharField(required=True)
+    name_uz = serializers.CharField(required=False, allow_blank=True)
+    name_en = serializers.CharField(required=False, allow_blank=True)
 
 
 class OneCIntegrationViewSet(ViewSet):
@@ -482,6 +489,44 @@ class OneCIntegrationViewSet(ViewSet):
                 "result": {
                     "id": item_category.id,
                     "name": item_category.name,
+                },
+                "ok": True,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+    @swagger_auto_schema(
+        operation_summary="1C Unit create",
+        operation_description="Create unit from 1C",
+        request_body=OneCUnitInputSerializer(),
+        responses={201: "Unit created"},
+        tags=["1C Integration"]
+    )
+    def unit_create(self, request):
+        serializer = OneCUnitInputSerializer(data=request.data)
+        if not serializer.is_valid():
+            raise CustomApiException(
+                error_code=ErrorCodes.INTEGRATION_INVALID_DATA,
+                message=serializer.errors
+            )
+
+        data = serializer.validated_data
+
+        if data.get("api_key") != INTEGRATION_API_KEY:
+            raise CustomApiException(error_code=ErrorCodes.INTEGRATION_API_KEY_INVALID)
+
+        with transaction.atomic():
+            unit = ProductUnit.objects.create(
+                name=data.get("name"),
+                name_uz=data.get("name_uz") or data.get("name"),
+                name_en=data.get("name_en") or data.get("name"),
+            )
+
+        return Response(
+            data={
+                "result": {
+                    "id": unit.id,
+                    "name": unit.name,
                 },
                 "ok": True,
             },
