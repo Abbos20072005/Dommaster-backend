@@ -136,7 +136,6 @@ class OneCBrandInputSerializer(serializers.Serializer):
     name = serializers.CharField(required=True)
     name_uz = serializers.CharField(required=False, allow_blank=True)
     name_en = serializers.CharField(required=False, allow_blank=True)
-    guid = serializers.CharField(required=True)
     image_base64 = serializers.CharField(required=False, allow_blank=True)
 
 
@@ -326,19 +325,13 @@ class OneCIntegrationViewSet(ViewSet):
             raise CustomApiException(error_code=ErrorCodes.INTEGRATION_API_KEY_INVALID)
 
         with transaction.atomic():
-            guid = data.get("guid")
-            defaults = {
-                "name": data.get("name"),
-                "name_uz": data.get("name_uz") or data.get("name"),
-                "name_en": data.get("name_en") or data.get("name"),
-            }
-
-            image_base64 = data.get("image_base64")
-            brand, created = Brand.objects.update_or_create(
-                guid=guid,
-                defaults=defaults,
+            brand = Brand.objects.create(
+                name=data.get("name"),
+                name_uz=data.get("name_uz") or data.get("name"),
+                name_en=data.get("name_en") or data.get("name"),
             )
 
+            image_base64 = data.get("image_base64")
             if image_base64:
                 content_file = decode_base64_image(image_base64)
                 brand.image.save(content_file.name, content_file, save=True)
@@ -346,9 +339,8 @@ class OneCIntegrationViewSet(ViewSet):
         return Response(
             data={
                 "result": {
-                    "brand_id": brand.id,
+                    "id": brand.id,
                     "name": brand.name,
-                    "created": created,
                 },
                 "ok": True,
             },
@@ -392,7 +384,7 @@ class OneCIntegrationViewSet(ViewSet):
         return Response(
             data={
                 "result": {
-                    "category_id": category.id,
+                    "id": category.id,
                     "name": category.name,
                 },
                 "ok": True,
@@ -440,7 +432,7 @@ class OneCIntegrationViewSet(ViewSet):
         return Response(
             data={
                 "result": {
-                    "sub_category_id": sub_category.id,
+                    "id": sub_category.id,
                     "name": sub_category.name,
                 },
                 "ok": True,
@@ -488,7 +480,7 @@ class OneCIntegrationViewSet(ViewSet):
         return Response(
             data={
                 "result": {
-                    "item_category_id": item_category.id,
+                    "id": item_category.id,
                     "name": item_category.name,
                 },
                 "ok": True,
