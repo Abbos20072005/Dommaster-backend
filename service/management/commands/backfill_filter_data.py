@@ -30,6 +30,13 @@ def detect_filter_type(schema, raw_value, unit, item_category):
         return schema.type
 
     if unit and unit.lower() in NUMERIC_UNITS:
+        existing_count = ProductFilterNumericValue.objects.filter(schema=schema).count()
+        if existing_count > 20:
+            unique_count = ProductFilterNumericValue.objects.filter(
+                schema=schema
+            ).values("value").distinct().count()
+            if unique_count <= 10:
+                return "multiselect"
         return "range"
 
     existing_count = ProductFilterNumericValue.objects.filter(schema=schema).count()
