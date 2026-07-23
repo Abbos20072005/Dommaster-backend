@@ -1,7 +1,6 @@
 import re
 import time
 from collections import defaultdict, Counter
-from difflib import SequenceMatcher
 from django.db import transaction
 from django.core.management.base import BaseCommand
 from service.models import (
@@ -113,24 +112,35 @@ def extract_params(name):
     return params
 
 
-def make_base_key(name, exclude_unit_label=None):
+def make_base_key(name, exclude_unit_label=None, all_labels=None):
     normalized = normalize_name(name)
-    if not exclude_unit_label:
+    if not exclude_unit_label and not all_labels:
         return normalized
+    labels_to_replace = all_labels if all_labels else [exclude_unit_label]
     for match in VALUE_PATTERN.finditer(normalized):
         num, unit = match.group(1), match.group(2)
         for map_key in DIMENSION_UNIT_MAP:
             if unit.lower() == map_key.lower():
                 label = DIMENSION_UNIT_MAP[map_key]
-                if label == exclude_unit_label:
-                    return normalized.replace(f"{num}{unit}", f"{{{label}}}", 1)
+                if label in labels_to_replace:
+                    label_key = f"{{{label}}}"
+                    if label_key not in normalized:
+                        normalized = normalized.replace(f"{num}{unit}", f"{{{label}}}", 1)
+                    if not all_labels:
+                        return normalized
+                    break
     for match in SOCKET_PATTERN.finditer(normalized):
         letters, num = match.group(1), match.group(2)
         for map_key in SOCKET_DIMENSIONS:
             if letters.lower() == map_key.lower():
                 label = SOCKET_DIMENSIONS[map_key]
-                if label == exclude_unit_label:
-                    return normalized.replace(f"{letters}{num}", f"{{{label}}}", 1)
+                if label in labels_to_replace:
+                    label_key = f"{{{label}}}"
+                    if label_key not in normalized:
+                        normalized = normalized.replace(f"{letters}{num}", f"{{{label}}}", 1)
+                    if not all_labels:
+                        return normalized
+                    break
     return normalized
 
 
@@ -295,9 +305,7 @@ class Command(BaseCommand):
                 if variant_value:
                     base_groups[base_key].append((p, variant_value))
 
-            merged = self._merge_similar_bases(base_groups, 1.0)
-
-            for base_key, entries in merged.items():
+            for base_key, entries in base_groups.items():
                 if len(entries) < min_group_size:
                     continue
 
@@ -330,28 +338,6 @@ class Command(BaseCommand):
 
                     if verbose and entries:
                         self._print_group(dim_label, base_key, entries, group_id=group.id)
-
-    def _merge_similar_bases(self, base_groups, threshold):
-        keys = list(base_groups.keys())
-        merged = {}
-        used = set()
-
-        for i, key_a in enumerate(keys):
-            if key_a in used:
-                continue
-            cluster = list(base_groups[key_a])
-            for j in range(i + 1, len(keys)):
-                key_b = keys[j]
-                if key_b in used:
-                    continue
-                ratio = SequenceMatcher(None, key_a, key_b).ratio()
-                if ratio >= threshold:
-                    cluster.extend(base_groups[key_b])
-                    used.add(key_b)
-            merged[key_a] = cluster
-            used.add(key_a)
-
-        return merged
 
     def _print_group(self, dim_label, base_key, entries, group_id=None):
         gid = f" (id={group_id})" if group_id else ""
