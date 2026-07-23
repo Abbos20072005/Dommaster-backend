@@ -906,7 +906,7 @@ class ProductViewSet(ViewSet):
                 products.values("product_item_category")
                 .annotate(cnt=Count("id"))
                 .order_by("-cnt")
-                .values_list("product_item_category", flat=True)[:8]
+                .values_list("product_item_category", flat=True)[:5]
             )
 
             if cat_ids:
