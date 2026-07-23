@@ -806,7 +806,7 @@ class ProductViewSet(ViewSet):
                         or_q |= Q(filter_data__contains={key: v})
                     products = products.filter(or_q)
 
-        available_filters_list = []
+        available_filters_list = None
         quick_filters = []
         if item_category:
             has_active_filters = any([q, brand, price_from, price_to, sale_id, filters_data])
@@ -814,11 +814,11 @@ class ProductViewSet(ViewSet):
 
             if not has_active_filters:
                 cached = cache.get(cache_key)
-                if cached:
+                if cached is not None:
                     available_filters_list = cached["filters"]
                     quick_filters = cached["quick"]
 
-            if not available_filters_list:
+            if available_filters_list is None:
                 schemas = ProductItemCategoryFilterSchema.objects.filter(
                     item_category_id=item_category, is_filterable=True
                 ).order_by("position")
@@ -969,6 +969,9 @@ class ProductViewSet(ViewSet):
                                 })
 
                 available_filters_list = AvailableFilterSerializer(available_filters, many=True).data
+
+        if available_filters_list is None:
+            available_filters_list = []
 
         products = get_optimized_product_qs(products, request)
 
