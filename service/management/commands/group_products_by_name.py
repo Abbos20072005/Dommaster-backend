@@ -27,6 +27,33 @@ DIMENSION_UNIT_MAP = {
     "dB": "Шум",
     "мл": "Объём",
     "л": "Объём",
+    "дюйм": "Длина (дюйм)",
+    "\"": "Длина (дюйм)",
+    "P": "Полюс (P)",
+    "п": "Полюс (P)",
+    "K": "Температура (K)",
+    "к": "Температура (K)",
+    "Lm": "Световой поток (Лм)",
+    "лм": "Световой поток (Лм)",
+    "Hz": "Частота (Гц)",
+    "Гц": "Частота (Гц)",
+    "mA": "Ток (мА)",
+    "ма": "Ток (мА)",
+    "Nm": "Момент (Нм)",
+    "нм": "Момент (Нм)",
+    "bar": "Давление (бар)",
+    "бар": "Давление (бар)",
+}
+
+SOCKET_PATTERN = re.compile(r"(?<!\w)([A-Za-z]+)(\d+(?:[.,]\d+)?)(?!\w)", re.IGNORECASE)
+
+SOCKET_DIMENSIONS = {
+    "e": "Цоколь (E)",
+    "gu": "Цоколь (GU)",
+    "g": "Цоколь (G)",
+    "r": "Цоколь (R)",
+    "par": "Тип лампы (PAR)",
+    "mr": "Тип лампы (MR)",
 }
 
 NORMALIZE_PATTERNS = [
@@ -51,6 +78,9 @@ DIMENSION_LABELS = {
     "объем": "Объём",
     "цвет": "Цвет",
     "материал": "Материал",
+    "полюс": "Полюс (P)",
+    "температура": "Температура (K)",
+    "световой поток": "Световой поток (Лм)",
 }
 
 
@@ -70,7 +100,15 @@ def extract_params(name):
         for map_key in DIMENSION_UNIT_MAP:
             if unit_lower == map_key.lower():
                 label = DIMENSION_UNIT_MAP[map_key]
-                params.append((num, unit, label))
+                params.append((f"{num}{unit}", label))
+                break
+    for match in SOCKET_PATTERN.finditer(normalized):
+        letters, num = match.group(1), match.group(2)
+        letters_lower = letters.lower()
+        for map_key in SOCKET_DIMENSIONS:
+            if letters_lower == map_key.lower():
+                label = SOCKET_DIMENSIONS[map_key]
+                params.append((f"{letters}{num}", label))
                 break
     return params
 
@@ -86,6 +124,13 @@ def make_base_key(name, exclude_unit_label=None):
                 label = DIMENSION_UNIT_MAP[map_key]
                 if label == exclude_unit_label:
                     return normalized.replace(f"{num}{unit}", f"{{{label}}}", 1)
+    for match in SOCKET_PATTERN.finditer(normalized):
+        letters, num = match.group(1), match.group(2)
+        for map_key in SOCKET_DIMENSIONS:
+            if letters.lower() == map_key.lower():
+                label = SOCKET_DIMENSIONS[map_key]
+                if label == exclude_unit_label:
+                    return normalized.replace(f"{letters}{num}", f"{{{label}}}", 1)
     return normalized
 
 
@@ -224,17 +269,17 @@ class Command(BaseCommand):
 
         param_label_counts = Counter()
         for params in product_params.values():
-            for _, _, label in params:
+            for _, label in params:
                 param_label_counts[label] += 1
 
-        all_labels = {label for params in product_params.values() for _, _, label in params}
+        all_labels = {label for params in product_params.values() for _, label in params}
         variant_labels = []
         for label in all_labels:
             unique_values = set()
             for p in ungrouped:
-                for num, unit, l in product_params.get(p.id, []):
+                for matched, l in product_params.get(p.id, []):
                     if l == label:
-                        unique_values.add(f"{num}{unit}")
+                        unique_values.add(matched)
             if len(unique_values) >= min_group_size:
                 variant_labels.append(label)
 
@@ -243,14 +288,14 @@ class Command(BaseCommand):
             for p in ungrouped:
                 base_key = make_base_key(p.name, exclude_unit_label=label)
                 variant_value = None
-                for num, unit, l in product_params.get(p.id, []):
+                for matched, l in product_params.get(p.id, []):
                     if l == label:
-                        variant_value = f"{num}{unit}".upper()
+                        variant_value = matched.upper()
                         break
                 if variant_value:
                     base_groups[base_key].append((p, variant_value))
 
-            merged = self._merge_similar_bases(base_groups, 0.85)
+            merged = self._merge_similar_bases(base_groups, 1.0)
 
             for base_key, entries in merged.items():
                 if len(entries) < min_group_size:
