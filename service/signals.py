@@ -1,6 +1,7 @@
 from django.db.models.signals import post_save, post_delete, pre_save
 from django.dispatch import receiver
-from .models import Comment, CartItem, Questions, Order, Product
+from django.core.cache import cache
+from .models import Comment, CartItem, Questions, Order, Product, ProductFilterNumericValue, ProductItemCategoryFilterSchema
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from .utils import send_telegram_message
@@ -55,3 +56,23 @@ def update_cart_total_price(sender, instance, **kwargs):
 @receiver(signal=[post_save, post_delete], sender=Questions)
 def update_questions_quantity(sender, instance, **kwargs):
     instance.product.update_questions()
+
+
+def clear_category_filter_cache(category_id):
+    if category_id:
+        cache.delete(f"product:available_filters:cat:{category_id}")
+
+
+@receiver(signal=[post_save, post_delete], sender=Product)
+def invalidate_filter_cache_on_product_change(sender, instance, **kwargs):
+    if hasattr(instance, 'product_item_category_id'):
+        clear_category_filter_cache(instance.product_item_category_id)
+
+
+@receiver(signal=[post_save, post_delete], sender=ProductFilterNumericValue)
+def invalidate_filter_cache_on_numeric_change(sender, instance, **kwargs):
+    if hasattr(instance, 'schema') and instance.schema_id:
+        cat_id = ProductItemCategoryFilterSchema.objects.filter(
+            id=instance.schema_id
+        ).values_list('item_category_id', flat=True).first()
+        clear_category_filter_cache(cat_id)
