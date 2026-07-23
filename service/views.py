@@ -21,7 +21,7 @@ from django.db.models import Count
 from django.core.cache import cache
 from django.contrib.postgres.search import TrigramSimilarity
 from django.db.models.functions import Greatest
-from collections import OrderedDict
+
 import secrets
 from django.db import transaction
 from base.models import Promocodes
@@ -734,8 +734,8 @@ class ProductViewSet(ViewSet):
                 error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors
             )
 
-        page = serializer.validated_data.get("page")
-        page_size = serializer.validated_data.get("page_size")
+        page = serializer.validated_data.get("page", 1)
+        page_size = serializer.validated_data.get("page_size", 20)
         q = serializer.validated_data.get("q")
         price_from = serializer.validated_data.get("price_from", 0)
         price_to = serializer.validated_data.get("price_to", 0)
@@ -757,114 +757,179 @@ class ProductViewSet(ViewSet):
             filters &= Q(price__gte=price_from)
         if price_to:
             filters &= Q(price__lte=price_to)
-
         if brand:
             filters &= Q(brand=brand)
-
         if item_category:
             filters &= Q(product_item_category=item_category)
-
         if sale_id:
             filters &= Q(sale_products__id=sale_id)
 
-        filters &= Q(is_active=True)
-
-        products = Product.objects.filter(filters, is_active=True)
+        base_qs = Product.objects.filter(filters, is_active=True)
 
         if filters_data:
-            for key, value in filters_data.items():
-                if item_category:
-                    schema = ProductItemCategoryFilterSchema.objects.filter(
-                        item_category=item_category, key=key
-                    ).first()
-                else:
-                    schema = ProductItemCategoryFilterSchema.objects.filter(
-                        key=key
-                    ).first()
-                if not schema:
-                    continue
+            base_qs = self._apply_filters(base_qs, filters_data, item_category)
 
-                if schema.type == "range" and isinstance(value, dict):
-                    schema_ids = list(ProductItemCategoryFilterSchema.objects.filter(
-                        key=key
-                    ).values_list("id", flat=True))
-                    numeric_qs = ProductFilterNumericValue.objects.filter(
-                        schema_id__in=schema_ids, product__in=products
-                    )
-                    if value.get("min") is not None:
-                        numeric_qs = numeric_qs.filter(value__gte=value["min"])
-                    if value.get("max") is not None:
-                        numeric_qs = numeric_qs.filter(value__lte=value["max"])
-                    products = products.filter(id__in=numeric_qs.values("product_id"))
+        available_filters_list, quick_filters = self._build_available_filters(
+            base_qs, item_category, q, brand, price_from, price_to, sale_id, filters_data
+        )
 
-                else:
-                    if not isinstance(value, list):
-                        value = [value]
-                    or_q = Q()
-                    for v in value:
-                        or_q |= Q(filter_data__contains={key: v})
-                    products = products.filter(or_q)
+        products_page, total_count = self._paginate_products(
+            base_qs, q, brand, sort, page, page_size, request
+        )
 
+        return Response(
+            data={
+                "result": products_page,
+                "available_filters": available_filters_list,
+                "quick_filters": QuickFilterSerializer(quick_filters, many=True).data,
+                "ok": True,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    def _apply_filters(self, qs, filters_data, item_category):
+        for key, value in filters_data.items():
+            schema = ProductItemCategoryFilterSchema.objects.filter(
+                item_category=item_category, key=key
+            ).first() if item_category else ProductItemCategoryFilterSchema.objects.filter(
+                key=key
+            ).first()
+            if not schema:
+                continue
+
+            if schema.type == "range" and isinstance(value, dict):
+                schema_ids = list(
+                    ProductItemCategoryFilterSchema.objects.filter(key=key)
+                    .values_list("id", flat=True)
+                )
+                numeric_qs = ProductFilterNumericValue.objects.filter(
+                    schema_id__in=schema_ids, product_id__in=qs.values("pk")
+                )
+                if value.get("min") is not None:
+                    numeric_qs = numeric_qs.filter(value__gte=value["min"])
+                if value.get("max") is not None:
+                    numeric_qs = numeric_qs.filter(value__lte=value["max"])
+                qs = qs.filter(id__in=numeric_qs.values("product_id"))
+            else:
+                if not isinstance(value, list):
+                    value = [value]
+                or_q = Q()
+                for v in value:
+                    or_q |= Q(filter_data__contains={key: v})
+                qs = qs.filter(or_q)
+        return qs
+
+    def _build_available_filters(self, qs, item_category, q, brand, price_from, price_to, sale_id, filters_data):
         available_filters_list = []
         quick_filters = []
+
+        has_filters = any([q, brand, price_from, price_to, sale_id, filters_data])
+
+        if not item_category and not has_filters:
+            return available_filters_list, quick_filters
+
+        cache_key = None
+        if item_category and not has_filters:
+            cache_key = f"product:available_filters:cat:{item_category}"
+            cached = cache.get(cache_key)
+            if cached:
+                return cached["filters"], cached["quick"]
+
+        schema_qs = ProductItemCategoryFilterSchema.objects.filter(
+            is_filterable=True
+        ).order_by("position")
+
         if item_category:
-            schemas = ProductItemCategoryFilterSchema.objects.filter(
-                item_category_id=item_category, is_filterable=True
-            ).order_by("position")
+            schemas = list(schema_qs.filter(item_category_id=item_category))
+        else:
+            cat_ids = list(qs.order_by().values_list(
+                "product_item_category", flat=True
+            ).distinct())
+            if not cat_ids:
+                return available_filters_list, quick_filters
+            schemas = list(schema_qs.filter(item_category_id__in=cat_ids))
 
-            available_filters = []
-            for schema in schemas:
-                if schema.type == "range":
-                    agg = ProductFilterNumericValue.objects.filter(
-                        schema=schema, product__in=products
-                    ).aggregate(min_val=Min("value"), max_val=Max("value"))
-                    if agg["min_val"] is None:
-                        continue
-                    available_filters.append({
-                        "key": schema.key,
-                        "label": schema.label,
-                        "type": "range",
-                        "unit": schema.unit,
-                        "min": agg["min_val"],
-                        "max": agg["max_val"],
-                    })
-                else:
-                    values = list(
-                        products.filter(filter_data__has_key=schema.key)
-                        .annotate(val=F(f"filter_data__{schema.key}"))
-                        .values("val")
-                        .annotate(count=Count("id"))
-                        .order_by("-count")
-                    )
-                    if not values:
-                        continue
-                    available_filters.append({
-                        "key": schema.key,
-                        "label": schema.label,
-                        "type": schema.type,
-                        "unit": schema.unit,
-                        "values": [{"value": v["val"], "count": v["count"]} for v in values],
-                    })
+        if not schemas:
+            return available_filters_list, quick_filters
 
-                    if schema.is_quick_filter:
-                        _values = values
-                        if schema.max_quick_filters:
-                            _values = values[:schema.max_quick_filters]
-                        for v in _values:
-                            label = f"{v['val']} {schema.unit}".strip() if schema.unit else v["val"]
-                            quick_filters.append({
-                                "key": schema.key,
-                                "label": label,
-                                "value": v["val"],
-                                "count": v["count"],
-                            })
+        range_schemas = [s for s in schemas if s.type == "range"]
+        checkbox_schemas = [s for s in schemas if s.type != "range"]
 
-            available_filters_list = AvailableFilterSerializer(
-                available_filters, many=True
-            ).data
+        range_minmax = {}
+        if range_schemas:
+            schema_ids = [s.id for s in range_schemas]
+            rows = ProductFilterNumericValue.objects.filter(
+                schema_id__in=schema_ids, product_id__in=qs.values("pk")
+            ).values("schema_id").annotate(
+                min_val=Min("value"), max_val=Max("value")
+            )
+            for r in rows:
+                if r["min_val"] is not None:
+                    range_minmax[r["schema_id"]] = r
 
+        checkbox_values = {}
+        if checkbox_schemas:
+            keys = [s.key for s in checkbox_schemas]
+            for schema in checkbox_schemas:
+                key = schema.key
+                vals = list(
+                    qs.filter(filter_data__has_key=key)
+                    .annotate(val=F(f"filter_data__{key}"))
+                    .values("val")
+                    .annotate(count=Count("id"))
+                    .order_by("-count")
+                )
+                if vals:
+                    checkbox_values[key] = vals
+
+        available_filters = []
+        for schema in schemas:
+            if schema.type == "range":
+                r = range_minmax.get(schema.id)
+                if not r:
+                    continue
+                available_filters.append({
+                    "key": schema.key,
+                    "label": schema.label,
+                    "type": "range",
+                    "unit": schema.unit,
+                    "min": r["min_val"],
+                    "max": r["max_val"],
+                })
+            else:
+                vals = checkbox_values.get(schema.key)
+                if not vals:
+                    continue
+                available_filters.append({
+                    "key": schema.key,
+                    "label": schema.label,
+                    "type": schema.type,
+                    "unit": schema.unit,
+                    "values": [{"value": v["val"], "count": v["count"]} for v in vals],
+                })
+                if schema.is_quick_filter:
+                    _values = vals
+                    if schema.max_quick_filters:
+                        _values = vals[:schema.max_quick_filters]
+                    for v in _values:
+                        label = f"{v['val']} {schema.unit}".strip() if schema.unit else v["val"]
+                        quick_filters.append({
+                            "key": schema.key,
+                            "label": label,
+                            "value": v["val"],
+                            "count": v["count"],
+                        })
+
+        available_filters_list = AvailableFilterSerializer(available_filters, many=True).data
+
+        if cache_key:
+            cache.set(cache_key, {"filters": available_filters_list, "quick": quick_filters}, timeout=60)
+
+        return available_filters_list, quick_filters
+
+    def _paginate_products(self, qs, q, brand, sort, page, page_size, request):
         if q and not brand:
-            products = products.select_related("brand").annotate(
+            qs = qs.select_related("brand").annotate(
                 sim_name=TrigramSimilarity("name", q),
                 sim_name_uz=TrigramSimilarity("name_uz", q),
                 sim_name_ru=TrigramSimilarity("name_ru", q),
@@ -884,94 +949,30 @@ class ProductViewSet(ViewSet):
                 Q(brand__name__icontains=q) | Q(brand__name_uz__icontains=q) | Q(brand__name_ru__icontains=q) | Q(brand__name_en__icontains=q)
             ).order_by("-similarity", sort)
         else:
-            products = products.order_by(sort)
+            qs = qs.order_by(sort)
 
-        has_filters = any([q, brand, price_from, price_to, sale_id, filters_data])
-        if not item_category and has_filters:
-            cat_ids = list(products.order_by().values_list(
-                "product_item_category", flat=True
-            ).distinct())
+        total_count = qs.count()
+        offset = (page - 1) * page_size
+        page_qs = qs[offset:offset + page_size]
+        page_qs = get_optimized_product_qs(page_qs, request)
 
-            if cat_ids:
-                schemas = ProductItemCategoryFilterSchema.objects.filter(
-                    item_category_id__in=cat_ids, is_filterable=True
-                ).order_by("position")
+        from service.serializers import ProductSerializer
+        serialized = ProductSerializer(page_qs, many=True, context={"request": request}).data
 
-                schema_groups = OrderedDict()
-                for schema in schemas:
-                    if schema.key not in schema_groups:
-                        schema_groups[schema.key] = {
-                            "schema": schema,
-                            "schema_ids": [],
-                        }
-                    schema_groups[schema.key]["schema_ids"].append(schema.id)
+        total_pages = max(1, (total_count + page_size - 1) // page_size)
 
-                available_filters = []
-                for key, group in schema_groups.items():
-                    first = group["schema"]
-                    if first.type == "range":
-                        agg = ProductFilterNumericValue.objects.filter(
-                            schema_id__in=group["schema_ids"], product__in=products
-                        ).aggregate(min_val=Min("value"), max_val=Max("value"))
-                        if agg["min_val"] is None:
-                            continue
-                        available_filters.append({
-                            "key": key,
-                            "label": first.label,
-                            "type": "range",
-                            "unit": first.unit,
-                            "min": agg["min_val"],
-                            "max": agg["max_val"],
-                        })
-                    else:
-                        values_list = list(
-                            products.filter(filter_data__has_key=key)
-                            .annotate(val=F(f"filter_data__{key}"))
-                            .values("val")
-                            .annotate(count=Count("id"))
-                            .order_by("-count")
-                        )
-                        if not values_list:
-                            continue
-                        available_filters.append({
-                            "key": key,
-                            "label": first.label,
-                            "type": first.type,
-                            "unit": first.unit,
-                            "values": [{"value": v["val"], "count": v["count"]} for v in values_list],
-                        })
-
-                        if first.is_quick_filter:
-                            _values = values_list
-                            if first.max_quick_filters:
-                                _values = values_list[:first.max_quick_filters]
-                            for v in _values:
-                                label = f"{v['val']} {first.unit}".strip() if first.unit else v["val"]
-                                quick_filters.append({
-                                    "key": key,
-                                    "label": label,
-                                    "value": v["val"],
-                                    "count": v["count"],
-                                })
-
-                available_filters_list = AvailableFilterSerializer(available_filters, many=True).data
-
-        products = get_optimized_product_qs(products, request)
-
-        return Response(
-            data={
-                "result": get_products_paginator(
-                    response_data=products,
-                    page=page,
-                    page_size=page_size,
-                    context={"request": request},
-                ),
-                "available_filters": available_filters_list,
-                "quick_filters": QuickFilterSerializer(quick_filters, many=True).data,
-                "ok": True,
-            },
-            status=status.HTTP_200_OK,
-        )
+        result = {
+            "totalElements": total_count,
+            "totalPages": total_pages,
+            "size": page_size,
+            "number": page,
+            "numberOfElements": len(serialized),
+            "first": page == 1,
+            "last": page >= total_pages,
+            "empty": total_count == 0,
+            "content": serialized,
+        }
+        return result, total_count
 
     @swagger_auto_schema(
         operation_summary="Available filters",
