@@ -1,5 +1,8 @@
 import os
+import io
 import openpyxl
+from PIL import Image as PILImage
+from openpyxl.drawing.image import Image as XLImage
 from django.core.management.base import BaseCommand
 from django.conf import settings
 from django.db.models import Prefetch
@@ -7,7 +10,7 @@ from service.models import ProductCategory, Product
 
 
 class Command(BaseCommand):
-    help = "Export products to Excel with one sheet per ProductCategory"
+    help = "Export products to Excel with one sheet per ProductCategory (images embedded)"
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -21,6 +24,9 @@ class Command(BaseCommand):
         output_path = options["output"]
         if not os.path.isabs(output_path):
             output_path = os.path.join(settings.BASE_DIR, output_path)
+
+        IMG_COL = 15
+        IMG_SIZE = 100
 
         wb = openpyxl.Workbook()
         wb.remove(wb.active)
@@ -58,6 +64,7 @@ class Command(BaseCommand):
                 continue
 
             ws = wb.create_sheet(title=sheet_name)
+            ws.column_dimensions[openpyxl.utils.get_column_letter(IMG_COL)].width = 18
 
             headers = [
                 "ID",
@@ -78,14 +85,11 @@ class Command(BaseCommand):
             ]
             ws.append(headers)
 
+            row_num = 2
+
             for product in products.iterator(chunk_size=500):
                 sub_cat = product.product_item_category.product_sub_category if product.product_item_category else None
                 item_cat = product.product_item_category
-
-                images = getattr(product, "images", [])
-                images_str = ", ".join(
-                    img.image.url for img in images if img.image
-                ) if images else ""
 
                 ws.append([
                     product.id,
@@ -102,8 +106,29 @@ class Command(BaseCommand):
                     product.barcode or "",
                     product.rating,
                     "Да" if product.is_active else "Нет",
-                    images_str,
+                    "",
                 ])
+
+                images = getattr(product, "images", [])
+                if images and images[0].image:
+                    try:
+                        pil_img = PILImage.open(images[0].image.path)
+                        pil_img.thumbnail((IMG_SIZE, IMG_SIZE))
+                        buf = io.BytesIO()
+                        pil_img.save(buf, format="PNG")
+                        buf.seek(0)
+
+                        xl_img = XLImage(buf)
+                        xl_img.width = IMG_SIZE
+                        xl_img.height = IMG_SIZE
+
+                        cell = f"{openpyxl.utils.get_column_letter(IMG_COL)}{row_num}"
+                        ws.add_image(xl_img, cell)
+                        ws.row_dimensions[row_num].height = IMG_SIZE + 4
+                    except Exception:
+                        pass
+
+                row_num += 1
 
             total_products += count
             self.stdout.write(f"  [{sheet_name}] {count} products")
