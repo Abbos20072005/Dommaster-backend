@@ -2343,7 +2343,7 @@ class OrderViewSet(ViewSet):
         if not order:
             raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
 
-        if order.status != 0:
+        if order.status not in (0, 1):
             raise CustomApiException(
                 error_code=ErrorCodes.INVALID_INPUT,
                 message="You could not cancel this order",
