@@ -1,7 +1,6 @@
 from .models import ProductItemCategory, ProductSubCategory, ProductCategory, Product
 import requests
 import threading
-from urllib.parse import quote
 from django.conf import settings
 
 
@@ -43,15 +42,15 @@ def _send_telegram_message_sync(order_id, customer_id, total_price, items_info):
 
     message = "\n".join(message_lines)
 
-    url = (
-        f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/sendMessage"
-        f"?chat_id={settings.TELEGRAM_CHANNEL_ID}"
-        f"&text={quote(message)}"
-        f"&parse_mode=HTML"
-    )
+    url = f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/sendMessage"
+    payload = {
+        "chat_id": settings.TELEGRAM_CHANNEL_ID,
+        "text": message,
+        "parse_mode": "HTML",
+    }
 
     try:
-        response = requests.get(url, timeout=10)
+        response = requests.post(url, json=payload, timeout=10)
         response.raise_for_status()
     except Exception as e:
         print("❌ Failed to send message to bot:", str(e))
