@@ -60,14 +60,6 @@ def _send_telegram_message_sync(order_id, customer_name, customer_phone, deliver
 
 def send_telegram_message(order):
     """Send Telegram notification asynchronously to avoid blocking the request."""
-    from .models import Order
-    order = Order.objects.select_related(
-        "customer", "order_location"
-    ).only(
-        "id", "customer_id", "total_price",
-        "customer__full_name", "customer__phone_number",
-        "order_location__name", "order_location__location_name",
-    ).get(id=order.id)
 
     customer_name = order.customer.full_name if order.customer else None
     customer_phone = order.customer.phone_number if order.customer else None
