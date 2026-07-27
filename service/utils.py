@@ -31,16 +31,16 @@ SECRET_TOKEN = "supersecrettoken123"
 def _send_telegram_message_sync(order_id, customer_id, total_price, items_info):
     """Internal synchronous function that runs in a separate thread."""
     message_lines = [
-        f"<b>🛒 New Order Created</b>",
-        f"🆔 Order ID: {order_id}",
-        f"👤 Customer ID: {customer_id}",
-        f"💰 Total Price: {total_price}",
-        "📦 Items:"
+        f"<b>🛒 Новый заказ</b>",
+        f"🆔 ID заказа: {order_id}",
+        f"👤 ID клиента: {customer_id}",
+        f"💰 Общая стоимость: {total_price}",
+        "📦 Товары:"
     ]
 
     for item_info in items_info:
         message_lines.append(
-            f" - {item_info['name']} (Qty: {item_info['quantity']}) | 👤 Manager: {item_info['telegram_id']}"
+            f" - {item_info['name']} (Кол-во: {item_info['quantity']}) | 👤 Менеджер: {item_info['telegram_id']}"
         )
 
     message = "\n".join(message_lines)
