@@ -1,4 +1,5 @@
 from utils.send_notification import send_notification_to_customer
+from service.utils import send_telegram_message
 from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
 from drf_yasg import openapi
@@ -2457,6 +2458,8 @@ class OrderViewSet(ViewSet):
         if payment_type == 4:
             order.payment_method = payment_method
         order.save(update_fields=["payment_type", "payment_method"])
+
+        send_telegram_message(order)
 
         payment_link = generate_link(
             order_id=order.id,
