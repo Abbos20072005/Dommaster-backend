@@ -93,6 +93,8 @@ class Order(BaseModel):
     delivery_type = models.IntegerField(choices=DELIVERY_TYPE, default=0, verbose_name="Тип доставки")
     payment_type = models.IntegerField(choices=PAYMENT_TYPE, null=True, blank=True, verbose_name="Тип оплаты")
     payment_method = models.CharField(max_length=10, choices=CASH_PAYMENT_METHOD, blank=True, null=True, verbose_name="Способ оплаты при получении")
+    receiver_name = models.CharField(max_length=255, blank=True, null=True, verbose_name="Имя получателя")
+    receiver_phone = models.CharField(max_length=14, blank=True, null=True, verbose_name="Телефон получателя")
     ofd_url = models.URLField(max_length=500, blank=True, null=True, verbose_name="Ссылка на чек")
 
     def __str__(self):

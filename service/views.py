@@ -2457,7 +2457,9 @@ class OrderViewSet(ViewSet):
         order.payment_type = payment_type
         if payment_type == 4:
             order.payment_method = payment_method
-        order.save(update_fields=["payment_type", "payment_method"])
+        order.receiver_name = serializer.validated_data.get("receiver_name")
+        order.receiver_phone = serializer.validated_data.get("receiver_phone")
+        order.save(update_fields=["payment_type", "payment_method", "receiver_name", "receiver_phone"])
 
         send_telegram_message(order)
 
