@@ -7,6 +7,12 @@ from exceptions.error_messages import ErrorCodes
 from .utils import send_telegram_message
 
 
+@receiver(post_save, sender=Order)
+def send_telegram_on_order_created(sender, instance, created, **kwargs):
+    if created:
+        send_telegram_message(instance)
+
+
 @receiver(pre_save, sender=Order)
 def decrease_product_quantity_on_collecting(sender, instance, **kwargs):
     if not instance.pk:
