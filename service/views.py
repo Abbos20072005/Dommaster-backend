@@ -2429,6 +2429,7 @@ class OrderViewSet(ViewSet):
                 customer_id=request.user.id,
                 promocode_id=promocode.id,
                 total_price=promocode_discount_price,
+                saved_price=cart.saved_price,
                 order_location=customer_location,
                 delivery_type=serializer.validated_data.get("delivery_type", 0),
             )
@@ -2436,6 +2437,7 @@ class OrderViewSet(ViewSet):
             order = Order.objects.create(
                 customer_id=request.user.id,
                 total_price=cart.products_total_price,
+                saved_price=cart.saved_price,
                 order_location=customer_location,
                 delivery_type=serializer.validated_data.get("delivery_type", 0),
             )

@@ -976,9 +976,11 @@ class OrderSerializer(serializers.ModelSerializer):
             "order_location",
             "receiver_name",
             "receiver_phone",
+            "saved_price",
             "created_at",
             "order_items"
         )
+
 
 class OrderItemSerializer(serializers.ModelSerializer):
     product = ProductSerializer(read_only=True)
@@ -1011,6 +1013,7 @@ class OrderDetailSerializer(serializers.ModelSerializer):
             "ofd_url",
             "receiver_name",
             "receiver_phone",
+            "saved_price",
             "created_at",
             "order_items"
         )
