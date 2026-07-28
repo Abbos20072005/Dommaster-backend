@@ -2437,7 +2437,7 @@ class OrderViewSet(ViewSet):
         else:
             order = Order.objects.create(
                 customer_id=request.user.id,
-                total_price=cart.products_total_price,
+                total_price=cart.total_price,
                 saved_price=cart.saved_price,
                 products_total_price=cart.products_total_price,
                 order_location=customer_location,
