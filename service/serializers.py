@@ -977,6 +977,7 @@ class OrderSerializer(serializers.ModelSerializer):
             "receiver_name",
             "receiver_phone",
             "saved_price",
+            "products_total_price",
             "created_at",
             "order_items"
         )
@@ -1014,6 +1015,7 @@ class OrderDetailSerializer(serializers.ModelSerializer):
             "receiver_name",
             "receiver_phone",
             "saved_price",
+            "products_total_price",
             "created_at",
             "order_items"
         )

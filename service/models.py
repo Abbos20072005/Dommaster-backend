@@ -96,6 +96,7 @@ class Order(BaseModel):
     receiver_name = models.CharField(max_length=255, blank=True, null=True, verbose_name="Имя получателя")
     receiver_phone = models.CharField(max_length=14, blank=True, null=True, verbose_name="Телефон получателя")
     saved_price = models.FloatField(default=0.0, verbose_name="Сэкономленная сумма")
+    products_total_price = models.FloatField(default=0.0, verbose_name="Общая стоимость продуктов")
     ofd_url = models.URLField(max_length=500, blank=True, null=True, verbose_name="Ссылка на чек")
 
     def __str__(self):
