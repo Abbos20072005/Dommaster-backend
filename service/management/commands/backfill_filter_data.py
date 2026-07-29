@@ -212,6 +212,10 @@ class Command(BaseCommand):
             if not char.name or not char.value:
                 continue
 
+            raw_value = char.value.strip()
+            if not raw_value:
+                continue
+
             key = make_filter_key(char.name)
             item_category = product.product_item_category
 
@@ -248,7 +252,7 @@ class Command(BaseCommand):
             if created:
                 stats["schemas_created"] += 1
 
-            detected_type = detect_filter_type(schema, char.value, char.unit, item_category)
+            detected_type = detect_filter_type(schema, raw_value, char.unit, item_category)
             if detected_type != schema.type and not schema.type_locked:
                 schema.type = detected_type
                 if not dry_run:
@@ -256,7 +260,7 @@ class Command(BaseCommand):
                 stats["schemas_type_updated"] += 1
 
             if schema.type == "range":
-                numeric_val = parse_numeric(char.value)
+                numeric_val = parse_numeric(raw_value)
                 if numeric_val is not None:
                     if dry_run:
                         exists = ProductFilterNumericValue.objects.filter(
@@ -273,7 +277,7 @@ class Command(BaseCommand):
                         else:
                             stats["numeric_values_updated"] += 1
             else:
-                filter_data[key] = slugify(char.value, allow_unicode=True) or char.value
+                filter_data[key] = raw_value
                 if not dry_run:
                     deleted, _ = ProductFilterNumericValue.objects.filter(
                         product=product, schema=schema
