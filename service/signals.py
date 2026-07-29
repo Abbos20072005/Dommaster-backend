@@ -69,6 +69,11 @@ def invalidate_filter_cache_on_product_change(sender, instance, **kwargs):
         clear_category_filter_cache(instance.product_item_category_id)
 
 
+@receiver(signal=[post_save, post_delete], sender=ProductItemCategoryFilterSchema)
+def invalidate_filter_cache_on_schema_change(sender, instance, **kwargs):
+    clear_category_filter_cache(instance.item_category_id)
+
+
 @receiver(signal=[post_save, post_delete], sender=ProductFilterNumericValue)
 def invalidate_filter_cache_on_numeric_change(sender, instance, **kwargs):
     if hasattr(instance, 'schema') and instance.schema_id:
