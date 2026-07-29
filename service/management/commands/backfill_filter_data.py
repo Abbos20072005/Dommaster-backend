@@ -135,6 +135,7 @@ class Command(BaseCommand):
             "schemas_type_updated": 0,
             "numeric_values_created": 0,
             "numeric_values_updated": 0,
+            "numeric_values_cleaned": 0,
             "filter_data_updated": 0,
         }
 
@@ -170,6 +171,7 @@ class Command(BaseCommand):
         self.stdout.write(f"  Schemas type updated:   {stats['schemas_type_updated']}")
         self.stdout.write(f"  Numeric values created: {stats['numeric_values_created']}")
         self.stdout.write(f"  Numeric values updated: {stats['numeric_values_updated']}")
+        self.stdout.write(f"  Numeric values cleaned: {stats['numeric_values_cleaned']}")
         self.stdout.write(f"  Filter data updated:    {stats['filter_data_updated']}")
         self.stdout.write(f"  Time elapsed:           {elapsed:.1f}s")
         self.stdout.write(f"  Avg speed:              {total / max(elapsed, 1):.0f} prod/s")
@@ -272,11 +274,16 @@ class Command(BaseCommand):
                             stats["numeric_values_updated"] += 1
             else:
                 filter_data[key] = slugify(char.value, allow_unicode=True) or char.value
+                if not dry_run:
+                    deleted, _ = ProductFilterNumericValue.objects.filter(
+                        product=product, schema=schema
+                    ).delete()
+                    if deleted:
+                        stats["numeric_values_cleaned"] += 1
 
-        if filter_data:
-            if not dry_run:
-                Product.objects.filter(id=product.id).update(filter_data=filter_data)
-            stats["filter_data_updated"] += 1
+        if not dry_run:
+            Product.objects.filter(id=product.id).update(filter_data=filter_data)
+        stats["filter_data_updated"] += 1
 
         stats["products_processed"] += 1
 
