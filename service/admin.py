@@ -320,6 +320,18 @@ class ProductFilterNumericValueInline(TabularInline):
     autocomplete_fields = ("product",)
 
 
+@admin.action(description="Lock type for selected filters")
+def lock_filter_type(modeladmin, request, queryset):
+    updated = queryset.update(type_locked=True)
+    messages.success(request, f"{updated} filter schemas locked.")
+
+
+@admin.action(description="Unlock type for selected filters")
+def unlock_filter_type(modeladmin, request, queryset):
+    updated = queryset.update(type_locked=False)
+    messages.success(request, f"{updated} filter schemas unlocked.")
+
+
 @admin.action(description="Change type for selected filters")
 def change_filter_type(modeladmin, request, queryset):
     if "apply" in request.POST:
@@ -347,7 +359,7 @@ def change_filter_type(modeladmin, request, queryset):
 
 @admin.register(ProductItemCategoryFilterSchema)
 class ProductItemCategoryFilterSchemaAdmin(ModelAdmin):
-    actions = [change_filter_type]
+    actions = [change_filter_type, lock_filter_type, unlock_filter_type]
     list_display = ("id", "item_category", "key", "label_ru", "type", "unit", "position", "is_filterable", "is_quick_filter", "max_quick_filters", "type_locked")
     list_display_links = ("id", "key")
     search_fields = ("key", "label_ru", "item_category__name")
