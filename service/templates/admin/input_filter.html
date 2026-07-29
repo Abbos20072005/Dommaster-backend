@@ -1,0 +1,15 @@
+{% load i18n %}
+<div style="padding: 8px 10px;">
+  <label for="{{ spec.parameter_name }}" style="display: block; margin-bottom: 4px; font-size: 11px; text-transform: uppercase; color: #666;">
+    {{ title }}
+  </label>
+  <input
+    type="text"
+    name="{{ spec.parameter_name }}"
+    id="{{ spec.parameter_name }}"
+    value="{{ spec.value|default:'' }}"
+    placeholder="{% translate 'Search...' %}"
+    style="width: 100%; padding: 5px 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;"
+    onchange="this.form.submit()"
+  >
+</div>

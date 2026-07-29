@@ -332,6 +332,21 @@ def unlock_filter_type(modeladmin, request, queryset):
     messages.success(request, f"{updated} filter schemas unlocked.")
 
 
+class ItemCategoryFilter(admin.SimpleListFilter):
+    title = "item category"
+    parameter_name = "item_category_search"
+    template = "admin/input_filter.html"
+
+    def lookups(self, request, model_admin):
+        return ()
+
+    def queryset(self, request, queryset):
+        value = self.value()
+        if value:
+            return queryset.filter(item_category__name__icontains=value)
+        return queryset
+
+
 @admin.action(description="Change type for selected filters")
 def change_filter_type(modeladmin, request, queryset):
     if "apply" in request.POST:
@@ -363,7 +378,7 @@ class ProductItemCategoryFilterSchemaAdmin(ModelAdmin):
     list_display = ("id", "item_category", "key", "label_ru", "type", "unit", "position", "is_filterable", "is_quick_filter", "max_quick_filters", "type_locked")
     list_display_links = ("id", "key")
     search_fields = ("key", "label_ru", "item_category__name")
-    list_filter = ("type", "is_filterable", "type_locked", "item_category")
+    list_filter = ("type", "is_filterable", "type_locked", ItemCategoryFilter)
     autocomplete_fields = ("item_category",)
     inlines = [ProductFilterNumericValueInline]
 
