@@ -1,10 +1,12 @@
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.db.models import Count
+from django.shortcuts import render
 from .models import Product, ProductCategory, ProductSubCategory, ProductItemCategory, Comment, Order, \
     OrderItem, Tag, Brand, Sale, AddsBrands, ProductImage, Favourites, Cart, CartItem, Questions, \
     ProductCharacteristics, RecentlyViewedProducts, Service, CommentImages, CommentReply, QuestionsReply, \
     ProductVariantGroup, ProductVariantItem, \
     Announcements, ProductItemCategoryFilterSchema, ProductFilterNumericValue, ProductUnit
+from .signals import clear_category_filter_cache
 from unfold.admin import ModelAdmin, TabularInline
 from base.admin_actions import make_visible, make_hidden, activate, deactivate, \
     mark_as_main, mark_as_not_main, status_collecting, status_delivering, status_completed, status_canceled
@@ -318,8 +320,34 @@ class ProductFilterNumericValueInline(TabularInline):
     autocomplete_fields = ("product",)
 
 
+@admin.action(description="Change type for selected filters")
+def change_filter_type(modeladmin, request, queryset):
+    if "apply" in request.POST:
+        new_type = request.POST.get("new_type")
+        if new_type not in dict(ProductItemCategoryFilterSchema._meta.get_field("type").choices):
+            messages.error(request, "Invalid type selected.")
+            return
+
+        category_ids = set(queryset.values_list("item_category_id", flat=True))
+        updated = queryset.update(type=new_type)
+        for cat_id in category_ids:
+            clear_category_filter_cache(cat_id)
+        messages.success(request, f"{updated} filter schemas updated to {dict(ProductItemCategoryFilterSchema._meta.get_field('type').choices)[new_type]}.")
+        return
+
+    context = {
+        **modeladmin.admin_site.each_context(request),
+        "queryset": queryset,
+        "opts": modeladmin.model._meta,
+        "filter_types": ProductItemCategoryFilterSchema._meta.get_field("type").choices,
+        "objects_name": "filter schemas",
+    }
+    return render(request, "admin/change_filter_type.html", context)
+
+
 @admin.register(ProductItemCategoryFilterSchema)
 class ProductItemCategoryFilterSchemaAdmin(ModelAdmin):
+    actions = [change_filter_type]
     list_display = ("id", "item_category", "key", "label_ru", "type", "unit", "position", "is_filterable", "is_quick_filter", "max_quick_filters", "type_locked")
     list_display_links = ("id", "key")
     search_fields = ("key", "label_ru", "item_category__name")
