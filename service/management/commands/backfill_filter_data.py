@@ -25,6 +25,12 @@ def make_filter_key(name):
     return slugify(name, allow_unicode=True) or slugify(name, allow_unicode=False)
 
 
+def normalize_value(value):
+    value = re.sub(r'(?<=\d) (?=[a-zA-Zа-яА-Я])', '', value)
+    value = re.sub(r'(?<=[a-zA-Zа-яА-Я]) (?=\d)', '', value)
+    return value
+
+
 def detect_filter_type(schema, raw_value, unit, item_category):
     if schema.type_locked:
         return schema.type
@@ -212,7 +218,7 @@ class Command(BaseCommand):
             if not char.name or not char.value:
                 continue
 
-            raw_value = char.value.strip()
+            raw_value = normalize_value(char.value.strip())
             if not raw_value:
                 continue
 
