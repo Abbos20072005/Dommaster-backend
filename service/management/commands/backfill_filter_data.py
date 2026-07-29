@@ -27,7 +27,6 @@ def make_filter_key(name):
 
 def normalize_value(value):
     value = re.sub(r'(?<=\d) (?=[a-zA-Zа-яА-Я])', '', value)
-    value = re.sub(r'(?<=[a-zA-Zа-яА-Я]) (?=\d)', '', value)
     return value
 
 
