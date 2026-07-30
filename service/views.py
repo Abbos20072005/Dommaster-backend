@@ -775,6 +775,15 @@ class ProductViewSet(ViewSet):
 
         if filters_data:
             for key, value in filters_data.items():
+                if key == "price":
+                    if isinstance(value, dict):
+                        if value.get("min") is not None:
+                            filters &= Q(price__gte=value["min"])
+                        if value.get("max") is not None:
+                            filters &= Q(price__lte=value["max"])
+                    products = Product.objects.filter(filters, is_active=True)
+                    continue
+
                 if item_category:
                     schema = ProductItemCategoryFilterSchema.objects.filter(
                         item_category=item_category, key=key
@@ -870,6 +879,17 @@ class ProductViewSet(ViewSet):
                                     "value": v["val"],
                                     "count": v["count"],
                                 })
+
+                price_agg = products.aggregate(min_price=Min("price"), max_price=Max("price"))
+                if price_agg["min_price"] is not None:
+                    available_filters.insert(0, {
+                        "key": "price",
+                        "label": "Цена",
+                        "type": "range",
+                        "unit": "сум",
+                        "min": price_agg["min_price"],
+                        "max": price_agg["max_price"],
+                    })
 
                 available_filters_list = AvailableFilterSerializer(
                     available_filters, many=True
@@ -972,6 +992,17 @@ class ProductViewSet(ViewSet):
                                     "count": v["count"],
                                 })
 
+                price_agg = products.aggregate(min_price=Min("price"), max_price=Max("price"))
+                if price_agg["min_price"] is not None:
+                    available_filters.insert(0, {
+                        "key": "price",
+                        "label": "Цена",
+                        "type": "range",
+                        "unit": "сум",
+                        "min": price_agg["min_price"],
+                        "max": price_agg["max_price"],
+                    })
+
                 available_filters_list = AvailableFilterSerializer(available_filters, many=True).data
 
         if available_filters_list is None:
@@ -1067,6 +1098,17 @@ class ProductViewSet(ViewSet):
                             "value": v["val"],
                             "count": v["count"],
                         })
+
+        price_agg = products.aggregate(min_price=Min("price"), max_price=Max("price"))
+        if price_agg["min_price"] is not None:
+            result.insert(0, {
+                "key": "price",
+                "label": "Цена",
+                "type": "range",
+                "unit": "сум",
+                "min": price_agg["min_price"],
+                "max": price_agg["max_price"],
+            })
 
         serialized_filters = AvailableFilterSerializer(result, many=True).data
         quick_data = QuickFilterSerializer(quick_filters, many=True).data

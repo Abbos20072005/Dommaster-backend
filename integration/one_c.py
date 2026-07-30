@@ -45,17 +45,17 @@ def decode_base64_image(base64_string):
         raise CustomApiException(error_code=ErrorCodes.INTEGRATION_IMAGE_DECODE_FAILED)
 
 
-def get_or_create_brand(guid):
-    if not guid:
+def get_or_create_brand(code):
+    if not code:
         return None
-    brand = Brand.objects.filter(guid=guid).first()
+    brand = Brand.objects.filter(code=code).first()
     if brand:
         return brand
     brand = Brand.objects.create(
-        name=guid,
-        name_uz=guid,
-        name_en=guid,
-        guid=guid,
+        name=code,
+        name_uz=code,
+        name_en=code,
+        code=code,
     )
     return brand
 
@@ -79,6 +79,13 @@ def detect_filter_type(schema, raw_value, unit, item_category):
         return schema.type
 
     if unit and unit.lower() in NUMERIC_UNITS:
+        existing_count = ProductFilterNumericValue.objects.filter(schema=schema).count()
+        if existing_count > 20:
+            unique_count = ProductFilterNumericValue.objects.filter(
+                schema=schema
+            ).values("value").distinct().count()
+            if unique_count <= 10:
+                return "multiselect"
         return "range"
 
     existing_count = ProductFilterNumericValue.objects.filter(schema=schema).count()
@@ -100,84 +107,283 @@ def detect_filter_type(schema, raw_value, unit, item_category):
     return "checkbox"
 
 
+class UnitNestedSerializer(serializers.Serializer):
+    unit_code = serializers.CharField(required=False, allow_blank=True)
+    unit_name_uz = serializers.CharField(required=False, allow_blank=True)
+    unit_name_ru = serializers.CharField(required=False, allow_blank=True)
+    unit_name_en = serializers.CharField(required=False, allow_blank=True)
+    unit_namefull_uz = serializers.CharField(required=False, allow_blank=True)
+    unit_namefull_ru = serializers.CharField(required=False, allow_blank=True)
+    unit_namefull_en = serializers.CharField(required=False, allow_blank=True)
+
+
+class BrandNestedSerializer(serializers.Serializer):
+    brand_code = serializers.CharField(required=False, allow_blank=True)
+    brand_name_uz = serializers.CharField(required=False, allow_blank=True)
+    brand_name_ru = serializers.CharField(required=False, allow_blank=True)
+    brand_name_en = serializers.CharField(required=False, allow_blank=True)
+    image_base64 = serializers.CharField(required=False, allow_blank=True)
+
+
+class CategoryNestedSerializer(serializers.Serializer):
+    category_code = serializers.CharField(required=False, allow_blank=True)
+    category_name_uz = serializers.CharField(required=False, allow_blank=True)
+    category_name_ru = serializers.CharField(required=False, allow_blank=True)
+    category_name_en = serializers.CharField(required=False, allow_blank=True)
+    image_base64 = serializers.CharField(required=False, allow_blank=True)
+    icon_base64 = serializers.CharField(required=False, allow_blank=True)
+
+
+class SubCategoryNestedSerializer(serializers.Serializer):
+    category_code = serializers.CharField(required=False, allow_blank=True)
+    subcategory_code = serializers.CharField(required=False, allow_blank=True)
+    subcategory_name_uz = serializers.CharField(required=False, allow_blank=True)
+    subcategory_name_ru = serializers.CharField(required=False, allow_blank=True)
+    subcategory_name_en = serializers.CharField(required=False, allow_blank=True)
+    image_base64 = serializers.CharField(required=False, allow_blank=True)
+
+
+class ItemCategoryNestedSerializer(serializers.Serializer):
+    subcategory_code = serializers.CharField(required=False, allow_blank=True)
+    itemcategory_code = serializers.CharField(required=False, allow_blank=True)
+    itemcategory_name_uz = serializers.CharField(required=False, allow_blank=True)
+    itemcategory_name_ru = serializers.CharField(required=False, allow_blank=True)
+    itemcategory_name_en = serializers.CharField(required=False, allow_blank=True)
+    image_base64 = serializers.CharField(required=False, allow_blank=True)
+
+
+class CharacteristicNestedSerializer(serializers.Serializer):
+    name = serializers.CharField(required=False, allow_blank=True)
+    value = serializers.CharField(required=False, allow_blank=True)
+    unit = serializers.CharField(required=False, allow_blank=True)
+
+
 class OneCProductInputSerializer(serializers.Serializer):
     api_key = serializers.CharField(required=True, write_only=True)
-    name = serializers.CharField(required=True)
-    name_uz = serializers.CharField(required=False, allow_blank=True)
-    name_en = serializers.CharField(required=False, allow_blank=True)
-    description = serializers.CharField(required=False, allow_blank=True)
+    product_code = serializers.CharField(required=False, allow_blank=True)
+    product_name_uz = serializers.CharField(required=False, allow_blank=True)
+    product_name_ru = serializers.CharField(required=False, allow_blank=True)
+    product_name_en = serializers.CharField(required=False, allow_blank=True)
     description_uz = serializers.CharField(required=False, allow_blank=True)
+    description_ru = serializers.CharField(required=False, allow_blank=True)
     description_en = serializers.CharField(required=False, allow_blank=True)
-    price = serializers.FloatField(required=True)
-    unit = serializers.ChoiceField(choices=[
-        "kg", "l", "sm", "pcs", "m", "g", "pkg", "set"
-    ], default="pcs")
-    quantity = serializers.IntegerField(default=0)
-    discount_price = serializers.FloatField(required=False, allow_null=True)
-    discount = serializers.IntegerField(required=False, allow_null=True)
-    item_category_id = serializers.IntegerField(required=False, allow_null=True)
-    brand_guid = serializers.CharField(required=False, allow_blank=True)
-    vendor_code = serializers.CharField(required=False, allow_blank=True)
+    unit = UnitNestedSerializer(required=False)
+    brand = BrandNestedSerializer(required=False)
+    category = CategoryNestedSerializer(required=False)
+    subcategory = SubCategoryNestedSerializer(required=False)
+    itemcategory = ItemCategoryNestedSerializer(required=False)
     barcode = serializers.CharField(required=False, allow_blank=True)
-    product_guid = serializers.CharField(required=False, allow_blank=True)
-    characteristics = serializers.ListField(
-        required=False, default=list,
-        child=serializers.DictField()
-    )
-    images_base64 = serializers.ListField(
-        required=False, default=list,
-        child=serializers.CharField()
-    )
+    articul_code = serializers.CharField(required=False, allow_blank=True)
+    characteristics = serializers.ListField(child=serializers.DictField(), required=False)
+    images_base64 = serializers.ListField(child=serializers.CharField(), required=False)
+    is_active = serializers.BooleanField(default=True)
     is_active = serializers.BooleanField(default=True)
 
 
 class OneCBrandInputSerializer(serializers.Serializer):
     api_key = serializers.CharField(required=True, write_only=True)
-    name = serializers.CharField(required=True)
-    name_uz = serializers.CharField(required=False, allow_blank=True)
-    name_en = serializers.CharField(required=False, allow_blank=True)
+    brand_code = serializers.CharField(required=False, allow_blank=True)
+    brand_name_uz = serializers.CharField(required=False, allow_blank=True)
+    brand_name_ru = serializers.CharField(required=False, allow_blank=True)
+    brand_name_en = serializers.CharField(required=False, allow_blank=True)
     image_base64 = serializers.CharField(required=True)
 
 
 class OneCCategoryInputSerializer(serializers.Serializer):
     api_key = serializers.CharField(required=True, write_only=True)
-    name = serializers.CharField(required=True)
-    name_uz = serializers.CharField(required=False, allow_blank=True)
-    name_en = serializers.CharField(required=False, allow_blank=True)
+    category_code = serializers.CharField(required=False, allow_blank=True)
+    category_name_uz = serializers.CharField(required=False, allow_blank=True)
+    category_name_ru = serializers.CharField(required=False, allow_blank=True)
+    category_name_en = serializers.CharField(required=False, allow_blank=True)
     image_base64 = serializers.CharField(required=True)
     icon_base64 = serializers.CharField(required=False, allow_blank=True)
-    position = serializers.IntegerField(default=0)
 
 
 class OneCSubCategoryInputSerializer(serializers.Serializer):
     api_key = serializers.CharField(required=True, write_only=True)
-    product_category_id = serializers.IntegerField(required=True)
-    name = serializers.CharField(required=True)
-    name_uz = serializers.CharField(required=False, allow_blank=True)
-    name_en = serializers.CharField(required=False, allow_blank=True)
+    category_code = serializers.CharField(required=True)
+    subcategory_code = serializers.CharField(required=False, allow_blank=True)
+    subcategory_name_uz = serializers.CharField(required=False, allow_blank=True)
+    subcategory_name_ru = serializers.CharField(required=False, allow_blank=True)
+    subcategory_name_en = serializers.CharField(required=False, allow_blank=True)
     image_base64 = serializers.CharField(required=True)
 
 
 class OneCItemCategoryInputSerializer(serializers.Serializer):
     api_key = serializers.CharField(required=True, write_only=True)
-    product_sub_category_id = serializers.IntegerField(required=True)
-    name = serializers.CharField(required=True)
-    name_uz = serializers.CharField(required=False, allow_blank=True)
-    name_en = serializers.CharField(required=False, allow_blank=True)
+    subcategory_code = serializers.CharField(required=True)
+    itemcategory_code = serializers.CharField(required=False, allow_blank=True)
+    itemcategory_name_uz = serializers.CharField(required=False, allow_blank=True)
+    itemcategory_name_ru = serializers.CharField(required=False, allow_blank=True)
+    itemcategory_name_en = serializers.CharField(required=False, allow_blank=True)
     image_base64 = serializers.CharField(required=True)
 
 
 class OneCUnitInputSerializer(serializers.Serializer):
     api_key = serializers.CharField(required=True, write_only=True)
-    name = serializers.CharField(required=True)
-    name_uz = serializers.CharField(required=False, allow_blank=True)
-    name_en = serializers.CharField(required=False, allow_blank=True)
+    unit_code = serializers.CharField(required=True)
+    unit_name_uz = serializers.CharField(required=False, allow_blank=True)
+    unit_name_ru = serializers.CharField(required=False, allow_blank=True)
+    unit_name_en = serializers.CharField(required=False, allow_blank=True)
+    unit_namefull_uz = serializers.CharField(required=False, allow_blank=True)
+    unit_namefull_ru = serializers.CharField(required=False, allow_blank=True)
+    unit_namefull_en = serializers.CharField(required=False, allow_blank=True)
 
 
 class OneCIntegrationViewSet(ViewSet):
+    def _upsert_unit(self, unit_data):
+        if not unit_data:
+            return None
+        code = unit_data.get("unit_code")
+        if not code:
+            return None
+        name_uz = unit_data.get("unit_name_uz", "")
+        name_ru = unit_data.get("unit_name_ru") or name_uz
+        name_en = unit_data.get("unit_name_en") or name_uz
+        unit, _ = ProductUnit.objects.update_or_create(
+            unit_code=code,
+            defaults={
+                "name": name_uz,
+                "name_uz": name_uz,
+                "name_ru": name_ru,
+                "name_en": name_en,
+                "name_full_uz": unit_data.get("unit_namefull_uz", ""),
+                "name_full_ru": unit_data.get("unit_namefull_ru", ""),
+                "name_full_en": unit_data.get("unit_namefull_en", ""),
+            }
+        )
+        return unit
+
+    def _upsert_brand(self, brand_data):
+        if not brand_data:
+            return None
+        code = brand_data.get("brand_code")
+        if not code:
+            return None
+        name_uz = brand_data.get("brand_name_uz", "")
+        name_ru = brand_data.get("brand_name_ru") or name_uz
+        name_en = brand_data.get("brand_name_en") or name_uz
+        brand, _ = Brand.objects.update_or_create(
+            code=code,
+            defaults={
+                "name": name_uz,
+                "name_uz": name_uz,
+                "name_ru": name_ru,
+                "name_en": name_en,
+            }
+        )
+        img = brand_data.get("image_base64")
+        if img:
+            content_file = decode_base64_image(img)
+            brand.image.save(content_file.name, content_file, save=True)
+        return brand
+
+    def _upsert_category(self, cat_data):
+        if not cat_data:
+            return None
+        code = cat_data.get("category_code")
+        if not code:
+            return None
+        name_uz = cat_data.get("category_name_uz", "")
+        name_ru = cat_data.get("category_name_ru") or name_uz
+        name_en = cat_data.get("category_name_en") or name_uz
+        cat, _ = ProductCategory.objects.update_or_create(
+            code=code,
+            defaults={
+                "name": name_uz,
+                "name_uz": name_uz,
+                "name_ru": name_ru,
+                "name_en": name_en,
+            }
+        )
+        for field, key in [("image", "image_base64"), ("icon", "icon_base64")]:
+            raw = cat_data.get(key)
+            if raw:
+                content_file = decode_base64_image(raw)
+                getattr(cat, field).save(content_file.name, content_file, save=True)
+        return cat
+
+    def _upsert_subcategory(self, sub_data):
+        if not sub_data:
+            return None
+        code = sub_data.get("subcategory_code")
+        if not code:
+            return None
+
+        category = None
+        category_code = sub_data.get("category_code")
+        if category_code:
+            category, _ = ProductCategory.objects.update_or_create(
+                code=category_code,
+                defaults={
+                    "name": category_code,
+                    "name_uz": category_code,
+                    "name_ru": category_code,
+                    "name_en": category_code,
+                }
+            )
+
+        name_uz = sub_data.get("subcategory_name_uz", "")
+        name_ru = sub_data.get("subcategory_name_ru") or name_uz
+        name_en = sub_data.get("subcategory_name_en") or name_uz
+        sub, _ = ProductSubCategory.objects.update_or_create(
+            code=code,
+            defaults={
+                "product_category": category,
+                "name": name_uz,
+                "name_uz": name_uz,
+                "name_ru": name_ru,
+                "name_en": name_en,
+            }
+        )
+        img = sub_data.get("image_base64")
+        if img:
+            content_file = decode_base64_image(img)
+            sub.image.save(content_file.name, content_file, save=True)
+        return sub
+
+    def _upsert_itemcategory(self, item_data):
+        if not item_data:
+            return None
+        code = item_data.get("itemcategory_code")
+        if not code:
+            return None
+
+        subcategory = None
+        subcategory_code = item_data.get("subcategory_code")
+        if subcategory_code:
+            subcategory, _ = ProductSubCategory.objects.update_or_create(
+                code=subcategory_code,
+                defaults={
+                    "name": subcategory_code,
+                    "name_uz": subcategory_code,
+                    "name_ru": subcategory_code,
+                    "name_en": subcategory_code,
+                }
+            )
+
+        name_uz = item_data.get("itemcategory_name_uz", "")
+        name_ru = item_data.get("itemcategory_name_ru") or name_uz
+        name_en = item_data.get("itemcategory_name_en") or name_uz
+        item, _ = ProductItemCategory.objects.update_or_create(
+            code=code,
+            defaults={
+                "product_sub_category": subcategory,
+                "name": name_uz,
+                "name_uz": name_uz,
+                "name_ru": name_ru,
+                "name_en": name_en,
+            }
+        )
+        img = item_data.get("image_base64")
+        if img:
+            content_file = decode_base64_image(img)
+            item.image.save(content_file.name, content_file, save=True)
+        return item
+
     @swagger_auto_schema(
         operation_summary="1C Product create",
-        operation_description="Create product from 1C with images, characteristics, attributes",
+        operation_description="Create product from 1C",
         request_body=OneCProductInputSerializer(),
         responses={201: "Product created"},
         tags=["1C Integration"]
@@ -196,44 +402,46 @@ class OneCIntegrationViewSet(ViewSet):
             raise CustomApiException(error_code=ErrorCodes.INTEGRATION_API_KEY_INVALID)
 
         with transaction.atomic():
-            item_category_id = data.get("item_category_id")
-            if item_category_id:
-                item_category = ProductItemCategory.objects.filter(id=item_category_id).first()
-                if not item_category:
-                    raise CustomApiException(
-                        error_code=ErrorCodes.INTEGRATION_INVALID_DATA,
-                        message=f"item_category_id {item_category_id} not found"
-                    )
-            else:
-                item_category = None
+            unit = self._upsert_unit(data.get("unit"))
+            brand = self._upsert_brand(data.get("brand"))
+            category = self._upsert_category(data.get("category"))
+            subcategory = self._upsert_subcategory(data.get("subcategory"))
+            item_category = self._upsert_itemcategory(data.get("itemcategory"))
 
-            brand = get_or_create_brand(data.get("brand_guid"))
+            name_uz = data.get("product_name_uz", "")
+            name_ru = data.get("product_name_ru") or name_uz
+            name_en = data.get("product_name_en") or name_uz
+            name = name_uz
 
-            name = data.get("name", "")
+            description_uz = data.get("description_uz", "")
+            description_ru = data.get("description_ru") or description_uz
+            description_en = data.get("description_en") or description_uz
+            description = description_uz
+
+            unit_label = unit.name if unit else "pcs"
+
+            product_code = data.get("product_code")
             product_defaults = {
                 "brand": brand,
                 "product_item_category": item_category,
                 "name": name,
-                "name_uz": data.get("name_uz") or name,
-                "name_en": data.get("name_en") or name,
-                "description": data.get("description", ""),
-                "description_uz": data.get("description_uz", ""),
-                "description_en": data.get("description_en", ""),
-                "price": data.get("price", 0.0),
-                "unit": data.get("unit", "pcs"),
-                "quantity": data.get("quantity", 0),
-                "discount_price": data.get("discount_price"),
-                "discount": data.get("discount"),
+                "name_uz": name_uz,
+                "name_ru": name_ru,
+                "name_en": name_en,
+                "description": description,
+                "description_uz": description_uz,
+                "description_ru": description_ru,
+                "description_en": description_en,
+                "unit": unit_label,
                 "is_active": data.get("is_active", True),
-                "vendor_code": data.get("vendor_code", ""),
+                "articul_code": data.get("articul_code", ""),
                 "barcode": data.get("barcode", ""),
             }
 
-            product_guid = data.get("product_guid")
             created = True
-            if product_guid:
+            if product_code:
                 product, created = Product.objects.update_or_create(
-                    guid=product_guid,
+                    product_code=product_code,
                     defaults=product_defaults,
                 )
             else:
@@ -243,13 +451,17 @@ class OneCIntegrationViewSet(ViewSet):
             char_instances = []
 
             for char_data in data.get("characteristics", []):
-                char_name = char_data.get("name_ru") or char_data.get("name", "")
-                char_value = char_data.get("value_ru") or char_data.get("value", "")
-                char_unit = char_data.get("unit_ru") or char_data.get("unit", "")
+                char_name = char_data.get("name", "")
+                char_value = char_data.get("value", "")
+                char_unit = char_data.get("unit", "")
 
-                if char_name and char_value:
-                    key = make_filter_key(char_name)
+                if not char_name or not char_value:
+                    continue
 
+                key = make_filter_key(char_name)
+
+                schema = None
+                if item_category:
                     schema, _ = ProductItemCategoryFilterSchema.objects.get_or_create(
                         item_category=item_category,
                         key=key,
@@ -258,32 +470,32 @@ class OneCIntegrationViewSet(ViewSet):
                             "label": char_name,
                             "unit": char_unit,
                         }
-                    ) if item_category else (None, False)
+                    )
 
-                    if schema:
-                        detected_type = detect_filter_type(schema, char_value, char_unit, item_category)
-                        if detected_type != schema.type and not schema.type_locked:
-                            schema.type = detected_type
-                            schema.save(update_fields=["type"])
+                if schema:
+                    detected_type = detect_filter_type(schema, char_value, char_unit, item_category)
+                    if detected_type != schema.type and not schema.type_locked:
+                        schema.type = detected_type
+                        schema.save(update_fields=["type"])
 
-                        if schema.type == "range":
-                            numeric_val = parse_numeric(char_value)
-                            if numeric_val is not None:
-                                ProductFilterNumericValue.objects.update_or_create(
-                                    product=product, schema=schema,
-                                    defaults={"value": numeric_val}
-                                )
-                        else:
-                            filter_data[key] = slugify(char_value, allow_unicode=True) or char_value
+                    if schema.type == "range":
+                        numeric_val = parse_numeric(char_value)
+                        if numeric_val is not None:
+                            ProductFilterNumericValue.objects.update_or_create(
+                                product=product, schema=schema,
+                                defaults={"value": numeric_val}
+                            )
+                    else:
+                        filter_data[key] = char_value
 
                 char_instances.append(ProductCharacteristics(
                     product=product,
                     name=char_name,
-                    name_uz=char_data.get("name_uz", char_name),
-                    name_en=char_data.get("name_en", char_name),
+                    name_uz=char_name,
+                    name_en=char_name,
                     value=char_value,
-                    value_uz=char_data.get("value_uz", char_value),
-                    value_en=char_data.get("value_en", char_value),
+                    value_uz=char_value,
+                    value_en=char_value,
                     unit=char_unit,
                 ))
 
@@ -302,13 +514,14 @@ class OneCIntegrationViewSet(ViewSet):
         return Response(
             data={
                 "result": {
-                    "product_id": product.id,
-                    "name": product.name,
-                    "created": created if product_guid else True,
+                    "product_code": product.product_code or product_code,
+                    "product_name_uz": product.name_uz,
+                    "product_name_ru": product.name_ru,
+                    "product_name_en": product.name_en,
                 },
                 "ok": True,
             },
-            status=status.HTTP_201_CREATED,
+            status=status.HTTP_200_OK if not created else status.HTTP_201_CREATED,
         )
 
     @swagger_auto_schema(
@@ -331,12 +544,27 @@ class OneCIntegrationViewSet(ViewSet):
         if data.get("api_key") != INTEGRATION_API_KEY:
             raise CustomApiException(error_code=ErrorCodes.INTEGRATION_API_KEY_INVALID)
 
+        name_uz = data.get("brand_name_uz", "")
+        name_ru = data.get("brand_name_ru") or name_uz
+        name_en = data.get("brand_name_en") or name_uz
+        brand_code = data.get("brand_code")
+
         with transaction.atomic():
-            brand = Brand.objects.create(
-                name=data.get("name"),
-                name_uz=data.get("name_uz") or data.get("name"),
-                name_en=data.get("name_en") or data.get("name"),
-            )
+            brand_defaults = {
+                "name": name_uz,
+                "name_uz": name_uz,
+                "name_ru": name_ru,
+                "name_en": name_en,
+            }
+
+            if brand_code:
+                brand, created = Brand.objects.update_or_create(
+                    code=brand_code,
+                    defaults=brand_defaults,
+                )
+            else:
+                brand = Brand.objects.create(**brand_defaults)
+                created = True
 
             image_base64 = data.get("image_base64")
             if image_base64:
@@ -346,12 +574,14 @@ class OneCIntegrationViewSet(ViewSet):
         return Response(
             data={
                 "result": {
-                    "id": brand.id,
-                    "name": brand.name,
+                    "brand_code": brand.code or brand_code,
+                    "name_uz": brand.name_uz,
+                    "name_ru": brand.name_ru,
+                    "name_en": brand.name_en,
                 },
                 "ok": True,
             },
-            status=status.HTTP_201_CREATED,
+            status=status.HTTP_200_OK if not created else status.HTTP_201_CREATED,
         )
 
     @swagger_auto_schema(
@@ -374,13 +604,27 @@ class OneCIntegrationViewSet(ViewSet):
         if data.get("api_key") != INTEGRATION_API_KEY:
             raise CustomApiException(error_code=ErrorCodes.INTEGRATION_API_KEY_INVALID)
 
+        name_uz = data.get("category_name_uz", "")
+        name_ru = data.get("category_name_ru") or name_uz
+        name_en = data.get("category_name_en") or name_uz
+        category_code = data.get("category_code")
+
         with transaction.atomic():
-            category = ProductCategory.objects.create(
-                name=data.get("name"),
-                name_uz=data.get("name_uz") or data.get("name"),
-                name_en=data.get("name_en") or data.get("name"),
-                position=data.get("position", 0),
-            )
+            defaults = {
+                "name": name_uz,
+                "name_uz": name_uz,
+                "name_ru": name_ru,
+                "name_en": name_en,
+            }
+
+            if category_code:
+                category, created = ProductCategory.objects.update_or_create(
+                    code=category_code,
+                    defaults=defaults,
+                )
+            else:
+                category = ProductCategory.objects.create(**defaults)
+                created = True
 
             for field, base64_key in [("image", "image_base64"), ("icon", "icon_base64")]:
                 raw = data.get(base64_key)
@@ -391,12 +635,14 @@ class OneCIntegrationViewSet(ViewSet):
         return Response(
             data={
                 "result": {
-                    "id": category.id,
-                    "name": category.name,
+                    "category_code": category.code or category_code,
+                    "name_uz": category.name_uz,
+                    "name_ru": category.name_ru,
+                    "name_en": category.name_en,
                 },
                 "ok": True,
             },
-            status=status.HTTP_201_CREATED,
+            status=status.HTTP_200_OK if not created else status.HTTP_201_CREATED,
         )
 
     @swagger_auto_schema(
@@ -419,17 +665,33 @@ class OneCIntegrationViewSet(ViewSet):
         if data.get("api_key") != INTEGRATION_API_KEY:
             raise CustomApiException(error_code=ErrorCodes.INTEGRATION_API_KEY_INVALID)
 
-        product_category = ProductCategory.objects.filter(id=data.get("product_category_id")).first()
+        name_uz = data.get("subcategory_name_uz", "")
+        name_ru = data.get("subcategory_name_ru") or name_uz
+        name_en = data.get("subcategory_name_en") or name_uz
+        subcategory_code = data.get("subcategory_code")
+
+        category_code = data.get("category_code")
+        product_category = ProductCategory.objects.filter(code=category_code).first() if category_code else None
         if not product_category:
             raise CustomApiException(error_code=ErrorCodes.INTEGRATION_CATEGORY_NOT_FOUND)
 
         with transaction.atomic():
-            sub_category = ProductSubCategory.objects.create(
-                product_category=product_category,
-                name=data.get("name"),
-                name_uz=data.get("name_uz") or data.get("name"),
-                name_en=data.get("name_en") or data.get("name"),
-            )
+            defaults = {
+                "product_category": product_category,
+                "name": name_uz,
+                "name_uz": name_uz,
+                "name_ru": name_ru,
+                "name_en": name_en,
+            }
+
+            if subcategory_code:
+                sub_category, created = ProductSubCategory.objects.update_or_create(
+                    code=subcategory_code,
+                    defaults=defaults,
+                )
+            else:
+                sub_category = ProductSubCategory.objects.create(**defaults)
+                created = True
 
             image_base64 = data.get("image_base64")
             if image_base64:
@@ -439,12 +701,14 @@ class OneCIntegrationViewSet(ViewSet):
         return Response(
             data={
                 "result": {
-                    "id": sub_category.id,
-                    "name": sub_category.name,
+                    "subcategory_code": sub_category.code or subcategory_code,
+                    "name_uz": sub_category.name_uz,
+                    "name_ru": sub_category.name_ru,
+                    "name_en": sub_category.name_en,
                 },
                 "ok": True,
             },
-            status=status.HTTP_201_CREATED,
+            status=status.HTTP_200_OK if not created else status.HTTP_201_CREATED,
         )
 
     @swagger_auto_schema(
@@ -467,17 +731,33 @@ class OneCIntegrationViewSet(ViewSet):
         if data.get("api_key") != INTEGRATION_API_KEY:
             raise CustomApiException(error_code=ErrorCodes.INTEGRATION_API_KEY_INVALID)
 
-        product_sub_category = ProductSubCategory.objects.filter(id=data.get("product_sub_category_id")).first()
+        name_uz = data.get("itemcategory_name_uz", "")
+        name_ru = data.get("itemcategory_name_ru") or name_uz
+        name_en = data.get("itemcategory_name_en") or name_uz
+        itemcategory_code = data.get("itemcategory_code")
+
+        subcategory_code = data.get("subcategory_code")
+        product_sub_category = ProductSubCategory.objects.filter(code=subcategory_code).first() if subcategory_code else None
         if not product_sub_category:
             raise CustomApiException(error_code=ErrorCodes.INTEGRATION_SUB_CATEGORY_NOT_FOUND)
 
         with transaction.atomic():
-            item_category = ProductItemCategory.objects.create(
-                product_sub_category=product_sub_category,
-                name=data.get("name"),
-                name_uz=data.get("name_uz") or data.get("name"),
-                name_en=data.get("name_en") or data.get("name"),
-            )
+            defaults = {
+                "product_sub_category": product_sub_category,
+                "name": name_uz,
+                "name_uz": name_uz,
+                "name_ru": name_ru,
+                "name_en": name_en,
+            }
+
+            if itemcategory_code:
+                item_category, created = ProductItemCategory.objects.update_or_create(
+                    code=itemcategory_code,
+                    defaults=defaults,
+                )
+            else:
+                item_category = ProductItemCategory.objects.create(**defaults)
+                created = True
 
             image_base64 = data.get("image_base64")
             if image_base64:
@@ -487,12 +767,14 @@ class OneCIntegrationViewSet(ViewSet):
         return Response(
             data={
                 "result": {
-                    "id": item_category.id,
-                    "name": item_category.name,
+                    "itemcategory_code": item_category.code or itemcategory_code,
+                    "name_uz": item_category.name_uz,
+                    "name_ru": item_category.name_ru,
+                    "name_en": item_category.name_en,
                 },
                 "ok": True,
             },
-            status=status.HTTP_201_CREATED,
+            status=status.HTTP_200_OK if not created else status.HTTP_201_CREATED,
         )
 
     @swagger_auto_schema(
@@ -515,20 +797,36 @@ class OneCIntegrationViewSet(ViewSet):
         if data.get("api_key") != INTEGRATION_API_KEY:
             raise CustomApiException(error_code=ErrorCodes.INTEGRATION_API_KEY_INVALID)
 
+        name_uz = data.get("unit_name_uz", "")
+        name_ru = data.get("unit_name_ru") or name_uz
+        name_en = data.get("unit_name_en") or name_uz
+
         with transaction.atomic():
-            unit = ProductUnit.objects.create(
-                name=data.get("name"),
-                name_uz=data.get("name_uz") or data.get("name"),
-                name_en=data.get("name_en") or data.get("name"),
+            unit, created = ProductUnit.objects.update_or_create(
+                unit_code=data.get("unit_code"),
+                defaults={
+                    "name": name_uz,
+                    "name_uz": name_uz,
+                    "name_ru": name_ru,
+                    "name_en": name_en,
+                    "name_full_uz": data.get("unit_namefull_uz", ""),
+                    "name_full_ru": data.get("unit_namefull_ru", ""),
+                    "name_full_en": data.get("unit_namefull_en", ""),
+                }
             )
 
         return Response(
             data={
                 "result": {
-                    "id": unit.id,
-                    "name": unit.name,
+                    "unit_code": unit.unit_code,
+                    "unit_name_uz": unit.name_uz,
+                    "unit_name_ru": unit.name_ru,
+                    "unit_name_en": unit.name_en,
+                    "unit_namefull_uz": unit.name_full_uz,
+                    "unit_namefull_ru": unit.name_full_ru,
+                    "unit_namefull_en": unit.name_full_en,
                 },
                 "ok": True,
             },
-            status=status.HTTP_201_CREATED,
+            status=status.HTTP_200_OK if not created else status.HTTP_201_CREATED,
         )

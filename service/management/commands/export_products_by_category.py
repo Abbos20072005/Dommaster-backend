@@ -102,7 +102,7 @@ class Command(BaseCommand):
                     product.discount or "",
                     product.quantity,
                     product.unit,
-                    product.vendor_code or "",
+                    product.articul_code or "",
                     product.barcode or "",
                     product.rating,
                     "Да" if product.is_active else "Нет",

@@ -65,7 +65,7 @@ class Brand(BaseModel):
     name = models.CharField(max_length=150, verbose_name="Название")
     image = models.ImageField(upload_to="brand/image/", verbose_name="Изображение")
     is_visible = models.BooleanField(default=True, verbose_name="Виден")
-    guid = models.CharField(max_length=100, blank=True, null=True, unique=True, verbose_name="GUID из 1С")
+    code = models.CharField(max_length=50, unique=True, null=True, blank=True, verbose_name="Код из 1С")
 
     def __str__(self):
         return self.name
@@ -111,6 +111,7 @@ class Order(BaseModel):
 
 
 class ProductCategory(BaseModel):
+    code = models.CharField(max_length=50, unique=True, null=True, blank=True, verbose_name="Код из 1С")
     name = models.CharField(max_length=255, verbose_name="Название")
     icon = models.ImageField(upload_to="product_category/icon/")
     image = models.ImageField(upload_to="product_category", verbose_name="Изображение")
@@ -136,6 +137,7 @@ class ProductCategory(BaseModel):
 
 
 class ProductSubCategory(BaseModel):
+    code = models.CharField(max_length=50, unique=True, null=True, blank=True, verbose_name="Код из 1С")
     product_category = models.ForeignKey(ProductCategory, on_delete=models.CASCADE, related_name="product_category",
                                          verbose_name="Категория продукта")
     name = models.CharField(max_length=255, verbose_name="Название")
@@ -154,6 +156,7 @@ class ProductSubCategory(BaseModel):
 
 
 class ProductItemCategory(BaseModel):
+    code = models.CharField(max_length=50, unique=True, null=True, blank=True, verbose_name="Код из 1С")
     product_sub_category = models.ForeignKey(ProductSubCategory, on_delete=models.CASCADE,
                                              related_name="product_sub_category",
                                              verbose_name="Подкатегория продукта")
@@ -234,9 +237,9 @@ class Product(BaseModel):
     questions_quantity = models.IntegerField(default=0, verbose_name="Количество вопросов")
     is_active = models.BooleanField(default=True, verbose_name="Активен")
     filter_data = models.JSONField(default=dict, blank=True)
-    vendor_code = models.CharField(max_length=100, blank=True, null=True, verbose_name="Артикул")
+    articul_code = models.CharField(max_length=100, blank=True, null=True, verbose_name="Артикул")
     barcode = models.CharField(max_length=100, blank=True, null=True, verbose_name="Штрихкод")
-    guid = models.CharField(max_length=100, blank=True, null=True, unique=True, verbose_name="GUID из 1С")
+    product_code = models.CharField(max_length=100, blank=True, null=True, unique=True, verbose_name="Код из 1С")
 
     def __str__(self):
         return self.name
@@ -278,7 +281,11 @@ class Product(BaseModel):
 
 
 class ProductUnit(BaseModel):
-    name = models.CharField(max_length=50, verbose_name="Название")
+    unit_code = models.CharField(max_length=50, unique=True, null=True, blank=True, verbose_name="Код единицы измерения")
+    name = models.CharField(max_length=50, verbose_name="Краткое название")
+    name_full_uz = models.CharField(max_length=255, blank=True, verbose_name="Полное название (узб.)")
+    name_full_ru = models.CharField(max_length=255, blank=True, verbose_name="Полное название (рус.)")
+    name_full_en = models.CharField(max_length=255, blank=True, verbose_name="Полное название (англ.)")
     is_active = models.BooleanField(default=True, verbose_name="Активен")
 
     def __str__(self):
