@@ -31,6 +31,7 @@ from datetime import date
 from base.models import Banner
 from base.serializers import BannerSerializer
 from utils.pyment_link import generate_link
+from payment.services_pay.auth_services import AtmosAuthService, AtmosHoldService
 from .models import (
     ProductCategory,
     ProductSubCategory,
@@ -2392,8 +2393,21 @@ class OrderViewSet(ViewSet):
                 message="You could not cancel this order",
             )
 
+        if order.hold_id and order.payment_status == 1:
+            try:
+                AtmosHoldService.cancel_hold(
+                    access_token=AtmosAuthService.get_access_token(),
+                    hold_id=order.hold_id,
+                )
+            except Exception as e:
+                raise CustomApiException(
+                    error_code=ErrorCodes.INVALID_INPUT,
+                    message=f"Failed to cancel Atmos hold: {e}",
+                )
+            order.payment_status = 3
+
         order.status = 4
-        order.save(update_fields=["status"])
+        order.save(update_fields=["status", "payment_status"])
         return Response(
             data={
                 "result": OrderSerializer(order, context={"request": request}).data,

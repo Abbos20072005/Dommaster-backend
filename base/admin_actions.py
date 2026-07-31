@@ -1,4 +1,5 @@
 from django.contrib import admin, messages
+from payment.services_pay.auth_services import AtmosAuthService, AtmosHoldService
 
 
 def toggle_bool_field(field_name, enable_value=True, label=None):
@@ -45,5 +46,33 @@ def status_completed(modeladmin, request, queryset):
 
 @admin.action(description="Set order status to Canceled")
 def status_canceled(modeladmin, request, queryset):
-    updated = queryset.update(status=4)
+    failed = []
+
+    atmos_orders = list(queryset.filter(hold_id__isnull=False, payment_status=1))
+    plain_orders = queryset.exclude(id__in=[order.id for order in atmos_orders])
+
+    updated = plain_orders.update(status=4)
+
+    if atmos_orders:
+        try:
+            access_token = AtmosAuthService.get_access_token()
+        except Exception as e:
+            access_token = None
+            failed.append(f"Atmos auth failed: {e}")
+
+        if access_token:
+            for order in atmos_orders:
+                try:
+                    AtmosHoldService.cancel_hold(
+                        access_token=access_token,
+                        hold_id=order.hold_id,
+                    )
+                    order.payment_status = 3
+                    order.save(update_fields=["status", "payment_status"])
+                    updated += 1
+                except Exception as e:
+                    failed.append(f"Order #{order.id}: {e}")
+
     messages.success(request, f"{updated} orders set to Canceled.")
+    if failed:
+        messages.error(request, "; ".join(failed))
