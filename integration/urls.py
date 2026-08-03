@@ -1,7 +1,13 @@
 from django.urls import path
 from .one_c import OneCIntegrationViewSet
+from .yandex_delivery import YandexDeliveryIntegrationViewSet
 
 urlpatterns = [
+    path(
+        "yandex/check-price/",
+        YandexDeliveryIntegrationViewSet.as_view({"post": "check_price"}),
+        name="yandex_delivery_check_price",
+    ),
     path(
         "1c/product/create/",
         OneCIntegrationViewSet.as_view({"post": "product_create"}),

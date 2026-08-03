@@ -2489,6 +2489,7 @@ class OrderViewSet(ViewSet):
                 products_total_price=cart.products_total_price,
                 order_location=customer_location,
                 delivery_type=serializer.validated_data.get("delivery_type", 0),
+                delivery_price=serializer.validated_data.get("delivery_price", 0.0),
             )
         else:
             order = Order.objects.create(
@@ -2498,6 +2499,7 @@ class OrderViewSet(ViewSet):
                 products_total_price=cart.products_total_price,
                 order_location=customer_location,
                 delivery_type=serializer.validated_data.get("delivery_type", 0),
+                delivery_price=serializer.validated_data.get("delivery_price", 0.0),
             )
 
         # Bulk create OrderItems and delete CartItems in 2 queries instead of N*2

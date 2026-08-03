@@ -220,6 +220,11 @@ class ProductAdmin(ModelAdmin):
             "fields": ("name", "price", "discount", "discount_price", "quantity",
                        "rating", "is_active", "brand", "product_item_category", "unit")
         }),
+        ("Доставка", {
+            "classes": ("collapse",),
+            "fields": ("weight", "length", "width", "height"),
+            "description": "Вес в кг, размеры в метрах. Используются для расчёта доставки Яндекс."
+        }),
         ("Данные для фильтров", {
             "classes": ("collapse",),
             "fields": ("filter_data",),
@@ -278,11 +283,12 @@ class CommentAdmin(ModelAdmin):
 
 @admin.register(Order)
 class OrderAdmin(ModelAdmin):
-    list_display = ("id", "customer", "status", "payment_status", "payment_type", "payment_method", "delivery_type", "total_price", "created_at")
+    list_display = ("id", "customer", "status", "payment_status", "payment_type", "payment_method", "delivery_type", "total_price", "delivery_price", "created_at")
     list_display_links = ("id", "customer")
     search_fields = ("customer__full_name", "customer__phone_number", "id")
     list_filter = ("status", "payment_status", "payment_type", "payment_method", "delivery_type", "created_at")
     autocomplete_fields = ("customer", "promocode", "order_location")
+    readonly_fields = ("delivery_price", "yandex_claim_id", "yandex_claim_status")
     date_hierarchy = "created_at"
     list_per_page = 25
     actions = [status_collecting, status_delivering, status_completed, status_canceled]

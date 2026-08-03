@@ -98,6 +98,10 @@ class Order(BaseModel):
     saved_price = models.FloatField(default=0.0, verbose_name="Сэкономленная сумма")
     products_total_price = models.FloatField(default=0.0, verbose_name="Общая стоимость продуктов")
     ofd_url = models.URLField(max_length=500, blank=True, null=True, verbose_name="Ссылка на чек")
+    delivery_price = models.DecimalField(max_digits=18, decimal_places=4, default=0.0,
+                                         verbose_name="Стоимость доставки")
+    yandex_claim_id = models.CharField(max_length=64, blank=True, null=True, verbose_name="ID заявки Яндекс Доставки")
+    yandex_claim_status = models.CharField(max_length=50, blank=True, null=True, verbose_name="Статус заявки Яндекс Доставки")
 
     def __str__(self):
         return str(self.id)
@@ -240,6 +244,10 @@ class Product(BaseModel):
     articul_code = models.CharField(max_length=100, blank=True, null=True, verbose_name="Артикул")
     barcode = models.CharField(max_length=100, blank=True, null=True, verbose_name="Штрихкод")
     product_code = models.CharField(max_length=100, blank=True, null=True, unique=True, verbose_name="Код из 1С")
+    weight = models.DecimalField(max_digits=10, decimal_places=3, blank=True, null=True, verbose_name="Вес, кг")
+    length = models.DecimalField(max_digits=10, decimal_places=3, blank=True, null=True, verbose_name="Длина, м")
+    width = models.DecimalField(max_digits=10, decimal_places=3, blank=True, null=True, verbose_name="Ширина, м")
+    height = models.DecimalField(max_digits=10, decimal_places=3, blank=True, null=True, verbose_name="Высота, м")
 
     def __str__(self):
         return self.name

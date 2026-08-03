@@ -77,6 +77,9 @@ class OrderCreateSerializer(serializers.Serializer):
     is_web = serializers.BooleanField(required=False)
     address_id = serializers.IntegerField(required=False)
     delivery_type = serializers.IntegerField(required=False, default=0)
+    delivery_price = serializers.DecimalField(
+        max_digits=18, decimal_places=4, required=False, default=0.0
+    )
     receiver_name = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
     receiver_phone = serializers.CharField(max_length=14, required=False, allow_null=True, allow_blank=True)
 
@@ -978,6 +981,7 @@ class OrderSerializer(serializers.ModelSerializer):
             "receiver_phone",
             "saved_price",
             "products_total_price",
+            "delivery_price",
             "created_at",
             "order_items"
         )
@@ -1016,6 +1020,7 @@ class OrderDetailSerializer(serializers.ModelSerializer):
             "receiver_phone",
             "saved_price",
             "products_total_price",
+            "delivery_price",
             "created_at",
             "order_items"
         )
