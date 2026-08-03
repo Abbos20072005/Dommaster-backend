@@ -14,6 +14,7 @@ from rest_framework.viewsets import ViewSet
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from service.models import Product
+from service.serializers import normalize_delivery_price
 
 load_dotenv()
 
@@ -378,8 +379,15 @@ class YandexDeliveryIntegrationViewSet(ViewSet):
             accept_language=validated.get("accept_language"),
         )
 
+        price = normalize_delivery_price(yandex_data.get("price"))
+        if price is None:
+            raise CustomApiException(
+                error_code=ErrorCodes.YANDEX_DELIVERY_ERROR,
+                message="Некорректная цена от Яндекс Доставки",
+            )
+
         result = {
-            "price": yandex_data.get("price"),
+            "price": str(price),
             "currency_rules": yandex_data.get("currency_rules"),
             "requirements": yandex_data.get("requirements"),
             "distance_meters": yandex_data.get("distance_meters"),

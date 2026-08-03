@@ -1,4 +1,6 @@
 from rest_framework import serializers
+from decimal import Decimal, InvalidOperation
+import re
 from authorization.serializers import CustomerSerializer, CustomerAddressesSerializer
 from .models import Product, ProductCategory, ProductItemCategory, ProductSubCategory, ProductImage, Comment, \
     Order, OrderItem, Brand, Sale, AddsBrands, Favourites, Cart, CartItem, ProductCharacteristics, Questions, \
@@ -8,6 +10,26 @@ from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from config import settings
 from base.serializers import PromocodeSerializer
+
+
+def normalize_delivery_price(raw):
+    if raw is None:
+        return None
+    if isinstance(raw, bool):
+        return Decimal("1") if raw else Decimal("0")
+    if isinstance(raw, (int, float, Decimal)):
+        return Decimal(str(raw))
+
+    value = re.sub(r"[^\d.,-]", "", str(raw))
+    if "," in value and "." in value:
+        value = value.replace(",", "")
+    elif "," in value:
+        value = value.replace(",", ".")
+
+    try:
+        return Decimal(value)
+    except InvalidOperation:
+        return None
 
 
 class TranslatedSerializerMixin:
@@ -77,11 +99,15 @@ class OrderCreateSerializer(serializers.Serializer):
     is_web = serializers.BooleanField(required=False)
     address_id = serializers.IntegerField(required=False)
     delivery_type = serializers.IntegerField(required=False, default=0)
-    delivery_price = serializers.DecimalField(
-        max_digits=18, decimal_places=4, required=False, default=0.0
-    )
+    delivery_price = serializers.CharField(required=False, allow_blank=True)
     receiver_name = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
     receiver_phone = serializers.CharField(max_length=14, required=False, allow_null=True, allow_blank=True)
+
+    def validate_delivery_price(self, value):
+        normalized = normalize_delivery_price(value)
+        if normalized is None:
+            raise serializers.ValidationError("Некорректная цена доставки")
+        return normalized
 
 class OrderCancelSerializer(serializers.Serializer):
     order_id = serializers.IntegerField(required=True)

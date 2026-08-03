@@ -2481,25 +2481,33 @@ class OrderViewSet(ViewSet):
                     1 - (promocode.discount_precent / 100)
                 )
 
+            delivery_type = serializer.validated_data.get("delivery_type", 0)
+            delivery_price = serializer.validated_data.get("delivery_price", 0.0)
+            delivery_cost = float(delivery_price) if delivery_type == 0 else 0.0
+
             order = Order.objects.create(
                 customer_id=request.user.id,
                 promocode_id=promocode.id,
-                total_price=promocode_discount_price,
+                total_price=promocode_discount_price + delivery_cost,
                 saved_price=cart.saved_price,
                 products_total_price=cart.products_total_price,
                 order_location=customer_location,
-                delivery_type=serializer.validated_data.get("delivery_type", 0),
-                delivery_price=serializer.validated_data.get("delivery_price", 0.0),
+                delivery_type=delivery_type,
+                delivery_price=delivery_price,
             )
         else:
+            delivery_type = serializer.validated_data.get("delivery_type", 0)
+            delivery_price = serializer.validated_data.get("delivery_price", 0.0)
+            delivery_cost = float(delivery_price) if delivery_type == 0 else 0.0
+
             order = Order.objects.create(
                 customer_id=request.user.id,
-                total_price=cart.total_price,
+                total_price=cart.total_price + delivery_cost,
                 saved_price=cart.saved_price,
                 products_total_price=cart.products_total_price,
                 order_location=customer_location,
-                delivery_type=serializer.validated_data.get("delivery_type", 0),
-                delivery_price=serializer.validated_data.get("delivery_price", 0.0),
+                delivery_type=delivery_type,
+                delivery_price=delivery_price,
             )
 
         # Bulk create OrderItems and delete CartItems in 2 queries instead of N*2
