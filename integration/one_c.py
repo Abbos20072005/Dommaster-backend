@@ -303,16 +303,15 @@ class OneCIntegrationViewSet(ViewSet):
                 getattr(cat, field).save(content_file.name, content_file, save=True)
         return cat
 
-    def _upsert_subcategory(self, sub_data):
+    def _upsert_subcategory(self, sub_data, category=None):
         if not sub_data:
             return None
         code = sub_data.get("subcategory_code")
         if not code:
             return None
 
-        category = None
         category_code = sub_data.get("category_code")
-        if category_code:
+        if category is None and category_code:
             category, _ = ProductCategory.objects.update_or_create(
                 code=category_code,
                 defaults={
@@ -322,6 +321,9 @@ class OneCIntegrationViewSet(ViewSet):
                     "name_en": category_code,
                 }
             )
+
+        if category is None:
+            raise CustomApiException(error_code=ErrorCodes.INTEGRATION_CATEGORY_NOT_FOUND)
 
         name_uz = sub_data.get("subcategory_name_uz", "")
         name_ru = sub_data.get("subcategory_name_ru") or name_uz
@@ -342,16 +344,15 @@ class OneCIntegrationViewSet(ViewSet):
             sub.image.save(content_file.name, content_file, save=True)
         return sub
 
-    def _upsert_itemcategory(self, item_data):
+    def _upsert_itemcategory(self, item_data, subcategory=None):
         if not item_data:
             return None
         code = item_data.get("itemcategory_code")
         if not code:
             return None
 
-        subcategory = None
         subcategory_code = item_data.get("subcategory_code")
-        if subcategory_code:
+        if subcategory is None and subcategory_code:
             subcategory, _ = ProductSubCategory.objects.update_or_create(
                 code=subcategory_code,
                 defaults={
@@ -361,6 +362,9 @@ class OneCIntegrationViewSet(ViewSet):
                     "name_en": subcategory_code,
                 }
             )
+
+        if subcategory is None:
+            raise CustomApiException(error_code=ErrorCodes.INTEGRATION_SUB_CATEGORY_NOT_FOUND)
 
         name_uz = item_data.get("itemcategory_name_uz", "")
         name_ru = item_data.get("itemcategory_name_ru") or name_uz
@@ -405,8 +409,8 @@ class OneCIntegrationViewSet(ViewSet):
             unit = self._upsert_unit(data.get("unit"))
             brand = self._upsert_brand(data.get("brand"))
             category = self._upsert_category(data.get("category"))
-            subcategory = self._upsert_subcategory(data.get("subcategory"))
-            item_category = self._upsert_itemcategory(data.get("itemcategory"))
+            subcategory = self._upsert_subcategory(data.get("subcategory"), category=category)
+            item_category = self._upsert_itemcategory(data.get("itemcategory"), subcategory=subcategory)
 
             name_uz = data.get("product_name_uz", "")
             name_ru = data.get("product_name_ru") or name_uz
