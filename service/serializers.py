@@ -584,6 +584,10 @@ class ProductDetailSerializer(ProductAnnotationMixin, serializers.Serializer):
     images = ProductImageSerializer(source="product_image", many=True, read_only=True)
     brand = BrandSerializer(read_only=True)
     variant_groups = serializers.SerializerMethodField()
+    weight = serializers.DecimalField(max_digits=10, decimal_places=3)
+    length = serializers.DecimalField(max_digits=10, decimal_places=3)
+    width = serializers.DecimalField(max_digits=10, decimal_places=3)
+    height = serializers.DecimalField(max_digits=10, decimal_places=3)
 
     def get_breadcrumbs(self, obj):
         return obj.get_breadcrumbs()
@@ -639,6 +643,10 @@ class ProductSerializer(ProductAnnotationMixin, TranslatedSerializerMixin, seria
             "characteristics",
             "breadcrumbs",
             "images",
+            "weight",
+            "length",
+            "width",
+            "height",
         )
 
     def get_breadcrumbs(self, obj):
