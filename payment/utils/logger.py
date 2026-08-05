@@ -1,6 +1,6 @@
 import logging
 
-logger = logging.getLogger('django')
+logger = logging.getLogger('payment')
 
 
 def logged(logged_message: str, logged_type: str = "debug") -> None:

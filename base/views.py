@@ -8,12 +8,13 @@ from service.serializers import PaginationSerializer
 from .paginations.get_news import get_news_paginator
 from .paginations.get_articles import get_articles_paginator
 from .paginations.get_reviews import get_reviews_paginator
+from .paginations.get_branches import get_branches_paginator
 from .serializers import BannerSerializer, MessageSerializer, MessageCreateSerializer, AboutUsSerializer, \
     ChatCreateSerializer, PromocodeRequestSerializer, NewsSerializer, NewsDetailSerializer, ArticlesSerializer, \
     ArticlesDetailSerializer, ReviewsSerializer, ReviewsDetailSerializer, VideoSerializer, PromocodeSerializer, \
-    DeleteButtonSerializer, BaseInformationSerializer
+    DeleteButtonSerializer, BaseInformationSerializer, MarketBranchSerializer
 from .models import Banner, Chat, AboutUs, Messages, Promocodes, News, Articles, Reviews, Video, DeleteButton, \
-    BaseInformation
+    BaseInformation, MarketBranch
 from service.models import Cart
 from drf_yasg import openapi
 from datetime import date
@@ -356,4 +357,45 @@ class BaseInformationViewSet(ViewSet):
     def base_info(self, request):
         base_info = BaseInformation.objects.last()
         serializer = BaseInformationSerializer(base_info, context={"request": request})
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+
+
+class BranchViewSet(ViewSet):
+    @swagger_auto_schema(
+        operation_summary="Market branches list",
+        operation_description="Market branches list",
+        manual_parameters=[
+            openapi.Parameter(
+                name='page', in_=openapi.IN_QUERY, description='Page', type=openapi.TYPE_INTEGER),
+            openapi.Parameter(
+                name='page_size', in_=openapi.IN_QUERY, description='Page size', type=openapi.TYPE_INTEGER),
+        ],
+        responses={200: MarketBranchSerializer(many=True)},
+        tags=["Base"]
+    )
+    def branch_list(self, request):
+        params = request.query_params
+        param_serializer = PaginationSerializer(data=params, context={"request": request})
+        if not param_serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=param_serializer.errors)
+
+        branches = MarketBranch.objects.filter(is_active=True).order_by("position", "id")
+        return Response(data={
+            "result": get_branches_paginator(response_data=branches,
+                                             page=param_serializer.validated_data.get("page"),
+                                             page_size=param_serializer.validated_data.get("page_size"),
+                                             context={"request": request}), "ok": True}, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        operation_summary="Market branch detail",
+        operation_description="Market branch detail",
+        responses={200: MarketBranchSerializer()},
+        tags=["Base"]
+    )
+    def branch_detail(self, request, pk):
+        branch = MarketBranch.objects.filter(id=pk, is_active=True).first()
+        if not branch:
+            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
+
+        serializer = MarketBranchSerializer(branch, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)

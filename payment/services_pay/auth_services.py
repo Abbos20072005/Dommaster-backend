@@ -489,8 +489,8 @@ class AtmosHoldService:
         if payment_details:
             json_data["payment_details"] = payment_details
 
-        print("Creating hold with data: ", json_data)
-        print("Access token: ", access_token)
+        logger.debug("Creating hold with data: %s", json_data)
+        logger.debug("Access token: %s", access_token)
             
         res = requests.post(
             url="https://apigw.atmos.uz/hold/create",

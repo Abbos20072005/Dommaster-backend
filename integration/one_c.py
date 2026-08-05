@@ -230,6 +230,25 @@ class OneCUnitInputSerializer(serializers.Serializer):
     unit_namefull_en = serializers.CharField(required=False, allow_blank=True)
 
 
+class PriceListItemNestedSerializer(serializers.Serializer):
+    price_id = serializers.CharField(required=False, allow_blank=True)
+    price_code = serializers.CharField(required=False, allow_blank=True)
+    price_name = serializers.CharField(required=False, allow_blank=True)
+
+
+class PriceProductNestedSerializer(serializers.Serializer):
+    product_code = serializers.CharField(required=False, allow_blank=True)
+    product_price = serializers.CharField(required=False, allow_blank=True)
+
+
+class OneCPriceListInputSerializer(serializers.Serializer):
+    api_key = serializers.CharField(required=True, write_only=True)
+    date = serializers.CharField(required=False, allow_blank=True)
+    price = PriceListItemNestedSerializer(required=False, many=True)
+    price_list = PriceListItemNestedSerializer(required=False, many=True)
+    products = PriceProductNestedSerializer(required=False, many=True)
+
+
 class OneCIntegrationViewSet(ViewSet):
     def _upsert_unit(self, unit_data):
         if not unit_data:
@@ -833,4 +852,71 @@ class OneCIntegrationViewSet(ViewSet):
                 "ok": True,
             },
             status=status.HTTP_200_OK if not created else status.HTTP_201_CREATED,
+        )
+
+    @swagger_auto_schema(
+        operation_summary="1C Price list create",
+        operation_description="Apply price list from 1C. Only product_code and product_price are used "
+                              "to update the product price; date and price list info are accepted but ignored.",
+        request_body=OneCPriceListInputSerializer(),
+        responses={200: "Prices updated"},
+        tags=["1C Integration"]
+    )
+    def price_list_create(self, request):
+        serializer = OneCPriceListInputSerializer(data=request.data)
+        if not serializer.is_valid():
+            raise CustomApiException(
+                error_code=ErrorCodes.INTEGRATION_INVALID_DATA,
+                message=serializer.errors
+            )
+
+        data = serializer.validated_data
+
+        if data.get("api_key") != INTEGRATION_API_KEY:
+            raise CustomApiException(error_code=ErrorCodes.INTEGRATION_API_KEY_INVALID)
+
+        date = data.get("date")
+        price_list = data.get("price") or data.get("price_list") or []
+        products = data.get("products", [])
+
+        prices_by_code = {}
+        for item in products:
+            code = (item.get("product_code") or "").strip()
+            raw_price = item.get("product_price")
+            if not code or raw_price in (None, ""):
+                continue
+            price = parse_numeric(raw_price)
+            if price is None:
+                continue
+            prices_by_code[code] = price
+
+        if not prices_by_code:
+            raise CustomApiException(
+                error_code=ErrorCodes.INTEGRATION_INVALID_DATA,
+                message="products: no valid product_code/product_price entries"
+            )
+
+        updated_count = 0
+        not_found = []
+
+        with transaction.atomic():
+            for code, price in prices_by_code.items():
+                updated = Product.objects.filter(product_code=code).update(price=price)
+                if updated:
+                    updated_count += 1
+                else:
+                    not_found.append(code)
+
+        return Response(
+            data={
+                "result": {
+                    "date": date,
+                    "price_list_count": len(price_list),
+                    "products_count": len(products),
+                    "updated_count": updated_count,
+                    "not_found_codes": not_found,
+                },
+                "ok": True,
+            },
+            status=status.HTTP_200_OK,
         )

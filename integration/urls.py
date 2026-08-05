@@ -38,4 +38,9 @@ urlpatterns = [
         OneCIntegrationViewSet.as_view({"post": "unit_create"}),
         name="one_c_unit_create",
     ),
+    path(
+        "1c/price-list/create/",
+        OneCIntegrationViewSet.as_view({"post": "price_list_create"}),
+        name="one_c_price_list_create",
+    ),
 ]

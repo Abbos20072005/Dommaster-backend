@@ -1,5 +1,6 @@
 import base64
 import binascii
+import logging
 import time
 
 from django.conf import settings
@@ -7,9 +8,12 @@ from django.db import transaction
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ViewSet
+
+logger = logging.getLogger(__name__)
 
 from service.models import Order
 from .authentication import UzumBankBasicAuthentication
@@ -621,6 +625,7 @@ class UzumBankStatusView(BaseUzumBankView):
         )
     
 class AtmosCardBindCheckoutView(APIView):
+    permission_classes = [IsAuthenticated]
     @swagger_auto_schema(
         operation_summary="Atmos Checkout Card Bind Init",
         operation_description=(
@@ -661,6 +666,7 @@ class AtmosCardBindCheckoutView(APIView):
     
 
 class AtmosCardBindCallbackView(APIView):
+    authentication_classes = []
     permission_classes = []
 
     @swagger_auto_schema(
@@ -720,6 +726,7 @@ class AtmosCardBindCallbackView(APIView):
 
 
 class AtmosCardDetailView(APIView):
+    permission_classes = [IsAuthenticated]
     @swagger_auto_schema(
         operation_summary="Atmos Get Card Details",
         operation_description="Returns details of a previously bound card by card_id.",
@@ -763,6 +770,7 @@ class AtmosCardDetailView(APIView):
         }, status=status.HTTP_200_OK)
 
 class AtmosCreateHoldView(APIView):
+    permission_classes = [IsAuthenticated]
     @swagger_auto_schema(
         operation_summary="Atmos Create Hold",
         operation_description="Atmos Create Hold API endpoint. Client clicks Pay — freeze funds on card.",
@@ -775,7 +783,7 @@ class AtmosCreateHoldView(APIView):
         duration = os.environ["ATMOS_HOLD_DURATION"]
 
         access_token = AtmosAuthService.get_access_token()
-        print("access_token :", access_token)
+        logger.debug("access_token: %s", access_token)
 
         if not order_id:
             return Response({"error": "order_id is required"}, status=status.HTTP_400_BAD_REQUEST)
@@ -847,6 +855,7 @@ class AtmosCreateHoldView(APIView):
 
 
 class AtmosChargeHoldView(APIView):
+    permission_classes = [IsAuthenticated]
     @swagger_auto_schema(
         operation_summary="Atmos Charge Hold",
         operation_description="Atmos Charge Hold API endpoint",
@@ -929,6 +938,7 @@ class AtmosChargeHoldView(APIView):
 
 
 class AtmosCancelHoldView(APIView):
+    permission_classes = [IsAuthenticated]
     @swagger_auto_schema(
         operation_summary="Atmos Cancel Hold",
         operation_description="Atmos Cancel Hold API endpoint",
@@ -974,6 +984,7 @@ class AtmosCancelHoldView(APIView):
 
 
 class CustomerCardViewSet(ViewSet):
+    permission_classes = [IsAuthenticated]
     @swagger_auto_schema(
         operation_summary="Get customer cards list",
         operation_description="Get customer cards list",

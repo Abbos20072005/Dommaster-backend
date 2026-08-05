@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import Banner, Chat, LoyaltyCard, AboutUs, Messages, Promocodes, News, Articles, Reviews, Video, DeleteButton, \
-    BaseInformation
+    BaseInformation, MarketBranch, BRANCH_TYPE_CHOICES
 from config import settings
 
 
@@ -240,3 +240,40 @@ class BaseInformationSerializer(serializers.ModelSerializer):
             "google_play_url",
             "app_store_url",
         )
+
+
+class MarketBranchSerializer(serializers.ModelSerializer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        request = self.context.get('request')
+        language = 'ru'
+        if request and request.META.get('HTTP_ACCEPT_LANGUAGE') in settings.MODELTRANSLATION_LANGUAGES:
+            language = request.META.get('HTTP_ACCEPT_LANGUAGE')
+        self.fields["name"] = serializers.CharField(source=f'name_{language}')
+        self.fields["location_name"] = serializers.CharField(source=f'location_name_{language}')
+        self.fields["description"] = serializers.CharField(source=f'description_{language}')
+
+    class Meta:
+        model = MarketBranch
+        fields = (
+            "id",
+            "name",
+            "location_name",
+            "address",
+            "branch_type",
+            "latitude",
+            "longitude",
+            "working_hours",
+            "description",
+            "phone_number",
+            "image",
+            "position",
+        )
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["branch_type"] = {
+            "id": instance.branch_type,
+            "name": dict(BRANCH_TYPE_CHOICES).get(instance.branch_type)
+        }
+        return data

@@ -1,15 +1,19 @@
 import os
+import logging
 
 import requests
 from django.conf import settings
 from pyfcm import FCMNotification
 from authorization.models import FcmToken
 
+logger = logging.getLogger(__name__)
+
 def send_notification(message: str) -> None:
     try:
-        print(requests.get(settings.TELEGRAM_API_URL + message))
+        response = requests.get(settings.TELEGRAM_API_URL + message)
+        logger.info("Telegram notification sent: %s", response.text)
     except Exception as e:
-        print(f"Failed while sending request to telegram client: {e}")
+        logger.error(f"Failed while sending request to telegram client: {e}")
 
 
 
@@ -24,10 +28,10 @@ def push_notification(message_title: str, message_body: str, fcm: str) -> bool:
             notification_title=message_title,
             notification_body=message_body
         )
-        print(result)
+        logger.info("FCM push result: %s", result)
         return True
     except Exception as a:
-        print(f"Failed while sending notification: {a}")
+        logger.error(f"Failed while sending notification: {a}")
         return False
 
 

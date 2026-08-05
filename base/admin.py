@@ -1,7 +1,18 @@
 from django.contrib import admin
 from .models import Banner, Chat, AboutUs, Messages, Promocodes, News, Articles, Reviews, Video, DeleteButton, \
-    LoyaltyCard, Notification, BaseInformation
+    LoyaltyCard, Notification, BaseInformation, MarketBranch
 from base.admin_actions import make_visible, make_hidden, activate, deactivate, mark_as_answer
+
+
+@admin.register(MarketBranch)
+class MarketBranchAdmin(admin.ModelAdmin):
+    list_display = ("id", "name", "branch_type", "location_name", "working_hours", "is_active", "position", "created_at")
+    list_display_links = ("id", "name")
+    search_fields = ("name", "location_name", "address", "description")
+    list_filter = ("branch_type", "is_active", "created_at")
+    date_hierarchy = "created_at"
+    list_per_page = 25
+    actions = [activate, deactivate]
 
 
 @admin.register(DeleteButton)

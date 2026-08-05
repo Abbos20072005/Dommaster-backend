@@ -1,7 +1,10 @@
 from .models import ProductItemCategory, ProductSubCategory, ProductCategory, Product
 import requests
 import threading
+import logging
 from django.conf import settings
+
+logger = logging.getLogger(__name__)
 
 
 def build_breadcrumbs(obj):
@@ -55,7 +58,7 @@ def _send_telegram_message_sync(order_id, customer_name, customer_phone, deliver
         response = requests.post(url, json=payload, timeout=10)
         response.raise_for_status()
     except Exception as e:
-        print("❌ Failed to send message to bot:", str(e))
+        logger.error(f"Failed to send message to bot: {e}")
 
 
 def send_telegram_message(order):

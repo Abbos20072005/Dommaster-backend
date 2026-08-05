@@ -55,6 +55,9 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    #custom middleware
+    "middleware.request_log.RequestLogMiddleware",
+
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
@@ -123,6 +126,7 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'authorization.custom_jwt.CustomJwtAuthentication',
     ),
+    'EXCEPTION_HANDLER': 'exceptions.handler.custom_exception_handler',
     # 'DEFAULT_THROTTLE_CLASSES': [
     #     'rest_framework.throttling.AnonRateThrottle',
     #     'rest_framework.throttling.UserRateThrottle',
@@ -131,6 +135,81 @@ REST_FRAMEWORK = {
     #     'anon': '240/minute',
     #     'user': '360/minute',
     # },
+}
+
+# Logging configuration
+# https://docs.djangoproject.com/en/5.1/topics/logging/
+LOG_DIR = BASE_DIR / "logs"
+LOG_DIR.mkdir(exist_ok=True)
+
+LOG_LEVEL = os.getenv("LOG_LEVEL", "DEBUG" if DEBUG else "INFO").upper()
+LOG_JSON = int(os.getenv("LOG_JSON", 0))
+LOG_REQUEST = int(os.getenv("LOG_REQUEST", 1))
+LOG_MAX_BYTES = int(os.getenv("LOG_MAX_BYTES", 20 * 1024 * 1024))
+LOG_BACKUP_COUNT = int(os.getenv("LOG_BACKUP_COUNT", 5))
+LOG_ERROR_MAX_BYTES = int(os.getenv("LOG_ERROR_MAX_BYTES", 10 * 1024 * 1024))
+LOG_ERROR_BACKUP_COUNT = int(os.getenv("LOG_ERROR_BACKUP_COUNT", 180))
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'filters': {
+        'sensitive_data': {
+            '()': 'utils.logger.SensitiveDataFilter',
+        },
+        'request_context': {
+            '()': 'utils.logger.RequestContextFilter',
+        },
+    },
+    'formatters': {
+        'verbose': {
+            '()': 'utils.logger.VerboseFormatter',
+            'format': '[%(asctime)s] %(levelname)s %(name)s:%(lineno)d %(message)s '
+                      '[req=%(request_id)s user=%(user_id)s]',
+        },
+        'json': {
+            '()': 'utils.logger.JsonFormatter',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'level': LOG_LEVEL,
+            'filters': ['sensitive_data', 'request_context'],
+            'formatter': 'json' if LOG_JSON else 'verbose',
+        },
+        'app_file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'level': 'INFO',
+            'filename': str(LOG_DIR / 'app.log'),
+            'maxBytes': LOG_MAX_BYTES,
+            'backupCount': LOG_BACKUP_COUNT,
+            'filters': ['sensitive_data', 'request_context'],
+            'formatter': 'json',
+            'encoding': 'utf-8',
+        },
+        'error_file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'level': 'ERROR',
+            'filename': str(LOG_DIR / 'error.log'),
+            'maxBytes': LOG_ERROR_MAX_BYTES,
+            'backupCount': LOG_ERROR_BACKUP_COUNT,
+            'filters': ['sensitive_data', 'request_context'],
+            'formatter': 'json',
+            'encoding': 'utf-8',
+        },
+    },
+    'root': {
+        'handlers': ['console', 'app_file', 'error_file'],
+        'level': LOG_LEVEL,
+    },
+    'loggers': {
+        'django.request': {
+            'handlers': [],
+            'level': 'ERROR',
+            'propagate': True,
+        },
+    },
 }
 
 JWT_USE = True
