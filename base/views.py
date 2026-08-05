@@ -1,6 +1,7 @@
 from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
 from rest_framework import status
+import logging
 from drf_yasg.utils import swagger_auto_schema
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
@@ -20,6 +21,8 @@ from drf_yasg import openapi
 from datetime import date
 import secrets
 from django.core.cache import cache
+
+logger = logging.getLogger(__name__)
 
 
 class VideoViewSet(ViewSet):
@@ -377,9 +380,11 @@ class BranchViewSet(ViewSet):
         params = request.query_params
         param_serializer = PaginationSerializer(data=params, context={"request": request})
         if not param_serializer.is_valid():
+            logger.error("Branch list validation failed: %s", param_serializer.errors)
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=param_serializer.errors)
 
         branches = MarketBranch.objects.filter(is_active=True).order_by("position", "id")
+        logger.info("Branch list fetched, total branches: %s", branches.count())
         return Response(data={
             "result": get_branches_paginator(response_data=branches,
                                              page=param_serializer.validated_data.get("page"),
@@ -395,7 +400,9 @@ class BranchViewSet(ViewSet):
     def branch_detail(self, request, pk):
         branch = MarketBranch.objects.filter(id=pk, is_active=True).first()
         if not branch:
+            logger.warning("Market branch %s not found or inactive", pk)
             raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
 
         serializer = MarketBranchSerializer(branch, context={"request": request})
+        logger.info("Market branch %s fetched", pk)
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
