@@ -2,6 +2,12 @@ from django.contrib import admin, messages
 from payment.services_pay.auth_services import AtmosAuthService, AtmosHoldService
 
 
+def get_model_fields(model, exclude=()):
+    """All concrete model fields (M2M excluded by default) for admin list_display."""
+    fields = [f.name for f in model._meta.fields]
+    return [field for field in fields if field not in exclude]
+
+
 def toggle_bool_field(field_name, enable_value=True, label=None):
     short_label = label or (f"Set {field_name} = {enable_value}")
 

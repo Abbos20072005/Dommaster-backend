@@ -2493,6 +2493,7 @@ class OrderViewSet(ViewSet):
                 products_total_price=cart.products_total_price,
                 order_location=customer_location,
                 delivery_type=delivery_type,
+                pickup_branch_id=serializer.validated_data.get("branch_id"),
                 delivery_price=delivery_price,
             )
         else:
@@ -2507,6 +2508,7 @@ class OrderViewSet(ViewSet):
                 products_total_price=cart.products_total_price,
                 order_location=customer_location,
                 delivery_type=delivery_type,
+                pickup_branch_id=serializer.validated_data.get("branch_id"),
                 delivery_price=delivery_price,
             )
 

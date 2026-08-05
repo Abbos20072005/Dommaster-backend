@@ -9,7 +9,8 @@ from .models import Product, ProductCategory, ProductItemCategory, ProductSubCat
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from config import settings
-from base.serializers import PromocodeSerializer
+from base.serializers import PromocodeSerializer, MarketBranchSerializer
+from base.models import MarketBranch
 
 
 def normalize_delivery_price(raw):
@@ -102,12 +103,24 @@ class OrderCreateSerializer(serializers.Serializer):
     delivery_price = serializers.CharField(required=False, allow_blank=True)
     receiver_name = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
     receiver_phone = serializers.CharField(max_length=14, required=False, allow_null=True, allow_blank=True)
+    branch_id = serializers.IntegerField(required=False)
 
     def validate_delivery_price(self, value):
         normalized = normalize_delivery_price(value)
         if normalized is None:
             raise serializers.ValidationError("Некорректная цена доставки")
         return normalized
+
+    def validate(self, attrs):
+        delivery_type = attrs.get("delivery_type", 0)
+        branch_id = attrs.get("branch_id")
+        if delivery_type == 1 and not branch_id:
+            raise serializers.ValidationError("branch_id is required for pickup delivery")
+        if branch_id:
+            branch = MarketBranch.objects.filter(id=branch_id, is_active=True).first()
+            if not branch:
+                raise serializers.ValidationError("Market branch not found")
+        return attrs
 
 class OrderCancelSerializer(serializers.Serializer):
     order_id = serializers.IntegerField(required=True)
@@ -999,6 +1012,7 @@ class OrderItemImageSerializer(serializers.ModelSerializer):
 class OrderSerializer(serializers.ModelSerializer):
     order_items = OrderItemImageSerializer(many=True, read_only=True)
     order_location = CustomerAddressesSerializer(read_only=True)
+    pickup_branch = MarketBranchSerializer(read_only=True)
 
     class Meta:
         model = Order
@@ -1011,6 +1025,7 @@ class OrderSerializer(serializers.ModelSerializer):
             "payment_type",
             "payment_method",
             "order_location",
+            "pickup_branch",
             "receiver_name",
             "receiver_phone",
             "saved_price",
@@ -1037,6 +1052,7 @@ class OrderDetailSerializer(serializers.ModelSerializer):
     order_items = OrderItemSerializer(many=True, read_only=True)
     order_location = CustomerAddressesSerializer(read_only=True)
     promocode = PromocodeSerializer(read_only=True)
+    pickup_branch = MarketBranchSerializer(read_only=True)
 
     class Meta:
         model = Order
@@ -1049,6 +1065,7 @@ class OrderDetailSerializer(serializers.ModelSerializer):
             "payment_type",
             "payment_method",
             "order_location",
+            "pickup_branch",
             "ofd_url",
             "receiver_name",
             "receiver_phone",

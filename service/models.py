@@ -9,7 +9,7 @@ from ckeditor.fields import RichTextField
 from ckeditor_uploader.fields import RichTextUploadingField
 from django.contrib.postgres.indexes import GinIndex
 import secrets
-from base.models import Promocodes
+from base.models import Promocodes, MarketBranch
 from authorization.models import CustomerAddresses
 
 ORDER_STATUS = (
@@ -91,6 +91,8 @@ class Order(BaseModel):
     order_location = models.ForeignKey(CustomerAddresses, on_delete=models.SET_NULL, blank=True, null=True,
                                        verbose_name="Локация доставки")
     delivery_type = models.IntegerField(choices=DELIVERY_TYPE, default=0, verbose_name="Тип доставки")
+    pickup_branch = models.ForeignKey(MarketBranch, on_delete=models.SET_NULL, blank=True, null=True,
+                                      verbose_name="Филиал самовывоза")
     payment_type = models.IntegerField(choices=PAYMENT_TYPE, null=True, blank=True, verbose_name="Тип оплаты")
     payment_method = models.CharField(max_length=10, choices=CASH_PAYMENT_METHOD, blank=True, null=True, verbose_name="Способ оплаты при получении")
     receiver_name = models.CharField(max_length=255, blank=True, null=True, verbose_name="Имя получателя")

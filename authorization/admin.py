@@ -2,15 +2,15 @@ from django.contrib import admin
 from .models import Customer, OTP, FcmToken, CustomerAddresses, PasswordResetToken
 from django.contrib.auth.hashers import make_password
 from unfold.admin import ModelAdmin
-from base.admin_actions import mark_verified, mark_unverified, mark_default
+from base.admin_actions import mark_verified, mark_unverified, mark_default, get_model_fields
 
 
 @admin.register(Customer)
 class CustomerAdmin(ModelAdmin):
-    list_display = ('id', 'full_name', 'phone_number', 'email', 'verified', 'created_at')
+    list_display = get_model_fields(Customer, exclude=("password",))
     list_display_links = ('id', 'full_name')
     search_fields = ('full_name', 'phone_number', 'email')
-    list_filter = ('verified', 'created_at')
+    list_filter = ('verified', 'role', 'created_at')
     date_hierarchy = "created_at"
     actions = [mark_verified, mark_unverified]
 
@@ -23,7 +23,7 @@ class CustomerAdmin(ModelAdmin):
 
 @admin.register(OTP)
 class OTPAdmin(ModelAdmin):
-    list_display = ("id", "customer", "otp_code", "resend", "count_attempts", "expire_at", "created_at")
+    list_display = get_model_fields(OTP)
     list_display_links = ("id", "customer")
     search_fields = ("customer__full_name", "customer__phone_number", "otp_code")
     list_filter = ("resend", "created_at")
@@ -33,7 +33,7 @@ class OTPAdmin(ModelAdmin):
 
 @admin.register(FcmToken)
 class FcmTokenAdmin(ModelAdmin):
-    list_display = ("id", "customer", "device_id", "created_at")
+    list_display = get_model_fields(FcmToken)
     list_display_links = ("id", "customer")
     search_fields = ("customer__full_name", "customer__phone_number", "device_id", "fcm_token")
     list_filter = ("created_at",)
@@ -43,7 +43,7 @@ class FcmTokenAdmin(ModelAdmin):
 
 @admin.register(CustomerAddresses)
 class CustomerAddressesAdmin(ModelAdmin):
-    list_display = ("id", "customer", "name", "location_name", "is_default", "created_at")
+    list_display = get_model_fields(CustomerAddresses)
     list_display_links = ("id", "customer")
     search_fields = ("name", "location_name", "customer__full_name", "customer__phone_number")
     list_filter = ("is_default", "created_at")
@@ -54,7 +54,7 @@ class CustomerAddressesAdmin(ModelAdmin):
 
 @admin.register(PasswordResetToken)
 class PasswordResetTokenAdmin(ModelAdmin):
-    list_display = ("id", "customer", "is_used", "expires_at")
+    list_display = get_model_fields(PasswordResetToken)
     list_display_links = ("id", "customer")
     search_fields = ("customer__full_name", "customer__phone_number", "token")
     list_filter = ("is_used", "expires_at")

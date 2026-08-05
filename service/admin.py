@@ -8,13 +8,13 @@ from .models import Product, ProductCategory, ProductSubCategory, ProductItemCat
     Announcements, ProductItemCategoryFilterSchema, ProductFilterNumericValue, ProductUnit
 from .signals import clear_category_filter_cache
 from unfold.admin import ModelAdmin, TabularInline
-from base.admin_actions import make_visible, make_hidden, activate, deactivate, \
+from base.admin_actions import make_visible, make_hidden, activate, deactivate, get_model_fields, \
     mark_as_main, mark_as_not_main, status_collecting, status_delivering, status_completed, status_canceled
 
 
 @admin.register(QuestionsReply)
 class QuestionsReplyAdmin(ModelAdmin):
-    list_display = ("id", "customer", "question", "is_admin", "is_visible", "created_at")
+    list_display = get_model_fields(QuestionsReply)
     list_display_links = ("id", "customer")
     search_fields = ("customer__full_name", "customer__phone_number", "answer")
     list_filter = ("is_admin", "is_visible", "created_at")
@@ -25,7 +25,7 @@ class QuestionsReplyAdmin(ModelAdmin):
 
 @admin.register(CommentReply)
 class CommentReplyAdmin(ModelAdmin):
-    list_display = ("id", "customer", "comment", "is_admin", "is_visible", "created_at")
+    list_display = get_model_fields(CommentReply)
     list_display_links = ("id", "customer")
     search_fields = ("customer__full_name", "customer__phone_number", "reply_comment")
     list_filter = ("is_admin", "is_visible", "created_at")
@@ -40,7 +40,7 @@ class CommentReplyAdmin(ModelAdmin):
 
 @admin.register(CommentImages)
 class CommentImagesAdmin(ModelAdmin):
-    list_display = ("id", "customer", "comment", "created_at")
+    list_display = get_model_fields(CommentImages)
     list_display_links = ("id", "customer")
     search_fields = ("customer__full_name", "customer__phone_number")
     autocomplete_fields = ("customer", "comment")
@@ -49,7 +49,7 @@ class CommentImagesAdmin(ModelAdmin):
 
 @admin.register(Service)
 class ServiceAdmin(ModelAdmin):
-    list_display = ("id", "name", "created_at")
+    list_display = get_model_fields(Service)
     list_display_links = ("id", "name")
     search_fields = ("name",)
     list_filter = ("created_at",)
@@ -58,7 +58,7 @@ class ServiceAdmin(ModelAdmin):
 
 @admin.register(RecentlyViewedProducts)
 class RecentlyViewedProductsAdmin(ModelAdmin):
-    list_display = ("id", "customer", "product", "created_at")
+    list_display = get_model_fields(RecentlyViewedProducts)
     list_display_links = ("id", "customer")
     search_fields = ("customer__full_name", "customer__phone_number", "product__name")
     list_filter = ("created_at",)
@@ -68,7 +68,7 @@ class RecentlyViewedProductsAdmin(ModelAdmin):
 
 @admin.register(ProductCharacteristics)
 class ProductCharacteristicsAdmin(ModelAdmin):
-    list_display = ("id", "product", "name", "unit", "value")
+    list_display = get_model_fields(ProductCharacteristics)
     list_display_links = ("id", "product")
     search_fields = ("name", "value", "product__name")
     list_filter = ("unit",)
@@ -77,7 +77,7 @@ class ProductCharacteristicsAdmin(ModelAdmin):
 
 @admin.register(Questions)
 class QuestionsAdmin(ModelAdmin):
-    list_display = ("id", "customer", "product", "is_visible", "created_at")
+    list_display = get_model_fields(Questions)
     list_display_links = ("id", "customer")
     search_fields = ("customer__full_name", "customer__phone_number", "question", "product__name")
     list_filter = ("is_visible", "created_at")
@@ -88,7 +88,7 @@ class QuestionsAdmin(ModelAdmin):
 
 @admin.register(Cart)
 class CartAdmin(ModelAdmin):
-    list_display = ("id", "customer", "total_price", "total_items", "created_at")
+    list_display = get_model_fields(Cart)
     list_display_links = ("id", "customer")
     search_fields = ("customer__full_name", "customer__phone_number", "cart_token")
     list_filter = ("created_at",)
@@ -98,7 +98,7 @@ class CartAdmin(ModelAdmin):
 
 @admin.register(CartItem)
 class CartItemAdmin(ModelAdmin):
-    list_display = ("id", "cart", "product", "quantity", "is_checked")
+    list_display = get_model_fields(CartItem)
     list_display_links = ("id", "cart")
     search_fields = ("cart__customer__full_name", "product__name", "cart__cart_token")
     list_filter = ("is_checked",)
@@ -107,7 +107,7 @@ class CartItemAdmin(ModelAdmin):
 
 @admin.register(Favourites)
 class FavouriteAdmin(ModelAdmin):
-    list_display = ("id", "customer", "product", "created_at")
+    list_display = get_model_fields(Favourites)
     list_display_links = ("id", "customer")
     search_fields = ("customer__full_name", "customer__phone_number", "product__name")
     list_filter = ("created_at",)
@@ -147,7 +147,7 @@ class ProductImageAdmin(ModelAdmin):
 
 @admin.register(AddsBrands)
 class AddsBrandsAdmin(ModelAdmin):
-    list_display = ("id", "name", "brand", "is_visible", "created_at")
+    list_display = get_model_fields(AddsBrands)
     list_display_links = ("id", "name")
     search_fields = ("name", "brand__name", "title")
     list_filter = ("is_visible", "created_at")
@@ -158,7 +158,7 @@ class AddsBrandsAdmin(ModelAdmin):
 
 @admin.register(Sale)
 class SaleAdmin(ModelAdmin):
-    list_display = ("id", "name", "discount_from", "discount_to", "is_main", "is_visible")
+    list_display = get_model_fields(Sale)
     list_display_links = ("id", "name")
     search_fields = ("name",)
     list_filter = ("is_main", "is_visible", "discount_from", "discount_to")
@@ -169,7 +169,7 @@ class SaleAdmin(ModelAdmin):
 
 @admin.register(Brand)
 class BrandAdmin(ModelAdmin):
-    list_display = ("id", "name", "product_images_count", "is_visible", "created_at")
+    list_display = get_model_fields(Brand) + ["product_images_count"]
     list_display_links = ("id", "name")
     search_fields = ("name",)
     list_filter = ("is_visible", "created_at")
@@ -188,7 +188,7 @@ class BrandAdmin(ModelAdmin):
 
 @admin.register(Tag)
 class TagAdmin(ModelAdmin):
-    list_display = ("id", "name", "is_active", "created_at")
+    list_display = get_model_fields(Tag)
     list_display_links = ("id", "name")
     search_fields = ("name",)
     list_filter = ("is_active", "created_at")
@@ -208,7 +208,7 @@ class ProductCharacteristicsInline(TabularInline):
 
 @admin.register(Product)
 class ProductAdmin(ModelAdmin):
-    list_display = ("id", "name", "price", "discount_price", "rating", "quantity", "is_active", "product_item_category", "brand")
+    list_display = get_model_fields(Product)
     list_display_links = ("id", "name")
     search_fields = ("name", "brand__name", "product_item_category__name")
     list_filter = ("brand", "product_item_category", "is_active", "unit", "created_at")
@@ -217,8 +217,13 @@ class ProductAdmin(ModelAdmin):
     inlines = (ProductImageInline, ProductCharacteristicsInline)
     fieldsets = (
         (None, {
-            "fields": ("name", "price", "discount", "discount_price", "quantity",
+            "fields": ("name", "short_description", "description", "price", "discount",
+                       "discount_price", "quantity", "comments_quantity", "questions_quantity",
                        "rating", "is_active", "brand", "product_item_category", "unit")
+        }),
+        ("Данные из 1С", {
+            "classes": ("collapse",),
+            "fields": ("telegram_id", "articul_code", "barcode", "product_code"),
         }),
         ("Доставка", {
             "classes": ("collapse",),
@@ -243,7 +248,7 @@ class ProductAdmin(ModelAdmin):
 
 @admin.register(ProductCategory)
 class ProductCategoryAdmin(ModelAdmin):
-    list_display = ("id", "name", "created_at")
+    list_display = get_model_fields(ProductCategory)
     list_display_links = ("id", "name")
     search_fields = ("name",)
     list_filter = ("created_at",)
@@ -252,7 +257,7 @@ class ProductCategoryAdmin(ModelAdmin):
 
 @admin.register(ProductSubCategory)
 class ProductSubCategoryAdmin(ModelAdmin):
-    list_display = ("id", "name", "product_category", "created_at")
+    list_display = get_model_fields(ProductSubCategory)
     list_display_links = ("id", "name")
     search_fields = ("name", "product_category__name")
     list_filter = ("product_category", "created_at")
@@ -262,7 +267,7 @@ class ProductSubCategoryAdmin(ModelAdmin):
 
 @admin.register(ProductItemCategory)
 class ProductItemCategoryAdmin(ModelAdmin):
-    list_display = ("id", "name", "product_sub_category", "created_at")
+    list_display = get_model_fields(ProductItemCategory)
     list_display_links = ("id", "name")
     search_fields = ("name", "product_sub_category__name")
     list_filter = ("product_sub_category", "created_at")
@@ -272,7 +277,7 @@ class ProductItemCategoryAdmin(ModelAdmin):
 
 @admin.register(Comment)
 class CommentAdmin(ModelAdmin):
-    list_display = ("id", "customer", "product", "product_rating", "is_visible", "created_at")
+    list_display = get_model_fields(Comment)
     list_display_links = ("id", "customer")
     search_fields = ("customer__full_name", "customer__phone_number", "comment", "product__name")
     list_filter = ("product_rating", "is_visible", "created_at")
@@ -283,11 +288,11 @@ class CommentAdmin(ModelAdmin):
 
 @admin.register(Order)
 class OrderAdmin(ModelAdmin):
-    list_display = ("id", "customer", "status", "payment_status", "payment_type", "payment_method", "delivery_type", "total_price", "delivery_price", "created_at")
+    list_display = ("id", "customer", "status", "payment_status", "payment_type", "payment_method", "delivery_type", "pickup_branch", "total_price", "delivery_price", "created_at")
     list_display_links = ("id", "customer")
     search_fields = ("customer__full_name", "customer__phone_number", "id")
     list_filter = ("status", "payment_status", "payment_type", "payment_method", "delivery_type", "created_at")
-    autocomplete_fields = ("customer", "promocode", "order_location")
+    autocomplete_fields = ("customer", "promocode", "order_location", "pickup_branch")
     readonly_fields = ("delivery_price", "yandex_claim_id", "yandex_claim_status")
     date_hierarchy = "created_at"
     list_per_page = 25
@@ -296,7 +301,7 @@ class OrderAdmin(ModelAdmin):
 
 @admin.register(OrderItem)
 class OrderItemAdmin(ModelAdmin):
-    list_display = ("id", "order", "product", "quantity", "created_at")
+    list_display = get_model_fields(OrderItem)
     list_display_links = ("id", "order")
     search_fields = ("order__id", "order__customer__full_name", "product__name")
     list_filter = ("created_at",)
@@ -312,12 +317,23 @@ class ProductVariantItemInline(TabularInline):
 
 @admin.register(ProductVariantGroup)
 class ProductVariantGroupAdmin(ModelAdmin):
-    list_display = ("id", "name", "display_type", "created_at")
+    list_display = get_model_fields(ProductVariantGroup)
     list_display_links = ("id", "name")
     search_fields = ("name",)
     list_filter = ("display_type", "created_at")
     inlines = [ProductVariantItemInline]
     date_hierarchy = "created_at"
+
+
+@admin.register(ProductVariantItem)
+class ProductVariantItemAdmin(ModelAdmin):
+    list_display = get_model_fields(ProductVariantItem)
+    list_display_links = ("id", "display_value")
+    search_fields = ("display_value", "group__name", "product__name")
+    list_filter = ("group", "created_at")
+    autocomplete_fields = ("group", "product")
+    date_hierarchy = "created_at"
+    list_per_page = 25
 
 
 class ProductFilterNumericValueInline(TabularInline):
@@ -381,7 +397,7 @@ def change_filter_type(modeladmin, request, queryset):
 @admin.register(ProductItemCategoryFilterSchema)
 class ProductItemCategoryFilterSchemaAdmin(ModelAdmin):
     actions = [change_filter_type, lock_filter_type, unlock_filter_type]
-    list_display = ("id", "item_category", "key", "label_ru", "type", "unit", "position", "is_filterable", "is_quick_filter", "max_quick_filters", "type_locked")
+    list_display = get_model_fields(ProductItemCategoryFilterSchema)
     list_display_links = ("id", "key")
     search_fields = ("key", "label_ru", "item_category__name")
     list_filter = ("type", "is_filterable", "type_locked", ItemCategoryFilter)
@@ -391,7 +407,7 @@ class ProductItemCategoryFilterSchemaAdmin(ModelAdmin):
 
 @admin.register(ProductFilterNumericValue)
 class ProductFilterNumericValueAdmin(ModelAdmin):
-    list_display = ("id", "product", "schema", "value")
+    list_display = get_model_fields(ProductFilterNumericValue)
     list_display_links = ("id", "product")
     search_fields = ("product__name", "schema__key")
     list_filter = ("schema__item_category",)
@@ -400,7 +416,7 @@ class ProductFilterNumericValueAdmin(ModelAdmin):
 
 @admin.register(Announcements)
 class AnnouncementsAdmin(ModelAdmin):
-    list_display = ("id", "title", "created_at")
+    list_display = get_model_fields(Announcements)
     list_display_links = ("id", "title")
     search_fields = ("title", "description")
     list_filter = ("created_at",)
@@ -409,7 +425,7 @@ class AnnouncementsAdmin(ModelAdmin):
 
 @admin.register(ProductUnit)
 class ProductUnitAdmin(ModelAdmin):
-    list_display = ("id", "name", "is_active", "created_at")
+    list_display = get_model_fields(ProductUnit)
     list_display_links = ("id", "name")
     search_fields = ("name",)
     list_filter = ("is_active",)
