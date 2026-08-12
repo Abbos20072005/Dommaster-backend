@@ -31,6 +31,8 @@ class ErrorCodes(Enum):
     INTEGRATION_CATEGORY_NOT_FOUND = 26
     INTEGRATION_SUB_CATEGORY_NOT_FOUND = 27
     YANDEX_DELIVERY_ERROR = 28
+    INTEGRATION_WAREHOUSE_NOT_FOUND = 29
+    INTEGRATION_PRODUCT_NOT_FOUND = 30
 
 
 error_messages = {
@@ -64,6 +66,8 @@ error_messages = {
     26: {"result": "Category not found", "http_status": status.HTTP_404_NOT_FOUND},
     27: {"result": "Sub category not found", "http_status": status.HTTP_404_NOT_FOUND},
     28: {"result": "Yandex Delivery service error", "http_status": status.HTTP_400_BAD_REQUEST},
+    29: {"result": "Warehouse not found", "http_status": status.HTTP_404_NOT_FOUND},
+    30: {"result": "Product not found", "http_status": status.HTTP_404_NOT_FOUND},
 }
 
 

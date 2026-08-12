@@ -18,7 +18,9 @@ from service.models import (
     Product, ProductImage, ProductCharacteristics,
     ProductCategory, ProductSubCategory, ProductItemCategory,
     Brand, ProductUnit, ProductItemCategoryFilterSchema, ProductFilterNumericValue,
+    ProductRemaining,
 )
+from base.models import MarketBranch, BRANCH_TYPE_CHOICES
 
 load_dotenv()
 
@@ -247,6 +249,37 @@ class OneCPriceListInputSerializer(serializers.Serializer):
     price = PriceListItemNestedSerializer(required=False, many=True)
     price_list = PriceListItemNestedSerializer(required=False, many=True)
     products = PriceProductNestedSerializer(required=False, many=True)
+
+
+class OneCWarehouseInputSerializer(serializers.Serializer):
+    api_key = serializers.CharField(required=True, write_only=True)
+    warehouse_code = serializers.CharField(required=True)
+    warehouse_name = serializers.CharField(required=True)
+    type = serializers.IntegerField(required=True)
+    location_name = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    address = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    latitude = serializers.FloatField(required=False, allow_null=True)
+    longitude = serializers.FloatField(required=False, allow_null=True)
+    working_hours = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    description = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    phone_number = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    image_base64 = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    is_active = serializers.BooleanField(required=False)
+    position = serializers.IntegerField(required=False)
+
+    def validate_type(self, value):
+        if value not in dict(BRANCH_TYPE_CHOICES):
+            raise serializers.ValidationError(
+                f"type must be one of {list(dict(BRANCH_TYPE_CHOICES).keys())}"
+            )
+        return value
+
+
+class OneCRemainingInputSerializer(serializers.Serializer):
+    api_key = serializers.CharField(required=True, write_only=True)
+    warehouse_code = serializers.CharField(required=True)
+    product_code = serializers.CharField(required=True)
+    product_remaining = serializers.FloatField(required=True, min_value=0.0)
 
 
 class OneCIntegrationViewSet(ViewSet):
@@ -919,4 +952,122 @@ class OneCIntegrationViewSet(ViewSet):
                 "ok": True,
             },
             status=status.HTTP_200_OK,
+        )
+
+    @swagger_auto_schema(
+        operation_summary="1C Warehouse create",
+        operation_description="Create or update warehouse/branch from 1C. "
+                              "type: 0 - Showroom, 1 - Market, 2 - Warehouse",
+        request_body=OneCWarehouseInputSerializer(),
+        responses={201: "Warehouse created"},
+        tags=["1C Integration"]
+    )
+    def warehouse_create(self, request):
+        serializer = OneCWarehouseInputSerializer(data=request.data)
+        if not serializer.is_valid():
+            raise CustomApiException(
+                error_code=ErrorCodes.INTEGRATION_INVALID_DATA,
+                message=serializer.errors
+            )
+
+        data = serializer.validated_data
+
+        if data.get("api_key") != INTEGRATION_API_KEY:
+            raise CustomApiException(error_code=ErrorCodes.INTEGRATION_API_KEY_INVALID)
+
+        warehouse_code = data.get("warehouse_code")
+        warehouse_name = data.get("warehouse_name")
+
+        branch_defaults = {
+            "name": warehouse_name,
+            "name_uz": warehouse_name,
+            "name_ru": warehouse_name,
+            "name_en": warehouse_name,
+            "branch_type": data.get("type"),
+        }
+        optional_fields = (
+            "location_name", "address", "latitude", "longitude",
+            "working_hours", "description", "phone_number", "is_active", "position"
+        )
+        for field in optional_fields:
+            if field in data:
+                branch_defaults[field] = data[field]
+
+        with transaction.atomic():
+            branch, created = MarketBranch.objects.update_or_create(
+                code=warehouse_code,
+                defaults=branch_defaults,
+            )
+
+            image_base64 = data.get("image_base64")
+            if image_base64:
+                content_file = decode_base64_image(image_base64)
+                branch.image.save(content_file.name, content_file, save=True)
+
+        return Response(
+            data={
+                "result": {
+                    "warehouse_code": branch.code,
+                    "warehouse_name": branch.name,
+                    "type": dict(BRANCH_TYPE_CHOICES).get(branch.branch_type),
+                    "location_name": branch.location_name,
+                    "address": branch.address,
+                    "latitude": branch.latitude,
+                    "longitude": branch.longitude,
+                    "working_hours": branch.working_hours,
+                    "description": branch.description,
+                    "phone_number": branch.phone_number,
+                    "is_active": branch.is_active,
+                    "position": branch.position,
+                },
+                "ok": True,
+            },
+            status=status.HTTP_200_OK if not created else status.HTTP_201_CREATED,
+        )
+
+    @swagger_auto_schema(
+        operation_summary="1C Product remaining create",
+        operation_description="Create or update product remaining for a warehouse from 1C",
+        request_body=OneCRemainingInputSerializer(),
+        responses={201: "Product remaining created"},
+        tags=["1C Integration"]
+    )
+    def remaining_create(self, request):
+        serializer = OneCRemainingInputSerializer(data=request.data)
+        if not serializer.is_valid():
+            raise CustomApiException(
+                error_code=ErrorCodes.INTEGRATION_INVALID_DATA,
+                message=serializer.errors
+            )
+
+        data = serializer.validated_data
+
+        if data.get("api_key") != INTEGRATION_API_KEY:
+            raise CustomApiException(error_code=ErrorCodes.INTEGRATION_API_KEY_INVALID)
+
+        branch = MarketBranch.objects.filter(code=data.get("warehouse_code")).first()
+        if not branch:
+            raise CustomApiException(error_code=ErrorCodes.INTEGRATION_WAREHOUSE_NOT_FOUND)
+
+        product = Product.objects.filter(product_code=data.get("product_code")).first()
+        if not product:
+            raise CustomApiException(error_code=ErrorCodes.INTEGRATION_PRODUCT_NOT_FOUND)
+
+        with transaction.atomic():
+            remaining, created = ProductRemaining.objects.update_or_create(
+                branch=branch,
+                product=product,
+                defaults={"quantity": data.get("product_remaining")}
+            )
+
+        return Response(
+            data={
+                "result": {
+                    "warehouse_code": branch.code,
+                    "product_code": product.product_code,
+                    "product_remaining": remaining.quantity,
+                },
+                "ok": True,
+            },
+            status=status.HTTP_200_OK if not created else status.HTTP_201_CREATED,
         )

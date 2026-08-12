@@ -5,7 +5,7 @@ from .models import Product, ProductCategory, ProductSubCategory, ProductItemCat
     OrderItem, Tag, Brand, Sale, AddsBrands, ProductImage, Favourites, Cart, CartItem, Questions, \
     ProductCharacteristics, RecentlyViewedProducts, Service, CommentImages, CommentReply, QuestionsReply, \
     ProductVariantGroup, ProductVariantItem, \
-    Announcements, ProductItemCategoryFilterSchema, ProductFilterNumericValue, ProductUnit
+    Announcements, ProductItemCategoryFilterSchema, ProductFilterNumericValue, ProductUnit, ProductRemaining
 from .signals import clear_category_filter_cache
 from unfold.admin import ModelAdmin, TabularInline
 from base.admin_actions import make_visible, make_hidden, activate, deactivate, get_model_fields, \
@@ -430,3 +430,14 @@ class ProductUnitAdmin(ModelAdmin):
     search_fields = ("name",)
     list_filter = ("is_active",)
     actions = [activate, deactivate]
+
+
+@admin.register(ProductRemaining)
+class ProductRemainingAdmin(ModelAdmin):
+    list_display = get_model_fields(ProductRemaining)
+    list_display_links = ("id", "product")
+    search_fields = ("branch__name", "branch__code", "product__name", "product__product_code")
+    list_filter = ("branch", "created_at")
+    autocomplete_fields = ("branch", "product")
+    date_hierarchy = "created_at"
+    list_per_page = 25

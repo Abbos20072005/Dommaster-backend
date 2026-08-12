@@ -8,7 +8,7 @@ from base.admin_actions import make_visible, make_hidden, activate, deactivate, 
 class MarketBranchAdmin(admin.ModelAdmin):
     list_display = get_model_fields(MarketBranch)
     list_display_links = ("id", "name")
-    search_fields = ("name", "location_name", "address", "description")
+    search_fields = ("name", "code", "location_name", "address", "description")
     list_filter = ("branch_type", "is_active", "created_at")
     date_hierarchy = "created_at"
     list_per_page = 25

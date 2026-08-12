@@ -306,6 +306,24 @@ class ProductUnit(BaseModel):
         verbose_name_plural = "Единицы измерения"
 
 
+class ProductRemaining(BaseModel):
+    branch = models.ForeignKey(MarketBranch, on_delete=models.CASCADE, related_name="branch_remaining",
+                               verbose_name="Склад")
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="product_remaining",
+                                verbose_name="Продукт")
+    quantity = models.FloatField(default=0.0, verbose_name="Остаток")
+
+    def __str__(self):
+        return f"{self.branch.name} - {self.product.name}: {self.quantity}"
+
+    class Meta:
+        verbose_name = "Остаток продукта"
+        verbose_name_plural = "Остатки продуктов"
+        constraints = [
+            models.UniqueConstraint(fields=["branch", "product"], name="unique_branch_product_remaining"),
+        ]
+
+
 class Favourites(BaseModel):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, blank=True, null=True, verbose_name="Клиент")
     favourite_token = models.CharField(max_length=64, blank=True, null=True, verbose_name="Токен карзины")

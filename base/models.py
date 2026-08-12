@@ -10,18 +10,20 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 BRANCH_TYPE_CHOICES = (
     (0, "Showroom"),
     (1, "Market"),
+    (2, "Warehouse"),
 )
 
 
 class MarketBranch(BaseModel):
     name = models.CharField(max_length=255, verbose_name="Название")
+    code = models.CharField(max_length=100, unique=True, null=True, blank=True, verbose_name="Код склада из 1С")
     location_name = models.CharField(max_length=255, blank=True, null=True, verbose_name="Название локации")
     address = models.CharField(max_length=500, blank=True, null=True, verbose_name="Адрес")
     branch_type = models.IntegerField(choices=BRANCH_TYPE_CHOICES, default=1, verbose_name="Тип филиала")
-    latitude = models.FloatField(verbose_name="Широта")
-    longitude = models.FloatField(verbose_name="Долгота")
+    latitude = models.FloatField(blank=True, null=True, verbose_name="Широта")
+    longitude = models.FloatField(blank=True, null=True, verbose_name="Долгота")
     working_hours = models.CharField(max_length=255, blank=True, null=True, verbose_name="Рабочее время")
-    description = RichTextUploadingField(verbose_name="Описание")
+    description = RichTextUploadingField(blank=True, null=True, verbose_name="Описание")
     phone_number = models.CharField(max_length=20, blank=True, null=True, verbose_name="Номер телефона")
     image = models.ImageField(upload_to="branch/image/", blank=True, null=True, verbose_name="Изображение")
     is_active = models.BooleanField(default=True, verbose_name="Активен")

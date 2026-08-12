@@ -43,4 +43,14 @@ urlpatterns = [
         OneCIntegrationViewSet.as_view({"post": "price_list_create"}),
         name="one_c_price_list_create",
     ),
+    path(
+        "1c/warehouse/create/",
+        OneCIntegrationViewSet.as_view({"post": "warehouse_create"}),
+        name="one_c_warehouse_create",
+    ),
+    path(
+        "1c/remaining/create/",
+        OneCIntegrationViewSet.as_view({"post": "remaining_create"}),
+        name="one_c_remaining_create",
+    ),
 ]
