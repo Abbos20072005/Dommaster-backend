@@ -275,11 +275,15 @@ class OneCWarehouseInputSerializer(serializers.Serializer):
         return value
 
 
+class OneCRemainingProductNestedSerializer(serializers.Serializer):
+    product_code = serializers.CharField(required=True)
+    product_remaining = serializers.FloatField(required=True, min_value=0.0)
+
+
 class OneCRemainingInputSerializer(serializers.Serializer):
     api_key = serializers.CharField(required=True, write_only=True)
     warehouse_code = serializers.CharField(required=True)
-    product_code = serializers.CharField(required=True)
-    product_remaining = serializers.FloatField(required=True, min_value=0.0)
+    products = OneCRemainingProductNestedSerializer(many=True, required=True)
 
 
 class OneCIntegrationViewSet(ViewSet):
@@ -1027,9 +1031,9 @@ class OneCIntegrationViewSet(ViewSet):
 
     @swagger_auto_schema(
         operation_summary="1C Product remaining create",
-        operation_description="Create or update product remaining for a warehouse from 1C",
+        operation_description="Create or update product remainings for a warehouse from 1C",
         request_body=OneCRemainingInputSerializer(),
-        responses={201: "Product remaining created"},
+        responses={201: "Product remainings created"},
         tags=["1C Integration"]
     )
     def remaining_create(self, request):
@@ -1049,25 +1053,45 @@ class OneCIntegrationViewSet(ViewSet):
         if not branch:
             raise CustomApiException(error_code=ErrorCodes.INTEGRATION_WAREHOUSE_NOT_FOUND)
 
-        product = Product.objects.filter(product_code=data.get("product_code")).first()
-        if not product:
-            raise CustomApiException(error_code=ErrorCodes.INTEGRATION_PRODUCT_NOT_FOUND)
+        products_data = data.get("products")
+        requested_codes = [item.get("product_code") for item in products_data]
+        remaining_by_code = {item.get("product_code"): item.get("product_remaining") for item in products_data}
+
+        products = Product.objects.filter(product_code__in=requested_codes)
+        products_map = {product.product_code: product for product in products}
+
+        skipped_products = [code for code in requested_codes if code not in products_map]
+
+        result = []
+        any_created = False
 
         with transaction.atomic():
-            remaining, created = ProductRemaining.objects.update_or_create(
-                branch=branch,
-                product=product,
-                defaults={"quantity": data.get("product_remaining")}
-            )
+            for product_code, quantity in remaining_by_code.items():
+                product = products_map.get(product_code)
+                if not product:
+                    continue
+                remaining, created = ProductRemaining.objects.update_or_create(
+                    branch=branch,
+                    product=product,
+                    defaults={"quantity": quantity}
+                )
+                any_created = any_created or created
+                result.append(
+                    {
+                        "warehouse_code": branch.code,
+                        "product_code": product.product_code,
+                        "product_remaining": remaining.quantity,
+                    }
+                )
+
+        if not result:
+            raise CustomApiException(error_code=ErrorCodes.INTEGRATION_PRODUCT_NOT_FOUND)
 
         return Response(
             data={
-                "result": {
-                    "warehouse_code": branch.code,
-                    "product_code": product.product_code,
-                    "product_remaining": remaining.quantity,
-                },
+                "result": result,
+                "skipped_products": skipped_products,
                 "ok": True,
             },
-            status=status.HTTP_200_OK if not created else status.HTTP_201_CREATED,
+            status=status.HTTP_201_CREATED if any_created else status.HTTP_200_OK,
         )
