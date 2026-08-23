@@ -241,6 +241,8 @@ class PriceListItemNestedSerializer(serializers.Serializer):
 class PriceProductNestedSerializer(serializers.Serializer):
     product_code = serializers.CharField(required=False, allow_blank=True)
     product_price = serializers.CharField(required=False, allow_blank=True)
+    discount_precent = serializers.CharField(required=False, allow_blank=True)
+    discount_price = serializers.CharField(required=False, allow_blank=True)
 
 
 class OneCPriceListInputSerializer(serializers.Serializer):
@@ -893,8 +895,9 @@ class OneCIntegrationViewSet(ViewSet):
 
     @swagger_auto_schema(
         operation_summary="1C Price list create",
-        operation_description="Apply price list from 1C. Only product_code and product_price are used "
-                              "to update the product price; date and price list info are accepted but ignored.",
+        operation_description="Apply price list from 1C. Only product_code, product_price, discount_precent "
+                              "and discount_price are used to update the product price and discount; "
+                              "date and price list info are accepted but ignored.",
         request_body=OneCPriceListInputSerializer(),
         responses={200: "Prices updated"},
         tags=["1C Integration"]
@@ -916,7 +919,7 @@ class OneCIntegrationViewSet(ViewSet):
         price_list = data.get("price") or data.get("price_list") or []
         products = data.get("products", [])
 
-        prices_by_code = {}
+        product_updates = {}
         for item in products:
             code = (item.get("product_code") or "").strip()
             raw_price = item.get("product_price")
@@ -925,9 +928,20 @@ class OneCIntegrationViewSet(ViewSet):
             price = parse_numeric(raw_price)
             if price is None:
                 continue
-            prices_by_code[code] = price
+            updates = {"price": price}
+            raw_discount_precent = item.get("discount_precent")
+            raw_discount_price = item.get("discount_price")
+            if raw_discount_precent not in (None, ""):
+                discount_precent = parse_numeric(raw_discount_precent)
+                if discount_precent is not None:
+                    updates["discount"] = int(discount_precent)
+            if raw_discount_price not in (None, ""):
+                discount_price = parse_numeric(raw_discount_price)
+                if discount_price is not None:
+                    updates["discount_price"] = discount_price
+            product_updates[code] = updates
 
-        if not prices_by_code:
+        if not product_updates:
             raise CustomApiException(
                 error_code=ErrorCodes.INTEGRATION_INVALID_DATA,
                 message="products: no valid product_code/product_price entries"
@@ -937,8 +951,8 @@ class OneCIntegrationViewSet(ViewSet):
         not_found = []
 
         with transaction.atomic():
-            for code, price in prices_by_code.items():
-                updated = Product.objects.filter(product_code=code).update(price=price)
+            for code, updates in product_updates.items():
+                updated = Product.objects.filter(product_code=code).update(**updates)
                 if updated:
                     updated_count += 1
                 else:
@@ -1057,35 +1071,41 @@ class OneCIntegrationViewSet(ViewSet):
         requested_codes = [item.get("product_code") for item in products_data]
         remaining_by_code = {item.get("product_code"): item.get("product_remaining") for item in products_data}
 
-        products = Product.objects.filter(product_code__in=requested_codes)
+        products = Product.objects.filter(product_code__in=requested_codes).only("id", "product_code")
         products_map = {product.product_code: product for product in products}
 
-        skipped_products = [code for code in requested_codes if code not in products_map]
-
-        result = []
-        any_created = False
-
-        with transaction.atomic():
-            for product_code, quantity in remaining_by_code.items():
-                product = products_map.get(product_code)
-                if not product:
-                    continue
-                remaining, created = ProductRemaining.objects.update_or_create(
-                    branch=branch,
-                    product=product,
-                    defaults={"quantity": quantity}
-                )
-                any_created = any_created or created
-                result.append(
-                    {
-                        "warehouse_code": branch.code,
-                        "product_code": product.product_code,
-                        "product_remaining": remaining.quantity,
-                    }
-                )
-
-        if not result:
+        if not products_map:
             raise CustomApiException(error_code=ErrorCodes.INTEGRATION_PRODUCT_NOT_FOUND)
+
+        skipped_products = list(dict.fromkeys(code for code in requested_codes if code not in products_map))
+
+        existing_product_ids = set(
+            ProductRemaining.objects.filter(branch=branch, product_id__in=products.values("id"))
+            .values_list("product_id", flat=True)
+        )
+
+        ProductRemaining.objects.bulk_create(
+            [
+                ProductRemaining(branch=branch, product=product, quantity=remaining_by_code[product_code])
+                for product_code, product in products_map.items()
+            ],
+            update_conflicts=True,
+            unique_fields=["branch", "product"],
+            update_fields=["quantity"],
+            batch_size=500,
+        )
+
+        any_created = bool({product.id for product in products_map.values()} - existing_product_ids)
+
+        result = [
+            {
+                "warehouse_code": branch.code,
+                "product_code": product_code,
+                "product_remaining": quantity,
+            }
+            for product_code, quantity in remaining_by_code.items()
+            if product_code in products_map
+        ]
 
         return Response(
             data={

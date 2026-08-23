@@ -243,6 +243,8 @@ class ProductAdmin(ModelAdmin):
     def save_model(self, request, obj, form, change):
         if obj.discount:
             obj.discount_price = obj.price * (1 - (obj.discount / 100))
+        else:
+            obj.discount_price = None
         obj.save()
 
 
