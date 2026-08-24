@@ -2,6 +2,7 @@ import os
 import time
 import logging
 from decimal import Decimal, InvalidOperation
+from math import asin, cos, radians, sin, sqrt
 
 import requests
 from dotenv import load_dotenv
@@ -13,6 +14,7 @@ from rest_framework.viewsets import ViewSet
 
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
+from base.models import MarketBranch
 from service.models import Product
 from service.serializers import normalize_delivery_price
 
@@ -29,6 +31,9 @@ YANDEX_DELIVERY_LANGUAGE = os.getenv("YANDEX_DELIVERY_LANGUAGE", "ru")
 CHECK_PRICE_PATH = "/b2b/cargo/integration/v2/check-price"
 CHECK_PRICE_MAX_ATTEMPTS = 3
 CHECK_PRICE_RETRY_BASE_DELAY = 1
+
+EARTH_RADIUS_KM = 6371
+DELIVERY_BRANCH_TYPES = (1, 2)
 
 TAX_CLASS_LIMITS = {
     "courier": (Decimal("0.8"), Decimal("0.5"), Decimal("0.5")),
@@ -295,6 +300,36 @@ def _build_requirements(requirements):
     return payload_requirements or None
 
 
+def _haversine_km(lat1, lon1, lat2, lon2):
+    lon1, lat1, lon2, lat2 = map(radians, (lon1, lat1, lon2, lat2))
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
+    a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
+    return 2 * EARTH_RADIUS_KM * asin(sqrt(a))
+
+
+def _find_closest_branch(latitude, longitude):
+    branches = MarketBranch.objects.filter(
+        is_active=True,
+        branch_type__in=DELIVERY_BRANCH_TYPES,
+        latitude__isnull=False,
+        longitude__isnull=False,
+    ).only("id", "name", "location_name", "address", "latitude", "longitude")
+    return min(
+        branches,
+        key=lambda branch: _haversine_km(latitude, longitude, branch.latitude, branch.longitude),
+        default=None,
+    )
+
+
+def _build_branch_route_point(branch, point_id):
+    return {
+        "id": point_id,
+        "fullname": branch.location_name or branch.address or branch.name,
+        "coordinates": [branch.longitude, branch.latitude],
+    }
+
+
 class YandexDeliveryService:
     @staticmethod
     def check_price(
@@ -346,7 +381,8 @@ class YandexDeliveryService:
 class YandexDeliveryIntegrationViewSet(ViewSet):
     @swagger_auto_schema(
         operation_summary="Yandex Delivery check price",
-        operation_description="Предварительный расчёт стоимости доставки (check-price) для Узбекистана",
+        operation_description="Предварительный расчёт стоимости доставки (check-price) для Узбекистана. "
+        "Точка забора автоматически определяется как ближайший к клиенту филиал",
         request_body=CheckPriceRequestSerializer(),
         responses={200: CheckPriceResponseSerializer()},
         tags=["Yandex Delivery"],
@@ -362,6 +398,19 @@ class YandexDeliveryIntegrationViewSet(ViewSet):
         route_points = validated["route_points"]
         requirements = validated.get("requirements") or {}
         skip_door_to_door = validated.get("skip_door_to_door", False)
+
+        client_coordinates = route_points[-1].get("coordinates")
+        closest_branch = None
+        if client_coordinates:
+            closest_branch = _find_closest_branch(client_coordinates[1], client_coordinates[0])
+        if closest_branch:
+            pickup_point_id = route_points[0].get("id", 1)
+            route_points = [_build_branch_route_point(closest_branch, pickup_point_id)] + route_points[1:]
+        else:
+            logger.warning(
+                "Yandex Delivery check-price: closest branch not resolved, "
+                "using client-provided pickup point"
+            )
 
         items = _build_items(
             validated["items"], route_points, requirements
@@ -393,6 +442,8 @@ class YandexDeliveryIntegrationViewSet(ViewSet):
             "distance_meters": yandex_data.get("distance_meters"),
             "eta": yandex_data.get("eta"),
             "zone_id": yandex_data.get("zone_id"),
+            "branch_id": closest_branch.id if closest_branch else None,
+            "branch_name": closest_branch.name if closest_branch else None,
         }
 
         return Response(
