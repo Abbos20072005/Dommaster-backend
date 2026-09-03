@@ -18,7 +18,7 @@ from service.models import (
     Product, ProductImage, ProductCharacteristics,
     ProductCategory, ProductSubCategory, ProductItemCategory,
     Brand, ProductUnit, ProductItemCategoryFilterSchema, ProductFilterNumericValue,
-    ProductRemaining,
+    ProductRemaining, Order, ORDER_STATUS,
 )
 from base.models import MarketBranch, BRANCH_TYPE_CHOICES
 
@@ -286,6 +286,11 @@ class OneCRemainingInputSerializer(serializers.Serializer):
     api_key = serializers.CharField(required=True, write_only=True)
     warehouse_code = serializers.CharField(required=True)
     products = OneCRemainingProductNestedSerializer(many=True, required=True)
+
+
+class OneCOrderStatusInputSerializer(serializers.Serializer):
+    api_key = serializers.CharField(required=True, write_only=True)
+    status = serializers.CharField(required=True)
 
 
 class OneCIntegrationViewSet(ViewSet):
@@ -1114,4 +1119,66 @@ class OneCIntegrationViewSet(ViewSet):
                 "ok": True,
             },
             status=status.HTTP_201_CREATED if any_created else status.HTTP_200_OK,
+        )
+
+    @swagger_auto_schema(
+        operation_summary="1C Order status update",
+        operation_description="Update order status from 1C. "
+                              "status: 'delivered' -> Completed (3)",
+        request_body=OneCOrderStatusInputSerializer(),
+        responses={200: "Order status updated"},
+        tags=["1C Integration"]
+    )
+    def order_status_update(self, request, order_id):
+        serializer = OneCOrderStatusInputSerializer(data=request.data)
+        if not serializer.is_valid():
+            raise CustomApiException(
+                error_code=ErrorCodes.INTEGRATION_INVALID_DATA,
+                message=serializer.errors
+            )
+
+        data = serializer.validated_data
+
+        if data.get("api_key") != INTEGRATION_API_KEY:
+            raise CustomApiException(error_code=ErrorCodes.INTEGRATION_API_KEY_INVALID)
+
+        order = Order.objects.filter(id=order_id).first()
+        if not order:
+            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
+
+        raw_status = (data.get("status") or "").strip().lower()
+
+        status_map = {
+            "delivered": 3,
+            "completed": 3,
+            "collecting": 1,
+            "delivering": 2,
+            "canceled": 4,
+            "cancelled": 4,
+            "pending": 0,
+        }
+
+        if raw_status not in status_map:
+            raise CustomApiException(
+                error_code=ErrorCodes.INTEGRATION_INVALID_DATA,
+                message=f"Invalid status '{raw_status}'. "
+                        f"Allowed: {', '.join(status_map.keys())}",
+            )
+
+        new_status = status_map[raw_status]
+
+        with transaction.atomic():
+            order.status = new_status
+            order.save(update_fields=["status", "updated_at"])
+
+        return Response(
+            data={
+                "result": {
+                    "order_id": order.id,
+                    "status": new_status,
+                    "status_name": dict(ORDER_STATUS).get(new_status),
+                },
+                "ok": True,
+            },
+            status=status.HTTP_200_OK,
         )

@@ -6,6 +6,7 @@ from django.views.static import serve
 from drf_yasg import openapi
 from drf_yasg.views import get_schema_view
 from rest_framework import permissions
+from integration.one_c import OneCIntegrationViewSet
 
 admin.site.site_header = 'Dommaster Admin'
 admin.site.site_title = 'Dommaster Admin'
@@ -32,6 +33,11 @@ urlpatterns = [
     path("api/v1/base/", include("base.urls")),
     path("api/v1/", include("service.urls")),
     path("api/v1/integration/", include("integration.urls")),
+    path(
+        "api/v1/orders/<int:order_id>/status/",
+        OneCIntegrationViewSet.as_view({"patch": "order_status_update"}),
+        name="one_c_order_status",
+    ),
     path("", include("payment.urls")),
 
     re_path(r'static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT}),
