@@ -173,3 +173,8 @@ utils/dommaster_service_key.json
 
 # logs
 logs/
+media
+
+# Claude Code
+.claude/
+CLAUDE.md

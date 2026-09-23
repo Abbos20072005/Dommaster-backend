@@ -50,6 +50,12 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField(max_length=30, required=True)
 
 
+class PhoneAuthSerializer(serializers.Serializer):
+    phone_number = serializers.CharField(max_length=14, validators=[validate_number])
+    role = serializers.ChoiceField(choices=Customer.Role.choices, required=False, default=Customer.Role.USER)
+    device_id = serializers.CharField(max_length=300, required=False, allow_blank=True)
+
+
 class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = Customer

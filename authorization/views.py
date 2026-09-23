@@ -16,12 +16,44 @@ from .utils import otp_code_generator
 from .serializers import CustomerSerializer, LoginSerializer, RegisterSerializer, OTPVerifySerializer, \
     OTPResendSerializer, ChangePasswordSerializer, ForgotPasswordSerializer, CustomerAddressesSerializer, \
     CustomerAddressesUpdateSerializer, CustomerAddressesCreateSerializer, ResetPasswordSerializer, FCMTokenSerializer, \
-    FCMTokenRequestSerializer, FCMTokenDeleteSerializer, TokenRefreshSerializer
+    FCMTokenRequestSerializer, FCMTokenDeleteSerializer, TokenRefreshSerializer, PhoneAuthSerializer
 from django.utils import timezone
 from integration.eskiz import EskizOTP
 from utils.send_notification import send_notification_to_customer
+from .services import create_otp, check_otp_limit
+
 
 class AuthViewSet(ViewSet):
+    @swagger_auto_schema(
+        operation_summary="Login / Register by phone",
+        operation_description="Phone number + role (optional, default user). Sends OTP; verify via otp/verify/ "
+                              "to get tokens. Role is applied only when a new customer is created.",
+        request_body=PhoneAuthSerializer(),
+        responses={200: "otp_key, is_new"},
+        tags=["Auth"]
+    )
+    def phone_auth(self, request):
+        serializer = PhoneAuthSerializer(data=request.data)
+        if not serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
+
+        phone = serializer.validated_data["phone_number"]
+        customer = Customer.objects.filter(phone_number=phone).order_by("-verified", "-created_at").first()
+        is_new = customer is None
+        if is_new:
+            customer = Customer.objects.create(phone_number=phone, role=serializer.validated_data["role"])
+
+        otp = create_otp(customer)
+        EskizOTP.send_otp_service(phone, f"Код подтверждения для входа в приложение Buildex Go: {otp.otp_code}")
+
+        device_id = serializer.validated_data.get("device_id")
+        if device_id:
+            FcmToken.objects.get_or_create(customer=customer, device_id=device_id,
+                                           defaults={"fcm_token": device_id})
+
+        return Response(data={"result": {"otp_key": otp.otp_key, "is_new": is_new}, "ok": True},
+                        status=status.HTTP_200_OK)
+
     @swagger_auto_schema(
         operation_summary="Account delete",
         operation_description="Account delete",
@@ -133,10 +165,7 @@ class AuthViewSet(ViewSet):
             if customer_save.id is None:
                 raise CustomApiException(error_code=ErrorCodes.USER_DOES_NOT_EXIST)
 
-            otp_code = otp_code_generator()
-            otp = OTP.objects.create(customer_id=customer_save.id, otp_code=otp_code, resend=False)
-            otp.expire_at = otp.created_at + timedelta(minutes=1)
-            otp.save()
+            otp = create_otp(customer_save)
             # message = (
             #     f' Project: Dommaster \nuser: {customer_save.id} \nphone_number: {customer_save.phone_number}\ncode: {otp.otp_code} '
             #     f'\notp_key: {otp.otp_key} '
@@ -154,23 +183,7 @@ class AuthViewSet(ViewSet):
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer_customer.errors)
 
         serializer_customer.save()
-        all_otp = OTP.objects.filter(customer_id=customer_none.id)
-        last_otp = all_otp.order_by("-created_at").first()
-        if all_otp.count() >= 3 and last_otp.created_at > datetime.now() - timedelta(hours=12):
-            raise CustomApiException(error_code=ErrorCodes.ATTEMPT_ALREADY_EXISTS,
-                                     time=last_otp.created_at + timedelta(hours=12))
-
-        if customer_none.id is None:
-            raise CustomApiException(error_code=ErrorCodes.USER_DOES_NOT_EXIST)
-
-        otp_code = otp_code_generator()
-        otp = OTP.objects.create(customer_id=customer_none.id, otp_code=otp_code, resend=False)
-        otp.expire_at = otp.created_at + timedelta(minutes=1)
-        otp.save()
-
-        latest_otp = all_otp.order_by("-created_at").exclude(otp_key=otp.otp_key).first()
-        if latest_otp and latest_otp.created_at < datetime.now() - timedelta(hours=12) and all_otp.count() >= 2:
-            all_otp.exclude(otp_key=otp.otp_key).delete()
+        otp = create_otp(customer_none)
 
         # message = (
         #     f' Project: Dommaster \nuser: {customer_none.id} \nphone_number: {customer_none.phone_number}\ncode: {otp.otp_code} '
@@ -503,33 +516,17 @@ class OTPViewSet(ViewSet):
         if not otp_check.customer:
             raise CustomApiException(error_code=ErrorCodes.USER_DOES_NOT_EXIST)
 
-        all_otp = otp_check.customer.otp_set.all()
+        check_otp_limit(otp_check.customer)
 
-        last_otp = all_otp.order_by("-created_at").first()
-        if all_otp.count() >= 3 and last_otp.created_at > datetime.now() - timedelta(hours=12):
-            raise CustomApiException(error_code=ErrorCodes.ATTEMPT_ALREADY_EXISTS,
-                                     time=last_otp.created_at + timedelta(hours=12))
-
+        last_otp = otp_check.customer.otp_set.order_by("-created_at").first()
         if last_otp.otp_key != otp_key:
             raise CustomApiException(error_code=ErrorCodes.OTP_KEY_NOT_FOUND)
 
-        first_otp = OTP.objects.filter(customer_id=all_otp.first().customer.id).order_by("-created_at").first()
-        if first_otp and first_otp.created_at + timedelta(minutes=1) > datetime.now():
+        if last_otp.created_at + timedelta(minutes=1) > datetime.now():
             raise CustomApiException(error_code=ErrorCodes.OTP_NOT_EXPIRED, time=(
-                    (first_otp.created_at + timedelta(minutes=1)) - datetime.now()).total_seconds())
+                    (last_otp.created_at + timedelta(minutes=1)) - datetime.now()).total_seconds())
 
-        old_otp = all_otp.filter(otp_key=otp_key).first()
-        if otp_check.customer.id is None:
-            raise CustomApiException(error_code=ErrorCodes.USER_DOES_NOT_EXIST)
-
-        otp_code = otp_code_generator()
-        otp = OTP.objects.create(customer_id=otp_check.customer.id, otp_code=otp_code, resend=old_otp.resend)
-        otp.expire_at = otp.created_at + timedelta(minutes=1)
-        otp.save()
-
-        latest_otp = all_otp.order_by("-created_at").exclude(otp_key=otp.otp_key).first()
-        if latest_otp and latest_otp.created_at < datetime.now() - timedelta(hours=12) and all_otp.count() >= 2:
-            all_otp.exclude(otp_key=otp.otp_key).delete()
+        otp = create_otp(otp_check.customer, resend=last_otp.resend, check_limit=False)
 
         # message = (
         #     f' Project: Dommaster \nuser: {otp_check.customer.id} \nphone_number: {otp_check.customer.phone_number}\ncode: {otp.otp_code} '
