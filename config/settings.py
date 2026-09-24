@@ -333,6 +333,13 @@ TELEGRAM_API_URL = (
     + "&text="
 )
 
+# Telegram bot for OTP fallback (SMS didn't arrive -> code via bot)
+# same bot as order notifications unless a separate one is configured
+TELEGRAM_OTP_BOT_TOKEN = os.getenv("TELEGRAM_OTP_BOT_TOKEN") or TELEGRAM_BOT_TOKEN
+TELEGRAM_OTP_BOT_USERNAME = os.getenv("TELEGRAM_OTP_BOT_USERNAME", "")
+TELEGRAM_OTP_WEBHOOK_SECRET = os.getenv("TELEGRAM_OTP_WEBHOOK_SECRET", "")
+TELEGRAM_LINK_TOKEN_TTL_MINUTES = int(os.getenv("TELEGRAM_LINK_TOKEN_TTL_MINUTES", "10"))
+
 SWAGGER_SETTINGS = {
     'SECURITY_DEFINITIONS': {
         'jwt': {

@@ -38,7 +38,8 @@ class IsAuthenticatedMiddleware(MiddlewareMixin):
             "question_reply_create",
             "question_reply_action",
             "order_cancel",
-            "fcm_token"
+            "fcm_token",
+            "telegram_link",
         }
 
         match = request.resolver_match

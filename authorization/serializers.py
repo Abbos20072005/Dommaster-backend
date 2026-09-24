@@ -35,6 +35,10 @@ class OTPResendSerializer(serializers.Serializer):
     otp_key = serializers.UUIDField()
 
 
+class TelegramOTPSerializer(serializers.Serializer):
+    otp_key = serializers.UUIDField(help_text="otp_key of the latest OTP (from auth/phone/, otp/resend/ ...)")
+
+
 class OTPVerifySerializer(serializers.Serializer):
     otp_key = serializers.UUIDField()
     otp_code = serializers.IntegerField()

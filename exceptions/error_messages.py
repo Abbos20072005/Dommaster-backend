@@ -33,6 +33,9 @@ class ErrorCodes(Enum):
     YANDEX_DELIVERY_ERROR = 28
     INTEGRATION_WAREHOUSE_NOT_FOUND = 29
     INTEGRATION_PRODUCT_NOT_FOUND = 30
+    TELEGRAM_OTP_LIMIT = 31
+    TELEGRAM_UNAVAILABLE = 32
+    TELEGRAM_LINK_NOT_FOUND = 33
 
 
 error_messages = {
@@ -68,6 +71,9 @@ error_messages = {
     28: {"result": "Yandex Delivery service error", "http_status": status.HTTP_400_BAD_REQUEST},
     29: {"result": "Warehouse not found", "http_status": status.HTTP_404_NOT_FOUND},
     30: {"result": "Product not found", "http_status": status.HTTP_404_NOT_FOUND},
+    31: {"result": "Telegram OTP limit reached, try again later", "http_status": status.HTTP_400_BAD_REQUEST},
+    32: {"result": "Telegram bot is unavailable", "http_status": status.HTTP_503_SERVICE_UNAVAILABLE},
+    33: {"result": "Telegram is not linked", "http_status": status.HTTP_404_NOT_FOUND},
 }
 
 

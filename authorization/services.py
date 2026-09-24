@@ -7,20 +7,21 @@ from .utils import otp_code_generator
 
 
 def check_otp_limit(customer):
-    """Max 3 OTPs per 12 hours."""
-    all_otp = OTP.objects.filter(customer_id=customer.id)
+    """Max 3 SMS OTPs per 12 hours (Telegram OTPs are free and limited separately)."""
+    all_otp = OTP.objects.filter(customer_id=customer.id, channel=OTP.Channel.SMS)
     last_otp = all_otp.order_by("-created_at").first()
     if all_otp.count() >= 3 and last_otp.created_at > datetime.now() - timedelta(hours=12):
         raise CustomApiException(error_code=ErrorCodes.ATTEMPT_ALREADY_EXISTS,
                                  time=last_otp.created_at + timedelta(hours=12))
 
 
-def create_otp(customer, resend=False, check_limit=True):
+def create_otp(customer, resend=False, check_limit=True, channel=OTP.Channel.SMS):
     """Create a new OTP (expires in 1 minute); older OTPs are cleaned up once the 12-hour window has passed."""
     if check_limit:
         check_otp_limit(customer)
 
-    otp = OTP.objects.create(customer_id=customer.id, otp_code=otp_code_generator(), resend=resend)
+    otp = OTP.objects.create(customer_id=customer.id, otp_code=otp_code_generator(), resend=resend,
+                             channel=channel)
     otp.expire_at = otp.created_at + timedelta(minutes=1)
     otp.save(update_fields=["expire_at"])
 
