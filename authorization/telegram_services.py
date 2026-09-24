@@ -38,8 +38,8 @@ MSG_NO_TOKEN = ("Kod olish uchun ilovada \"Kod kelmadi\" tugmasini bosing.\n"
 MSG_FOREIGN_CONTACT = "Faqat o'z raqamingizni yuboring. / Отправьте, пожалуйста, свой номер."
 MSG_PHONE_MISMATCH = ("Bu raqam ilovada kiritilgan raqamga mos kelmadi.\n"
                       "Этот номер не совпадает с номером, указанным в приложении.")
-MSG_LINKED_NO_CODE = ("Telegram ulandi. Yangi kod olish uchun ilovada \"Kod kelmadi\" ni bosing.\n"
-                      "Telegram привязан. Нажмите «Код не пришёл» в приложении, чтобы получить новый код.")
+MSG_LINKED_NO_CODE = ("Telegram ulandi. Endi tasdiqlash kodlari shu yerga keladi.\n"
+                      "Telegram привязан. Теперь коды подтверждения будут приходить сюда.")
 MSG_UNLINKED = "Telegram raqamdan uzildi. / Telegram отвязан от номера."
 MSG_NOT_LINKED = "Bu chat hech qaysi raqamga ulanmagan. / Этот чат не привязан к номеру."
 
@@ -132,12 +132,15 @@ def _reply(chat_id, text, reply_markup=None):
 
 
 def _complete_link(token, chat_id):
-    """Mark the token used (idempotent for Telegram retries) and deliver its OTP if still current."""
+    """Mark the token used (idempotent for Telegram retries) and deliver the customer's latest OTP.
+
+    The latest OTP (not necessarily token.otp) is the one whose otp_key the app holds, e.g. when the
+    customer requested an SMS resend after getting the deep link."""
     if not TelegramLinkToken.objects.filter(pk=token.pk, is_used=False).update(is_used=True):
         return
-    otp = token.otp
-    latest = OTP.objects.filter(customer_id=token.customer_id).order_by("-created_at").first()
-    if not otp or not latest or latest.pk != otp.pk:
+    otp = OTP.objects.filter(customer_id=token.customer_id).order_by("-created_at").first()
+    if not otp:
+        # already verified (OTPs are deleted on success) -> nothing to deliver
         _reply(chat_id, MSG_LINKED_NO_CODE, TelegramOTPBot.remove_keyboard())
         return
     try:
