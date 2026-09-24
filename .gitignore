@@ -169,3 +169,13 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+utils/dommaster_service_key.json
+
+# logs
+logs/
+media
+
+# Claude Code
+.claude/
+CLAUDE.md
+AGENTS.md

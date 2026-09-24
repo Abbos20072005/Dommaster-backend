@@ -6,10 +6,11 @@ from django.views.static import serve
 from drf_yasg import openapi
 from drf_yasg.views import get_schema_view
 from rest_framework import permissions
+from integration.one_c import OneCIntegrationViewSet
 
 admin.site.site_header = 'Dommaster Admin'
 admin.site.site_title = 'Dommaster Admin'
-admin.site.index_title = 'Welcome to dashboard'
+admin.site.index_title = 'Welcome to Dommaster dashboard'
 
 schema_view = get_schema_view(
     openapi.Info(
@@ -25,9 +26,19 @@ schema_view = get_schema_view(
 )
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('api/v1/auth/', include("authorization.urls")),
-    path('api/v1/', include("service.urls")),
+    path("admin/", admin.site.urls),
+    path('i18n/', include('django.conf.urls.i18n')),
+    path('ckeditor/', include('ckeditor_uploader.urls')),
+    path("api/v1/auth/", include("authorization.urls")),
+    path("api/v1/base/", include("base.urls")),
+    path("api/v1/", include("service.urls")),
+    path("api/v1/integration/", include("integration.urls")),
+    path(
+        "api/v1/orders/<int:order_id>/status/",
+        OneCIntegrationViewSet.as_view({"patch": "order_status_update"}),
+        name="one_c_order_status",
+    ),
+    path("", include("payment.urls")),
 
     re_path(r'static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT}),
     re_path(r'media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),

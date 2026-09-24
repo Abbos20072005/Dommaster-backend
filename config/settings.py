@@ -2,11 +2,12 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 from datetime import timedelta
+from django.urls import reverse_lazy
+from django.utils.translation import gettext_lazy as _
 
 load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
@@ -18,12 +19,17 @@ SHOW_SWAGGER = int(os.getenv('DJANGO_SHOW_SWAGGER', 1))
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = int(os.getenv('DEBUG', 1))
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '127.0.0.1').split(',')
-
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '127.0.0.1').split(",")
+# CSRF_TRUSTED_ORIGINS = os.getenv("CSRF_TRUSTED_ORIGINS").split(",")
 
 # Application definition
 
 INSTALLED_APPS = [
+    "unfold",                           # ← обязательно первым
+    "unfold.contrib.filters",          # опционально — кастомные фильтры
+    "unfold.contrib.forms",            # опционально — красивые формы
+    "unfold.contrib.inlines",          # опционально — инлайны
+
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -31,21 +37,27 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
-    #apps
+    # apps
     "authorization",
     "service",
+    "base",
 
-    #packages
+    # packages
     "rest_framework",
     "drf_yasg",
     "corsheaders",
-    "tinymce",
     "rest_framework_simplejwt",
-    "modeltranslation"
+    "modeltranslation",
+    'ckeditor',
+    'ckeditor_uploader',  # For image/file upload suppert
+    'payment'
 
 ]
 
 MIDDLEWARE = [
+    #custom middleware
+    "middleware.request_log.RequestLogMiddleware",
+
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
@@ -54,6 +66,9 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+
+    #custom middleware
+    "middleware.auth_blocker.IsAuthenticatedMiddleware",
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -84,7 +99,6 @@ CORS_ALLOW_HEADERS = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
@@ -106,12 +120,99 @@ DATABASES = {
     }
 }
 
+CONN_MAX_AGE = 60
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'authorization.custom_JWT.CustomJWTAuthentication',
+        'authorization.custom_jwt.CustomJwtAuthentication',
     ),
+    'EXCEPTION_HANDLER': 'exceptions.handler.custom_exception_handler',
+    # 'DEFAULT_THROTTLE_CLASSES': [
+    #     'rest_framework.throttling.AnonRateThrottle',
+    #     'rest_framework.throttling.UserRateThrottle',
+    # ],
+    # 'DEFAULT_THROTTLE_RATES': {
+    #     'anon': '240/minute',
+    #     'user': '360/minute',
+    # },
+}
 
+# Logging configuration
+# https://docs.djangoproject.com/en/5.1/topics/logging/
+LOG_DIR = BASE_DIR / "logs"
+LOG_DIR.mkdir(exist_ok=True)
+
+LOG_LEVEL = os.getenv("LOG_LEVEL", "DEBUG" if DEBUG else "INFO").upper()
+LOG_JSON = int(os.getenv("LOG_JSON", 0))
+LOG_REQUEST = int(os.getenv("LOG_REQUEST", 1))
+LOG_MAX_BYTES = int(os.getenv("LOG_MAX_BYTES", 20 * 1024 * 1024))
+LOG_BACKUP_COUNT = int(os.getenv("LOG_BACKUP_COUNT", 5))
+LOG_ERROR_MAX_BYTES = int(os.getenv("LOG_ERROR_MAX_BYTES", 10 * 1024 * 1024))
+LOG_ERROR_BACKUP_COUNT = int(os.getenv("LOG_ERROR_BACKUP_COUNT", 180))
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'filters': {
+        'sensitive_data': {
+            '()': 'utils.logger.SensitiveDataFilter',
+        },
+        'request_context': {
+            '()': 'utils.logger.RequestContextFilter',
+        },
+    },
+    'formatters': {
+        'verbose': {
+            '()': 'utils.logger.VerboseFormatter',
+            'format': '[%(asctime)s] %(levelname)s %(name)s:%(lineno)d %(message)s '
+                      '[req=%(request_id)s user=%(user_id)s]',
+        },
+        'json': {
+            '()': 'utils.logger.JsonFormatter',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'level': LOG_LEVEL,
+            'filters': ['sensitive_data', 'request_context'],
+            'formatter': 'json' if LOG_JSON else 'verbose',
+        },
+        'app_file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'level': 'INFO',
+            'filename': str(LOG_DIR / 'app.log'),
+            'maxBytes': LOG_MAX_BYTES,
+            'backupCount': LOG_BACKUP_COUNT,
+            'filters': ['sensitive_data', 'request_context'],
+            'formatter': 'json',
+            'encoding': 'utf-8',
+        },
+        'error_file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'level': 'ERROR',
+            'filename': str(LOG_DIR / 'error.log'),
+            'maxBytes': LOG_ERROR_MAX_BYTES,
+            'backupCount': LOG_ERROR_BACKUP_COUNT,
+            'filters': ['sensitive_data', 'request_context'],
+            'formatter': 'json',
+            'encoding': 'utf-8',
+        },
+    },
+    'root': {
+        'handlers': ['console', 'app_file', 'error_file'],
+        'level': LOG_LEVEL,
+    },
+    'loggers': {
+        'urllib3': {
+            'level': 'WARNING',
+        },
+        'django.request': {
+            'handlers': [],
+            'level': 'ERROR',
+            'propagate': True,
+        },
+    },
 }
 
 JWT_USE = True
@@ -143,18 +244,53 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+
+# Redis cache configuration (django-redis)
+# Ensure you install: pip install django-redis
+# Configure env vars: REDIS_URL or REDIS_HOST/REDIS_PORT/REDIS_DB (and REDIS_PASSWORD if used)
+# REDIS_URL = os.getenv("REDIS_URL")
+# if not REDIS_URL:
+#     REDIS_HOST = os.getenv("REDIS_HOST", "127.0.0.1")
+#     REDIS_PORT = os.getenv("REDIS_PORT", "6379")
+#     REDIS_DB = os.getenv("REDIS_DB", "0")
+#     REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")
+#     if REDIS_PASSWORD:
+#         REDIS_URL = f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
+#     else:
+#         REDIS_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/1",
+        "OPTIONS": {
+            # Use DefaultClient for connection pooling
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            # "PASSWORD": os.getenv("REDIS_PASSWORD", None),
+        },
+        # "KEY_PREFIX": os.getenv("CACHE_KEY_PREFIX", "buildex"),
+    }
+}
+
+# Default TTL for cache.get / cache.set usage in seconds
+CACHE_TTL = int(os.getenv("CACHE_TTL", 60 * 5))  # default 5 minutes
+
+# Optional: use cache-based sessions (uncomment if desired)
+# SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+# SESSION_CACHE_ALIAS = 'default'
+
+LANGUAGE_CODE = 'ru-ru'
 
 get_text = lambda x: x
-LANGUAGES = {
-    'uz': get_text('Uzbek'),
-    'ru': get_text('Russian'),
-    'en': get_text('English')
-}
+
+LANGUAGES = [
+    ('uz', get_text('Uzbek')),
+    ('ru', get_text('Russian')),
+    ('en', get_text('English')),
+]
 
 MODELTRANSLATION_DEFAULT_LANGUAGE = 'ru'
 MODELTRANSLATION_LANGUAGES = ('uz', 'ru', 'en')
@@ -163,8 +299,7 @@ TIME_ZONE = 'Asia/Tashkent'
 
 USE_I18N = True
 
-USE_TZ = True
-
+USE_TZ = False
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
@@ -175,10 +310,28 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# CKEditor upload path
+CKEDITOR_UPLOAD_PATH = "uploads/"
+# CKEDITOR_IMAGE_BACKEND = "pillow"
+# CKEDITOR_ALLOW_NONIMAGE_FILES = True
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
+TELEGRAM_CHANNEL_ID = os.getenv("TELEGRAM_CHANNEL_ID", "")
+_telegram_topic_id = os.getenv("TELEGRAM_TOPIC_ID") or os.getenv("TELEGRAM_ORDER_TOPIC_ID")
+try:
+    TELEGRAM_TOPIC_ID = int(_telegram_topic_id) if _telegram_topic_id else None
+except (TypeError, ValueError):
+    TELEGRAM_TOPIC_ID = None
+TELEGRAM_API_URL = (
+    f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage?chat_id={TELEGRAM_CHANNEL_ID}"
+    + (f"&message_thread_id={TELEGRAM_TOPIC_ID}" if TELEGRAM_TOPIC_ID else "")
+    + "&text="
+)
 
 SWAGGER_SETTINGS = {
     'SECURITY_DEFINITIONS': {
@@ -199,29 +352,170 @@ SWAGGER_SETTINGS = {
     "DEFAULT_MODEL_RENDERING": "example"
 }
 
-TINYMCE_DEFAULT_CONFIG = {
-    'height': 500,
-    'width': '100%',
-    'plugins': 'advlist autolink lists link image charmap preview anchor '
-               'searchreplace visualblocks code fullscreen insertdatetime media table paste help',
-    'toolbar': 'undo redo | styleselect | bold italic | link image media | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | help',
-    'image_advtab': True,  # Enables advanced image options
-    'file_picker_callback': 'function(callback, value, meta) { \
-        if (meta.filetype === "image") { \
-            var input = document.createElement("input"); \
-            input.setAttribute("type", "file"); \
-            input.setAttribute("accept", "image/*"); \
-            input.onchange = function() { \
-                var file = this.files[0]; \
-                var reader = new FileReader(); \
-                reader.onload = function() { \
-                    callback(reader.result, { alt: file.name }); \
-                }; \
-                reader.readAsDataURL(file); \
-            }; \
-            input.click(); \
-        } \
-    }',
+CKEDITOR_CONFIGS = {
+    'default': {
+        'toolbar': 'Full',
+        'height': 400,
+        'width': '100%',
+        'tabSpaces': 4,
+
+        # Enable content embedding (YouTube, Vimeo, etc.)
+        'extraPlugins': ','.join([
+            'uploadimage',  # allow image uploads
+            # 'uploadfile',       # allow file uploads
+            'embed',  # for oEmbed videos
+            'autoembed',  # automatically embed URLs
+            'image2',  # enhanced image plugin
+            'codesnippet',  # code blocks with syntax highlighting
+            'autogrow',  # auto-resize editor
+            'clipboard',  # copy/paste features
+            'justify',  # text alignment
+            'colorbutton',  # text color
+            'font',  # font options
+            # 'video',            # optional video plugin
+        ]),
+
+        'toolbar_Full': [
+            {'name': 'document', 'items': ['Source', '-', 'Preview', 'Print']},
+            {'name': 'clipboard', 'items': ['Cut', 'Copy', 'Paste', 'PasteText', 'PasteFromWord', '-', 'Undo', 'Redo']},
+            {'name': 'editing', 'items': ['Find', 'Replace', '-', 'SelectAll']},
+            {'name': 'styles', 'items': ['Format', 'Font', 'FontSize']},
+            {'name': 'basicstyles', 'items': ['Bold', 'Italic', 'Underline', 'Strike', '-', 'RemoveFormat']},
+            {'name': 'colors', 'items': ['TextColor', 'BGColor']},
+            {'name': 'paragraph',
+             'items': ['NumberedList', 'BulletedList', '-', 'Outdent', 'Indent', '-', 'Blockquote', '-', 'JustifyLeft',
+                       'JustifyCenter', 'JustifyRight', 'JustifyBlock']},
+            {'name': 'links', 'items': ['Link', 'Unlink', 'Anchor']},
+            {'name': 'insert',
+             'items': ['Image', 'UploadImage', 'Table', 'HorizontalRule', 'Smiley', 'SpecialChar', 'Embed',
+                       'CodeSnippet']},
+            {'name': 'tools', 'items': ['Maximize', 'ShowBlocks']},
+        ],
+
+        'codeSnippet_theme': 'monokai_sublime',
+        'autoGrow_minHeight': 200,
+        'autoGrow_maxHeight': 800,
+        'autoGrow_bottomSpace': 50,
+
+        # Optional: limit allowed content to avoid security issues
+        'allowedContent': True,
+        'removePlugins': 'stylesheetparser',
+        'forcePasteAsPlainText': False,
+        'embed_provider': '//ckeditor.iframe.ly/api/oembed?url={url}&callback={callback}',
+    }
 }
-DATA_UPLOAD_MAX_MEMORY_SIZE = 5242880
-FILE_UPLOAD_MAX_MEMORY_SIZE = 5242880
+
+# click_settings
+CLICK_SERVICE_ID = int(os.getenv('CLICK_SERVICE_ID', 1))
+CLICK_MERCHANT_ID = int(os.getenv('CLICK_MERCHANT_ID', 1))
+CLICK_SECRET_KEY = os.getenv('CLICK_SECRET_KEY', "")
+CLICK_ACCOUNT_MODEL = os.getenv('CLICK_ACCOUNT_MODEL', "")
+CLICK_AMOUNT_FIELD = os.getenv('CLICK_AMOUNT_FIELD', "")
+
+# payme_settings
+PAYME_ID = os.getenv('PAYME_ID', 1)
+PAYME_KEY = os.getenv('PAYME_KEY', "")
+
+#Uzum Bank
+SERVICE_ID_UZUM=int(os.getenv('SERVICE_ID_UZUM', 1))
+SERVICE_UZUM_KEY=os.getenv('SERVICE_UZUM_KEY', "")
+SERVICE_UZUM_PASSWORD=os.getenv('SERVICE_UZUM_PASSWORD', "")
+
+#web redirected url
+REDIRECTED_URL=os.getenv('REDIRECTED_URL', "")
+
+
+
+
+UNFOLD = {
+    "SITE_TITLE": "Buildex",
+    "SITE_HEADER": "Buildex Admin",
+    "SITE_SUBHEADER": "Buildex management system",
+    "SITE_URL": "/",
+    "SITE_SYMBOL": "speed",  # Material symbol name
+    "SHOW_HISTORY": True,
+    "SHOW_VIEW_ON_SITE": True,
+    "ENVIRONMENT": os.environ.get("DJANGO_ENV", "development"),
+    "SHOW_LANGUAGES": True, # Requires the i18n URL mentioned above
+
+    # ─── Colors (Tailwind-based) ──────────────────────────────────
+    "COLORS": {
+        "primary": {
+            "50": "240 249 255",
+            "100": "224 242 254",
+            "200": "186 230 253",
+            "300": "125 211 252",
+            "400": "56 189 248",
+            "500": "14 165 233",
+            "600": "2 132 199",
+            "700": "3 105 161",
+            "800": "7 89 133",
+            "900": "12 74 110",
+            "950": "8 47 73",
+        },
+    },
+
+    # ─── Sidebar Navigation ──────────────────────────────────────
+    "SIDEBAR": {
+        "show_search": True,
+        "show_all_applications": False,
+        "navigation": [
+            {
+                "title": _("Core Management"),
+                "items": [
+                    {
+                        "title": _("Dashboard"),
+                        "icon": "dashboard",
+                        "link": reverse_lazy("admin:index"),
+                    },
+                    {
+                        "title": _("Users"),
+                        "icon": "person",
+                        "link": reverse_lazy("admin:auth_user_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": _("Business Logic"),
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": _("Listings"),
+                        "icon": "apartment",
+                        # "link": reverse_lazy("admin:properties_listing_changelist"),
+                    },
+                ],
+            },
+        ],
+    },
+
+    # ─── User Profile Menu (Top Right) ────────────────────────────
+    "USER_MENU": [
+        {
+            "title": _("View Website"),
+            "icon": "open_in_new",
+            "link": "/",
+        },
+        {
+            "title": _("Support"),
+            "icon": "help",
+            "link": "https://example.com/support",
+        },
+    ],
+
+    # ─── Top Header Links ─────────────────────────────────────────
+    "TABS": [
+        {
+            "models": [
+                "auth.user",
+                "auth.group",
+            ],
+            "items": [
+                {
+                    "title": _("Access Control"),
+                    "link": reverse_lazy("admin:auth_user_changelist"),
+                },
+            ],
+        },
+    ],
+}
