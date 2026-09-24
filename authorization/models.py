@@ -61,12 +61,17 @@ class FcmToken(BaseModel):
 
 
 class OTP(BaseModel):
+    class Channel(models.TextChoices):
+        SMS = 'sms', 'SMS'
+        TELEGRAM = 'telegram', 'Telegram'
+
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, verbose_name="Клиент")
     resend = models.BooleanField(default=False, verbose_name="Переотправить")
     otp_code = models.IntegerField(verbose_name="ОТП код")
     otp_key = models.CharField(default=uuid.uuid4, max_length=250, editable=False, unique=True, verbose_name="ОТП ключ")
     count_attempts = models.IntegerField(default=0, verbose_name="Количество попыток")
     expire_at = models.DateTimeField(blank=True, null=True, verbose_name="Истекает в")
+    channel = models.CharField(max_length=20, choices=Channel.choices, default=Channel.SMS, verbose_name="Канал")
 
     def __str__(self):
         return self.customer.phone_number
@@ -83,3 +88,39 @@ class PasswordResetToken(models.Model):
 
     def is_valid(self):
         return not self.is_used and self.expires_at > timezone.now()
+
+
+class TelegramLink(BaseModel):
+    """Telegram account <-> phone number binding (phone ownership confirmed by shared contact)."""
+    phone_number = models.CharField(max_length=14, unique=True, verbose_name="Номер телефона")
+    chat_id = models.BigIntegerField(verbose_name="Chat ID")
+    telegram_user_id = models.BigIntegerField(verbose_name="Telegram user ID")
+    username = models.CharField(max_length=64, blank=True, default="", verbose_name="Username")
+    first_name = models.CharField(max_length=128, blank=True, default="", verbose_name="Имя")
+
+    def __str__(self):
+        return f"{self.phone_number} -> {self.chat_id}"
+
+    class Meta:
+        verbose_name = "Telegram привязка"
+        verbose_name_plural = "Telegram привязки"
+
+
+class TelegramLinkToken(BaseModel):
+    """One-time deep link token (t.me/<bot>?start=<token>); delivers `otp` once the link is confirmed."""
+    token = models.CharField(max_length=64, unique=True, verbose_name="Токен")
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, verbose_name="Клиент")
+    otp = models.ForeignKey(OTP, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="ОТП")
+    chat_id = models.BigIntegerField(null=True, blank=True, verbose_name="Chat ID")
+    expires_at = models.DateTimeField(verbose_name="Истекает в")
+    is_used = models.BooleanField(default=False, verbose_name="Использован")
+
+    def is_valid(self):
+        return not self.is_used and self.expires_at > timezone.now()
+
+    def __str__(self):
+        return self.customer.phone_number
+
+    class Meta:
+        verbose_name = "Telegram токен привязки"
+        verbose_name_plural = "Telegram токены привязки"

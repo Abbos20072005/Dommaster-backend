@@ -1,5 +1,6 @@
 from django.contrib import admin
-from .models import Customer, OTP, FcmToken, CustomerAddresses, PasswordResetToken
+from .models import Customer, OTP, FcmToken, CustomerAddresses, PasswordResetToken, TelegramLink, \
+    TelegramLinkToken
 from django.contrib.auth.hashers import make_password
 from unfold.admin import ModelAdmin
 from base.admin_actions import mark_verified, mark_unverified, mark_default, get_model_fields
@@ -26,7 +27,7 @@ class OTPAdmin(ModelAdmin):
     list_display = get_model_fields(OTP)
     list_display_links = ("id", "customer")
     search_fields = ("customer__full_name", "customer__phone_number", "otp_code")
-    list_filter = ("resend", "created_at")
+    list_filter = ("resend", "channel", "created_at")
     date_hierarchy = "created_at"
     list_per_page = 25
 
@@ -59,3 +60,21 @@ class PasswordResetTokenAdmin(ModelAdmin):
     search_fields = ("customer__full_name", "customer__phone_number", "token")
     list_filter = ("is_used", "expires_at")
     autocomplete_fields = ("customer",)
+
+
+@admin.register(TelegramLink)
+class TelegramLinkAdmin(ModelAdmin):
+    list_display = get_model_fields(TelegramLink)
+    list_display_links = ("id", "phone_number")
+    search_fields = ("phone_number", "username", "first_name", "chat_id")
+    date_hierarchy = "created_at"
+
+
+@admin.register(TelegramLinkToken)
+class TelegramLinkTokenAdmin(ModelAdmin):
+    list_display = ("id", "customer", "chat_id", "is_used", "expires_at", "created_at")
+    list_display_links = ("id", "customer")
+    search_fields = ("customer__phone_number",)
+    list_filter = ("is_used", "created_at")
+    autocomplete_fields = ("customer", "otp")
+    date_hierarchy = "created_at"

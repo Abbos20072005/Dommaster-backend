@@ -16,11 +16,18 @@ from .utils import otp_code_generator
 from .serializers import CustomerSerializer, LoginSerializer, RegisterSerializer, OTPVerifySerializer, \
     OTPResendSerializer, ChangePasswordSerializer, ForgotPasswordSerializer, CustomerAddressesSerializer, \
     CustomerAddressesUpdateSerializer, CustomerAddressesCreateSerializer, ResetPasswordSerializer, FCMTokenSerializer, \
-    FCMTokenRequestSerializer, FCMTokenDeleteSerializer, TokenRefreshSerializer, PhoneAuthSerializer
+    FCMTokenRequestSerializer, FCMTokenDeleteSerializer, TokenRefreshSerializer, PhoneAuthSerializer, \
+    TelegramOTPSerializer
 from django.utils import timezone
 from integration.eskiz import EskizOTP
 from utils.send_notification import send_notification_to_customer
 from .services import create_otp, check_otp_limit
+from .telegram_services import request_telegram_otp, is_telegram_linked, unlink_telegram, handle_telegram_update
+from .models import TelegramLink
+from django.conf import settings
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class AuthViewSet(ViewSet):
@@ -29,7 +36,7 @@ class AuthViewSet(ViewSet):
         operation_description="Phone number + role (optional, default user). Sends OTP; verify via otp/verify/ "
                               "to get tokens. Role is applied only when a new customer is created.",
         request_body=PhoneAuthSerializer(),
-        responses={200: "otp_key, is_new"},
+        responses={200: "otp_key, is_new, telegram_linked"},
         tags=["Auth"]
     )
     def phone_auth(self, request):
@@ -51,7 +58,8 @@ class AuthViewSet(ViewSet):
             FcmToken.objects.get_or_create(customer=customer, device_id=device_id,
                                            defaults={"fcm_token": device_id})
 
-        return Response(data={"result": {"otp_key": otp.otp_key, "is_new": is_new}, "ok": True},
+        return Response(data={"result": {"otp_key": otp.otp_key, "is_new": is_new,
+                                          "telegram_linked": is_telegram_linked(phone)}, "ok": True},
                         status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
@@ -537,6 +545,80 @@ class OTPViewSet(ViewSet):
         EskizOTP.send_otp_service(otp_check.customer.phone_number, f"Код подтверждения для регистрации в приложение Buildex Go: {otp.otp_code}")
 
         return Response(data={"result": {"otp_key": otp.otp_key}, "ok": True}, status=status.HTTP_200_OK)
+
+
+    @swagger_auto_schema(
+        operation_summary="OTP via Telegram (\"kod kelmadi\")",
+        operation_description=(
+            "Fallback when SMS did not arrive. Pass the latest otp_key; a NEW otp_key is returned — verify with it "
+            "via otp/verify/.\n\n"
+            "- `linked=true`: code already sent to the linked Telegram chat.\n"
+            "- `linked=false`: open `deep_link` (or build `https://t.me/<bot>?start=<link_token>`), valid `expires_in` seconds. The customer opens the bot, presses "
+            "Start and shares their phone contact; then the code arrives in the bot.\n\n"
+            "Telegram codes do not count toward the SMS limit (own limit: 1/min, 10 per 12h)."
+        ),
+        request_body=TelegramOTPSerializer(),
+        responses={200: "otp_key, linked, deep_link, link_token, expires_in"},
+        tags=["OTP"]
+    )
+    def otp_telegram(self, request):
+        serializer = TelegramOTPSerializer(data=request.data)
+        if not serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
+
+        otp_check = OTP.objects.select_related("customer").filter(
+            otp_key=str(serializer.validated_data["otp_key"])).first()
+        if not otp_check:
+            raise CustomApiException(error_code=ErrorCodes.OTP_KEY_NOT_FOUND)
+
+        last_otp = otp_check.customer.otp_set.order_by("-created_at").first()
+        if last_otp.otp_key != otp_check.otp_key:
+            raise CustomApiException(error_code=ErrorCodes.OTP_KEY_NOT_FOUND)
+
+        result = request_telegram_otp(otp_check)
+        return Response(data={"result": result, "ok": True}, status=status.HTTP_200_OK)
+
+
+class TelegramViewSet(ViewSet):
+    @swagger_auto_schema(
+        operation_summary="Telegram link status",
+        operation_description="Whether the customer's phone is linked to a Telegram account (for OTP delivery)",
+        responses={200: "linked, username, first_name, linked_at"},
+        tags=["Telegram"]
+    )
+    def link_status(self, request):
+        link = TelegramLink.objects.filter(phone_number=request.user.phone_number).first()
+        result = {
+            "linked": bool(link),
+            "username": link.username if link else None,
+            "first_name": link.first_name if link else None,
+            "linked_at": link.updated_at if link else None,
+        }
+        return Response(data={"result": result, "ok": True}, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        operation_summary="Telegram unlink",
+        operation_description="Remove the Telegram binding of the customer's phone",
+        responses={200: "Unlinked"},
+        tags=["Telegram"]
+    )
+    def unlink(self, request):
+        if not unlink_telegram(request.user.phone_number):
+            raise CustomApiException(error_code=ErrorCodes.TELEGRAM_LINK_NOT_FOUND)
+        return Response(data={"result": "Telegram unlinked", "ok": True}, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(auto_schema=None)
+    def webhook(self, request):
+        """Telegram Bot API webhook; authenticated by X-Telegram-Bot-Api-Secret-Token."""
+        secret = settings.TELEGRAM_OTP_WEBHOOK_SECRET
+        if not secret or request.headers.get("X-Telegram-Bot-Api-Secret-Token") != secret:
+            return Response(status=status.HTTP_403_FORBIDDEN)
+        try:
+            handle_telegram_update(request.data)
+        except Exception:
+            # always 200: otherwise Telegram keeps re-delivering the same update
+            logger.exception("Telegram OTP webhook update failed")
+        return Response(data={"ok": True}, status=status.HTTP_200_OK)
 
 
 class FCMTokenViewSet(ViewSet):
