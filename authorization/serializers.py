@@ -1,6 +1,7 @@
 from .models import Customer, CustomerAddresses, FcmToken
 from rest_framework import serializers
-from .utils import validate_number
+from django.core.exceptions import ValidationError as DjangoValidationError
+from .utils import validate_number, normalize_uz_phone
 from django.contrib.auth.hashers import make_password
 
 class FCMTokenDeleteSerializer(serializers.Serializer):
@@ -51,9 +52,15 @@ class LoginSerializer(serializers.Serializer):
 
 
 class PhoneAuthSerializer(serializers.Serializer):
-    phone_number = serializers.CharField(max_length=14, validators=[validate_number])
+    phone_number = serializers.CharField(max_length=20, help_text="998XXXXXXXXX (12 digits)")
     role = serializers.ChoiceField(choices=Customer.Role.choices, required=False, default=Customer.Role.USER)
     device_id = serializers.CharField(max_length=300, required=False, allow_blank=True)
+
+    def validate_phone_number(self, value):
+        try:
+            return normalize_uz_phone(value)
+        except DjangoValidationError as e:
+            raise serializers.ValidationError(e.messages)
 
 
 class RegisterSerializer(serializers.ModelSerializer):

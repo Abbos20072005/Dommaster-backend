@@ -35,6 +35,8 @@ _MASK_PATTERN = re.compile(
 
 _BEARER_PATTERN = re.compile(r"(?i)\bBearer\s+[A-Za-z0-9\-_.]+")
 
+_TELEGRAM_TOKEN_PATTERN = re.compile(r"bot\d+:[A-Za-z0-9_-]+")
+
 _MASK = "***"
 
 
@@ -66,6 +68,7 @@ class SensitiveDataFilter(logging.Filter):
     def filter(self, record):
         message = record.getMessage()
         message = _BEARER_PATTERN.sub(_MASK, message)
+        message = _TELEGRAM_TOKEN_PATTERN.sub(f"bot{_MASK}", message)
         message = _MASK_PATTERN.sub(rf"\g<1>{_MASK}", message)
         record.msg = message
         record.args = ()

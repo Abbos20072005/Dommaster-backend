@@ -204,6 +204,9 @@ LOGGING = {
         'level': LOG_LEVEL,
     },
     'loggers': {
+        'urllib3': {
+            'level': 'WARNING',
+        },
         'django.request': {
             'handlers': [],
             'level': 'ERROR',
@@ -317,9 +320,18 @@ CKEDITOR_UPLOAD_PATH = "uploads/"
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-TELEGRAM_BOT_TOKEN = "6380957235:AAHOgqvvnffZL4deU_pY79mieYdBJYr0J-w"
-TELEGRAM_CHANNEL_ID = "-1002522360493"
-TELEGRAM_API_URL = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage?chat_id={TELEGRAM_CHANNEL_ID}&text="
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
+TELEGRAM_CHANNEL_ID = os.getenv("TELEGRAM_CHANNEL_ID", "")
+_telegram_topic_id = os.getenv("TELEGRAM_TOPIC_ID") or os.getenv("TELEGRAM_ORDER_TOPIC_ID")
+try:
+    TELEGRAM_TOPIC_ID = int(_telegram_topic_id) if _telegram_topic_id else None
+except (TypeError, ValueError):
+    TELEGRAM_TOPIC_ID = None
+TELEGRAM_API_URL = (
+    f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage?chat_id={TELEGRAM_CHANNEL_ID}"
+    + (f"&message_thread_id={TELEGRAM_TOPIC_ID}" if TELEGRAM_TOPIC_ID else "")
+    + "&text="
+)
 
 SWAGGER_SETTINGS = {
     'SECURITY_DEFINITIONS': {
