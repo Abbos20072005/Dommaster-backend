@@ -1,33 +1,29 @@
-from django.urls import re_path
-from drf_yasg import openapi
-from drf_yasg.views import get_schema_view
-from rest_framework import permissions
+from django.urls import path, include
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
+import config.schema_extensions  # noqa: F401  registers auth schemes
 
-schema_view = get_schema_view(
-    openapi.Info(
-        title="Dommaster APIv1",
-        default_version="v1",
-        description="API for project Dommaster",
-        terms_of_service="",
-        contact=openapi.Contact(email="hikmatullaevabbos24@gmail.com"),
-        license=openapi.License(name="BSD License"),
-    ),
-    public=True,
-    permission_classes=[permissions.AllowAny],
-)
+
+def docs_urls(prefix, name, patterns, custom_settings=None):
+    """OpenAPI schema + swagger ui + redoc for one set of `patterns`, under `prefix`."""
+    return [
+        path(f"{prefix}schema/", SpectacularAPIView.as_view(patterns=patterns, custom_settings=custom_settings),
+             name=name),
+        path(f"{prefix}swagger/", SpectacularSwaggerView.as_view(url_name=name), name=f"{name}-swagger-ui"),
+        path(f"{prefix}redoc/", SpectacularRedocView.as_view(url_name=name), name=f"{name}-redoc"),
+    ]
+
 
 urlpatterns = [
-    re_path(
-        r"^swagger(?P<format>\.json|\.yaml)$",
-        schema_view.without_ui(cache_timeout=0),
-        name="schema-json",
+    # admin docs not under `admin/` — django admin's catch-all would swallow it
+    *docs_urls(
+        "api/v1/admin/", "admin-schema",
+        [path("api/v1/admin/", include("config.urls.dashboard"))],
+        {
+            "TITLE": "Dommaster Admin APIv1",
+            "DESCRIPTION": "Dashboard API. Auth: Bearer token from /api/v1/admin/auth/login/",
+            # tag operations by the first segment after this prefix (auth, products, ...)
+            "SCHEMA_PATH_PREFIX": "/api/v1/admin/",
+        },
     ),
-    re_path(
-        r"^swagger/$",
-        schema_view.with_ui("swagger", cache_timeout=0),
-        name="schema-swagger-ui",
-    ),
-    re_path(
-        r"^redoc/$", schema_view.with_ui("redoc", cache_timeout=0), name="schema-redoc"
-    )
+    *docs_urls("", "schema", [path("", include("config.urls.client"))]),
 ]

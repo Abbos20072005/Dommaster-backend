@@ -1,7 +1,6 @@
 from rest_framework.generics import GenericAPIView, RetrieveAPIView
 from rest_framework.response import Response
-from authorization.custom_jwt import AdminJwtAuthentication
-from authorization.permissions import IsAdmin
+from utils.admin_views import AdminViewMixin
 from .serializers import AdminLoginSerializer, AdminTokenRefreshSerializer, AdminSerializer
 
 
@@ -27,9 +26,7 @@ class AdminTokenRefreshAPIView(AdminTokenAPIView):
     serializer_class = AdminTokenRefreshSerializer
 
 
-class AdminMeAPIView(RetrieveAPIView):
-    authentication_classes = [AdminJwtAuthentication]
-    permission_classes = [IsAdmin]
+class AdminMeAPIView(AdminViewMixin, RetrieveAPIView):
     serializer_class = AdminSerializer
 
     def get_object(self):

@@ -5,7 +5,7 @@ import time
 
 from django.conf import settings
 from django.db import transaction
-from drf_yasg.utils import swagger_auto_schema
+from drf_spectacular.utils import extend_schema, OpenApiResponse
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
@@ -54,7 +54,7 @@ from exceptions.error_messages import ErrorCodes
 class PreparePaymentView(APIView):
     SECRET_KEY = settings.CLICK_SECRET_KEY
 
-    @swagger_auto_schema(auto_schema=None)
+    @extend_schema(exclude=True)
     def post(self, request, *args, **kwargs):
         data = request.data or ''
         logged("PreparePaymentView: received data -> {}".format(data or ''), "info")
@@ -100,7 +100,7 @@ class PreparePaymentView(APIView):
 class CompletePaymentView(APIView):
     SECRET_KEY = settings.CLICK_SECRET_KEY
 
-    @swagger_auto_schema(auto_schema=None)
+    @extend_schema(exclude=True)
     def post(self, request, *args, **kwargs):
         data = request.data or ''
         logged("CompletePaymentView: received data -> {}".format(data), "info")
@@ -148,7 +148,7 @@ class MerchantAPIView(APIView):
     permission_classes = ()
     authentication_classes = ()
 
-    @swagger_auto_schema(auto_schema=None)
+    @extend_schema(exclude=True)
     def post(self, request, *args, **kwargs):
         password = request.META.get('HTTP_AUTHORIZATION')
         if self.authorize(password):
@@ -255,7 +255,7 @@ class MerchantAPIView(APIView):
 
 # class UzumBankPaymentView(ViewSet):
 #
-#     @swagger_auto_schema(auto_schema=None)
+#     @extend_schema(exclude=True)
 #     def transaction_check(self, request):
 #         check_request(request)
 #         account = request.data.get('params', {}).get('account')
@@ -269,7 +269,7 @@ class MerchantAPIView(APIView):
 #             trans_time=int(time.time() * 1000)
 #         )
 #
-#     @swagger_auto_schema(auto_schema=None)
+#     @extend_schema(exclude=True)
 #     def transaction_create(self, request):
 #         check_request(request)
 #         account = request.data.get('params', {}).get('account')
@@ -298,7 +298,7 @@ class MerchantAPIView(APIView):
 #             order_id=validated['params']['account']
 #         )
 #
-#     @swagger_auto_schema(auto_schema=None)
+#     @extend_schema(exclude=True)
 #     def transaction_confirm(self, request):
 #         check_request(request)
 #
@@ -351,7 +351,7 @@ class MerchantAPIView(APIView):
 #
 #         return Response(data=response_data)
 #
-#     @swagger_auto_schema(auto_schema=None)
+#     @extend_schema(exclude=True)
 #     def transaction_reverse(self, request):
 #         check_request(request)
 #
@@ -389,7 +389,7 @@ class MerchantAPIView(APIView):
 #
 #         return Response(data=response_data)
 #
-#     @swagger_auto_schema(auto_schema=None)
+#     @extend_schema(exclude=True)
 #     def transaction_status(self, request):
 #         check_request(request)
 #         serializer = UzumConFirmSerializer(data=request.data)
@@ -626,14 +626,15 @@ class UzumBankStatusView(BaseUzumBankView):
     
 class AtmosCardBindCheckoutView(APIView):
     permission_classes = [IsAuthenticated]
-    @swagger_auto_schema(
-        operation_summary="Atmos Checkout Card Bind Init",
-        operation_description=(
+    @extend_schema(
+        summary="Atmos Checkout Card Bind Init",
+        description=(
             "Generates an Atmos hosted checkout URL for card binding. "
             "Open the returned url in WebView. After the user binds the card via OTP, "
             "Atmos sends card_id to your callback URL."
         ),
-        responses={200: "Checkout URL generated", 400: "Bad Request"},
+        request=None,
+        responses={200: OpenApiResponse(description="Checkout URL generated"), 400: OpenApiResponse(description="Bad Request")},
         tags=["Atmos"],
     )
     def post(self, request):
@@ -669,12 +670,13 @@ class AtmosCardBindCallbackView(APIView):
     authentication_classes = []
     permission_classes = []
 
-    @swagger_auto_schema(
-        operation_summary="Atmos Checkout Card Bind Callback",
-        operation_description=(
+    @extend_schema(
+        summary="Atmos Checkout Card Bind Callback",
+        description=(
             
         ),
-        responses={200: "Checkout URL generated", 400: "Bad Request"},
+        request=None,
+        responses={200: OpenApiResponse(description="Checkout URL generated"), 400: OpenApiResponse(description="Bad Request")},
         tags=["Atmos"],
     )
     def post(self, request):
@@ -727,10 +729,10 @@ class AtmosCardBindCallbackView(APIView):
 
 class AtmosCardDetailView(APIView):
     permission_classes = [IsAuthenticated]
-    @swagger_auto_schema(
-        operation_summary="Atmos Get Card Details",
-        operation_description="Returns details of a previously bound card by card_id.",
-        responses={200: "Card details returned", 400: "Bad Request", 404: "Not Found"},
+    @extend_schema(
+        summary="Atmos Get Card Details",
+        description="Returns details of a previously bound card by card_id.",
+        responses={200: OpenApiResponse(description="Card details returned"), 400: OpenApiResponse(description="Bad Request"), 404: OpenApiResponse(description="Not Found")},
         tags=["Atmos"],
     )
     def get(self, request, card_id):
@@ -771,11 +773,11 @@ class AtmosCardDetailView(APIView):
 
 class AtmosCreateHoldView(APIView):
     permission_classes = [IsAuthenticated]
-    @swagger_auto_schema(
-        operation_summary="Atmos Create Hold",
-        operation_description="Atmos Create Hold API endpoint. Client clicks Pay — freeze funds on card.",
-        request_body=CreateHoldSerializer(),
-        responses={200:"Created", 400:"Bad Request"},
+    @extend_schema(
+        summary="Atmos Create Hold",
+        description="Atmos Create Hold API endpoint. Client clicks Pay — freeze funds on card.",
+        request=CreateHoldSerializer(),
+        responses={200:OpenApiResponse(description="Created"), 400:OpenApiResponse(description="Bad Request")},
         tags=["Atmos"]
     )
     def post(self, request):
@@ -856,11 +858,11 @@ class AtmosCreateHoldView(APIView):
 
 class AtmosChargeHoldView(APIView):
     permission_classes = [IsAuthenticated]
-    @swagger_auto_schema(
-        operation_summary="Atmos Charge Hold",
-        operation_description="Atmos Charge Hold API endpoint",
-        request_body=ChargeHoldSerializer(),
-        responses={200:"Charge", 400:"Bad Request"},
+    @extend_schema(
+        summary="Atmos Charge Hold",
+        description="Atmos Charge Hold API endpoint",
+        request=ChargeHoldSerializer(),
+        responses={200:OpenApiResponse(description="Charge"), 400:OpenApiResponse(description="Bad Request")},
         tags=["Atmos"]
     )
     def post(self, request):
@@ -939,11 +941,11 @@ class AtmosChargeHoldView(APIView):
 
 class AtmosCancelHoldView(APIView):
     permission_classes = [IsAuthenticated]
-    @swagger_auto_schema(
-        operation_summary="Atmos Cancel Hold",
-        operation_description="Atmos Cancel Hold API endpoint",
-        request_body=CancelHoldSerializer(),
-        responses={200:"Cancel", 400:"Bad Request"},
+    @extend_schema(
+        summary="Atmos Cancel Hold",
+        description="Atmos Cancel Hold API endpoint",
+        request=CancelHoldSerializer(),
+        responses={200:OpenApiResponse(description="Cancel"), 400:OpenApiResponse(description="Bad Request")},
         tags=["Atmos"]
     )
     def post(self, request):
@@ -985,9 +987,9 @@ class AtmosCancelHoldView(APIView):
 
 class CustomerCardViewSet(ViewSet):
     permission_classes = [IsAuthenticated]
-    @swagger_auto_schema(
-        operation_summary="Get customer cards list",
-        operation_description="Get customer cards list",
+    @extend_schema(
+        summary="Get customer cards list",
+        description="Get customer cards list",
         responses={200: CustomerCardSerializer(many=True)},
         tags=["CustomerCard"],
     )
@@ -996,9 +998,9 @@ class CustomerCardViewSet(ViewSet):
         serializer = CustomerCardSerializer(cards, many=True, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
-    @swagger_auto_schema(
-        operation_summary="Get customer card detail",
-        operation_description="Get customer card detail",
+    @extend_schema(
+        summary="Get customer card detail",
+        description="Get customer card detail",
         responses={200: CustomerCardSerializer()},
         tags=["CustomerCard"],
     )
@@ -1010,10 +1012,10 @@ class CustomerCardViewSet(ViewSet):
         serializer = CustomerCardSerializer(card, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
-    @swagger_auto_schema(
-        operation_summary="Update customer card",
-        operation_description="Update customer card",
-        request_body=CustomerCardUpdateSerializer(),
+    @extend_schema(
+        summary="Update customer card",
+        description="Update customer card",
+        request=CustomerCardUpdateSerializer(),
         responses={202: CustomerCardUpdateSerializer()},
         tags=["CustomerCard"],
     )
@@ -1036,10 +1038,10 @@ class CustomerCardViewSet(ViewSet):
 
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_202_ACCEPTED)
 
-    @swagger_auto_schema(
-        operation_summary="Delete customer card",
-        operation_description="Delete customer card",
-        responses={204: "Customer card successfully deleted"},
+    @extend_schema(
+        summary="Delete customer card",
+        description="Delete customer card",
+        responses={204: OpenApiResponse(description="Customer card successfully deleted")},
         tags=["CustomerCard"],
     )
     def card_delete(self, request, pk):

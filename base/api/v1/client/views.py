@@ -2,7 +2,7 @@ from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
 from rest_framework import status
 import logging
-from drf_yasg.utils import swagger_auto_schema
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from service.api.v1.client.serializers import PaginationSerializer
@@ -17,7 +17,7 @@ from .serializers import BannerSerializer, MessageSerializer, MessageCreateSeria
 from base.models import Banner, Chat, AboutUs, Messages, Promocodes, News, Articles, Reviews, Video, DeleteButton, \
     BaseInformation, MarketBranch
 from service.models import Cart
-from drf_yasg import openapi
+from drf_spectacular.types import OpenApiTypes
 from datetime import date
 import secrets
 from django.core.cache import cache
@@ -26,9 +26,9 @@ logger = logging.getLogger(__name__)
 
 
 class VideoViewSet(ViewSet):
-    @swagger_auto_schema(
-        operation_summary="Video list",
-        operation_description="Video list",
+    @extend_schema(
+        summary="Video list",
+        description="Video list",
         responses={200: VideoSerializer(many=True)},
         tags=["Video"]
     )
@@ -37,9 +37,9 @@ class VideoViewSet(ViewSet):
         serializer = VideoSerializer(video, many=True, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
-    @swagger_auto_schema(
-        operation_summary="Video detail",
-        operation_description="Video detail",
+    @extend_schema(
+        summary="Video detail",
+        description="Video detail",
         responses={200: VideoSerializer()},
         tags=["Video"]
     )
@@ -53,14 +53,14 @@ class VideoViewSet(ViewSet):
 
 
 class ReviewsViewSet(ViewSet):
-    @swagger_auto_schema(
-        operation_summary="Reviews list",
-        operation_description="Reviews list",
-        manual_parameters=[
-            openapi.Parameter(
-                name='page', in_=openapi.IN_QUERY, description='Page', type=openapi.TYPE_INTEGER),
-            openapi.Parameter(
-                name='page_size', in_=openapi.IN_QUERY, description='Page size', type=openapi.TYPE_INTEGER),
+    @extend_schema(
+        summary="Reviews list",
+        description="Reviews list",
+        parameters=[
+            OpenApiParameter(
+                name='page', location=OpenApiParameter.QUERY, description='Page', type=OpenApiTypes.INT),
+            OpenApiParameter(
+                name='page_size', location=OpenApiParameter.QUERY, description='Page size', type=OpenApiTypes.INT),
         ],
         responses={200: ReviewsSerializer(many=True)},
         tags=["Reviews"]
@@ -77,9 +77,9 @@ class ReviewsViewSet(ViewSet):
                                             page_size=param_serializer.validated_data.get("page_size"),
                                             context={"request": request}), "ok": True}, status=status.HTTP_200_OK)
 
-    @swagger_auto_schema(
-        operation_summary="Reviews detail",
-        operation_description="Reviews detail",
+    @extend_schema(
+        summary="Reviews detail",
+        description="Reviews detail",
         responses={200: ReviewsDetailSerializer()},
         tags=["Reviews"]
     )
@@ -93,14 +93,14 @@ class ReviewsViewSet(ViewSet):
 
 
 class ArticlesViewSet(ViewSet):
-    @swagger_auto_schema(
-        operation_summary="Articles list",
-        operation_description="Articles list",
-        manual_parameters=[
-            openapi.Parameter(
-                name='page', in_=openapi.IN_QUERY, description='Page', type=openapi.TYPE_INTEGER),
-            openapi.Parameter(
-                name='page_size', in_=openapi.IN_QUERY, description='Page size', type=openapi.TYPE_INTEGER),
+    @extend_schema(
+        summary="Articles list",
+        description="Articles list",
+        parameters=[
+            OpenApiParameter(
+                name='page', location=OpenApiParameter.QUERY, description='Page', type=OpenApiTypes.INT),
+            OpenApiParameter(
+                name='page_size', location=OpenApiParameter.QUERY, description='Page size', type=OpenApiTypes.INT),
         ],
         responses={200: ArticlesSerializer(many=True)},
         tags=["Articles"]
@@ -117,9 +117,9 @@ class ArticlesViewSet(ViewSet):
                                              page_size=param_serializer.validated_data.get("page_size"),
                                              context={"request": request}), "ok": True}, status=status.HTTP_200_OK)
 
-    @swagger_auto_schema(
-        operation_summary="Articles detail",
-        operation_description="Articles detail",
+    @extend_schema(
+        summary="Articles detail",
+        description="Articles detail",
         responses={200: ArticlesDetailSerializer()},
         tags=["Articles"]
     )
@@ -133,14 +133,14 @@ class ArticlesViewSet(ViewSet):
 
 
 class NewsViewSet(ViewSet):
-    @swagger_auto_schema(
-        operation_summary="News list",
-        operation_description="News list",
-        manual_parameters=[
-            openapi.Parameter(
-                name='page', in_=openapi.IN_QUERY, description='Page', type=openapi.TYPE_INTEGER),
-            openapi.Parameter(
-                name='page_size', in_=openapi.IN_QUERY, description='Page size', type=openapi.TYPE_INTEGER),
+    @extend_schema(
+        summary="News list",
+        description="News list",
+        parameters=[
+            OpenApiParameter(
+                name='page', location=OpenApiParameter.QUERY, description='Page', type=OpenApiTypes.INT),
+            OpenApiParameter(
+                name='page_size', location=OpenApiParameter.QUERY, description='Page size', type=OpenApiTypes.INT),
         ],
         responses={200: NewsSerializer(many=True)},
         tags=["News"]
@@ -157,9 +157,9 @@ class NewsViewSet(ViewSet):
                                          page_size=param_serializer.validated_data.get("page_size"),
                                          context={"request": request}), "ok": True}, status=status.HTTP_200_OK)
 
-    @swagger_auto_schema(
-        operation_summary="News detail",
-        operation_description="News detail",
+    @extend_schema(
+        summary="News detail",
+        description="News detail",
         responses={200: NewsDetailSerializer()},
         tags=["News"]
     )
@@ -173,9 +173,9 @@ class NewsViewSet(ViewSet):
 
 
 class PromocodeViewSet(ViewSet):
-    @swagger_auto_schema(
-        operation_summary="Promocodes list",
-        operation_description="Promocodes list",
+    @extend_schema(
+        summary="Promocodes list",
+        description="Promocodes list",
         responses={200: PromocodeSerializer(many=True)},
         tags=["Order"]
     )
@@ -184,11 +184,11 @@ class PromocodeViewSet(ViewSet):
         serializer = PromocodeSerializer(promocode, many=True, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
-    @swagger_auto_schema(
-        operation_summary="Promocode checker",
-        operation_description="Promocode checker",
-        request_body=PromocodeRequestSerializer(),
-        responses={},
+    @extend_schema(
+        summary="Promocode checker",
+        description="Promocode checker",
+        request=PromocodeRequestSerializer(),
+        responses={200: OpenApiResponse(description="Promocode info")},
         tags=["Order"]
     )
     def promocode_checker(self, request):
@@ -223,9 +223,9 @@ class PromocodeViewSet(ViewSet):
 
 
 class BannerViewSet(ViewSet):
-    @swagger_auto_schema(
-        operation_summary="Banner",
-        operation_description="Banner",
+    @extend_schema(
+        summary="Banner",
+        description="Banner",
         responses={200: BannerSerializer(many=True)},
         tags=["Base"]
     )
@@ -242,9 +242,9 @@ class BannerViewSet(ViewSet):
 
 
 class ChatViewSet(ViewSet):
-    @swagger_auto_schema(
-        operation_summary="Chat messages list",
-        operation_description="Chat messages list",
+    @extend_schema(
+        summary="Chat messages list",
+        description="Chat messages list",
         responses={200: MessageSerializer(many=True)},
         tags=["Chat"]
     )
@@ -284,10 +284,10 @@ class ChatViewSet(ViewSet):
         serializer = MessageSerializer(messages, many=True, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
-    @swagger_auto_schema(
-        operation_summary="Chat message create",
-        operation_description="Chat message create",
-        request_body=MessageCreateSerializer(),
+    @extend_schema(
+        summary="Chat message create",
+        description="Chat message create",
+        request=MessageCreateSerializer(),
         responses={201: MessageSerializer()},
         tags=["Chat"]
     )
@@ -327,9 +327,9 @@ class ChatViewSet(ViewSet):
 
 
 class AboutUsViewSet(ViewSet):
-    @swagger_auto_schema(
-        operation_summary="About Us",
-        operation_description="About Us",
+    @extend_schema(
+        summary="About Us",
+        description="About Us",
         responses={200: AboutUsSerializer()},
         tags=["Base"]
     )
@@ -339,9 +339,9 @@ class AboutUsViewSet(ViewSet):
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
     
 class DeleteButtonViewSet(ViewSet):
-    @swagger_auto_schema(
-        operation_summary="Delete Button",
-        operation_description="Delete Button",
+    @extend_schema(
+        summary="Delete Button",
+        description="Delete Button",
         responses={200: DeleteButtonSerializer()},
         tags=["Delete Button"]
     )
@@ -351,9 +351,9 @@ class DeleteButtonViewSet(ViewSet):
 
 
 class BaseInformationViewSet(ViewSet):
-    @swagger_auto_schema(
-        operation_summary="Base Information",
-        operation_description="Base Information",
+    @extend_schema(
+        summary="Base Information",
+        description="Base Information",
         responses={200: BaseInformationSerializer()},
         tags=["Base"]
     )
@@ -364,14 +364,14 @@ class BaseInformationViewSet(ViewSet):
 
 
 class BranchViewSet(ViewSet):
-    @swagger_auto_schema(
-        operation_summary="Market branches list",
-        operation_description="Market branches list",
-        manual_parameters=[
-            openapi.Parameter(
-                name='page', in_=openapi.IN_QUERY, description='Page', type=openapi.TYPE_INTEGER),
-            openapi.Parameter(
-                name='page_size', in_=openapi.IN_QUERY, description='Page size', type=openapi.TYPE_INTEGER),
+    @extend_schema(
+        summary="Market branches list",
+        description="Market branches list",
+        parameters=[
+            OpenApiParameter(
+                name='page', location=OpenApiParameter.QUERY, description='Page', type=OpenApiTypes.INT),
+            OpenApiParameter(
+                name='page_size', location=OpenApiParameter.QUERY, description='Page size', type=OpenApiTypes.INT),
         ],
         responses={200: MarketBranchSerializer(many=True)},
         tags=["Base"]
@@ -391,9 +391,9 @@ class BranchViewSet(ViewSet):
                                              page_size=param_serializer.validated_data.get("page_size"),
                                              context={"request": request}), "ok": True}, status=status.HTTP_200_OK)
 
-    @swagger_auto_schema(
-        operation_summary="Market branch detail",
-        operation_description="Market branch detail",
+    @extend_schema(
+        summary="Market branch detail",
+        description="Market branch detail",
         responses={200: MarketBranchSerializer()},
         tags=["Base"]
     )
