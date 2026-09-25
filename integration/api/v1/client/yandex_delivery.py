@@ -6,7 +6,7 @@ from math import asin, cos, radians, sin, sqrt
 
 import requests
 from dotenv import load_dotenv
-from drf_yasg.utils import swagger_auto_schema
+from drf_spectacular.utils import extend_schema
 from rest_framework import serializers
 from rest_framework import status
 from rest_framework.response import Response
@@ -16,7 +16,7 @@ from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from base.models import MarketBranch
 from service.models import Product
-from service.serializers import normalize_delivery_price
+from service.api.v1.client.serializers import normalize_delivery_price
 
 load_dotenv()
 
@@ -379,11 +379,11 @@ class YandexDeliveryService:
 
 
 class YandexDeliveryIntegrationViewSet(ViewSet):
-    @swagger_auto_schema(
-        operation_summary="Yandex Delivery check price",
-        operation_description="Предварительный расчёт стоимости доставки (check-price) для Узбекистана. "
+    @extend_schema(
+        summary="Yandex Delivery check price",
+        description="Предварительный расчёт стоимости доставки (check-price) для Узбекистана. "
         "Точка забора автоматически определяется как ближайший к клиенту филиал",
-        request_body=CheckPriceRequestSerializer(),
+        request=CheckPriceRequestSerializer(),
         responses={200: CheckPriceResponseSerializer()},
         tags=["Yandex Delivery"],
     )

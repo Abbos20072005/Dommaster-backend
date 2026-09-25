@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Banner, Chat, LoyaltyCard, AboutUs, Messages, Promocodes, News, Articles, Reviews, Video, DeleteButton, \
+from base.models import Banner, Chat, LoyaltyCard, AboutUs, Messages, Promocodes, News, Articles, Reviews, Video, DeleteButton, \
     BaseInformation, MarketBranch, BRANCH_TYPE_CHOICES
 from config import settings
 

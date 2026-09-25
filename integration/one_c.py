@@ -8,7 +8,7 @@ from django.utils.text import slugify
 from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
 from rest_framework import status
-from drf_yasg.utils import swagger_auto_schema
+from drf_spectacular.utils import extend_schema, OpenApiResponse
 from rest_framework import serializers
 from dotenv import load_dotenv
 
@@ -448,11 +448,11 @@ class OneCIntegrationViewSet(ViewSet):
             item.image.save(content_file.name, content_file, save=True)
         return item
 
-    @swagger_auto_schema(
-        operation_summary="1C Product create",
-        operation_description="Create product from 1C",
-        request_body=OneCProductInputSerializer(),
-        responses={201: "Product created"},
+    @extend_schema(
+        summary="1C Product create",
+        description="Create product from 1C",
+        request=OneCProductInputSerializer(),
+        responses={201: OpenApiResponse(description="Product created")},
         tags=["1C Integration"]
     )
     def product_create(self, request):
@@ -591,11 +591,11 @@ class OneCIntegrationViewSet(ViewSet):
             status=status.HTTP_200_OK if not created else status.HTTP_201_CREATED,
         )
 
-    @swagger_auto_schema(
-        operation_summary="1C Brand create",
-        operation_description="Create or update brand from 1C",
-        request_body=OneCBrandInputSerializer(),
-        responses={201: "Brand created"},
+    @extend_schema(
+        summary="1C Brand create",
+        description="Create or update brand from 1C",
+        request=OneCBrandInputSerializer(),
+        responses={201: OpenApiResponse(description="Brand created")},
         tags=["1C Integration"]
     )
     def brand_create(self, request):
@@ -651,11 +651,11 @@ class OneCIntegrationViewSet(ViewSet):
             status=status.HTTP_200_OK if not created else status.HTTP_201_CREATED,
         )
 
-    @swagger_auto_schema(
-        operation_summary="1C Category create",
-        operation_description="Create category from 1C",
-        request_body=OneCCategoryInputSerializer(),
-        responses={201: "Category created"},
+    @extend_schema(
+        summary="1C Category create",
+        description="Create category from 1C",
+        request=OneCCategoryInputSerializer(),
+        responses={201: OpenApiResponse(description="Category created")},
         tags=["1C Integration"]
     )
     def category_create(self, request):
@@ -712,11 +712,11 @@ class OneCIntegrationViewSet(ViewSet):
             status=status.HTTP_200_OK if not created else status.HTTP_201_CREATED,
         )
 
-    @swagger_auto_schema(
-        operation_summary="1C Sub-category create",
-        operation_description="Create sub-category from 1C",
-        request_body=OneCSubCategoryInputSerializer(),
-        responses={201: "Sub-category created"},
+    @extend_schema(
+        summary="1C Sub-category create",
+        description="Create sub-category from 1C",
+        request=OneCSubCategoryInputSerializer(),
+        responses={201: OpenApiResponse(description="Sub-category created")},
         tags=["1C Integration"]
     )
     def sub_category_create(self, request):
@@ -778,11 +778,11 @@ class OneCIntegrationViewSet(ViewSet):
             status=status.HTTP_200_OK if not created else status.HTTP_201_CREATED,
         )
 
-    @swagger_auto_schema(
-        operation_summary="1C Item-category create",
-        operation_description="Create item-category from 1C",
-        request_body=OneCItemCategoryInputSerializer(),
-        responses={201: "Item-category created"},
+    @extend_schema(
+        summary="1C Item-category create",
+        description="Create item-category from 1C",
+        request=OneCItemCategoryInputSerializer(),
+        responses={201: OpenApiResponse(description="Item-category created")},
         tags=["1C Integration"]
     )
     def item_category_create(self, request):
@@ -844,11 +844,11 @@ class OneCIntegrationViewSet(ViewSet):
             status=status.HTTP_200_OK if not created else status.HTTP_201_CREATED,
         )
 
-    @swagger_auto_schema(
-        operation_summary="1C Unit create",
-        operation_description="Create unit from 1C",
-        request_body=OneCUnitInputSerializer(),
-        responses={201: "Unit created"},
+    @extend_schema(
+        summary="1C Unit create",
+        description="Create unit from 1C",
+        request=OneCUnitInputSerializer(),
+        responses={201: OpenApiResponse(description="Unit created")},
         tags=["1C Integration"]
     )
     def unit_create(self, request):
@@ -898,13 +898,13 @@ class OneCIntegrationViewSet(ViewSet):
             status=status.HTTP_200_OK if not created else status.HTTP_201_CREATED,
         )
 
-    @swagger_auto_schema(
-        operation_summary="1C Price list create",
-        operation_description="Apply price list from 1C. Only product_code, product_price, discount_precent "
+    @extend_schema(
+        summary="1C Price list create",
+        description="Apply price list from 1C. Only product_code, product_price, discount_precent "
                               "and discount_price are used to update the product price and discount; "
                               "date and price list info are accepted but ignored.",
-        request_body=OneCPriceListInputSerializer(),
-        responses={200: "Prices updated"},
+        request=OneCPriceListInputSerializer(),
+        responses={200: OpenApiResponse(description="Prices updated")},
         tags=["1C Integration"]
     )
     def price_list_create(self, request):
@@ -977,12 +977,12 @@ class OneCIntegrationViewSet(ViewSet):
             status=status.HTTP_200_OK,
         )
 
-    @swagger_auto_schema(
-        operation_summary="1C Warehouse create",
-        operation_description="Create or update warehouse/branch from 1C. "
+    @extend_schema(
+        summary="1C Warehouse create",
+        description="Create or update warehouse/branch from 1C. "
                               "type: 0 - Showroom, 1 - Market, 2 - Warehouse",
-        request_body=OneCWarehouseInputSerializer(),
-        responses={201: "Warehouse created"},
+        request=OneCWarehouseInputSerializer(),
+        responses={201: OpenApiResponse(description="Warehouse created")},
         tags=["1C Integration"]
     )
     def warehouse_create(self, request):
@@ -1048,11 +1048,11 @@ class OneCIntegrationViewSet(ViewSet):
             status=status.HTTP_200_OK if not created else status.HTTP_201_CREATED,
         )
 
-    @swagger_auto_schema(
-        operation_summary="1C Product remaining create",
-        operation_description="Create or update product remainings for a warehouse from 1C",
-        request_body=OneCRemainingInputSerializer(),
-        responses={201: "Product remainings created"},
+    @extend_schema(
+        summary="1C Product remaining create",
+        description="Create or update product remainings for a warehouse from 1C",
+        request=OneCRemainingInputSerializer(),
+        responses={201: OpenApiResponse(description="Product remainings created")},
         tags=["1C Integration"]
     )
     def remaining_create(self, request):
@@ -1121,12 +1121,12 @@ class OneCIntegrationViewSet(ViewSet):
             status=status.HTTP_201_CREATED if any_created else status.HTTP_200_OK,
         )
 
-    @swagger_auto_schema(
-        operation_summary="1C Order status update",
-        operation_description="Update order status from 1C. "
+    @extend_schema(
+        summary="1C Order status update",
+        description="Update order status from 1C. "
                               "status: 'delivered' -> Completed (3)",
-        request_body=OneCOrderStatusInputSerializer(),
-        responses={200: "Order status updated"},
+        request=OneCOrderStatusInputSerializer(),
+        responses={200: OpenApiResponse(description="Order status updated")},
         tags=["1C Integration"]
     )
     def order_status_update(self, request, order_id):

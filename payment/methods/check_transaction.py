@@ -2,7 +2,7 @@ from payment.utils.logger import logged
 from payment.utils.get_params import get_params
 
 from payment.models import MerchatTransactionsModel
-from payment.serializers import MerchatTransactionsModelSerializer
+from payment.api.v1.client.serializers import MerchatTransactionsModelSerializer
 
 
 class CheckTransaction:

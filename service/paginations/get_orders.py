@@ -1,4 +1,4 @@
-from service.serializers import OrderSerializer
+from service.api.v1.client.serializers import OrderSerializer
 from django.core.paginator import Paginator
 
 def get_orders_paginator(context: dict, response_data ,page: int, page_size: int):

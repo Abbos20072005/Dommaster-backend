@@ -2,10 +2,10 @@ from django.conf import settings
 from rest_framework import serializers
 from rest_framework.response import Response
 
-from .models import MerchatTransactionsModel, AccountModel, UzumBankTransactionsModel, CustomerCard
-from .utils.exception_payme import IncorrectAmount, PerformTransactionDoesNotExist
-from .utils.exception_uzumbank import UzumBankAPIException, ErrorCode
-from .utils.logger import logged
+from payment.models import MerchatTransactionsModel, AccountModel, UzumBankTransactionsModel, CustomerCard
+from payment.utils.exception_payme import IncorrectAmount, PerformTransactionDoesNotExist
+from payment.utils.exception_uzumbank import UzumBankAPIException, ErrorCode
+from payment.utils.logger import logged
 from service.models import Order
 
 class CreateHoldSerializer(serializers.Serializer):

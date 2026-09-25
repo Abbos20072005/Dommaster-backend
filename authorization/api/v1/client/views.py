@@ -4,15 +4,15 @@ from django.db.models import Q
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from utils.send_notification import send_notification
-from .models import Customer, OTP, FcmToken, CustomerAddresses, PasswordResetToken
+from authorization.models import Customer, OTP, FcmToken, CustomerAddresses, PasswordResetToken
 from rest_framework.response import Response
 from rest_framework import status
-from drf_yasg.utils import swagger_auto_schema
+from drf_spectacular.utils import extend_schema, OpenApiResponse
 from datetime import datetime, timedelta
 from django.contrib.auth.hashers import check_password, make_password
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
-from .utils import otp_code_generator
+from authorization.utils import otp_code_generator
 from .serializers import CustomerSerializer, LoginSerializer, RegisterSerializer, OTPVerifySerializer, \
     OTPResendSerializer, ChangePasswordSerializer, ForgotPasswordSerializer, CustomerAddressesSerializer, \
     CustomerAddressesUpdateSerializer, CustomerAddressesCreateSerializer, ResetPasswordSerializer, FCMTokenSerializer, \
@@ -21,9 +21,9 @@ from .serializers import CustomerSerializer, LoginSerializer, RegisterSerializer
 from django.utils import timezone
 from integration.eskiz import EskizOTP
 from utils.send_notification import send_notification_to_customer
-from .services import create_otp, check_otp_limit
-from .telegram_services import request_telegram_otp, is_telegram_linked, unlink_telegram, handle_telegram_update
-from .models import TelegramLink
+from authorization.services import create_otp, check_otp_limit
+from authorization.telegram_services import request_telegram_otp, is_telegram_linked, unlink_telegram, handle_telegram_update
+from authorization.models import TelegramLink
 from django.conf import settings
 import logging
 
@@ -31,12 +31,12 @@ logger = logging.getLogger(__name__)
 
 
 class AuthViewSet(ViewSet):
-    @swagger_auto_schema(
-        operation_summary="Login / Register by phone",
-        operation_description="Phone number + role (optional, default user). Sends OTP; verify via otp/verify/ "
+    @extend_schema(
+        summary="Login / Register by phone",
+        description="Phone number + role (optional, default user). Sends OTP; verify via otp/verify/ "
                               "to get tokens. Role is applied only when a new customer is created.",
-        request_body=PhoneAuthSerializer(),
-        responses={200: "otp_key, is_new, telegram_linked"},
+        request=PhoneAuthSerializer(),
+        responses={200: OpenApiResponse(description="otp_key, is_new, telegram_linked")},
         tags=["Auth"]
     )
     def phone_auth(self, request):
@@ -62,10 +62,10 @@ class AuthViewSet(ViewSet):
                                           "telegram_linked": is_telegram_linked(phone)}, "ok": True},
                         status=status.HTTP_200_OK)
 
-    @swagger_auto_schema(
-        operation_summary="Account delete",
-        operation_description="Account delete",
-        responses={204: "Account successfully deleted"},
+    @extend_schema(
+        summary="Account delete",
+        description="Account delete",
+        responses={204: OpenApiResponse(description="Account successfully deleted")},
         tags=["Auth"]
     )
     def delete_account(self, request):
@@ -77,10 +77,10 @@ class AuthViewSet(ViewSet):
         return Response(data={"result": "Account successfully deleted", "ok": True},
                         status=status.HTTP_204_NO_CONTENT)
     
-    @swagger_auto_schema(
-        operation_summary="Customer login",
-        operation_description="Customer login",
-        request_body=LoginSerializer(),
+    @extend_schema(
+        summary="Customer login",
+        description="Customer login",
+        request=LoginSerializer(),
         responses={200: LoginSerializer()},
         tags=["Auth"]
     )
@@ -113,10 +113,10 @@ class AuthViewSet(ViewSet):
         return Response(data={'access_token': str(access_token), 'refresh_token': str(refresh), 'ok': True},
                         status=status.HTTP_200_OK)
 
-    @swagger_auto_schema(
-        operation_summary="Refresh token",
-        operation_description="Get new access and refresh tokens using refresh token",
-        request_body=TokenRefreshSerializer(),
+    @extend_schema(
+        summary="Refresh token",
+        description="Get new access and refresh tokens using refresh token",
+        request=TokenRefreshSerializer(),
         responses={200: TokenRefreshSerializer()},
         tags=["Auth"]
     )
@@ -143,10 +143,10 @@ class AuthViewSet(ViewSet):
         return Response(data={"access_token": str(new_access), "refresh_token": str(new_refresh), "ok": True},
                         status=status.HTTP_200_OK)
 
-    @swagger_auto_schema(
-        operation_summary="Customer Register",
-        operation_description="Customer Register",
-        request_body=RegisterSerializer(),
+    @extend_schema(
+        summary="Customer Register",
+        description="Customer Register",
+        request=RegisterSerializer(),
         responses={201: RegisterSerializer()},
         tags=["Auth"]
     )
@@ -204,9 +204,9 @@ class AuthViewSet(ViewSet):
         fcm_token.save()
         return Response(data={"result": {"otp_key": otp.otp_key}, 'ok': True}, status=status.HTTP_201_CREATED)
 
-    @swagger_auto_schema(
-        operation_summary="Auth me",
-        operation_description="Auth me",
+    @extend_schema(
+        summary="Auth me",
+        description="Auth me",
         responses={200: CustomerSerializer()},
         tags=["Auth"]
     )
@@ -218,10 +218,10 @@ class AuthViewSet(ViewSet):
         serializer = CustomerSerializer(customer, context={'request': request})
         return Response(data={'result': serializer.data, 'ok': True}, status=status.HTTP_200_OK)
 
-    @swagger_auto_schema(
-        operation_summary="Update user information",
-        operation_description="Update user information",
-        request_body=CustomerSerializer(),
+    @extend_schema(
+        summary="Update user information",
+        description="Update user information",
+        request=CustomerSerializer(),
         responses={202: CustomerSerializer()},
         tags=["Auth"]
     )
@@ -238,11 +238,11 @@ class AuthViewSet(ViewSet):
         serializer.save()
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_202_ACCEPTED)
 
-    @swagger_auto_schema(
-        operation_summary="Change password",
-        operation_description="Change password",
-        request_body=ChangePasswordSerializer(),
-        responses={202: "Password successfully changed"},
+    @extend_schema(
+        summary="Change password",
+        description="Change password",
+        request=ChangePasswordSerializer(),
+        responses={202: OpenApiResponse(description="Password successfully changed")},
         tags=["Auth"]
     )
     def change_password(self, request):
@@ -269,11 +269,11 @@ class AuthViewSet(ViewSet):
         customer.save(update_fields=["password"])
         return Response(data={"result": "Password successfully updated", "ok": True}, status=status.HTTP_202_ACCEPTED)
 
-    @swagger_auto_schema(
-        operation_summary="Forgot password",
-        operation_description="Forgot password",
-        request_body=ForgotPasswordSerializer(),
-        responses={200: "Message sent to {}"},
+    @extend_schema(
+        summary="Forgot password",
+        description="Forgot password",
+        request=ForgotPasswordSerializer(),
+        responses={200: OpenApiResponse(description="Message sent to {}")},
         tags=["Auth"]
 
     )
@@ -312,11 +312,11 @@ class AuthViewSet(ViewSet):
         return Response(data={"result": {"otp_key": otp.otp_key}, "ok": True},
                         status=status.HTTP_200_OK)
 
-    @swagger_auto_schema(
-        operation_summary="Verify reset otp",
-        operation_description="Verify reset otp",
-        request_body=OTPVerifySerializer(),
-        responses={200: "OTP successfully verified"},
+    @extend_schema(
+        summary="Verify reset otp",
+        description="Verify reset otp",
+        request=OTPVerifySerializer(),
+        responses={200: OpenApiResponse(description="OTP successfully verified")},
         tags=["Auth"]
     )
     def verify_reset_otp(self, request):
@@ -347,11 +347,11 @@ class AuthViewSet(ViewSet):
 
         return Response(data={"result": {"reset_token": reset_token}, "ok": True}, status=status.HTTP_200_OK)
 
-    @swagger_auto_schema(
-        operation_summary="",
-        operation_description="",
-        request_body=ResetPasswordSerializer(),
-        responses={200: "Password successfully changed"},
+    @extend_schema(
+        summary="",
+        description="",
+        request=ResetPasswordSerializer(),
+        responses={200: OpenApiResponse(description="Password successfully changed")},
         tags=["Auth"]
     )
     def reset_password(self, request):
@@ -383,9 +383,9 @@ class AuthViewSet(ViewSet):
 
         return Response(data={"result": "Password successfully changed", "ok": True}, status=status.HTTP_200_OK)
 
-    @swagger_auto_schema(
-        operation_summary="Get customer address",
-        operation_description="Get customer address",
+    @extend_schema(
+        summary="Get customer address",
+        description="Get customer address",
         responses={200: CustomerAddressesSerializer(many=True)},
         tags=["Auth"]
     )
@@ -394,10 +394,10 @@ class AuthViewSet(ViewSet):
         serializer = CustomerAddressesSerializer(addresses, many=True, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
-    @swagger_auto_schema(
-        operation_summary="Update customer address",
-        operation_description="Update customer address",
-        request_body=CustomerAddressesUpdateSerializer(),
+    @extend_schema(
+        summary="Update customer address",
+        description="Update customer address",
+        request=CustomerAddressesUpdateSerializer(),
         responses={202: CustomerAddressesUpdateSerializer()},
         tags=["Auth"]
     )
@@ -421,10 +421,10 @@ class AuthViewSet(ViewSet):
 
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_202_ACCEPTED)
 
-    @swagger_auto_schema(
-        operation_summary="Delete customer address",
-        operation_description="Delete customer address",
-        responses={204: "Customer address successfully deleted"},
+    @extend_schema(
+        summary="Delete customer address",
+        description="Delete customer address",
+        responses={204: OpenApiResponse(description="Customer address successfully deleted")},
         tags=["Auth"]
     )
     def delete_address(self, request, pk):
@@ -436,10 +436,10 @@ class AuthViewSet(ViewSet):
         return Response(data={"result": "Customer address successfully deleted", "ok": True},
                         status=status.HTTP_204_NO_CONTENT)
 
-    @swagger_auto_schema(
-        operation_summary="Create customer address",
-        operation_description="Create customer address",
-        request_body=CustomerAddressesCreateSerializer(),
+    @extend_schema(
+        summary="Create customer address",
+        description="Create customer address",
+        request=CustomerAddressesCreateSerializer(),
         responses={201: CustomerAddressesCreateSerializer()},
         tags=["Auth"]
     )
@@ -455,11 +455,11 @@ class AuthViewSet(ViewSet):
 
 
 class OTPViewSet(ViewSet):
-    @swagger_auto_schema(
-        operation_summary="OTP verification",
-        operation_description="OTP verification",
-        request_body=OTPVerifySerializer(),
-        responses={200: "User verified"},
+    @extend_schema(
+        summary="OTP verification",
+        description="OTP verification",
+        request=OTPVerifySerializer(),
+        responses={200: OpenApiResponse(description="User verified")},
         tags=["OTP"]
     )
     def otp_verify(self, request):
@@ -505,10 +505,10 @@ class OTPViewSet(ViewSet):
         return Response(data={"result": {"access_token": str(access_token), "refresh_token": str(refresh)}, "ok": True},
                         status=status.HTTP_200_OK)
 
-    @swagger_auto_schema(
-        operation_summary="OTP resend",
-        operation_description="OTP resend",
-        request_body=OTPResendSerializer(),
+    @extend_schema(
+        summary="OTP resend",
+        description="OTP resend",
+        request=OTPResendSerializer(),
         responses={200: OTPVerifySerializer()},
         tags=["OTP"]
     )
@@ -547,9 +547,9 @@ class OTPViewSet(ViewSet):
         return Response(data={"result": {"otp_key": otp.otp_key}, "ok": True}, status=status.HTTP_200_OK)
 
 
-    @swagger_auto_schema(
-        operation_summary="OTP via Telegram (\"kod kelmadi\")",
-        operation_description=(
+    @extend_schema(
+        summary="OTP via Telegram (\"kod kelmadi\")",
+        description=(
             "Fallback when SMS did not arrive. Pass the latest otp_key; a NEW otp_key is returned — verify with it "
             "via otp/verify/.\n\n"
             "- `linked=true`: code already sent to the linked Telegram chat.\n"
@@ -557,8 +557,8 @@ class OTPViewSet(ViewSet):
             "Start and shares their phone contact; then the code arrives in the bot.\n\n"
             "Telegram codes do not count toward the SMS limit (own limit: 1/min, 10 per 12h)."
         ),
-        request_body=TelegramOTPSerializer(),
-        responses={200: "otp_key, linked, deep_link, link_token, expires_in"},
+        request=TelegramOTPSerializer(),
+        responses={200: OpenApiResponse(description="otp_key, linked, deep_link, link_token, expires_in")},
         tags=["OTP"]
     )
     def otp_telegram(self, request):
@@ -580,10 +580,10 @@ class OTPViewSet(ViewSet):
 
 
 class TelegramViewSet(ViewSet):
-    @swagger_auto_schema(
-        operation_summary="Telegram link status",
-        operation_description="Whether the customer's phone is linked to a Telegram account (for OTP delivery)",
-        responses={200: "linked, username, first_name, linked_at"},
+    @extend_schema(
+        summary="Telegram link status",
+        description="Whether the customer's phone is linked to a Telegram account (for OTP delivery)",
+        responses={200: OpenApiResponse(description="linked, username, first_name, linked_at")},
         tags=["Telegram"]
     )
     def link_status(self, request):
@@ -596,10 +596,10 @@ class TelegramViewSet(ViewSet):
         }
         return Response(data={"result": result, "ok": True}, status=status.HTTP_200_OK)
 
-    @swagger_auto_schema(
-        operation_summary="Telegram unlink",
-        operation_description="Remove the Telegram binding of the customer's phone",
-        responses={200: "Unlinked"},
+    @extend_schema(
+        summary="Telegram unlink",
+        description="Remove the Telegram binding of the customer's phone",
+        responses={200: OpenApiResponse(description="Unlinked")},
         tags=["Telegram"]
     )
     def unlink(self, request):
@@ -607,7 +607,7 @@ class TelegramViewSet(ViewSet):
             raise CustomApiException(error_code=ErrorCodes.TELEGRAM_LINK_NOT_FOUND)
         return Response(data={"result": "Telegram unlinked", "ok": True}, status=status.HTTP_200_OK)
 
-    @swagger_auto_schema(auto_schema=None)
+    @extend_schema(exclude=True)
     def webhook(self, request):
         """Telegram Bot API webhook; authenticated by X-Telegram-Bot-Api-Secret-Token."""
         secret = settings.TELEGRAM_OTP_WEBHOOK_SECRET
@@ -622,10 +622,10 @@ class TelegramViewSet(ViewSet):
 
 
 class FCMTokenViewSet(ViewSet):
-    @swagger_auto_schema(
-        operation_summary="FCMToken",
-        operation_description="FCMToken",
-        request_body=FCMTokenRequestSerializer(),
+    @extend_schema(
+        summary="FCMToken",
+        description="FCMToken",
+        request=FCMTokenRequestSerializer(),
         responses={200: FCMTokenSerializer()},
         tags=["FcmToken"]
     )
@@ -651,11 +651,11 @@ class FCMTokenViewSet(ViewSet):
         update_serializer.save()
         return Response(data={"result": update_serializer.data, "ok": True}, status=status.HTTP_202_ACCEPTED)
     
-    @swagger_auto_schema(
-        operation_summary="FCMToken delete",
-        operation_description="FCMToken delete",
-        request_body=FCMTokenDeleteSerializer(),
-        responses={204: "FCMToken successfully deleted"},
+    @extend_schema(
+        summary="FCMToken delete",
+        description="FCMToken delete",
+        request=FCMTokenDeleteSerializer(),
+        responses={204: OpenApiResponse(description="FCMToken successfully deleted")},
         tags=["FcmToken"]
     )
     def fcmtoken_delete(self, request):

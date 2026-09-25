@@ -2,22 +2,22 @@ from utils.send_notification import send_notification_to_customer
 from service.utils import send_telegram_message
 from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
-from drf_yasg import openapi
-from drf_yasg.utils import swagger_auto_schema
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
 
 from authorization.models import CustomerAddresses
-from .paginations.get_comments_me import get_comments_me_paginator
-from .paginations.get_question_replies import get_question_replies_paginator
+from service.paginations.get_comments_me import get_comments_me_paginator
+from service.paginations.get_question_replies import get_question_replies_paginator
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
-from .paginations.get_orders import get_orders_paginator
+from service.paginations.get_orders import get_orders_paginator
 from rest_framework import status
 from django.db.models import Q, Sum, Exists, OuterRef, Value, BooleanField, Prefetch, IntegerField, Subquery, Min, Max, F
 from django.db.models.functions import Coalesce
-from .paginations.get_products_pagination import get_products_paginator
-from .paginations.get_comments import get_comments_paginator
-from .paginations.get_question import get_questions_paginator
-from .paginations.get_comment_replies import get_comment_replies_paginator
+from service.paginations.get_products_pagination import get_products_paginator
+from service.paginations.get_comments import get_comments_paginator
+from service.paginations.get_question import get_questions_paginator
+from service.paginations.get_comment_replies import get_comment_replies_paginator
 from django.db.models import Count
 from django.core.cache import cache
 from collections import OrderedDict
@@ -29,10 +29,10 @@ from django.db import transaction
 from base.models import Promocodes
 from datetime import date
 from base.models import Banner
-from base.serializers import BannerSerializer
+from base.api.v1.client.serializers import BannerSerializer
 from utils.pyment_link import generate_link
 from payment.services_pay.auth_services import AtmosAuthService, AtmosHoldService
-from .models import (
+from service.models import (
     ProductCategory,
     ProductSubCategory,
     ProductItemCategory,
@@ -181,10 +181,10 @@ def get_optimized_product_qs(base_qs, request):
 
 
 class MainPageViewSet(ViewSet):
-    @swagger_auto_schema(
-        operation_summary="Main page informations",
-        operation_description="Main page informations",
-        responses={200: "Result"},
+    @extend_schema(
+        summary="Main page informations",
+        description="Main page informations",
+        responses={200: OpenApiResponse(description="Result")},
         tags=["Main"],
     )
     def homepage_data(self, request):
@@ -231,10 +231,10 @@ class MainPageViewSet(ViewSet):
 
 
 class ProductViewSet(ViewSet):
-    @swagger_auto_schema(
-        operation_summary="Product update",
-        operation_description="Product update",
-        request_body=ProductUpdateSerializer(),
+    @extend_schema(
+        summary="Product update",
+        description="Product update",
+        request=ProductUpdateSerializer(),
         responses={200: ProductSerializer()},
         tags=["Product"],
     )
@@ -260,10 +260,10 @@ class ProductViewSet(ViewSet):
             status=status.HTTP_200_OK,
         )
     
-    @swagger_auto_schema(
-        operation_summary="Product create",
-        operation_description="Product create",
-        request_body=ProductCreateSerializer(),
+    @extend_schema(
+        summary="Product create",
+        description="Product create",
+        request=ProductCreateSerializer(),
         responses={200: ProductCreateSerializer()},
         tags=["Product"],
     )
@@ -281,10 +281,10 @@ class ProductViewSet(ViewSet):
             data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK
         )
 
-    @swagger_auto_schema(
-        operation_summary="Product sub categories create",
-        operation_description="Product sub categories create",
-        request_body=ProductSubCategoryCreateSerializer(),
+    @extend_schema(
+        summary="Product sub categories create",
+        description="Product sub categories create",
+        request=ProductSubCategoryCreateSerializer(),
         responses={200: ProductSubCategoryCreateSerializer()},
         tags=["Product"],
     )
@@ -302,10 +302,10 @@ class ProductViewSet(ViewSet):
             data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK
         )
 
-    @swagger_auto_schema(
-        operation_summary="Product categories create",
-        operation_description="Product categories create",
-        request_body=ProductItemCategoryCreateSerializer(),
+    @extend_schema(
+        summary="Product categories create",
+        description="Product categories create",
+        request=ProductItemCategoryCreateSerializer(),
         responses={200: ProductItemCategoryCreateSerializer()},
         tags=["Product"],
     )
@@ -323,10 +323,10 @@ class ProductViewSet(ViewSet):
             data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK
         )
 
-    @swagger_auto_schema(
-        operation_summary="Product characteristics",
-        operation_description="Product characteristics",
-        request_body=ProductCharacteristicsCreateSerializer(),
+    @extend_schema(
+        summary="Product characteristics",
+        description="Product characteristics",
+        request=ProductCharacteristicsCreateSerializer(),
         responses={200: ProductCharacteristicsCreateSerializer()},
         tags=["Product"],
     )
@@ -344,10 +344,10 @@ class ProductViewSet(ViewSet):
             data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK
         )
 
-    @swagger_auto_schema(
-        operation_summary="Most searched products",
-        operation_description="Most searched products",
-        responses={200: "Products name list"},
+    @extend_schema(
+        summary="Most searched products",
+        description="Most searched products",
+        responses={200: OpenApiResponse(description="Products name list")},
         tags=["Product"],
     )
     def most_search(self, request):
@@ -369,21 +369,21 @@ class ProductViewSet(ViewSet):
             data={"result": products, "ok": True}, status=status.HTTP_200_OK
         )
 
-    @swagger_auto_schema(
-        operation_summary="Recently viewed products",
-        operation_description="Recently viewed products",
-        manual_parameters=[
-            openapi.Parameter(
+    @extend_schema(
+        summary="Recently viewed products",
+        description="Recently viewed products",
+        parameters=[
+            OpenApiParameter(
                 name="page",
-                in_=openapi.IN_QUERY,
+                location=OpenApiParameter.QUERY,
                 description="Page",
-                type=openapi.TYPE_INTEGER,
+                type=OpenApiTypes.INT,
             ),
-            openapi.Parameter(
+            OpenApiParameter(
                 name="page_size",
-                in_=openapi.IN_QUERY,
+                location=OpenApiParameter.QUERY,
                 description="Page size",
-                type=openapi.TYPE_INTEGER,
+                type=OpenApiTypes.INT,
             ),
         ],
         responses={200: RecentlyViewedProductsSerializer(many=True)},
@@ -416,14 +416,14 @@ class ProductViewSet(ViewSet):
             status=status.HTTP_200_OK,
         )
 
-    @swagger_auto_schema(
-        operation_summary="Search products by name",
-        operation_description="Search products by name",
-        manual_parameters=[
-            openapi.Parameter(
+    @extend_schema(
+        summary="Search products by name",
+        description="Search products by name",
+        parameters=[
+            OpenApiParameter(
                 name="q",
-                in_=openapi.IN_QUERY,
-                type=openapi.TYPE_STRING,
+                location=OpenApiParameter.QUERY,
+                type=OpenApiTypes.STR,
                 description="Search param",
             )
         ],
@@ -503,9 +503,9 @@ class ProductViewSet(ViewSet):
             data={"result": cache.get(cache_key), "ok": True}, status=status.HTTP_200_OK
         )
 
-    @swagger_auto_schema(
-        operation_summary="Most sold products",
-        operation_description="Most sold products",
+    @extend_schema(
+        summary="Most sold products",
+        description="Most sold products",
         responses={200: ProductShortSerializer(many=True)},
         tags=["Product"],
     )
@@ -533,21 +533,21 @@ class ProductViewSet(ViewSet):
         )
 
     # TODO: need to check if brand id receive string is it working or not
-    @swagger_auto_schema(
-        operation_summary="Product categories list",
-        operation_description="Product categories list",
-        manual_parameters=[
-            openapi.Parameter(
+    @extend_schema(
+        summary="Product categories list",
+        description="Product categories list",
+        parameters=[
+            OpenApiParameter(
                 name="brand_id",
-                in_=openapi.IN_QUERY,
+                location=OpenApiParameter.QUERY,
                 description="Brand id",
-                type=openapi.TYPE_INTEGER,
+                type=OpenApiTypes.INT,
             ),
-            openapi.Parameter(
+            OpenApiParameter(
                 name="is_main",
-                in_=openapi.IN_QUERY,
+                location=OpenApiParameter.QUERY,
                 description="Is main category",
-                type=openapi.TYPE_BOOLEAN,
+                type=OpenApiTypes.BOOL,
             ),
         ],
         responses={200: ProductCategoryListSerializer(many=True)},
@@ -606,15 +606,15 @@ class ProductViewSet(ViewSet):
         cache.set(cache_key_main, data, timeout=1000)
         return Response(data={"result": data, "ok": True}, status=status.HTTP_200_OK)
 
-    @swagger_auto_schema(
-        operation_summary="Product category detail and sub categories list",
-        operation_description="Product category detail and sub categories list",
-        manual_parameters=[
-            openapi.Parameter(
+    @extend_schema(
+        summary="Product category detail and sub categories list",
+        description="Product category detail and sub categories list",
+        parameters=[
+            OpenApiParameter(
                 name="brand_id",
-                in_=openapi.IN_QUERY,
+                location=OpenApiParameter.QUERY,
                 description="Brand id",
-                type=openapi.TYPE_INTEGER,
+                type=OpenApiTypes.INT,
             )
         ],
         responses={200: ProductCategorySerializer()},
@@ -648,9 +648,9 @@ class ProductViewSet(ViewSet):
             data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK
         )
 
-    @swagger_auto_schema(
-        operation_summary="Product sub category detail and item category list",
-        operation_description="Product sub category detail and item category list",
+    @extend_schema(
+        summary="Product sub category detail and item category list",
+        description="Product sub category detail and item category list",
         responses={200: ProductSubCategorySerializer()},
         tags=["Product"],
     )
@@ -666,9 +666,9 @@ class ProductViewSet(ViewSet):
             data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK
         )
 
-    @swagger_auto_schema(
-        operation_summary="",
-        operation_description="",
+    @extend_schema(
+        summary="",
+        description="",
         responses={200: ProductItemCategorySerializer()},
         tags=["Product"],
     )
@@ -684,9 +684,9 @@ class ProductViewSet(ViewSet):
             data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK
         )
 
-    @swagger_auto_schema(
-        operation_summary="All item categories",
-        operation_description="All item categories",
+    @extend_schema(
+        summary="All item categories",
+        description="All item categories",
         responses={200: ProductItemCategorySerializer(many=True)},
         tags=["Product"],
     )
@@ -699,9 +699,9 @@ class ProductViewSet(ViewSet):
             data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK
         )
 
-    @swagger_auto_schema(
-        operation_summary="Product detail",
-        operation_description="Product detail",
+    @extend_schema(
+        summary="Product detail",
+        description="Product detail",
         responses={200: ProductSerializer()},
         tags=["Product"],
     )
@@ -722,10 +722,10 @@ class ProductViewSet(ViewSet):
             data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK
         )
 
-    @swagger_auto_schema(
-        operation_summary="Products filter",
-        operation_description="Products filter",
-        request_body=FilterSerializer(),
+    @extend_schema(
+        summary="Products filter",
+        description="Products filter",
+        request=FilterSerializer(),
         responses={200: FilterSerializer(many=True)},
         tags=["Product"],
     )
@@ -1026,9 +1026,9 @@ class ProductViewSet(ViewSet):
             status=status.HTTP_200_OK,
         )
 
-    @swagger_auto_schema(
-        operation_summary="Available filters",
-        operation_description="Get available filters and their values/counts for an item category",
+    @extend_schema(
+        summary="Available filters",
+        description="Get available filters and their values/counts for an item category",
         responses={200: AvailableFilterSerializer(many=True)},
         tags=["Product"],
     )
@@ -1124,10 +1124,10 @@ class ProductViewSet(ViewSet):
         )
 
 class CommentViewSet(ViewSet):
-    @swagger_auto_schema(
-        operation_summary="Comment reply delete",
-        operation_description="Comment reply delete",
-        responses={204: "Comment successfully deleted"},
+    @extend_schema(
+        summary="Comment reply delete",
+        description="Comment reply delete",
+        responses={204: OpenApiResponse(description="Comment successfully deleted")},
         tags=["Comment"],
     )
     def reply_delete(self, request, pk):
@@ -1143,10 +1143,10 @@ class CommentViewSet(ViewSet):
             status=status.HTTP_204_NO_CONTENT,
         )
 
-    @swagger_auto_schema(
-        operation_summary="Comment reply create",
-        operation_description="Comment reply create",
-        request_body=CommentReplyCreateSerializer(),
+    @extend_schema(
+        summary="Comment reply create",
+        description="Comment reply create",
+        request=CommentReplyCreateSerializer(),
         responses={200: CommentReplyCreateSerializer()},
         tags=["Comment"],
     )
@@ -1171,21 +1171,21 @@ class CommentViewSet(ViewSet):
             data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK
         )
 
-    @swagger_auto_schema(
-        operation_summary="Replies list",
-        operation_description="Replies list",
-        manual_parameters=[
-            openapi.Parameter(
+    @extend_schema(
+        summary="Replies list",
+        description="Replies list",
+        parameters=[
+            OpenApiParameter(
                 name="page",
-                in_=openapi.IN_QUERY,
+                location=OpenApiParameter.QUERY,
                 description="Page",
-                type=openapi.TYPE_INTEGER,
+                type=OpenApiTypes.INT,
             ),
-            openapi.Parameter(
+            OpenApiParameter(
                 name="page_size",
-                in_=openapi.IN_QUERY,
+                location=OpenApiParameter.QUERY,
                 description="Page size",
-                type=openapi.TYPE_INTEGER,
+                type=OpenApiTypes.INT,
             ),
         ],
         responses={200: CommentReplySerializer(many=True)},
@@ -1215,10 +1215,10 @@ class CommentViewSet(ViewSet):
             status=status.HTTP_200_OK,
         )
 
-    @swagger_auto_schema(
-        operation_summary="Comment reply update",
-        operation_description="Comment reply update",
-        request_body=CommentReplyUpdateSerializer(),
+    @extend_schema(
+        summary="Comment reply update",
+        description="Comment reply update",
+        request=CommentReplyUpdateSerializer(),
         responses={202: CommentReplyUpdateSerializer()},
         tags=["Comment"],
     )
@@ -1240,21 +1240,21 @@ class CommentViewSet(ViewSet):
             status=status.HTTP_202_ACCEPTED,
         )
 
-    @swagger_auto_schema(
-        operation_summary="My comments list",
-        operation_description="My comments list",
-        manual_parameters=[
-            openapi.Parameter(
+    @extend_schema(
+        summary="My comments list",
+        description="My comments list",
+        parameters=[
+            OpenApiParameter(
                 name="page",
-                in_=openapi.IN_QUERY,
+                location=OpenApiParameter.QUERY,
                 description="Page",
-                type=openapi.TYPE_INTEGER,
+                type=OpenApiTypes.INT,
             ),
-            openapi.Parameter(
+            OpenApiParameter(
                 name="page_size",
-                in_=openapi.IN_QUERY,
+                location=OpenApiParameter.QUERY,
                 description="Page size",
-                type=openapi.TYPE_INTEGER,
+                type=OpenApiTypes.INT,
             ),
         ],
         responses={200: CommentSerializer(many=True)},
@@ -1284,27 +1284,27 @@ class CommentViewSet(ViewSet):
             status=status.HTTP_200_OK,
         )
 
-    @swagger_auto_schema(
-        operation_summary="Get product comments",
-        operation_description="Get product comments",
-        manual_parameters=[
-            openapi.Parameter(
+    @extend_schema(
+        summary="Get product comments",
+        description="Get product comments",
+        parameters=[
+            OpenApiParameter(
                 name="page",
-                in_=openapi.IN_QUERY,
+                location=OpenApiParameter.QUERY,
                 description="Page",
-                type=openapi.TYPE_INTEGER,
+                type=OpenApiTypes.INT,
             ),
-            openapi.Parameter(
+            OpenApiParameter(
                 name="page_size",
-                in_=openapi.IN_QUERY,
+                location=OpenApiParameter.QUERY,
                 description="Page size",
-                type=openapi.TYPE_INTEGER,
+                type=OpenApiTypes.INT,
             ),
-            openapi.Parameter(
+            OpenApiParameter(
                 name="product_id",
-                in_=openapi.IN_QUERY,
+                location=OpenApiParameter.QUERY,
                 description="Product id",
-                type=openapi.TYPE_INTEGER,
+                type=OpenApiTypes.INT,
             ),
         ],
         responses={200: CommentSerializer(many=True)},
@@ -1341,18 +1341,18 @@ class CommentViewSet(ViewSet):
         )
 
     # TODO: need to optimize
-    @swagger_auto_schema(
-        operation_summary="Write comment to product",
-        operation_description="Write comment to product",
-        manual_parameters=[
-            openapi.Parameter(
+    @extend_schema(
+        summary="Write comment to product",
+        description="Write comment to product",
+        parameters=[
+            OpenApiParameter(
                 name="product_id",
-                in_=openapi.IN_QUERY,
-                type=openapi.TYPE_INTEGER,
+                location=OpenApiParameter.QUERY,
+                type=OpenApiTypes.INT,
                 description="Product id",
             )
         ],
-        request_body=CommentCreateSerializer(),
+        request=CommentCreateSerializer(),
         responses={201: CommentCreateSerializer()},
         tags=["Comment"],
     )
@@ -1398,10 +1398,10 @@ class CommentViewSet(ViewSet):
             data={"result": serializer.data, "ok": True}, status=status.HTTP_201_CREATED
         )
 
-    @swagger_auto_schema(
-        operation_summary="Comment update",
-        operation_description="Comment update",
-        request_body=CommentUpdateSerializer(),
+    @extend_schema(
+        summary="Comment update",
+        description="Comment update",
+        request=CommentUpdateSerializer(),
         responses={200: CommentSerializer()},
         tags=["Comment"],
     )
@@ -1429,10 +1429,10 @@ class CommentViewSet(ViewSet):
             data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK
         )
 
-    @swagger_auto_schema(
-        operation_summary="Comment delete",
-        operation_description="Comment delete",
-        responses={204: "Your comment successfully deleted"},
+    @extend_schema(
+        summary="Comment delete",
+        description="Comment delete",
+        responses={204: OpenApiResponse(description="Your comment successfully deleted")},
         tags=["Comment"],
     )
     def comment_delete(self, request, pk):
@@ -1455,14 +1455,14 @@ class CommentViewSet(ViewSet):
 
 class BrandViewSet(ViewSet):
     # TODO: need to check if category id receive string is it working or not
-    @swagger_auto_schema(
-        operation_summary="Brands list",
-        operation_description="Brands list",
-        manual_parameters=[
-            openapi.Parameter(
+    @extend_schema(
+        summary="Brands list",
+        description="Brands list",
+        parameters=[
+            OpenApiParameter(
                 name="item_category_id",
-                in_=openapi.IN_QUERY,
-                type=openapi.TYPE_INTEGER,
+                location=OpenApiParameter.QUERY,
+                type=OpenApiTypes.INT,
                 description="Item category id",
             ),
         ],
@@ -1495,9 +1495,9 @@ class BrandViewSet(ViewSet):
         cache.set(cache_key, data, timeout=1000)
         return Response(data={"result": data, "ok": True}, status=status.HTTP_200_OK)
 
-    @swagger_auto_schema(
-        operation_summary="Brand detail",
-        operation_description="Brand detail",
+    @extend_schema(
+        summary="Brand detail",
+        description="Brand detail",
         responses={200: BrandDetailSerializer()},
         tags=["Brand"],
     )
@@ -1517,9 +1517,9 @@ class BrandViewSet(ViewSet):
 
 
 class SaleViewSet(ViewSet):
-    @swagger_auto_schema(
-        operation_summary="Sale list",
-        operation_description="Sale list",
+    @extend_schema(
+        summary="Sale list",
+        description="Sale list",
         responses={200: SaleSerializer(many=True)},
         tags=["Sale"],
     )
@@ -1530,9 +1530,9 @@ class SaleViewSet(ViewSet):
             data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK
         )
 
-    @swagger_auto_schema(
-        operation_summary="Sale main",
-        operation_description="Sale main",
+    @extend_schema(
+        summary="Sale main",
+        description="Sale main",
         responses={200: SaleMainSerializer()},
         tags=["Sale"],
     )
@@ -1546,9 +1546,9 @@ class SaleViewSet(ViewSet):
             data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK
         )
 
-    @swagger_auto_schema(
-        operation_summary="Sale detail, pk receive sale id",
-        operation_description="Sale detail, pk receive sale id",
+    @extend_schema(
+        summary="Sale detail, pk receive sale id",
+        description="Sale detail, pk receive sale id",
         responses={200: SaleSerializer()},
         tags=["Sale"],
     )
@@ -1564,9 +1564,9 @@ class SaleViewSet(ViewSet):
 
 
 class AddsBrandsViewSet(ViewSet):
-    @swagger_auto_schema(
-        operation_summary="Adds brands list",
-        operation_description="Adds brands list",
+    @extend_schema(
+        summary="Adds brands list",
+        description="Adds brands list",
         responses={200: AddsBrandsSerializer(many=True)},
         tags=["AddsBrands"],
     )
@@ -1581,9 +1581,9 @@ class AddsBrandsViewSet(ViewSet):
             data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK
         )
 
-    @swagger_auto_schema(
-        operation_summary="Adds brands detail, pk receive adds brands id",
-        operation_description="Adds brands detail, pk receive adds brands id",
+    @extend_schema(
+        summary="Adds brands detail, pk receive adds brands id",
+        description="Adds brands detail, pk receive adds brands id",
         responses={200: AddsBrandsDetailSerializer()},
         tags=["AddsBrands"],
     )
@@ -1599,13 +1599,13 @@ class AddsBrandsViewSet(ViewSet):
 
 class FavouriteViewSet(ViewSet):
     # TODO: need to check if user delete account and send request with old token it's returning error
-    @swagger_auto_schema(
-        operation_summary="Create favourite product or delete it from favourite",
-        operation_description="Create favourite product or delete it from favourite",
-        request_body=FavouriteCreateSerializer(),
+    @extend_schema(
+        summary="Create favourite product or delete it from favourite",
+        description="Create favourite product or delete it from favourite",
+        request=FavouriteCreateSerializer(),
         responses={
             201: FavouriteSerializer(),
-            200: "Product successfully removed from favourite",
+            200: OpenApiResponse(description="Product successfully removed from favourite"),
         },
         tags=["Favourite"],
     )
@@ -1692,9 +1692,9 @@ class FavouriteViewSet(ViewSet):
             data={"result": serializer.data, "ok": True}, status=status.HTTP_201_CREATED
         )
 
-    @swagger_auto_schema(
-        operation_summary="Favourite products list",
-        operation_description="Favourite products list",
+    @extend_schema(
+        summary="Favourite products list",
+        description="Favourite products list",
         responses={200: FavouriteListSerializer(many=True)},
         tags=["Favourite"],
     )
@@ -1757,9 +1757,9 @@ class FavouriteViewSet(ViewSet):
 
 
 class CartViewSet(ViewSet):
-    @swagger_auto_schema(
-        operation_summary="Get cart",
-        operation_description="Get cart",
+    @extend_schema(
+        summary="Get cart",
+        description="Get cart",
         responses={200: CartSerializer(many=True)},
         tags=["Cart"],
     )
@@ -1845,10 +1845,10 @@ class CartViewSet(ViewSet):
         resp.delete_cookie("cart_token")
         return resp
 
-    @swagger_auto_schema(
-        operation_summary="Create cart item",
-        operation_description="Create cart item",
-        request_body=CartItemCreateSerializer(),
+    @extend_schema(
+        summary="Create cart item",
+        description="Create cart item",
+        request=CartItemCreateSerializer(),
         responses={200: CartSerializer()},
         tags=["Cart"],
     )
@@ -1896,13 +1896,13 @@ class CartViewSet(ViewSet):
             data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK
         )
 
-    @swagger_auto_schema(
-        operation_summary="Update cart item",
-        operation_description="Update cart item",
-        request_body=CartItemUpdateSerializer(),
+    @extend_schema(
+        summary="Update cart item",
+        description="Update cart item",
+        request=CartItemUpdateSerializer(),
         responses={
             202: CartItemSerializer(),
-            204: "Product successfully deleted from cart",
+            204: OpenApiResponse(description="Product successfully deleted from cart"),
         },
         tags=["Cart"],
     )
@@ -1975,10 +1975,10 @@ class CartViewSet(ViewSet):
             status=status.HTTP_202_ACCEPTED,
         )
 
-    @swagger_auto_schema(
-        operation_summary="Cart item bulk update",
-        operation_description="Cart item bulk update",
-        request_body=CartItemBulkUpdateSerializer(),
+    @extend_schema(
+        summary="Cart item bulk update",
+        description="Cart item bulk update",
+        request=CartItemBulkUpdateSerializer(),
         responses={200: CartItemSerializer()},
         tags=["Cart"],
     )
@@ -2013,9 +2013,9 @@ class CartViewSet(ViewSet):
 
 
 class ServiceViewSet(ViewSet):
-    @swagger_auto_schema(
-        operation_summary="Service list",
-        operation_description="Service list",
+    @extend_schema(
+        summary="Service list",
+        description="Service list",
         responses={200: ServiceSerializer(many=True)},
         tags=["Service"],
     )
@@ -2028,9 +2028,9 @@ class ServiceViewSet(ViewSet):
             data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK
         )
 
-    @swagger_auto_schema(
-        operation_summary="Service detail",
-        operation_description="Service detail",
+    @extend_schema(
+        summary="Service detail",
+        description="Service detail",
         responses={200: ServiceDetailSerializer()},
         tags=["Service"],
     )
@@ -2043,10 +2043,10 @@ class ServiceViewSet(ViewSet):
 
 
 class QuestionsViewSet(ViewSet):
-    @swagger_auto_schema(
-        operation_summary="Question reply delete",
-        operation_description="Question reply delete",
-        responses={204: "Question reply successfully deleted"},
+    @extend_schema(
+        summary="Question reply delete",
+        description="Question reply delete",
+        responses={204: OpenApiResponse(description="Question reply successfully deleted")},
         tags=["Question"],
     )
     def reply_delete(self, request, pk):
@@ -2062,10 +2062,10 @@ class QuestionsViewSet(ViewSet):
             status=status.HTTP_204_NO_CONTENT,
         )
 
-    @swagger_auto_schema(
-        operation_summary="Question reply update",
-        operation_description="Question reply update",
-        request_body=QuestionsReplyUpdateSerializer(),
+    @extend_schema(
+        summary="Question reply update",
+        description="Question reply update",
+        request=QuestionsReplyUpdateSerializer(),
         responses={202: QuestionsReplyUpdateSerializer()},
         tags=["Question"],
     )
@@ -2090,10 +2090,10 @@ class QuestionsViewSet(ViewSet):
             status=status.HTTP_202_ACCEPTED,
         )
 
-    @swagger_auto_schema(
-        operation_summary="Question reply create",
-        operation_description="Question reply create",
-        request_body=QuestionsReplyCreateSerializer(),
+    @extend_schema(
+        summary="Question reply create",
+        description="Question reply create",
+        request=QuestionsReplyCreateSerializer(),
         responses={200: QuestionsReplyCreateSerializer()},
         tags=["Question"],
     )
@@ -2118,21 +2118,21 @@ class QuestionsViewSet(ViewSet):
             data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK
         )
 
-    @swagger_auto_schema(
-        operation_summary="Questions replies list",
-        operation_description="Question replies list",
-        manual_parameters=[
-            openapi.Parameter(
+    @extend_schema(
+        summary="Questions replies list",
+        description="Question replies list",
+        parameters=[
+            OpenApiParameter(
                 name="page",
-                in_=openapi.IN_QUERY,
+                location=OpenApiParameter.QUERY,
                 description="Page",
-                type=openapi.TYPE_INTEGER,
+                type=OpenApiTypes.INT,
             ),
-            openapi.Parameter(
+            OpenApiParameter(
                 name="page_size",
-                in_=openapi.IN_QUERY,
+                location=OpenApiParameter.QUERY,
                 description="Page size",
-                type=openapi.TYPE_INTEGER,
+                type=OpenApiTypes.INT,
             ),
         ],
         responses={200: QuestionsSerializer(many=True)},
@@ -2162,21 +2162,21 @@ class QuestionsViewSet(ViewSet):
             status=status.HTTP_200_OK,
         )
 
-    @swagger_auto_schema(
-        operation_summary="My questions list",
-        operation_description="My questions list",
-        manual_parameters=[
-            openapi.Parameter(
+    @extend_schema(
+        summary="My questions list",
+        description="My questions list",
+        parameters=[
+            OpenApiParameter(
                 name="page",
-                in_=openapi.IN_QUERY,
+                location=OpenApiParameter.QUERY,
                 description="Page",
-                type=openapi.TYPE_INTEGER,
+                type=OpenApiTypes.INT,
             ),
-            openapi.Parameter(
+            OpenApiParameter(
                 name="page_size",
-                in_=openapi.IN_QUERY,
+                location=OpenApiParameter.QUERY,
                 description="Page size",
-                type=openapi.TYPE_INTEGER,
+                type=OpenApiTypes.INT,
             ),
         ],
         responses={200: QuestionsSerializer(many=True)},
@@ -2206,27 +2206,27 @@ class QuestionsViewSet(ViewSet):
             status=status.HTTP_200_OK,
         )
 
-    @swagger_auto_schema(
-        operation_summary="Product questions list",
-        operation_description="Product questions list",
-        manual_parameters=[
-            openapi.Parameter(
+    @extend_schema(
+        summary="Product questions list",
+        description="Product questions list",
+        parameters=[
+            OpenApiParameter(
                 name="page",
-                in_=openapi.IN_QUERY,
+                location=OpenApiParameter.QUERY,
                 description="Page",
-                type=openapi.TYPE_INTEGER,
+                type=OpenApiTypes.INT,
             ),
-            openapi.Parameter(
+            OpenApiParameter(
                 name="page_size",
-                in_=openapi.IN_QUERY,
+                location=OpenApiParameter.QUERY,
                 description="Page size",
-                type=openapi.TYPE_INTEGER,
+                type=OpenApiTypes.INT,
             ),
-            openapi.Parameter(
+            OpenApiParameter(
                 name="product_id",
-                in_=openapi.IN_QUERY,
+                location=OpenApiParameter.QUERY,
                 description="Product id",
-                type=openapi.TYPE_INTEGER,
+                type=OpenApiTypes.INT,
             ),
         ],
         responses={200: QuestionsSerializer(many=True)},
@@ -2256,18 +2256,18 @@ class QuestionsViewSet(ViewSet):
             status=status.HTTP_200_OK,
         )
 
-    @swagger_auto_schema(
-        operation_summary="Create product question",
-        operation_description="Create product question",
-        manual_parameters=[
-            openapi.Parameter(
+    @extend_schema(
+        summary="Create product question",
+        description="Create product question",
+        parameters=[
+            OpenApiParameter(
                 name="product_id",
-                in_=openapi.IN_QUERY,
-                type=openapi.TYPE_INTEGER,
+                location=OpenApiParameter.QUERY,
+                type=OpenApiTypes.INT,
                 description="Product id",
             )
         ],
-        request_body=QuestionsCreateSerializer(),
+        request=QuestionsCreateSerializer(),
         responses={201: QuestionsCreateSerializer()},
         tags=["Question"],
     )
@@ -2287,10 +2287,10 @@ class QuestionsViewSet(ViewSet):
             data={"result": serializer.data, "ok": True}, status=status.HTTP_201_CREATED
         )
 
-    @swagger_auto_schema(
-        operation_summary="Update product question",
-        operation_description="Update product question",
-        request_body=QuestionsUpdateSerializer(),
+    @extend_schema(
+        summary="Update product question",
+        description="Update product question",
+        request=QuestionsUpdateSerializer(),
         responses={204: QuestionsUpdateSerializer()},
         tags=["Question"],
     )
@@ -2314,10 +2314,10 @@ class QuestionsViewSet(ViewSet):
             status=status.HTTP_202_ACCEPTED,
         )
 
-    @swagger_auto_schema(
-        operation_summary="Delete product question",
-        operation_description="Delete product question",
-        responses={204: "Question successfully deleted"},
+    @extend_schema(
+        summary="Delete product question",
+        description="Delete product question",
+        responses={204: OpenApiResponse(description="Question successfully deleted")},
         tags=["Question"],
     )
     def delete_question(self, request, pk):
@@ -2334,10 +2334,10 @@ class QuestionsViewSet(ViewSet):
 
 class OrderViewSet(ViewSet):
     # TODO: need to implement payment with cash
-    @swagger_auto_schema(
-        operation_summary="Order pay",
-        operation_description="Order pay",
-        request_body=OrderPaySerializer(),
+    @extend_schema(
+        summary="Order pay",
+        description="Order pay",
+        request=OrderPaySerializer(),
         responses={200: OrderSerializer()},
         tags=["Order"],
     )
@@ -2376,9 +2376,10 @@ class OrderViewSet(ViewSet):
             data={"result": payment_link, "ok": True}, status=status.HTTP_200_OK
         )
 
-    @swagger_auto_schema(
-        operation_summary="Order cancel",
-        operation_description="Order cancel",
+    @extend_schema(
+        summary="Order cancel",
+        description="Order cancel",
+        request=None,
         responses={200: OrderSerializer()},
         tags=["Order"],
     )
@@ -2416,10 +2417,10 @@ class OrderViewSet(ViewSet):
             status=status.HTTP_200_OK,
         )
 
-    @swagger_auto_schema(
-        operation_summary="Create order",
-        operation_description="Create order",
-        request_body=OrderCreateSerializer(),
+    @extend_schema(
+        summary="Create order",
+        description="Create order",
+        request=OrderCreateSerializer(),
         responses={201: OrderSerializer()},
         tags=["Order"],
     )
@@ -2547,9 +2548,9 @@ class OrderViewSet(ViewSet):
             status=status.HTTP_201_CREATED,
         )
 
-    @swagger_auto_schema(
-        operation_summary="Order detail",
-        operation_description="Order detail",
+    @extend_schema(
+        summary="Order detail",
+        description="Order detail",
         responses={201: OrderDetailSerializer()},
         tags=["Order"],
     )
@@ -2563,21 +2564,21 @@ class OrderViewSet(ViewSet):
             data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK
         )
 
-    @swagger_auto_schema(
-        operation_summary="Orders history list",
-        operation_description="Orders history list",
-        manual_parameters=[
-            openapi.Parameter(
+    @extend_schema(
+        summary="Orders history list",
+        description="Orders history list",
+        parameters=[
+            OpenApiParameter(
                 name="page",
-                in_=openapi.IN_QUERY,
+                location=OpenApiParameter.QUERY,
                 description="Page",
-                type=openapi.TYPE_INTEGER,
+                type=OpenApiTypes.INT,
             ),
-            openapi.Parameter(
+            OpenApiParameter(
                 name="page_size",
-                in_=openapi.IN_QUERY,
+                location=OpenApiParameter.QUERY,
                 description="Page size",
-                type=openapi.TYPE_INTEGER,
+                type=OpenApiTypes.INT,
             ),
         ],
         responses={200: OrderSerializer(many=True)},
@@ -2613,21 +2614,21 @@ class OrderViewSet(ViewSet):
             status=status.HTTP_200_OK,
         )
 
-    @swagger_auto_schema(
-        operation_summary="Orders active list",
-        operation_description="Orders active list",
-        manual_parameters=[
-            openapi.Parameter(
+    @extend_schema(
+        summary="Orders active list",
+        description="Orders active list",
+        parameters=[
+            OpenApiParameter(
                 name="page",
-                in_=openapi.IN_QUERY,
+                location=OpenApiParameter.QUERY,
                 description="Page",
-                type=openapi.TYPE_INTEGER,
+                type=OpenApiTypes.INT,
             ),
-            openapi.Parameter(
+            OpenApiParameter(
                 name="page_size",
-                in_=openapi.IN_QUERY,
+                location=OpenApiParameter.QUERY,
                 description="Page size",
-                type=openapi.TYPE_INTEGER,
+                type=OpenApiTypes.INT,
             ),
         ],
         responses={200: OrderSerializer(many=True)},

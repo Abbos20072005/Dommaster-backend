@@ -44,7 +44,7 @@ INSTALLED_APPS = [
 
     # packages
     "rest_framework",
-    "drf_yasg",
+    "drf_spectacular",
     "corsheaders",
     "rest_framework_simplejwt",
     "modeltranslation",
@@ -127,6 +127,7 @@ REST_FRAMEWORK = {
         'authorization.custom_jwt.CustomJwtAuthentication',
     ),
     'EXCEPTION_HANDLER': 'exceptions.handler.custom_exception_handler',
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     # 'DEFAULT_THROTTLE_CLASSES': [
     #     'rest_framework.throttling.AnonRateThrottle',
     #     'rest_framework.throttling.UserRateThrottle',
@@ -340,23 +341,16 @@ TELEGRAM_OTP_BOT_USERNAME = os.getenv("TELEGRAM_OTP_BOT_USERNAME", "")
 TELEGRAM_OTP_WEBHOOK_SECRET = os.getenv("TELEGRAM_OTP_WEBHOOK_SECRET", "")
 TELEGRAM_LINK_TOKEN_TTL_MINUTES = int(os.getenv("TELEGRAM_LINK_TOKEN_TTL_MINUTES", "10"))
 
-SWAGGER_SETTINGS = {
-    'SECURITY_DEFINITIONS': {
-        'jwt': {
-            'type': 'apiKey',
-            'name': 'Authorization',
-            'in': 'header'
-        }
-    },
-    'SWAGGER_UI_REQUEST_HEADERS': [
-        {
-            'name': 'Authorization',
-            'description': 'JWT Token',
-            'value': 'Bearer <your_jwt_token_here>'
-        },
-    ],
-    'LOGIN_URL': 'api/v1/auth/login',
-    "DEFAULT_MODEL_RENDERING": "example"
+SPECTACULAR_SETTINGS = {
+    # client schema defaults; admin overrides TITLE/DESCRIPTION/SCHEMA_PATH_PREFIX in config/urls/swagger.py
+    "TITLE": "Dommaster APIv1",
+    "DESCRIPTION": "API for project Dommaster (mobile / web clients)",
+    "VERSION": "v1",
+    "CONTACT": {"email": "hikmatullaevabbos24@gmail.com"},
+    "LICENSE": {"name": "BSD License"},
+    "SERVE_INCLUDE_SCHEMA": False,
+    "COMPONENT_SPLIT_REQUEST": True,
+    "SWAGGER_UI_SETTINGS": {"persistAuthorization": True, "deepLinking": True},
 }
 
 CKEDITOR_CONFIGS = {
