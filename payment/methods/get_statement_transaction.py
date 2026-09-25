@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from payment.models import MerchatTransactionsModel
-from payment.serializers import PaymeTransactionSerializer
+from payment.api.v1.client.serializers import PaymeTransactionSerializer
 
 
 class GetStatement:

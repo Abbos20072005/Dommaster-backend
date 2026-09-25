@@ -1,4 +1,4 @@
-from service.serializers import CommentSerializer
+from service.api.v1.client.serializers import CommentSerializer
 from django.core.paginator import Paginator
 from service.models import Comment
 from django.db.models import Q, Count

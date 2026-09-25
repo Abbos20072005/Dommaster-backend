@@ -1,4 +1,4 @@
-from service.serializers import CommentReplySerializer
+from service.api.v1.client.serializers import CommentReplySerializer
 from django.core.paginator import Paginator
 
 def get_comment_replies_paginator(context: dict, response_data ,page: int, page_size: int):

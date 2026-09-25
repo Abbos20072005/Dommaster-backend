@@ -16,7 +16,7 @@ from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from base.models import MarketBranch
 from service.models import Product
-from service.serializers import normalize_delivery_price
+from service.api.v1.client.serializers import normalize_delivery_price
 
 load_dotenv()
 

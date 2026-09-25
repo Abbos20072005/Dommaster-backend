@@ -4,7 +4,7 @@ from django.db import transaction
 from payment.utils.get_params import get_params
 
 from payment.models import MerchatTransactionsModel, AccountModel
-from payment.serializers import MerchatTransactionsModelSerializer
+from payment.api.v1.client.serializers import MerchatTransactionsModelSerializer
 from payment.utils.exception_payme import PerformTransactionDoesNotExist
 
 

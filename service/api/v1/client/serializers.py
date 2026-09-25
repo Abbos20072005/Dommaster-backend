@@ -1,15 +1,15 @@
 from rest_framework import serializers
 from decimal import Decimal, InvalidOperation
 import re
-from authorization.serializers import CustomerSerializer, CustomerAddressesSerializer
-from .models import Product, ProductCategory, ProductItemCategory, ProductSubCategory, ProductImage, Comment, \
+from authorization.api.v1.client.serializers import CustomerSerializer, CustomerAddressesSerializer
+from service.models import Product, ProductCategory, ProductItemCategory, ProductSubCategory, ProductImage, Comment, \
     Order, OrderItem, Brand, Sale, AddsBrands, Favourites, Cart, CartItem, ProductCharacteristics, Questions, \
     RecentlyViewedProducts, Service, CommentReply, CommentImages, QuestionsReply, \
     ProductVariantGroup, ProductVariantItem, ProductItemCategoryFilterSchema
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from config import settings
-from base.serializers import PromocodeSerializer, MarketBranchSerializer
+from base.api.v1.client.serializers import PromocodeSerializer, MarketBranchSerializer
 from base.models import MarketBranch
 
 

@@ -1,4 +1,4 @@
-from service.serializers import QuestionsSerializer
+from service.api.v1.client.serializers import QuestionsSerializer
 from django.core.paginator import Paginator
 
 def get_questions_paginator(context: dict, response_data ,page: int, page_size: int):

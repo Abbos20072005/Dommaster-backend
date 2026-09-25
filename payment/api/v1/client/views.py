@@ -16,14 +16,14 @@ from rest_framework.viewsets import ViewSet
 logger = logging.getLogger(__name__)
 
 from service.models import Order
-from .authentication import UzumBankBasicAuthentication
-from .methods.cancel_transaction import CancelTransaction
-from .methods.check_perform_transaction import CheckPerformTransaction
-from .methods.check_transaction import CheckTransaction
-from .methods.create_transaction import CreateTransaction
-from .methods.get_statement_transaction import GetStatement
-from .methods.perform_transaction import PerformTransaction
-from .models import ClickTransaction, CustomerCard, AtmosTransaction
+from payment.authentication import UzumBankBasicAuthentication
+from payment.methods.cancel_transaction import CancelTransaction
+from payment.methods.check_perform_transaction import CheckPerformTransaction
+from payment.methods.check_transaction import CheckTransaction
+from payment.methods.create_transaction import CreateTransaction
+from payment.methods.get_statement_transaction import GetStatement
+from payment.methods.perform_transaction import PerformTransaction
+from payment.models import ClickTransaction, CustomerCard, AtmosTransaction
 from .serializers import (
     UzumBankCheckSerializer,
     UzumBankCreateSerializer,
@@ -36,14 +36,14 @@ from .serializers import (
     CustomerCardSerializer,
     CustomerCardUpdateSerializer
 )
-from .services import UzumBankService, UzumBankErrors
-from .utils.exception_click import ClickErrorCode, ClickError
-from .utils.exception_payme import MethodNotFound, PerformTransactionDoesNotExist, PermissionDenied
-from .utils.exception_uzumbank import UzumBankAPIException, ErrorCode
-from .utils.logger import logged
-from .utils.utils_click import _serialize_request, get_order, create_transaction, get_transaction
-from .utils.utils_uzum import check_request, raise_exception_if_invalid
-from .services_pay.auth_services import AtmosAuthService, AtmosHoldService, AtmosBindWithCheckoutService
+from payment.services import UzumBankService, UzumBankErrors
+from payment.utils.exception_click import ClickErrorCode, ClickError
+from payment.utils.exception_payme import MethodNotFound, PerformTransactionDoesNotExist, PermissionDenied
+from payment.utils.exception_uzumbank import UzumBankAPIException, ErrorCode
+from payment.utils.logger import logged
+from payment.utils.utils_click import _serialize_request, get_order, create_transaction, get_transaction
+from payment.utils.utils_uzum import check_request, raise_exception_if_invalid
+from payment.services_pay.auth_services import AtmosAuthService, AtmosHoldService, AtmosBindWithCheckoutService
 import os
 import uuid
 from authorization.models import Customer

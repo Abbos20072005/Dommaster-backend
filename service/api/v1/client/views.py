@@ -6,18 +6,18 @@ from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 
 from authorization.models import CustomerAddresses
-from .paginations.get_comments_me import get_comments_me_paginator
-from .paginations.get_question_replies import get_question_replies_paginator
+from service.paginations.get_comments_me import get_comments_me_paginator
+from service.paginations.get_question_replies import get_question_replies_paginator
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
-from .paginations.get_orders import get_orders_paginator
+from service.paginations.get_orders import get_orders_paginator
 from rest_framework import status
 from django.db.models import Q, Sum, Exists, OuterRef, Value, BooleanField, Prefetch, IntegerField, Subquery, Min, Max, F
 from django.db.models.functions import Coalesce
-from .paginations.get_products_pagination import get_products_paginator
-from .paginations.get_comments import get_comments_paginator
-from .paginations.get_question import get_questions_paginator
-from .paginations.get_comment_replies import get_comment_replies_paginator
+from service.paginations.get_products_pagination import get_products_paginator
+from service.paginations.get_comments import get_comments_paginator
+from service.paginations.get_question import get_questions_paginator
+from service.paginations.get_comment_replies import get_comment_replies_paginator
 from django.db.models import Count
 from django.core.cache import cache
 from collections import OrderedDict
@@ -29,10 +29,10 @@ from django.db import transaction
 from base.models import Promocodes
 from datetime import date
 from base.models import Banner
-from base.serializers import BannerSerializer
+from base.api.v1.client.serializers import BannerSerializer
 from utils.pyment_link import generate_link
 from payment.services_pay.auth_services import AtmosAuthService, AtmosHoldService
-from .models import (
+from service.models import (
     ProductCategory,
     ProductSubCategory,
     ProductItemCategory,

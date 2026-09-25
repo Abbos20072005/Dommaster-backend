@@ -1,7 +1,7 @@
-from .models import Customer, CustomerAddresses, FcmToken
+from authorization.models import Customer, CustomerAddresses, FcmToken
 from rest_framework import serializers
 from django.core.exceptions import ValidationError as DjangoValidationError
-from .utils import validate_number, normalize_uz_phone
+from authorization.utils import validate_number, normalize_uz_phone
 from django.contrib.auth.hashers import make_password
 
 class FCMTokenDeleteSerializer(serializers.Serializer):

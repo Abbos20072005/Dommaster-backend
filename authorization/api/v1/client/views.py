@@ -4,7 +4,7 @@ from django.db.models import Q
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from utils.send_notification import send_notification
-from .models import Customer, OTP, FcmToken, CustomerAddresses, PasswordResetToken
+from authorization.models import Customer, OTP, FcmToken, CustomerAddresses, PasswordResetToken
 from rest_framework.response import Response
 from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 from django.contrib.auth.hashers import check_password, make_password
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
-from .utils import otp_code_generator
+from authorization.utils import otp_code_generator
 from .serializers import CustomerSerializer, LoginSerializer, RegisterSerializer, OTPVerifySerializer, \
     OTPResendSerializer, ChangePasswordSerializer, ForgotPasswordSerializer, CustomerAddressesSerializer, \
     CustomerAddressesUpdateSerializer, CustomerAddressesCreateSerializer, ResetPasswordSerializer, FCMTokenSerializer, \
@@ -21,9 +21,9 @@ from .serializers import CustomerSerializer, LoginSerializer, RegisterSerializer
 from django.utils import timezone
 from integration.eskiz import EskizOTP
 from utils.send_notification import send_notification_to_customer
-from .services import create_otp, check_otp_limit
-from .telegram_services import request_telegram_otp, is_telegram_linked, unlink_telegram, handle_telegram_update
-from .models import TelegramLink
+from authorization.services import create_otp, check_otp_limit
+from authorization.telegram_services import request_telegram_otp, is_telegram_linked, unlink_telegram, handle_telegram_update
+from authorization.models import TelegramLink
 from django.conf import settings
 import logging
 

@@ -2,7 +2,7 @@ import time
 import uuid
 
 from payment.models import MerchatTransactionsModel
-from payment.serializers import MerchatTransactionsModelSerializer
+from payment.api.v1.client.serializers import MerchatTransactionsModelSerializer
 from payment.utils.exception_payme import TooManyRequests
 from payment.utils.get_params import get_params
 

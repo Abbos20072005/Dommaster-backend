@@ -1,4 +1,4 @@
-from service.serializers import ProductSerializer
+from service.api.v1.client.serializers import ProductSerializer
 from django.core.paginator import Paginator
 
 def get_products_paginator(context: dict, response_data ,page: int, page_size: int):

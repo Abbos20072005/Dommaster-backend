@@ -5,16 +5,16 @@ import logging
 from drf_yasg.utils import swagger_auto_schema
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
-from service.serializers import PaginationSerializer
-from .paginations.get_news import get_news_paginator
-from .paginations.get_articles import get_articles_paginator
-from .paginations.get_reviews import get_reviews_paginator
-from .paginations.get_branches import get_branches_paginator
+from service.api.v1.client.serializers import PaginationSerializer
+from base.paginations.get_news import get_news_paginator
+from base.paginations.get_articles import get_articles_paginator
+from base.paginations.get_reviews import get_reviews_paginator
+from base.paginations.get_branches import get_branches_paginator
 from .serializers import BannerSerializer, MessageSerializer, MessageCreateSerializer, AboutUsSerializer, \
     ChatCreateSerializer, PromocodeRequestSerializer, NewsSerializer, NewsDetailSerializer, ArticlesSerializer, \
     ArticlesDetailSerializer, ReviewsSerializer, ReviewsDetailSerializer, VideoSerializer, PromocodeSerializer, \
     DeleteButtonSerializer, BaseInformationSerializer, MarketBranchSerializer
-from .models import Banner, Chat, AboutUs, Messages, Promocodes, News, Articles, Reviews, Video, DeleteButton, \
+from base.models import Banner, Chat, AboutUs, Messages, Promocodes, News, Articles, Reviews, Video, DeleteButton, \
     BaseInformation, MarketBranch
 from service.models import Cart
 from drf_yasg import openapi

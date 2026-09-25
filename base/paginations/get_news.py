@@ -1,4 +1,4 @@
-from base.serializers import NewsSerializer
+from base.api.v1.client.serializers import NewsSerializer
 from django.core.paginator import Paginator
 from django.db.models import Count
 
