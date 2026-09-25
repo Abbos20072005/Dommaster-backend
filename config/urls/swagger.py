@@ -3,20 +3,19 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, Sp
 import config.schema_extensions  # noqa: F401  registers auth schemes
 
 
-def docs_urls(prefix, name, patterns, custom_settings=None):
-    """OpenAPI schema + swagger ui + redoc for one set of `patterns`, under `prefix`."""
+def docs_urls(suffix, name, patterns, custom_settings=None):
+    """OpenAPI schema + swagger ui + redoc for one set of `patterns`: schema/<suffix>, swagger/<suffix>, redoc/<suffix>"""
     return [
-        path(f"{prefix}schema/", SpectacularAPIView.as_view(patterns=patterns, custom_settings=custom_settings),
+        path(f"schema/{suffix}", SpectacularAPIView.as_view(patterns=patterns, custom_settings=custom_settings),
              name=name),
-        path(f"{prefix}swagger/", SpectacularSwaggerView.as_view(url_name=name), name=f"{name}-swagger-ui"),
-        path(f"{prefix}redoc/", SpectacularRedocView.as_view(url_name=name), name=f"{name}-redoc"),
+        path(f"swagger/{suffix}", SpectacularSwaggerView.as_view(url_name=name), name=f"{name}-swagger-ui"),
+        path(f"redoc/{suffix}", SpectacularRedocView.as_view(url_name=name), name=f"{name}-redoc"),
     ]
 
 
 urlpatterns = [
-    # admin docs not under `admin/` — django admin's catch-all would swallow it
     *docs_urls(
-        "api/v1/admin/", "admin-schema",
+        "admin/", "admin-schema",
         [path("api/v1/admin/", include("config.urls.dashboard"))],
         {
             "TITLE": "Dommaster Admin APIv1",
