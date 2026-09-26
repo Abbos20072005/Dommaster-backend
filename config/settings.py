@@ -38,19 +38,20 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     # apps
-    "authorization",
-    "service",
-    "base",
+    "apps.authorization",
+    "apps.service",
+    "apps.base",
 
     # packages
     "rest_framework",
     "drf_spectacular",
+    "django_filters",
     "corsheaders",
     "rest_framework_simplejwt",
     "modeltranslation",
     'ckeditor',
     'ckeditor_uploader',  # For image/file upload suppert
-    'payment'
+    "apps.payment",
 
 ]
 
@@ -124,7 +125,7 @@ CONN_MAX_AGE = 60
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'authorization.custom_jwt.CustomJwtAuthentication',
+        'apps.authorization.custom_jwt.CustomJwtAuthentication',
     ),
     'EXCEPTION_HANDLER': 'exceptions.handler.custom_exception_handler',
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
