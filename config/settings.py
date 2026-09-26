@@ -335,6 +335,12 @@ TELEGRAM_API_URL = (
     + "&text="
 )
 
+# Support chat: customer messages go to the orders group (TELEGRAM_CHANNEL_ID), own topic
+try:
+    TELEGRAM_CHAT_TOPIC_ID = int(os.getenv("TELEGRAM_CHAT_TOPIC_ID") or 0) or None
+except (TypeError, ValueError):
+    TELEGRAM_CHAT_TOPIC_ID = None
+
 # Telegram bot for OTP fallback (SMS didn't arrive -> code via bot)
 # same bot as order notifications unless a separate one is configured
 TELEGRAM_OTP_BOT_TOKEN = os.getenv("TELEGRAM_OTP_BOT_TOKEN") or TELEGRAM_BOT_TOKEN

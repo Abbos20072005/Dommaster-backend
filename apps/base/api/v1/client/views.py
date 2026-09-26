@@ -17,6 +17,7 @@ from .serializers import BannerSerializer, MessageSerializer, MessageCreateSeria
 from apps.base.models import Banner, Chat, AboutUs, Messages, Promocodes, News, Articles, Reviews, Video, DeleteButton, \
     BaseInformation, MarketBranch
 from apps.service.models import Cart
+from apps.base.telegram import send_chat_message_to_telegram
 from drf_spectacular.types import OpenApiTypes
 from datetime import date
 import secrets
@@ -309,7 +310,7 @@ class ChatViewSet(ViewSet):
             if not serializer.is_valid():
                 raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
 
-            serializer.save()
+            send_chat_message_to_telegram(serializer.save())
             return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
         chat = Chat.objects.filter(customer_id=request.user.id).first()
@@ -322,7 +323,7 @@ class ChatViewSet(ViewSet):
         if not serializer.is_valid():
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
 
-        serializer.save()
+        send_chat_message_to_telegram(serializer.save())
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
 
