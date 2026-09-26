@@ -1,13 +1,15 @@
 from rest_framework import serializers
+from .serializers import OrderListSerializer
 
 WEEK, MONTH = "week", "month"
 PERIOD_DAYS = {WEEK: 7, MONTH: 30}
 
 
 class DashboardQuerySerializer(serializers.Serializer):
-    """Query params of the dashboard endpoints (each endpoint reads only its own)."""
-    days = serializers.IntegerField(required=False, min_value=1, max_value=365)
-    period = serializers.ChoiceField(choices=list(PERIOD_DAYS), default=WEEK)
+    """Query params of the dashboard endpoint."""
+    days = serializers.IntegerField(default=30, min_value=1, max_value=365, help_text="KPI cards window")
+    period = serializers.ChoiceField(choices=list(PERIOD_DAYS), default=WEEK,
+                                     help_text="Delivered orders / registrations charts: 7 or 30 days")
     months = serializers.IntegerField(default=6, min_value=1, max_value=24)
     low_stock = serializers.IntegerField(default=10, min_value=0)
 
@@ -99,3 +101,14 @@ class RevenueSerializer(serializers.Serializer):
     b2b = serializers.FloatField(help_text="Completed orders of prorab customers")
     individual = serializers.FloatField(help_text="All other completed orders")
     months = RevenueMonthSerializer(many=True)
+
+
+class DashboardSerializer(serializers.Serializer):
+    summary = DashboardSummarySerializer()
+    delivered_orders = DeliveredOrdersSerializer()
+    registrations = RegistrationsSerializer()
+    recent_orders = OrderListSerializer(many=True)
+    attention = AttentionSerializer()
+    customers = CustomersCompositionSerializer()
+    catalog = CatalogSerializer()
+    revenue = RevenueSerializer()
