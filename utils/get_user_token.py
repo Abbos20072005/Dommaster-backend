@@ -1,6 +1,6 @@
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.tokens import UntypedToken
-from authorization.models import Customer
+from apps.authorization.models import Customer
 
 
 def decode_jwt_token(token):

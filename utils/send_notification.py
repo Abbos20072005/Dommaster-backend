@@ -4,7 +4,7 @@ import logging
 import requests
 from django.conf import settings
 from pyfcm import FCMNotification
-from authorization.models import FcmToken
+from apps.authorization.models import FcmToken
 
 logger = logging.getLogger(__name__)
 

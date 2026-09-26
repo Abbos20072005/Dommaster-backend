@@ -4,7 +4,7 @@ from drf_spectacular.plumbing import build_bearer_security_scheme_object
 
 
 class CustomerJwtScheme(OpenApiAuthenticationExtension):
-    target_class = "authorization.custom_jwt.CustomJwtAuthentication"
+    target_class = "apps.authorization.custom_jwt.CustomJwtAuthentication"
     name = "customerJwt"
 
     def get_security_definition(self, auto_schema):
@@ -12,7 +12,7 @@ class CustomerJwtScheme(OpenApiAuthenticationExtension):
 
 
 class AdminJwtScheme(OpenApiAuthenticationExtension):
-    target_class = "authorization.custom_jwt.AdminJwtAuthentication"
+    target_class = "apps.authorization.custom_jwt.AdminJwtAuthentication"
     name = "adminJwt"
 
     def get_security_definition(self, auto_schema):
@@ -20,7 +20,7 @@ class AdminJwtScheme(OpenApiAuthenticationExtension):
 
 
 class UzumBankBasicScheme(OpenApiAuthenticationExtension):
-    target_class = "payment.authentication.UzumBankBasicAuthentication"
+    target_class = "apps.payment.authentication.UzumBankBasicAuthentication"
     name = "uzumBasic"
 
     def get_security_definition(self, auto_schema):

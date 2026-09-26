@@ -1,7 +1,7 @@
 import base64
 
 from django.conf import settings
-from service.models import Order
+from apps.service.models import Order
 
 
 def generate_link(order_id: int, total_price: int, type_pyment: int, is_web: bool = False, payment_method: str = None):
