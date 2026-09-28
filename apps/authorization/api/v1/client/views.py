@@ -68,7 +68,7 @@ class AuthViewSet(ViewSet):
             customer = Customer.objects.create(phone_number=phone, role=serializer.validated_data["role"])
 
         otp = create_otp(customer)
-        EskizOTP.send_otp_service(phone, f"Код подтверждения для входа в приложение Buildex Go: {otp.otp_code}")
+        EskizOTP.send_otp_service(phone, f"Код подтверждения для регистрации в приложение Buildex Go: {otp.otp_code}")
 
         device_id = serializer.validated_data.get("device_id")
         if device_id:
