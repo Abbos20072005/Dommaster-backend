@@ -1,6 +1,6 @@
 import uuid
 from rest_framework.viewsets import ViewSet
-from django.db.models import Q
+from django.db.models import Q, F
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from utils.send_notification import send_notification
@@ -28,6 +28,8 @@ from django.conf import settings
 import logging
 
 logger = logging.getLogger(__name__)
+
+OTP_MAX_ATTEMPTS = 3
 
 
 def issue_customer_tokens(customer):
@@ -471,42 +473,39 @@ class OTPViewSet(ViewSet):
         tags=["OTP"]
     )
     def otp_verify(self, request):
-        data = request.data
-        serializer = OTPVerifySerializer(data=data, context={"request": request})
+        serializer = OTPVerifySerializer(data=request.data, context={"request": request})
         if not serializer.is_valid():
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
+        otp_key = str(serializer.validated_data["otp_key"])
+        otp_code = serializer.validated_data["otp_code"]
 
-        otp = OTP.objects.filter(otp_key=data.get("otp_key"), resend=False).first()
+        otp = OTP.objects.select_related("customer").filter(otp_key=otp_key, resend=False).first()
         if not otp:
             raise CustomApiException(error_code=ErrorCodes.OTP_KEY_NOT_FOUND)
 
-        otp.count_attempts += 1
-        otp.save(update_fields=["count_attempts"])
-        if otp.otp_code != data.get("otp_code"):
+        # count the attempt atomically before checking the code: max 3 tries per OTP, even under parallel requests
+        if not OTP.objects.filter(pk=otp.pk, count_attempts__lt=OTP_MAX_ATTEMPTS).update(
+                count_attempts=F("count_attempts") + 1):
+            raise CustomApiException(error_code=ErrorCodes.OTP_ATTEMPTS_LIMITE)
+
+        if otp.otp_code != otp_code:
             raise CustomApiException(error_code=ErrorCodes.INCORRECT_OTP)
 
         if otp.expire_at < datetime.now() - timedelta(minutes=1):
             raise CustomApiException(error_code=ErrorCodes.OTP_EXPIRED)
 
-        if otp.count_attempts > 2:
-            raise CustomApiException(error_code=ErrorCodes.OTP_ATTEMPTS_LIMITE)
+        customer = otp.customer
+        if not customer:
+            raise CustomApiException(error_code=ErrorCodes.USER_DOES_NOT_EXIST)
 
-        otp_check = OTP.objects.filter(otp_key=data.get("otp_key")).first()
-        if not otp_check:
-            raise CustomApiException(error_code=ErrorCodes.INVALID_TOKEN)
+        customer.verified = True
+        customer.save(update_fields=["verified"])
 
-        if not otp_check.customer:
-            raise CustomApiException(ErrorCodes.USER_DOES_NOT_EXIST)
+        OTP.objects.filter(customer_id=customer.id).delete()
 
-        otp_check.customer.verified = True
-        otp_check.customer.save(update_fields=["verified"])
+        access_token, refresh = issue_customer_tokens(customer)
 
-        all_otp = OTP.objects.filter(customer_id=otp_check.customer.id)
-        all_otp.delete()
-
-        access_token, refresh = issue_customer_tokens(otp_check.customer)
-
-        # send_notification_to_customer(otp_check.customer.id)
+        # send_notification_to_customer(customer.id)
         return Response(data={"result": {"access_token": access_token, "refresh_token": refresh}, "ok": True},
                         status=status.HTTP_200_OK)
 
