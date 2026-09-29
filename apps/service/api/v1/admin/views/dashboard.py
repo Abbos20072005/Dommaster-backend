@@ -10,8 +10,7 @@ from apps.base.models import Chat, Messages
 from apps.service.models import Order, Product, ProductCategory, ProductImage, ProductRemaining, Questions, \
     QuestionsReply
 from utils.admin_views import AdminViewMixin
-from .dashboard_serializers import DashboardQuerySerializer, DashboardSerializer, PERIOD_DAYS
-from .serializers import PENDING, COMPLETED, CANCELED
+from ..serializers import DashboardQuerySerializer, DashboardSerializer, PERIOD_DAYS, PENDING, COMPLETED, CANCELED
 
 PENDING_ORDER_HOURS = 2
 RECENT_ORDERS = 5

@@ -1,12 +1,24 @@
 from django.urls import path
 from rest_framework.routers import SimpleRouter
-from .views import OrderViewSet, ProductViewSet
-from .dashboard_views import DashboardAPIView
+from .views import BrandViewSet, PartnerBrandViewSet, ProductBadgeViewSet, ProductCategoryViewSet, \
+    ProductSubCategoryViewSet, ProductItemCategoryViewSet, ProductAttributeViewSet, OrderViewSet, ProductViewSet, \
+    CommentViewSet, QuestionViewSet, CommentReplyViewSet, QuestionReplyViewSet, DashboardAPIView
 
 # SimpleRouter: mounted at the admin root, DefaultRouter's API-root view would take `api/v1/admin/`
 router = SimpleRouter()
 router.register("orders", OrderViewSet, basename="admin_order")
 router.register("products", ProductViewSet, basename="admin_product")
+router.register("brands", BrandViewSet, basename="admin_brand")
+router.register("partner-brands", PartnerBrandViewSet, basename="admin_partner_brand")
+router.register("product-badges", ProductBadgeViewSet, basename="admin_product_badge")
+router.register("categories", ProductCategoryViewSet, basename="admin_category")
+router.register("sub-categories", ProductSubCategoryViewSet, basename="admin_sub_category")
+router.register("item-categories", ProductItemCategoryViewSet, basename="admin_item_category")
+router.register("attributes", ProductAttributeViewSet, basename="admin_attribute")
+router.register("comments", CommentViewSet, basename="admin_comment")
+router.register("comment-replies", CommentReplyViewSet, basename="admin_comment_reply")
+router.register("questions", QuestionViewSet, basename="admin_question")
+router.register("question-replies", QuestionReplyViewSet, basename="admin_question_reply")
 
 urlpatterns = router.urls + [
     path("dashboard/", DashboardAPIView.as_view(), name="admin_dashboard"),

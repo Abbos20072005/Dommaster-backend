@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from rest_framework.utils import html
 
 
 class RelationSerializer(serializers.ModelSerializer):
@@ -12,6 +13,12 @@ class RelationSerializer(serializers.ModelSerializer):
             if name != "id":
                 field.read_only = True
         return fields
+
+    def get_value(self, dictionary):
+        # multipart/form-data: accept a bare pk (`parent=5`) besides `parent.id=5`
+        if html.is_html_input(dictionary) and self.field_name in dictionary:
+            return dictionary.get(self.field_name)
+        return super().get_value(dictionary)
 
     def to_internal_value(self, data):
         pk = data.get("id") if isinstance(data, dict) else data

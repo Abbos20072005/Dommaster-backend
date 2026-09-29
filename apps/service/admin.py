@@ -2,10 +2,11 @@ from django.contrib import admin, messages
 from django.db.models import Count
 from django.shortcuts import render
 from .models import Product, ProductCategory, ProductSubCategory, ProductItemCategory, Comment, Order, \
-    OrderItem, Tag, Brand, Sale, AddsBrands, ProductImage, Favourites, Cart, CartItem, Questions, \
+    OrderItem, Tag, Brand, Sale, AddsBrands, PartnerBrand, ProductBadge, ProductImage, Favourites, Cart, CartItem, Questions, \
     ProductCharacteristics, RecentlyViewedProducts, Service, CommentImages, CommentReply, QuestionsReply, \
     ProductVariantGroup, ProductVariantItem, \
-    Announcements, ProductItemCategoryFilterSchema, ProductFilterNumericValue, ProductUnit, ProductRemaining
+    Announcements, ProductItemCategoryFilterSchema, ProductFilterNumericValue, ProductUnit, ProductRemaining, \
+    ProductAttribute
 from .signals import clear_category_filter_cache
 from unfold.admin import ModelAdmin, TabularInline
 from apps.base.admin_actions import make_visible, make_hidden, activate, deactivate, get_model_fields, \
@@ -156,6 +157,24 @@ class AddsBrandsAdmin(ModelAdmin):
     actions = [make_visible, make_hidden]
 
 
+@admin.register(PartnerBrand)
+class PartnerBrandAdmin(ModelAdmin):
+    list_display = get_model_fields(PartnerBrand)
+    list_display_links = ("id", "name")
+    search_fields = ("name",)
+    list_filter = ("is_active", "created_at")
+    actions = [activate, deactivate]
+
+
+@admin.register(ProductBadge)
+class ProductBadgeAdmin(ModelAdmin):
+    list_display = get_model_fields(ProductBadge)
+    list_display_links = ("id", "name")
+    search_fields = ("name",)
+    list_filter = ("is_active", "created_at")
+    actions = [activate, deactivate]
+
+
 @admin.register(Sale)
 class SaleAdmin(ModelAdmin):
     list_display = get_model_fields(Sale)
@@ -211,15 +230,15 @@ class ProductAdmin(ModelAdmin):
     list_display = get_model_fields(Product)
     list_display_links = ("id", "name")
     search_fields = ("name", "brand__name", "product_item_category__name")
-    list_filter = ("brand", "product_item_category", "is_active", "unit", "created_at")
+    list_filter = ("brand", "badge", "product_item_category", "is_active", "unit", "created_at")
     readonly_fields = ("discount_price",)
-    autocomplete_fields = ("brand", "product_item_category")
+    autocomplete_fields = ("brand", "badge", "product_item_category")
     inlines = (ProductImageInline, ProductCharacteristicsInline)
     fieldsets = (
         (None, {
             "fields": ("name", "short_description", "description", "price", "discount",
                        "discount_price", "quantity", "comments_quantity", "questions_quantity",
-                       "rating", "is_active", "brand", "product_item_category", "unit")
+                       "rating", "is_active", "brand", "badge", "product_item_category", "unit")
         }),
         ("Данные из 1С", {
             "classes": ("collapse",),
@@ -253,8 +272,9 @@ class ProductCategoryAdmin(ModelAdmin):
     list_display = get_model_fields(ProductCategory)
     list_display_links = ("id", "name")
     search_fields = ("name",)
-    list_filter = ("created_at",)
+    list_filter = ("is_active", "created_at")
     date_hierarchy = "created_at"
+    actions = [activate, deactivate]
 
 
 @admin.register(ProductSubCategory)
@@ -262,9 +282,10 @@ class ProductSubCategoryAdmin(ModelAdmin):
     list_display = get_model_fields(ProductSubCategory)
     list_display_links = ("id", "name")
     search_fields = ("name", "product_category__name")
-    list_filter = ("product_category", "created_at")
+    list_filter = ("is_active", "product_category", "created_at")
     autocomplete_fields = ("product_category",)
     date_hierarchy = "created_at"
+    actions = [activate, deactivate]
 
 
 @admin.register(ProductItemCategory)
@@ -272,9 +293,10 @@ class ProductItemCategoryAdmin(ModelAdmin):
     list_display = get_model_fields(ProductItemCategory)
     list_display_links = ("id", "name")
     search_fields = ("name", "product_sub_category__name")
-    list_filter = ("product_sub_category", "created_at")
+    list_filter = ("is_active", "product_sub_category", "created_at")
     autocomplete_fields = ("product_sub_category",)
     date_hierarchy = "created_at"
+    actions = [activate, deactivate]
 
 
 @admin.register(Comment)
@@ -431,6 +453,16 @@ class ProductUnitAdmin(ModelAdmin):
     list_display_links = ("id", "name")
     search_fields = ("name",)
     list_filter = ("is_active",)
+    actions = [activate, deactivate]
+
+
+@admin.register(ProductAttribute)
+class ProductAttributeAdmin(ModelAdmin):
+    list_display = get_model_fields(ProductAttribute)
+    list_display_links = ("id", "name")
+    search_fields = ("name", "item_category__name")
+    list_filter = ("value_type", "is_active", "created_at")
+    autocomplete_fields = ("item_category",)
     actions = [activate, deactivate]
 
 

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .serializers import OrderListSerializer
+from .order import OrderListSerializer
 
 WEEK, MONTH = "week", "month"
 PERIOD_DAYS = {WEEK: 7, MONTH: 30}

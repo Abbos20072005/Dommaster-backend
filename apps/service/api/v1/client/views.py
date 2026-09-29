@@ -230,6 +230,28 @@ class MainPageViewSet(ViewSet):
         return Response(data={"result": result, "ok": True}, status=status.HTTP_200_OK)
 
 
+# an inactive category hides its whole branch (sub/item categories below it)
+ACTIVE_CATEGORY_BRANCH = {
+    "is_active": True,
+    "product_category__is_active": True,
+    "product_category__product_sub_category__is_active": True,
+}
+ACTIVE_ITEM_CATEGORY = {
+    "is_active": True,
+    "product_sub_category__is_active": True,
+    "product_sub_category__product_category__is_active": True,
+}
+
+
+def active_children_prefetches():
+    """Only active sub/item categories for the nested category serializers (they read `.all()`)."""
+    return (
+        Prefetch("product_category", queryset=ProductSubCategory.objects.filter(is_active=True)),
+        Prefetch("product_category__product_sub_category",
+                 queryset=ProductItemCategory.objects.filter(is_active=True)),
+    )
+
+
 class ProductViewSet(ViewSet):
     @extend_schema(
         summary="Product update",
@@ -458,7 +480,7 @@ class ProductViewSet(ViewSet):
             )
 
             category = (
-                ProductCategory.objects.annotate(
+                ProductCategory.objects.filter(is_active=True).annotate(
                     similarity=Greatest(
                         TrigramSimilarity("name", param_data),
                         TrigramSimilarity("name_uz", param_data),
@@ -567,7 +589,7 @@ class ProductViewSet(ViewSet):
                 )
 
             if not brand_id:
-                categories = ProductCategory.objects.all().order_by("position")
+                categories = ProductCategory.objects.filter(is_active=True).order_by("position")
                 serializer = ProductCategoryListSerializer(
                     categories, many=True, context={"request": request}
                 )
@@ -575,6 +597,7 @@ class ProductViewSet(ViewSet):
                 categories = ProductCategory.objects.filter(
                     product_category__product_sub_category__product_item_category__brand_id=brand_id,
                     product_category__product_sub_category__product_item_category__id__isnull=False,
+                    **ACTIVE_CATEGORY_BRANCH,
                 ).distinct().order_by("position")
                 serializer = ProductCategoryFilterSerializer(
                     categories, many=True, context={"request": request}
@@ -596,8 +619,8 @@ class ProductViewSet(ViewSet):
                 data={"result": cached_data, "ok": True}, status=status.HTTP_200_OK
             )
 
-        categories = ProductCategory.objects.all().prefetch_related(
-            "product_category__product_sub_category"
+        categories = ProductCategory.objects.filter(is_active=True).prefetch_related(
+            *active_children_prefetches()
         ).order_by("position")
         serializer = ProducgtCategoryTreeSerializer(
             categories, many=True, context={"request": request}
@@ -623,7 +646,9 @@ class ProductViewSet(ViewSet):
     def sub_category_list(self, request, pk):
         brand_id = request.query_params.get("brand_id")
         if not brand_id:
-            category = ProductCategory.objects.filter(id=pk).first()
+            category = ProductCategory.objects.filter(id=pk, is_active=True).prefetch_related(
+                *active_children_prefetches()
+            ).first()
             if not category:
                 raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
 
@@ -638,7 +663,9 @@ class ProductViewSet(ViewSet):
             ProductCategory.objects.filter(
                 product_category__product_sub_category__product_item_category__brand_id=brand_id,
                 product_category__product_sub_category__product_item_category__id__isnull=False,
+                **ACTIVE_CATEGORY_BRANCH,
             )
+            .prefetch_related(*active_children_prefetches())
             .distinct()
             .first()
         )
@@ -655,7 +682,11 @@ class ProductViewSet(ViewSet):
         tags=["Product"],
     )
     def item_category_list(self, request, pk):
-        sub_category = ProductSubCategory.objects.filter(id=pk).first()
+        sub_category = ProductSubCategory.objects.filter(
+            id=pk, is_active=True, product_category__is_active=True
+        ).prefetch_related(
+            Prefetch("product_sub_category", queryset=ProductItemCategory.objects.filter(is_active=True))
+        ).first()
         if not sub_category:
             raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
 
@@ -673,7 +704,7 @@ class ProductViewSet(ViewSet):
         tags=["Product"],
     )
     def item_category_detail(self, request, pk):
-        item_category = ProductItemCategory.objects.filter(id=pk).first()
+        item_category = ProductItemCategory.objects.filter(id=pk, **ACTIVE_ITEM_CATEGORY).first()
         if not item_category:
             raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
 
@@ -691,7 +722,7 @@ class ProductViewSet(ViewSet):
         tags=["Product"],
     )
     def all_item_categories(self, request):
-        item_categories = ProductItemCategory.objects.all()
+        item_categories = ProductItemCategory.objects.filter(**ACTIVE_ITEM_CATEGORY)
         serializer = ProductItemCategorySerializer(
             item_categories, many=True, context={"request": request}
         )

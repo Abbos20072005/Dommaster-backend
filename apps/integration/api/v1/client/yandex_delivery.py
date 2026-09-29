@@ -1,3 +1,4 @@
+import json
 import os
 import time
 import logging
@@ -199,7 +200,7 @@ class CheckPriceResponseSerializer(serializers.Serializer):
     zone_id = serializers.CharField(required=False)
 
 
-def _raise_yandex_error(response):
+def _raise_yandex_error(response, payload=None):
     yandex_code = None
     yandex_message = None
     try:
@@ -216,7 +217,10 @@ def _raise_yandex_error(response):
         or yandex_message
         or f"Ошибка сервиса Яндекс Доставки (HTTP {response.status_code})"
     )
-    logger.error(f"Yandex Delivery check-price failed: {yandex_code} - {user_message}")
+    logger.error(
+        f"Yandex Delivery check-price failed: {yandex_code} - {user_message} | "
+        f"HTTP {response.status_code} body={response.text[:500]} payload={json.dumps(payload, ensure_ascii=False)}"
+    )
     raise CustomApiException(
         error_code=ErrorCodes.YANDEX_DELIVERY_ERROR, message=user_message
     )
@@ -373,8 +377,11 @@ class YandexDeliveryService:
                 continue
 
             if response.status_code != 200:
-                _raise_yandex_error(response)
+                _raise_yandex_error(response, payload)
 
+            logger.info(
+                f"Yandex Delivery check-price ok: payload={json.dumps(payload, ensure_ascii=False)}"
+            )
             return response.json()
 
 

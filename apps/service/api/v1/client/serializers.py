@@ -833,7 +833,7 @@ class ProductSubCategoryFilterSerializer(serializers.Serializer):
     product_item_categories = serializers.SerializerMethodField()
 
     def get_product_item_categories(self, obj):
-        qs = obj.product_sub_category.filter(product_item_category__id__isnull=False).distinct()
+        qs = obj.product_sub_category.filter(is_active=True, product_item_category__id__isnull=False).distinct()
         return ProductItemCategoryFilterSerializer(qs, many=True, context=self.context).data
 
 class ProductCategoryFilterSerializer(serializers.Serializer):
@@ -843,7 +843,10 @@ class ProductCategoryFilterSerializer(serializers.Serializer):
     sub_categories = serializers.SerializerMethodField()
 
     def get_sub_categories(self, obj):
-        qs = obj.product_category.filter(product_sub_category__product_item_category__id__isnull=False).distinct()
+        qs = obj.product_category.filter(
+            is_active=True, product_sub_category__is_active=True,
+            product_sub_category__product_item_category__id__isnull=False,
+        ).distinct()
         return ProductSubCategoryFilterSerializer(qs, many=True, context=self.context).data
 
 class ProductItemCategorySerializer(TranslatedSerializerMixin, serializers.ModelSerializer):
