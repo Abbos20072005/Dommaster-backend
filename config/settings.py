@@ -348,6 +348,9 @@ TELEGRAM_OTP_BOT_USERNAME = os.getenv("TELEGRAM_OTP_BOT_USERNAME", "")
 TELEGRAM_OTP_WEBHOOK_SECRET = os.getenv("TELEGRAM_OTP_WEBHOOK_SECRET", "")
 TELEGRAM_LINK_TOKEN_TTL_MINUTES = int(os.getenv("TELEGRAM_LINK_TOKEN_TTL_MINUTES", "10"))
 
+# OTP code lifetime (SMS and Telegram)
+OTP_LIFETIME_SECONDS = int(os.getenv("OTP_LIFETIME_SECONDS") or 60)
+
 SPECTACULAR_SETTINGS = {
     # client schema defaults; admin overrides TITLE/DESCRIPTION/SCHEMA_PATH_PREFIX in config/urls/swagger.py
     "TITLE": "Dommaster APIv1",

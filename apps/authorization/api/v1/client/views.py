@@ -305,7 +305,7 @@ class AuthViewSet(ViewSet):
 
         otp_code = otp_code_generator()
         otp = OTP.objects.create(customer_id=customer.id, otp_code=otp_code, resend=False)
-        otp.expire_at = otp.created_at + timedelta(minutes=1)
+        otp.expire_at = otp.created_at + timedelta(seconds=settings.OTP_LIFETIME_SECONDS)
         otp.save()
 
         latest_otp = all_otp.order_by("-created_at").exclude(otp_key=otp.otp_key).first()
@@ -483,10 +483,11 @@ class OTPViewSet(ViewSet):
         if not otp:
             raise CustomApiException(error_code=ErrorCodes.OTP_KEY_NOT_FOUND)
 
-        # count the attempt atomically before checking the code: max 3 tries per OTP, even under parallel requests
-        if not OTP.objects.filter(pk=otp.pk, count_attempts__lt=OTP_MAX_ATTEMPTS).update(
-                count_attempts=F("count_attempts") + 1):
-            raise CustomApiException(error_code=ErrorCodes.OTP_ATTEMPTS_LIMITE)
+        # TODO: temporarily disabled — restore the block below to re-enable the 3-tries-per-OTP limit
+        # # count the attempt atomically before checking the code: max 3 tries per OTP, even under parallel requests
+        # if not OTP.objects.filter(pk=otp.pk, count_attempts__lt=OTP_MAX_ATTEMPTS).update(
+        #         count_attempts=F("count_attempts") + 1):
+        #     raise CustomApiException(error_code=ErrorCodes.OTP_ATTEMPTS_LIMITE)
 
         if otp.otp_code != otp_code:
             raise CustomApiException(error_code=ErrorCodes.INCORRECT_OTP)
@@ -534,9 +535,10 @@ class OTPViewSet(ViewSet):
         if last_otp.otp_key != otp_key:
             raise CustomApiException(error_code=ErrorCodes.OTP_KEY_NOT_FOUND)
 
-        if last_otp.created_at + timedelta(minutes=1) > datetime.now():
-            raise CustomApiException(error_code=ErrorCodes.OTP_NOT_EXPIRED, time=(
-                    (last_otp.created_at + timedelta(minutes=1)) - datetime.now()).total_seconds())
+        resend_available_at = last_otp.created_at + timedelta(seconds=settings.OTP_LIFETIME_SECONDS)
+        if resend_available_at > datetime.now():
+            raise CustomApiException(error_code=ErrorCodes.OTP_NOT_EXPIRED,
+                                     time=(resend_available_at - datetime.now()).total_seconds())
 
         otp = create_otp(otp_check.customer, resend=last_otp.resend, check_limit=False)
 

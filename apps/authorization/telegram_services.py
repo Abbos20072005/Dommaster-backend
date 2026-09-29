@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 TELEGRAM_OTP_COOLDOWN = timedelta(minutes=1)
 TELEGRAM_OTP_WINDOW = timedelta(hours=12)
 TELEGRAM_OTP_MAX_PER_WINDOW = 10
-OTP_LIFETIME = timedelta(minutes=1)
+OTP_LIFETIME = timedelta(seconds=settings.OTP_LIFETIME_SECONDS)
 
 MSG_OTP = "Buildex Go\nTasdiqlash kodi / Код подтверждения: <b>{code}</b>\n\nKodni hech kimga bermang. / Никому не сообщайте код."
 MSG_SHARE_CONTACT = ("Raqamingizni tasdiqlash uchun pastdagi tugmani bosing.\n"
@@ -45,6 +45,8 @@ MSG_NOT_LINKED = "Bu chat hech qaysi raqamga ulanmagan. / Этот чат не �
 
 
 def check_telegram_otp_limit(customer):
+    # TODO: temporarily disabled — remove this return to re-enable the Telegram OTP limit
+    return
     now = datetime.now()
     tg_otps = OTP.objects.filter(customer_id=customer.id, channel=OTP.Channel.TELEGRAM,
                                  created_at__gt=now - TELEGRAM_OTP_WINDOW)
