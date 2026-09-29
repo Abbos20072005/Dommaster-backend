@@ -50,8 +50,7 @@ def issue_customer_tokens(customer):
 class AuthViewSet(ViewSet):
     @extend_schema(
         summary="Login / Register by phone",
-        description="Phone number + role (optional, default user). Sends OTP; verify via otp/verify/ "
-                              "to get tokens. Role is applied only when a new customer is created.",
+        description="Phone number. Sends OTP; verify via otp/verify/ to get tokens.",
         request=PhoneAuthSerializer(),
         responses={200: OpenApiResponse(description="otp_key, is_new, telegram_linked")},
         tags=["Auth"]
@@ -65,7 +64,7 @@ class AuthViewSet(ViewSet):
         customer = Customer.objects.filter(phone_number=phone).order_by("-verified", "-created_at").first()
         is_new = customer is None
         if is_new:
-            customer = Customer.objects.create(phone_number=phone, role=serializer.validated_data["role"])
+            customer = Customer.objects.create(phone_number=phone)
 
         otp = create_otp(customer)
         EskizOTP.send_otp_service(phone, f"Код подтверждения для регистрации в приложение Buildex Go: {otp.otp_code}")

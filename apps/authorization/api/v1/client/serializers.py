@@ -57,7 +57,6 @@ class LoginSerializer(serializers.Serializer):
 
 class PhoneAuthSerializer(serializers.Serializer):
     phone_number = serializers.CharField(max_length=20, help_text="998XXXXXXXXX (12 digits)")
-    role = serializers.ChoiceField(choices=Customer.Role.choices, required=False, default=Customer.Role.USER)
     device_id = serializers.CharField(max_length=300, required=False, allow_blank=True)
 
     def validate_phone_number(self, value):
