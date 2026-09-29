@@ -775,6 +775,8 @@ class ProductViewSet(ViewSet):
         price_to = serializer.validated_data.get("price_to", 0)
         sort_by = serializer.validated_data.get("sort_by")
         brand = serializer.validated_data.get("brand")
+        category = serializer.validated_data.get("category")
+        sub_category = serializer.validated_data.get("sub_category")
         item_category = serializer.validated_data.get("item_category")
         sale_id = serializer.validated_data.get("sale_id")
         filters_data = serializer.validated_data.get("filters", {})
@@ -795,6 +797,10 @@ class ProductViewSet(ViewSet):
         if brand:
             filters &= Q(brand=brand)
 
+        if category:
+            filters &= Q(product_item_category__product_sub_category__product_category=category)
+        if sub_category:
+            filters &= Q(product_item_category__product_sub_category=sub_category)
         if item_category:
             filters &= Q(product_item_category=item_category)
 
@@ -851,7 +857,7 @@ class ProductViewSet(ViewSet):
         available_filters_list = None
         quick_filters = []
         if item_category:
-            has_active_filters = any([q, brand, price_from, price_to, sale_id, filters_data])
+            has_active_filters = any([q, brand, price_from, price_to, sale_id, filters_data, category, sub_category])
             cache_key = f"product:available_filters:cat:{item_category}"
 
             if not has_active_filters:
@@ -953,7 +959,7 @@ class ProductViewSet(ViewSet):
         else:
             products = products.order_by(sort)
 
-        has_filters = any([q, brand, price_from, price_to, sale_id, filters_data])
+        has_filters = any([q, brand, price_from, price_to, sale_id, filters_data, category, sub_category])
         if not item_category and has_filters:
             cat_ids = list(
                 products.values("product_item_category")

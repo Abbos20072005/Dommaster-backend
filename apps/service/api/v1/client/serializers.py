@@ -417,6 +417,8 @@ class FilterSerializer(PaginationSerializer):
     price_from = serializers.FloatField(required=False)
     price_to = serializers.FloatField(required=False)
     brand = serializers.IntegerField(required=False)
+    category = serializers.IntegerField(required=False)
+    sub_category = serializers.IntegerField(required=False)
     item_category = serializers.IntegerField(required=False)
     sale_id = serializers.IntegerField(required=False)
     filters = serializers.JSONField(required=False, default=dict)
