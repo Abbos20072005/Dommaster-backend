@@ -117,3 +117,4 @@ class RecentlyViewedProducts(BaseModel):
         verbose_name = "Недавно просмотренный продукт"
         verbose_name_plural = "Недавно просмотренные продукты"
         ordering = ("-created_at",)
+        unique_together = ("customer", "product")
