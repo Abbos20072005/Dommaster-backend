@@ -491,6 +491,14 @@ class OneCIntegrationViewSet(ViewSet):
             product_defaults = {
                 "brand": brand,
                 "product_item_category": item_category,
+                "unit": unit_label,
+                "is_active": data.get("is_active", True),
+                "articul_code": data.get("articul_code", ""),
+                "barcode": data.get("barcode", ""),
+            }
+            # name/description are set only on create; later syncs don't overwrite admin edits
+            product_create_defaults = {
+                **product_defaults,
                 "name": name,
                 "name_uz": name_uz,
                 "name_ru": name_ru,
@@ -499,10 +507,6 @@ class OneCIntegrationViewSet(ViewSet):
                 "description_uz": description_uz,
                 "description_ru": description_ru,
                 "description_en": description_en,
-                "unit": unit_label,
-                "is_active": data.get("is_active", True),
-                "articul_code": data.get("articul_code", ""),
-                "barcode": data.get("barcode", ""),
             }
 
             created = True
@@ -510,9 +514,10 @@ class OneCIntegrationViewSet(ViewSet):
                 product, created = Product.objects.update_or_create(
                     product_code=product_code,
                     defaults=product_defaults,
+                    create_defaults=product_create_defaults,
                 )
             else:
-                product = Product.objects.create(**product_defaults)
+                product = Product.objects.create(**product_create_defaults)
 
             filter_data = {}
             char_instances = []
