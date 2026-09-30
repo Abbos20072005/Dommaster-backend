@@ -238,7 +238,8 @@ class ProductAdmin(ModelAdmin):
     inlines = (ProductImageInline, ProductCharacteristicsInline)
     fieldsets = (
         (None, {
-            "fields": ("name", "short_description", "description", "price", "discount",
+            "fields": ("name_uz", "name_ru", "name_en", "short_description",
+                       "description_uz", "description_ru", "description_en", "price", "discount",
                        "discount_price", "quantity", "comments_quantity", "questions_quantity",
                        "rating", "is_active", "brand", "badge", "product_item_category", "unit")
         }),
@@ -260,6 +261,13 @@ class ProductAdmin(ModelAdmin):
     date_hierarchy = "created_at"
     list_per_page = 25
     actions = [activate, deactivate]
+
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        # ru is the default (fallback) language
+        form.base_fields["name_ru"].required = True
+        form.base_fields["description_ru"].required = True
+        return form
 
     def save_model(self, request, obj, form, change):
         if obj.discount:
