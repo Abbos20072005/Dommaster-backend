@@ -14,9 +14,9 @@ class CustomerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Customer
-        fields = ("id", "full_name", "phone_number", "email", "role", "verified", "is_blocked",
+        fields = ("id", "full_name", "phone_number", "email", "role", "verified", "is_blocked", "avatar",
                   "last_login", "orders_count", "total_purchase", "created_at", "updated_at")
-        read_only_fields = ("last_login", "created_at", "updated_at")
+        read_only_fields = ("avatar", "last_login", "created_at", "updated_at")
 
     def validate_phone_number(self, value):
         qs = Customer.objects.filter(phone_number=value)

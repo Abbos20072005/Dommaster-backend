@@ -19,6 +19,7 @@ class Customer(BaseModel):
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.USER, verbose_name="Роль")
     is_blocked = models.BooleanField(default=False, db_index=True, verbose_name="Заблокирован")
     last_login = models.DateTimeField(blank=True, null=True, db_index=True, verbose_name="Последний вход")
+    avatar = models.ImageField(upload_to="customer/avatar/", blank=True, null=True, verbose_name="Фото профиля")
 
     def __str__(self):
         return self.full_name or self.phone_number
