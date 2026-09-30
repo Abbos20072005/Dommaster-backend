@@ -1,6 +1,5 @@
 from .models import ProductItemCategory, ProductSubCategory, ProductCategory, Product
 import requests
-import threading
 import json
 import logging
 from html import escape
@@ -423,50 +422,16 @@ def _build_order_excel(order_data):
     return buffer.getvalue()
 
 
+# ---------------------------------------------------------------------------
+# Order notifications (delivered from the outbox, see apps/service/outbox.py)
+# ---------------------------------------------------------------------------
+
+class TelegramSendError(Exception):
+    pass
 
 
-def _send_telegram_message_sync(order_data):
-    """Internal synchronous function that runs in a separate thread."""
-    url = f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/sendDocument"
-    payload = {
-        "chat_id": settings.TELEGRAM_CHANNEL_ID,
-        "caption": _build_order_caption(order_data),
-        "parse_mode": "HTML",
-    }
-    if getattr(settings, "TELEGRAM_TOPIC_ID", None):
-        payload["message_thread_id"] = settings.TELEGRAM_TOPIC_ID
-
-    if order_data.get("map_url"):
-        payload["reply_markup"] = json.dumps({
-            "inline_keyboard": [
-                [{"text": "🗺 Открыть на карте", "url": order_data["map_url"]}]
-            ]
-        })
-
-    try:
-        files = {
-            "document": (
-                f"order_{order_data['id']}.xlsx",
-                _build_order_excel(order_data),
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            )
-        }
-        response = requests.post(url, data=payload, files=files, timeout=20)
-        data = response.json()
-        if not data.get("ok"):
-            logger.error(
-                "Telegram sendDocument failed: order_id=%s status=%s error_code=%s description=%s",
-                order_data["id"], response.status_code, data.get("error_code"), data.get("description"),
-            )
-    except requests.RequestException as e:
-        logger.error("Telegram request error: order_id=%s %s", order_data["id"], type(e).__name__)
-    except Exception:
-        logger.exception("Failed to send order to Telegram: order_id=%s", order_data["id"])
-
-
-def send_telegram_message(order):
-    """Send Telegram notification (caption + Excel) asynchronously to avoid blocking the request."""
-
+def build_order_data(order):
+    """Snapshot of an order for Telegram (caption/Excel)."""
     customer = order.customer
     customer_name = order.receiver_name or (customer.full_name if customer else None)
     customer_phone = order.receiver_phone or (customer.phone_number if customer else None)
@@ -525,11 +490,105 @@ def send_telegram_message(order):
         'total_weight': total_order_weight,
         'items': items_info,
     }
+    return order_data
 
-    thread = threading.Thread(
-        target=_send_telegram_message_sync,
-        args=(order_data,),
-        daemon=True
+
+def _status_lines(order, payload):
+    order_status = payload.get("status", order.status)
+    payment_status = payload.get("payment_status", order.payment_status)
+    return [
+        f"📋 Статус: <b>{escape(_get_russian_order_status(order_status))}</b>",
+        f"💳 Оплата: <b>{escape(_get_russian_payment_status(payment_status))}</b>",
+    ]
+
+
+def _build_collecting_text(order, payload):
+    return "\n".join([f"<b>📦 Заказ № {order.id} передан в сборку</b>", *_status_lines(order, payload)])
+
+
+def _build_canceled_text(order, payload):
+    lines = [f"<b>❌ Заказ № {order.id} отменён</b>", *_status_lines(order, payload)]
+    if payload.get("reason"):
+        lines.append(f"📝 Причина: {escape(str(payload['reason']))}")
+    return "\n".join(lines)
+
+
+def _build_refunded_text(order, payload):
+    lines = [f"<b>↩️ Возврат средств по заказу № {order.id}</b>", *_status_lines(order, payload)]
+    if payload.get("provider"):
+        lines.append(f"🏦 Платёжная система: {escape(str(payload['provider']))}")
+    if payload.get("transaction_id"):
+        lines.append(f"🧾 Транзакция: <code>{escape(str(payload['transaction_id']))}</code>")
+    lines.append(f"💰 Сумма возврата: <b>{_format_price(payload.get('amount', order.total_price))} сум</b>")
+    return "\n".join(lines)
+
+
+def _build_sync_failed_text(order, payload):
+    lines = [f"<b>⚠️ Заказ № {order.id} не передан в 1С</b>", *_status_lines(order, payload)]
+    if payload.get("attempts"):
+        lines.append(f"🔁 Попыток: {payload['attempts']}")
+    if payload.get("error"):
+        lines.append(f"🐞 Ошибка: <code>{escape(str(payload['error'])[:500])}</code>")
+    return "\n".join(lines)
+
+
+def _telegram_call(method, data, files=None):
+    if not settings.TELEGRAM_BOT_TOKEN or not settings.TELEGRAM_CHANNEL_ID:
+        raise TelegramSendError("TELEGRAM_BOT_TOKEN / TELEGRAM_CHANNEL_ID not configured")
+    data = {**data, "chat_id": settings.TELEGRAM_CHANNEL_ID, "parse_mode": "HTML"}
+    if getattr(settings, "TELEGRAM_TOPIC_ID", None):
+        data["message_thread_id"] = settings.TELEGRAM_TOPIC_ID
+    try:
+        response = requests.post(
+            f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/{method}",
+            data=data, files=files, timeout=20,
+        )
+        body = response.json()
+    except (requests.RequestException, ValueError) as e:
+        raise TelegramSendError(f"{method}: {type(e).__name__}") from e
+    if not body.get("ok"):
+        raise TelegramSendError(
+            f"{method}: status={response.status_code} error_code={body.get('error_code')} "
+            f"description={body.get('description')}"
+        )
+
+
+def _send_order_document(order_data):
+    data = {"caption": _build_order_caption(order_data)}
+    if order_data.get("map_url"):
+        data["reply_markup"] = json.dumps({
+            "inline_keyboard": [
+                [{"text": "🗺 Открыть на карте", "url": order_data["map_url"]}]
+            ]
+        })
+    files = {
+        "document": (
+            f"order_{order_data['id']}.xlsx",
+            _build_order_excel(order_data),
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+    }
+    _telegram_call("sendDocument", data, files=files)
+
+
+def send_order_event_to_telegram(event_type, order, payload=None):
+    """Deliver one order event to the orders Telegram group. Raises TelegramSendError on failure."""
+    from .models.choices import (
+        ORDER_EVENT_CREATED, ORDER_EVENT_COLLECTING, ORDER_EVENT_CANCELED, ORDER_EVENT_REFUNDED,
+        ORDER_EVENT_SYNC_FAILED,
     )
-    thread.start()
 
+    # only a new order goes with the full caption + Excel; the rest are short status updates
+    if event_type == ORDER_EVENT_CREATED:
+        _send_order_document(build_order_data(order))
+        return
+
+    text_builders = {
+        ORDER_EVENT_COLLECTING: _build_collecting_text,
+        ORDER_EVENT_CANCELED: _build_canceled_text,
+        ORDER_EVENT_REFUNDED: _build_refunded_text,
+        ORDER_EVENT_SYNC_FAILED: _build_sync_failed_text,
+    }
+    if event_type not in text_builders:
+        raise TelegramSendError(f"unknown event type: {event_type}")
+    _telegram_call("sendMessage", {"text": text_builders[event_type](order, payload or {})})

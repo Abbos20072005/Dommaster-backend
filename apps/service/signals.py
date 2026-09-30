@@ -4,9 +4,11 @@ from django.core.cache import cache
 from .models import Comment, CartItem, Questions, Order, Product, ProductFilterNumericValue, ProductItemCategoryFilterSchema
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
-from .utils import send_telegram_message
+from .models.choices import ORDER_EVENT_COLLECTING, ORDER_EVENT_CANCELED, ORDER_EVENT_REFUNDED
+from .outbox import emit_order_event
 
 
+# Order.save() is atomic, so stock changes and outbox events here commit together with the order
 @receiver(pre_save, sender=Order)
 def decrease_product_quantity_on_collecting(sender, instance, **kwargs):
     if not instance.pk:
@@ -28,7 +30,7 @@ def decrease_product_quantity_on_collecting(sender, instance, **kwargs):
             products_to_update.append(product)
         if products_to_update:
             Product.objects.bulk_update(products_to_update, ['quantity'])
-        send_telegram_message(instance)
+        emit_order_event(instance, ORDER_EVENT_COLLECTING)
 
     elif previous.status != 4 and instance.status == 4:
         items = instance.order_items.select_related('product').all()
@@ -39,6 +41,15 @@ def decrease_product_quantity_on_collecting(sender, instance, **kwargs):
             products_to_update.append(product)
         if products_to_update:
             Product.objects.bulk_update(products_to_update, ['quantity'])
+        emit_order_event(instance, ORDER_EVENT_CANCELED)
+
+    # payment_status -> 3 is set only after Atmos confirmed cancel_hold, i.e. the money went back to the customer
+    if previous.payment_status in (1, 2) and instance.payment_status == 3:
+        emit_order_event(instance, ORDER_EVENT_REFUNDED, payload={
+            "provider": "Atmos",
+            "transaction_id": instance.hold_id,
+            "amount": instance.total_price,
+        })
 
 
 @receiver(signal=[post_save, post_delete], sender=Comment)

@@ -57,7 +57,12 @@ def status_canceled(modeladmin, request, queryset):
     atmos_orders = list(queryset.filter(hold_id__isnull=False, payment_status=1))
     plain_orders = queryset.exclude(id__in=[order.id for order in atmos_orders])
 
-    updated = plain_orders.update(status=4)
+    # save() per order (not queryset.update) so signals restore stock and emit order.canceled
+    updated = 0
+    for order in plain_orders.exclude(status=4):
+        order.status = 4
+        order.save(update_fields=["status"])
+        updated += 1
 
     if atmos_orders:
         try:
@@ -73,6 +78,7 @@ def status_canceled(modeladmin, request, queryset):
                         access_token=access_token,
                         hold_id=order.hold_id,
                     )
+                    order.status = 4
                     order.payment_status = 3
                     order.save(update_fields=["status", "payment_status"])
                     updated += 1

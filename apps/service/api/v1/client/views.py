@@ -1,5 +1,6 @@
 from utils.send_notification import send_notification_to_customer
-from apps.service.utils import send_telegram_message
+from apps.service.outbox import emit_order_event
+from apps.service.models.choices import ORDER_EVENT_CREATED
 from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
 from drf_spectacular.types import OpenApiTypes
@@ -2504,74 +2505,75 @@ class OrderViewSet(ViewSet):
                     message="Customer location not found",
                 )
 
-        promocode = Promocodes.objects.filter(
-            code=serializer.validated_data.get("promocode")
-        ).first()
-        if promocode:
-            if promocode.expires_at < date.today():
-                raise CustomApiException(error_code=ErrorCodes.PROMOCODE_EXPIRED)
+        # order, its items and the order.created outbox event are committed together
+        with transaction.atomic():
+            promocode = Promocodes.objects.filter(
+                code=serializer.validated_data.get("promocode")
+            ).first()
+            if promocode:
+                if promocode.expires_at < date.today():
+                    raise CustomApiException(error_code=ErrorCodes.PROMOCODE_EXPIRED)
 
-            promocode_discount_price = 0
-            if not promocode.discount_precent and promocode.discount_price:
-                promocode_discount_price = cart.total_price - promocode.discount_price
-            elif not promocode.discount_price and promocode.discount_precent:
-                promocode_discount_price = cart.total_price * (
-                    1 - (promocode.discount_precent / 100)
+                promocode_discount_price = 0
+                if not promocode.discount_precent and promocode.discount_price:
+                    promocode_discount_price = cart.total_price - promocode.discount_price
+                elif not promocode.discount_price and promocode.discount_precent:
+                    promocode_discount_price = cart.total_price * (
+                        1 - (promocode.discount_precent / 100)
+                    )
+
+                delivery_type = serializer.validated_data.get("delivery_type", 0)
+                delivery_price = serializer.validated_data.get("delivery_price", 0.0)
+                delivery_cost = float(delivery_price) if delivery_type == 0 else 0.0
+
+                order = Order.objects.create(
+                    customer_id=request.user.id,
+                    promocode_id=promocode.id,
+                    total_price=promocode_discount_price + delivery_cost,
+                    saved_price=cart.saved_price,
+                    products_total_price=cart.products_total_price,
+                    order_location=customer_location,
+                    delivery_type=delivery_type,
+                    pickup_branch_id=serializer.validated_data.get("branch_id"),
+                    delivery_price=delivery_price,
+                )
+            else:
+                delivery_type = serializer.validated_data.get("delivery_type", 0)
+                delivery_price = serializer.validated_data.get("delivery_price", 0.0)
+                delivery_cost = float(delivery_price) if delivery_type == 0 else 0.0
+
+                order = Order.objects.create(
+                    customer_id=request.user.id,
+                    total_price=cart.total_price + delivery_cost,
+                    saved_price=cart.saved_price,
+                    products_total_price=cart.products_total_price,
+                    order_location=customer_location,
+                    delivery_type=delivery_type,
+                    pickup_branch_id=serializer.validated_data.get("branch_id"),
+                    delivery_price=delivery_price,
                 )
 
-            delivery_type = serializer.validated_data.get("delivery_type", 0)
-            delivery_price = serializer.validated_data.get("delivery_price", 0.0)
-            delivery_cost = float(delivery_price) if delivery_type == 0 else 0.0
+            # Bulk create OrderItems and delete CartItems in 2 queries instead of N*2
+            cart_items = CartItem.objects.filter(
+                cart_id=cart.id, is_checked=True
+            ).select_related('product')
+            order_items = [
+                OrderItem(order=order, product=item.product, quantity=item.quantity)
+                for item in cart_items
+            ]
+            OrderItem.objects.bulk_create(order_items)
+            cart_items.delete()
 
-            order = Order.objects.create(
-                customer_id=request.user.id,
-                promocode_id=promocode.id,
-                total_price=promocode_discount_price + delivery_cost,
-                saved_price=cart.saved_price,
-                products_total_price=cart.products_total_price,
-                order_location=customer_location,
-                delivery_type=delivery_type,
-                pickup_branch_id=serializer.validated_data.get("branch_id"),
-                delivery_price=delivery_price,
-            )
-        else:
-            delivery_type = serializer.validated_data.get("delivery_type", 0)
-            delivery_price = serializer.validated_data.get("delivery_price", 0.0)
-            delivery_cost = float(delivery_price) if delivery_type == 0 else 0.0
+            payment_type = serializer.validated_data.get("payment_type")
+            payment_method = serializer.validated_data.get("payment_method")
 
-            order = Order.objects.create(
-                customer_id=request.user.id,
-                total_price=cart.total_price + delivery_cost,
-                saved_price=cart.saved_price,
-                products_total_price=cart.products_total_price,
-                order_location=customer_location,
-                delivery_type=delivery_type,
-                pickup_branch_id=serializer.validated_data.get("branch_id"),
-                delivery_price=delivery_price,
-            )
-
-        # Bulk create OrderItems and delete CartItems in 2 queries instead of N*2
-        cart_items = CartItem.objects.filter(
-            cart_id=cart.id, is_checked=True
-        ).select_related('product')
-        order_items = [
-            OrderItem(order=order, product=item.product, quantity=item.quantity)
-            for item in cart_items
-        ]
-        OrderItem.objects.bulk_create(order_items)
-        cart_items.delete()
-
-        payment_type = serializer.validated_data.get("payment_type")
-        payment_method = serializer.validated_data.get("payment_method")
-
-        order.payment_type = payment_type
-        if payment_type == 4:
-            order.payment_method = payment_method
-        order.receiver_name = serializer.validated_data.get("receiver_name")
-        order.receiver_phone = serializer.validated_data.get("receiver_phone")
-        order.save(update_fields=["payment_type", "payment_method", "receiver_name", "receiver_phone"])
-
-        send_telegram_message(order)
+            order.payment_type = payment_type
+            if payment_type == 4:
+                order.payment_method = payment_method
+            order.receiver_name = serializer.validated_data.get("receiver_name")
+            order.receiver_phone = serializer.validated_data.get("receiver_phone")
+            order.save(update_fields=["payment_type", "payment_method", "receiver_name", "receiver_phone"])
+            emit_order_event(order, ORDER_EVENT_CREATED)
 
         payment_link = generate_link(
             order_id=order.id,
