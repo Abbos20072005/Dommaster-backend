@@ -112,7 +112,7 @@ def _get_russian_unit(unit_val):
     return UNIT_RU.get(s, str(unit_val))
 
 
-def _build_order_caption(order_data):
+def build_order_caption(order_data):
     header = [
         f"<b>🛒 Новый заказ № {order_data['id']}</b>",
     ]
@@ -184,7 +184,7 @@ def _style_range(ws, cell_range, font=None, fill=None, border=None, alignment=No
                 cell.alignment = alignment
 
 
-def _build_order_excel(order_data):
+def build_order_excel(order_data):
     wb = Workbook()
     ws = wb.active
     ws.title = f"Заказ {order_data['id']}"
@@ -502,18 +502,18 @@ def _status_lines(order, payload):
     ]
 
 
-def _build_collecting_text(order, payload):
+def build_collecting_text(order, payload):
     return "\n".join([f"<b>📦 Заказ № {order.id} передан в сборку</b>", *_status_lines(order, payload)])
 
 
-def _build_canceled_text(order, payload):
+def build_canceled_text(order, payload):
     lines = [f"<b>❌ Заказ № {order.id} отменён</b>", *_status_lines(order, payload)]
     if payload.get("reason"):
         lines.append(f"📝 Причина: {escape(str(payload['reason']))}")
     return "\n".join(lines)
 
 
-def _build_refunded_text(order, payload):
+def build_refunded_text(order, payload):
     lines = [f"<b>↩️ Возврат средств по заказу № {order.id}</b>", *_status_lines(order, payload)]
     if payload.get("provider"):
         lines.append(f"🏦 Платёжная система: {escape(str(payload['provider']))}")
@@ -523,7 +523,7 @@ def _build_refunded_text(order, payload):
     return "\n".join(lines)
 
 
-def _build_sync_failed_text(order, payload):
+def build_sync_failed_text(order, payload):
     lines = [f"<b>⚠️ Заказ № {order.id} не передан в 1С</b>", *_status_lines(order, payload)]
     if payload.get("attempts"):
         lines.append(f"🔁 Попыток: {payload['attempts']}")
@@ -532,7 +532,7 @@ def _build_sync_failed_text(order, payload):
     return "\n".join(lines)
 
 
-def _telegram_call(method, data, files=None):
+def telegram_call(method, data, files=None):
     if not settings.TELEGRAM_BOT_TOKEN or not settings.TELEGRAM_CHANNEL_ID:
         raise TelegramSendError("TELEGRAM_BOT_TOKEN / TELEGRAM_CHANNEL_ID not configured")
     data = {**data, "chat_id": settings.TELEGRAM_CHANNEL_ID, "parse_mode": "HTML"}
@@ -553,8 +553,8 @@ def _telegram_call(method, data, files=None):
         )
 
 
-def _send_order_document(order_data):
-    data = {"caption": _build_order_caption(order_data)}
+def send_order_document(order_data):
+    data = {"caption": build_order_caption(order_data)}
     if order_data.get("map_url"):
         data["reply_markup"] = json.dumps({
             "inline_keyboard": [
@@ -564,11 +564,11 @@ def _send_order_document(order_data):
     files = {
         "document": (
             f"order_{order_data['id']}.xlsx",
-            _build_order_excel(order_data),
+            build_order_excel(order_data),
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
     }
-    _telegram_call("sendDocument", data, files=files)
+    telegram_call("sendDocument", data, files=files)
 
 
 def send_order_event_to_telegram(event_type, order, payload=None):
@@ -580,15 +580,15 @@ def send_order_event_to_telegram(event_type, order, payload=None):
 
     # only a new order goes with the full caption + Excel; the rest are short status updates
     if event_type == ORDER_EVENT_CREATED:
-        _send_order_document(build_order_data(order))
+        send_order_document(build_order_data(order))
         return
 
     text_builders = {
-        ORDER_EVENT_COLLECTING: _build_collecting_text,
-        ORDER_EVENT_CANCELED: _build_canceled_text,
-        ORDER_EVENT_REFUNDED: _build_refunded_text,
-        ORDER_EVENT_SYNC_FAILED: _build_sync_failed_text,
+        ORDER_EVENT_COLLECTING: build_collecting_text,
+        ORDER_EVENT_CANCELED: build_canceled_text,
+        ORDER_EVENT_REFUNDED: build_refunded_text,
+        ORDER_EVENT_SYNC_FAILED: build_sync_failed_text,
     }
     if event_type not in text_builders:
         raise TelegramSendError(f"unknown event type: {event_type}")
-    _telegram_call("sendMessage", {"text": text_builders[event_type](order, payload or {})})
+    telegram_call("sendMessage", {"text": text_builders[event_type](order, payload or {})})
