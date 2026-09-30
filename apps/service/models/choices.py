@@ -53,3 +53,13 @@ OUTBOX_STATUS = (
     (OUTBOX_SENT, "Отправлено"),
     (OUTBOX_FAILED, "Ошибка"),
 )
+
+PUBLISH_STATUS_DRAFT = "draft"
+PUBLISH_STATUS_REVIEW = "review"
+PUBLISH_STATUS_PUBLISHED = "published"
+
+PUBLISH_STATUS = (
+    (PUBLISH_STATUS_DRAFT, "Черновик"),
+    (PUBLISH_STATUS_REVIEW, "На проверке"),
+    (PUBLISH_STATUS_PUBLISHED, "Опубликован"),
+)

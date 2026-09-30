@@ -30,7 +30,8 @@ class ProductFilter(django_filters.FilterSet):
 
     class Meta:
         model = Product
-        fields = ("brand", "badge", "product_item_category", "is_active", "unit")
+        fields = ("brand", "badge", "product_item_category", "is_active", "erp_active", "publish_status", "purchasable",
+                  "unit")
 
     def filter_in_stock(self, queryset, name, value):
         return queryset.filter(quantity__gt=0) if value else queryset.filter(quantity__lte=0)

@@ -6,6 +6,7 @@ from django.db import models
 from abstract_model.base_model import BaseModel
 from apps.base.models import MarketBranch
 from .catalog import Brand, ProductItemCategory
+from .choices import PUBLISH_STATUS, PUBLISH_STATUS_DRAFT
 
 
 class Product(BaseModel):
@@ -40,6 +41,10 @@ class Product(BaseModel):
     comments_quantity = models.IntegerField(default=0, verbose_name="Количество коментариев")
     questions_quantity = models.IntegerField(default=0, verbose_name="Количество вопросов")
     is_active = models.BooleanField(default=True, verbose_name="Активен")
+    erp_active = models.BooleanField(default=True, verbose_name="Активен в 1С")
+    publish_status = models.CharField(max_length=16, choices=PUBLISH_STATUS, default=PUBLISH_STATUS_DRAFT,
+                                      verbose_name="Статус публикации")
+    purchasable = models.BooleanField(default=False, verbose_name="Доступен к покупке")
     filter_data = models.JSONField(default=dict, blank=True)
     articul_code = models.CharField(max_length=100, blank=True, null=True, verbose_name="Артикул")
     barcode = models.CharField(max_length=100, blank=True, null=True, verbose_name="Штрихкод")

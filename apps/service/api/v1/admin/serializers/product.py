@@ -44,7 +44,7 @@ class ProductListSerializer(serializers.ModelSerializer):
         model = Product
         fields = ("id", "name", "images", "product_code", "articul_code", "barcode", "brand", "badge",
                   "product_item_category", "price", "discount_price", "discount", "unit", "quantity", "rating", "comments_quantity",
-                  "is_active", "created_at", "updated_at")
+                  "is_active", "erp_active", "publish_status", "purchasable", "created_at", "updated_at")
 
 
 class ProductSerializer(serializers.ModelSerializer):
@@ -60,7 +60,7 @@ class ProductSerializer(serializers.ModelSerializer):
                   "description_uz", "description_ru", "description_en",
                   "brand", "badge", "product_item_category", "price", "discount_price", "discount", "unit",
                   "quantity",
-                  "is_active", "product_code", "articul_code", "barcode", "weight", "length", "width", "height",
+                  "is_active", "erp_active", "publish_status", "purchasable", "product_code", "articul_code", "barcode", "weight", "length", "width", "height",
                   "rating", "comments_quantity", "questions_quantity", "filter_data", "characteristics", "images",
                   "created_at", "updated_at")
         # filter_data is built from 1C data
