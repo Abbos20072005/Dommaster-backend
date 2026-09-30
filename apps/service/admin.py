@@ -227,7 +227,9 @@ class ProductCharacteristicsInline(TabularInline):
 
 @admin.register(Product)
 class ProductAdmin(ModelAdmin):
-    list_display = get_model_fields(Product)
+    list_display = get_model_fields(Product, exclude=(
+        "short_description", "description", "description_uz", "description_ru", "description_en",
+    ))
     list_display_links = ("id", "name")
     search_fields = ("name", "brand__name", "product_item_category__name")
     list_filter = ("brand", "badge", "product_item_category", "is_active", "unit", "created_at")
