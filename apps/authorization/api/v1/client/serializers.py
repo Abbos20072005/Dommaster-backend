@@ -81,7 +81,9 @@ class RegisterSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
 
+
 class CustomerSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = Customer
         fields = (
@@ -92,29 +94,7 @@ class CustomerSerializer(serializers.ModelSerializer):
             "role",
             "avatar",
         )
-        # avatar is changed only via customer/avatar/ (validated upload)
-        read_only_fields = ("avatar",)
 
-
-AVATAR_MAX_SIZE_MB = 5
-AVATAR_ALLOWED_FORMATS = {"JPEG": "jpg/jpeg", "PNG": "png", "WEBP": "webp"}
-
-
-class CustomerAvatarSerializer(serializers.Serializer):
-    avatar = serializers.ImageField(
-        help_text=f"Image file ({', '.join(AVATAR_ALLOWED_FORMATS.values())}), max {AVATAR_MAX_SIZE_MB} MB"
-    )
-
-    def validate_avatar(self, value):
-        if value.size > AVATAR_MAX_SIZE_MB * 1024 * 1024:
-            raise serializers.ValidationError(f"Image size must not exceed {AVATAR_MAX_SIZE_MB} MB.")
-        # real content format (checked by Pillow), not the file extension
-        image_format = getattr(getattr(value, "image", None), "format", None)
-        if image_format not in AVATAR_ALLOWED_FORMATS:
-            raise serializers.ValidationError(
-                f"Unsupported image format. Allowed: {', '.join(AVATAR_ALLOWED_FORMATS.values())}."
-            )
-        return value
 
 class CustomerAddressesSerializer(serializers.ModelSerializer):
     class Meta:

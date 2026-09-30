@@ -19,7 +19,6 @@ class IsAuthenticatedMiddleware(MiddlewareMixin):
             "auth_me",
             "change_password",
             "update_customer_info",
-            "customer_avatar",
             "addresses_list",
             "address_update",
             "promocode_checker",

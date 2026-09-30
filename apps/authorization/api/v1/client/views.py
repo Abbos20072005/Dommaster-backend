@@ -17,7 +17,7 @@ from .serializers import CustomerSerializer, LoginSerializer, RegisterSerializer
     OTPResendSerializer, ChangePasswordSerializer, ForgotPasswordSerializer, CustomerAddressesSerializer, \
     CustomerAddressesUpdateSerializer, CustomerAddressesCreateSerializer, ResetPasswordSerializer, FCMTokenSerializer, \
     FCMTokenRequestSerializer, FCMTokenDeleteSerializer, TokenRefreshSerializer, PhoneAuthSerializer, \
-    TelegramOTPSerializer, CustomerAvatarSerializer
+    TelegramOTPSerializer
 from django.utils import timezone
 from apps.integration.eskiz import EskizOTP
 from utils.send_notification import send_notification_to_customer
@@ -229,8 +229,11 @@ class AuthViewSet(ViewSet):
 
     @extend_schema(
         summary="Update user information",
-        description="Update user information",
-        request=CustomerSerializer(),
+        description="Partial update of the profile. To upload / replace the profile image send "
+                    "multipart/form-data with the `avatar` file (jpg/jpeg, png, webp, max 5 MB); "
+                    "to remove it send `avatar: null` (JSON) or an empty `avatar` (multipart). "
+                    "The old image file is deleted from storage.",
+        request={"application/json": CustomerSerializer, "multipart/form-data": CustomerSerializer},
         responses={202: CustomerSerializer()},
         tags=["Auth"]
     )
@@ -246,47 +249,6 @@ class AuthViewSet(ViewSet):
 
         serializer.save()
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_202_ACCEPTED)
-
-    @extend_schema(
-        summary="Upload / replace profile image",
-        description="multipart/form-data, field `avatar`: jpg/jpeg, png or webp, max 5 MB. "
-                    "Replaces the current image (old file is deleted). Returns the updated profile.",
-        request={"multipart/form-data": CustomerAvatarSerializer},
-        responses={200: CustomerSerializer()},
-        tags=["Auth"]
-    )
-    def upload_avatar(self, request):
-        customer = Customer.objects.filter(id=request.user.id).first()
-        if not customer:
-            raise CustomApiException(error_code=ErrorCodes.USER_DOES_NOT_EXIST)
-
-        serializer = CustomerAvatarSerializer(data=request.data)
-        if not serializer.is_valid():
-            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
-
-        customer.avatar = serializer.validated_data["avatar"]
-        customer.save(update_fields=["avatar", "updated_at"])
-        return Response(data={"result": CustomerSerializer(customer, context={"request": request}).data, "ok": True},
-                        status=status.HTTP_200_OK)
-
-    @extend_schema(
-        summary="Delete profile image",
-        description="Removes the profile image (file is deleted from storage); `avatar` becomes null. "
-                    "Returns the updated profile.",
-        request=None,
-        responses={200: CustomerSerializer()},
-        tags=["Auth"]
-    )
-    def delete_avatar(self, request):
-        customer = Customer.objects.filter(id=request.user.id).first()
-        if not customer:
-            raise CustomApiException(error_code=ErrorCodes.USER_DOES_NOT_EXIST)
-
-        if customer.avatar:
-            customer.avatar = None
-            customer.save(update_fields=["avatar", "updated_at"])
-        return Response(data={"result": CustomerSerializer(customer, context={"request": request}).data, "ok": True},
-                        status=status.HTTP_200_OK)
 
     @extend_schema(
         summary="Change password",
