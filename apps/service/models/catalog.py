@@ -113,7 +113,12 @@ class ProductAttribute(BaseModel):
     # not linked to products yet (they still use the free-form ProductCharacteristics from 1C)
     VALUE_TYPE_CHOICES = (
         ("number", "Число"),
+        ("range", "Диапазон"),
         ("list", "Список"),
+        ("multi_list", "Множественный выбор"),
+        ("boolean", "Да/Нет"),
+        ("color", "Цвет"),
+        ("text", "Текст"),
     )
     item_category = models.ForeignKey(ProductItemCategory, on_delete=models.CASCADE, related_name="attributes",
                                       verbose_name="Предметная категория")
