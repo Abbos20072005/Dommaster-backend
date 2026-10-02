@@ -13,7 +13,7 @@ from ..serializers import ProductListSerializer, ProductSerializer, ProductImage
 
 class ProductViewSet(AdminModelViewSet):
     filterset_class = ProductFilter
-    search_fields = ("name_ru", "name_uz", "product_code", "articul_code", "barcode")
+    search_fields = ("name_ru", "name_uz", "name_en", "product_code", "articul_code", "barcode")
     ordering_fields = ("id", "name", "price", "quantity", "rating", "created_at", "updated_at")
     ordering = ("-created_at",)
 

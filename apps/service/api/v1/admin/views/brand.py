@@ -9,7 +9,7 @@ from ..serializers import BrandSerializer, PartnerBrandSerializer
 class BrandViewSet(AdminModelViewSet):
     serializer_class = BrandSerializer
     filterset_class = BrandFilter
-    search_fields = ("name_ru", "name_uz", "code")
+    search_fields = ("name_ru", "name_uz", "name_en", "code")
     ordering_fields = ("id", "name", "products_count", "created_at", "updated_at")
     ordering = ("-created_at",)
 

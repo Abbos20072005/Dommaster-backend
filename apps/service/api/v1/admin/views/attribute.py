@@ -10,7 +10,7 @@ from ..serializers import ProductAttributeSerializer
 class ProductAttributeViewSet(AdminModelViewSet):
     serializer_class = ProductAttributeSerializer
     filterset_class = ProductAttributeFilter
-    search_fields = ("name_ru", "name_uz")
+    search_fields = ("name_ru", "name_uz", "name_en")
     ordering_fields = ("id", "name", "value_type", "item_categories_count", "products_count", "created_at",
                        "updated_at")
     ordering = ("-created_at",)

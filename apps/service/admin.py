@@ -235,7 +235,7 @@ class ProductAttributeValueInline(TabularInline):
 @admin.register(Product)
 class ProductAdmin(ModelAdmin):
     list_display = get_model_fields(Product, exclude=(
-        "short_description", "description", "description_uz", "description_ru",
+        "short_description", "description", "description_uz", "description_ru", "description_en",
     ))
     list_display_links = ("id", "name")
     search_fields = ("name", "brand__name", "product_item_category__name")
@@ -246,8 +246,8 @@ class ProductAdmin(ModelAdmin):
     inlines = (ProductImageInline, ProductCharacteristicsInline, ProductAttributeValueInline)
     fieldsets = (
         (None, {
-            "fields": ("name_uz", "name_ru", "short_description",
-                       "description_uz", "description_ru", "price", "discount",
+            "fields": ("name_uz", "name_ru", "name_en", "short_description",
+                       "description_uz", "description_ru", "description_en", "price", "discount",
                        "discount_price", "quantity", "comments_quantity", "questions_quantity",
                        "rating", "is_active", "erp_active", "publish_status", "purchasable", "brand", "badge", "product_item_category", "unit")
         }),

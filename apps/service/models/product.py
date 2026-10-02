@@ -86,6 +86,7 @@ class Product(BaseModel):
             GinIndex(fields=['name'], opclasses=['gin_trgm_ops'], name='idx_product_name_trgm'),
             GinIndex(fields=['name_uz'], opclasses=['gin_trgm_ops'], name='idx_product_name_uz_trgm'),
             GinIndex(fields=['name_ru'], opclasses=['gin_trgm_ops'], name='idx_product_name_ru_trgm'),
+            GinIndex(fields=['name_en'], opclasses=['gin_trgm_ops'], name='idx_product_name_en_trgm'),
             models.Index(fields=['is_active'], name='idx_product_is_active'),
             models.Index(fields=['brand'], name='idx_product_brand'),
             models.Index(fields=['product_item_category'], name='idx_product_item_cat'),

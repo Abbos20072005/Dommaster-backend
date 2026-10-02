@@ -270,9 +270,11 @@ class ProductCharacteristicsCreateSerializer(serializers.ModelSerializer):
             "product",
             "name",
             "name_uz",
+            "name_en",
             "unit",
             "value",
-            "value_uz"
+            "value_uz",
+            "value_en"
         )
 
 
@@ -522,8 +524,10 @@ class ProductCreateSerializer(serializers.ModelSerializer):
             "brand",
             "name",
             "name_uz",
+            "name_en",
             "description",
             "description_uz",
+            "description_en",
             "price",
             "unit",
             "quantity"
@@ -581,6 +585,7 @@ class ProductDetailAttributeSerializer(TranslatedSerializerMixin, serializers.Se
     BOOLEAN_LABELS = {
         "uz": {"true": "Ha", "false": "Yo'q"},
         "ru": {"true": "Да", "false": "Нет"},
+        "en": {"true": "Yes", "false": "No"},
     }
 
     id = serializers.IntegerField(source="attribute_id")
@@ -1025,6 +1030,7 @@ class ProductItemCategoryCreateSerializer(serializers.ModelSerializer):
             "product_sub_category",
             "name",
             "name_uz",
+            "name_en",
             "image"
         )
 

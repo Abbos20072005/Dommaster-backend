@@ -237,6 +237,7 @@ class Command(BaseCommand):
                         label=char.name,
                         label_uz=char.name,
                         label_ru=char.name,
+                        label_en=char.name,
                         unit=char.unit or "",
                     )
             else:
@@ -248,6 +249,7 @@ class Command(BaseCommand):
                         "label": char.name,
                         "label_uz": char.name,
                         "label_ru": char.name,
+                        "label_en": char.name,
                         "unit": char.unit or "",
                     }
                 )
