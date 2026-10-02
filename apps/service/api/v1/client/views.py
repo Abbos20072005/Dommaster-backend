@@ -1403,11 +1403,11 @@ class CommentViewSet(ViewSet):
         comment = Comment.objects.filter(
             customer_id=request.user.id, product_id=product.id
         ).first()
-        if comment:
-            raise CustomApiException(
-                error_code=ErrorCodes.INVALID_INPUT,
-                message="Your comment already exist",
-            )
+        # if comment:
+        #     raise CustomApiException(
+        #         error_code=ErrorCodes.INVALID_INPUT,
+        #         message="Your comment already exist",
+        #     )
 
         data = (
             request.data.dict() if hasattr(request.data, "dict") else dict(request.data)
