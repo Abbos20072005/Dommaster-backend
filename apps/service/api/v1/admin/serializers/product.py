@@ -17,7 +17,7 @@ class ProductBrandSerializer(RelationSerializer):
 class ProductBadgeShortSerializer(RelationSerializer):
     class Meta:
         model = ProductBadge
-        fields = ("id", "name")
+        fields = ("id", "name", "kind", "color")
 
 
 class ProductImageSerializer(serializers.ModelSerializer):
@@ -75,20 +75,21 @@ class ProductAttributeValueSerializer(serializers.ModelSerializer):
 
 class ProductListSerializer(serializers.ModelSerializer):
     brand = ProductBrandSerializer(read_only=True)
-    badge = ProductBadgeShortSerializer(read_only=True)
+    badges = ProductBadgeShortSerializer(many=True, read_only=True)
     product_item_category = ProductItemCategorySerializer(read_only=True)
     images = ProductImageSerializer(source="product_image", many=True, read_only=True)
 
     class Meta:
         model = Product
-        fields = ("id", "name", "images", "product_code", "articul_code", "barcode", "brand", "badge",
+        fields = ("id", "name", "images", "product_code", "articul_code", "barcode", "brand", "badges",
                   "product_item_category", "price", "discount_price", "discount", "unit", "quantity", "rating", "comments_quantity",
                   "is_active", "erp_active", "publish_status", "purchasable", "created_at", "updated_at")
 
 
 class ProductSerializer(serializers.ModelSerializer):
     brand = ProductBrandSerializer(required=False, allow_null=True)
-    badge = ProductBadgeShortSerializer(required=False, allow_null=True)
+    # the sent list replaces the product's manual badges; auto badges are managed by their rules (ignored here)
+    badges = ProductBadgeShortSerializer(many=True, required=False)
     product_item_category = ProductItemCategorySerializer(required=False, allow_null=True)
     characteristics = ProductCharacteristicSerializer(source="product_characteristics", many=True, required=False)
     # values of the item category's attributes (item-categories/{id}/attributes/); the sent list replaces all
@@ -99,7 +100,7 @@ class ProductSerializer(serializers.ModelSerializer):
         model = Product
         fields = ("id", "name", "name_uz", "name_ru", "name_en", "short_description",
                   "description_uz", "description_ru", "description_en",
-                  "brand", "badge", "product_item_category", "price", "discount_price", "discount", "unit",
+                  "brand", "badges", "product_item_category", "price", "discount_price", "discount", "unit",
                   "quantity",
                   "is_active", "erp_active", "publish_status", "purchasable", "product_code", "articul_code", "barcode", "weight", "length", "width", "height",
                   "rating", "comments_quantity", "questions_quantity", "filter_data", "characteristics",
@@ -155,21 +156,31 @@ class ProductSerializer(serializers.ModelSerializer):
             ProductAttributeValue(product=product, **item) for item in attribute_values
         )
 
+    @staticmethod
+    def _set_badges(product, badges):
+        manual = [badge for badge in badges if badge.kind == ProductBadge.MANUAL]
+        product.badges.set([*manual, *product.badges.filter(kind=ProductBadge.AUTO)])
+
     @transaction.atomic
     def create(self, validated_data):
         characteristics = validated_data.pop("product_characteristics", [])
         attribute_values = validated_data.pop("attribute_values", [])
+        badges = validated_data.pop("badges", [])
         product = super().create(validated_data)
         self._set_characteristics(product, characteristics)
         self._set_attribute_values(product, attribute_values)
+        self._set_badges(product, badges)
         return product
 
     @transaction.atomic
     def update(self, instance, validated_data):
         characteristics = validated_data.pop("product_characteristics", None)
         attribute_values = validated_data.pop("attribute_values", None)
+        badges = validated_data.pop("badges", None)
         old_category_id = instance.product_item_category_id
         product = super().update(instance, validated_data)
+        if badges is not None:
+            self._set_badges(product, badges)
         if characteristics is not None:
             self._set_characteristics(product, characteristics)
         if attribute_values is not None:

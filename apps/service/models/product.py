@@ -23,8 +23,7 @@ class Product(BaseModel):
     telegram_id = models.CharField(max_length=11, blank=True, null=True, verbose_name="Телеграм id")
     brand = models.ForeignKey(Brand, on_delete=models.SET_NULL, null=True, blank=True, related_name="product_brand",
                               verbose_name="Бренд")
-    badge = models.ForeignKey("ProductBadge", on_delete=models.SET_NULL, null=True, blank=True,
-                              related_name="products", verbose_name="Бейдж")
+    badges = models.ManyToManyField("ProductBadge", blank=True, related_name="products", verbose_name="Бейджи")
     product_item_category = models.ForeignKey(ProductItemCategory, on_delete=models.CASCADE, blank=True, null=True,
                                               related_name="product_item_category",
                                               verbose_name="Предметная категория продуктов")

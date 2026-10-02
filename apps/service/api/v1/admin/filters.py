@@ -24,6 +24,7 @@ class ProductFilter(django_filters.FilterSet):
     sub_category = django_filters.NumberFilter(field_name="product_item_category__product_sub_category")
     min_price = django_filters.NumberFilter(field_name="price", lookup_expr="gte")
     max_price = django_filters.NumberFilter(field_name="price", lookup_expr="lte")
+    badge = django_filters.NumberFilter(field_name="badges")
     in_stock = django_filters.BooleanFilter(method="filter_in_stock")
     has_discount = django_filters.BooleanFilter(field_name="discount_price", lookup_expr="isnull", exclude=True)
     from_created = django_filters.DateFilter(field_name="created_at", lookup_expr="date__gte")
@@ -31,7 +32,7 @@ class ProductFilter(django_filters.FilterSet):
 
     class Meta:
         model = Product
-        fields = ("brand", "badge", "product_item_category", "is_active", "erp_active", "publish_status", "purchasable",
+        fields = ("brand", "product_item_category", "is_active", "erp_active", "publish_status", "purchasable",
                   "unit")
 
     def filter_in_stock(self, queryset, name, value):
@@ -56,7 +57,7 @@ class PartnerBrandFilter(django_filters.FilterSet):
 class ProductBadgeFilter(django_filters.FilterSet):
     class Meta:
         model = ProductBadge
-        fields = ("is_active",)
+        fields = ("is_active", "kind", "rule_field")
 
 
 class CountFilterMixin:

@@ -3,7 +3,7 @@ from django.db.models.functions import Coalesce
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
-from apps.service.models import ProductCategory, ProductSubCategory, ProductItemCategory, \
+from apps.service.models import Product, ProductCategory, ProductSubCategory, ProductItemCategory, \
     ProductItemCategoryFilterSchema
 from utils.admin_views import AdminModelViewSet
 from ..filters import ProductCategoryFilter, ProductSubCategoryFilter, ProductItemCategoryFilter
@@ -11,34 +11,41 @@ from ..serializers import ProductCategorySerializer, ProductSubCategoryAdminSeri
     ProductItemCategoryAdminSerializer, ItemCategoryAttributesSerializer, CategoryReorderSerializer
 
 
+def rows_count(queryset, path, field="*", distinct=False):
+    """Rows of `queryset` under a category (`path`: row -> that category).
+
+    Correlated subquery, not JOIN + GROUP BY: a join to products multiplies every category row by its products
+    (and runs once more for the paginator's count); a subquery is evaluated only for the rows of the page.
+    """
+    rows = queryset.filter(**{path: OuterRef("pk")}).order_by().values(path) \
+        .annotate(count=Count(field, distinct=distinct)).values("count")
+    return Coalesce(Subquery(rows), 0)
+
+
 def filters_count(path):
     """Distinct filterable filter keys of the item categories under a category (`path`: schema -> that category)."""
-    schemas = ProductItemCategoryFilterSchema.objects.filter(is_filterable=True, **{path: OuterRef("pk")}) \
-        .order_by().values(path).annotate(count=Count("key", distinct=True)).values("count")
-    return Coalesce(Subquery(schemas), 0)
+    return rows_count(ProductItemCategoryFilterSchema.objects.filter(is_filterable=True), path, "key", distinct=True)
 
 
-# reverse names: category -> "product_category" (subs) -> "product_sub_category" (items)
-#   -> "product_item_category" (products)
 def category_queryset():
     return ProductCategory.objects.annotate(
-        children_count=Count("product_category", distinct=True),
-        products_count=Count("product_category__product_sub_category__product_item_category", distinct=True),
+        children_count=rows_count(ProductSubCategory.objects, "product_category"),
+        products_count=rows_count(Product.objects, "product_item_category__product_sub_category__product_category"),
         filters_count=filters_count("item_category__product_sub_category__product_category"),
     )
 
 
 def sub_category_queryset():
     return ProductSubCategory.objects.annotate(
-        children_count=Count("product_sub_category", distinct=True),
-        products_count=Count("product_sub_category__product_item_category", distinct=True),
+        children_count=rows_count(ProductItemCategory.objects, "product_sub_category"),
+        products_count=rows_count(Product.objects, "product_item_category__product_sub_category"),
         filters_count=filters_count("item_category__product_sub_category"),
     )
 
 
 def item_category_queryset():
     return ProductItemCategory.objects.annotate(
-        products_count=Count("product_item_category"),
+        products_count=rows_count(Product.objects, "product_item_category"),
         filters_count=filters_count("item_category"),
     )
 

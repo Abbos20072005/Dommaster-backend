@@ -1,5 +1,6 @@
 from ckeditor.fields import RichTextField
 from ckeditor_uploader.fields import RichTextUploadingField
+from django.core.validators import RegexValidator
 from django.db import models
 
 from abstract_model.base_model import BaseModel
@@ -50,8 +51,41 @@ class Tag(BaseModel):
 
 
 class ProductBadge(BaseModel):
-    # Card label ("Yangi", "Hit", ...): unlike Tag (M2M) a product has at most one (Product.badge FK)
+    # Card label ("Yangi", "Hit", ...), a product may have several (Product.badges M2M).
+    # Products of a `manual` badge are picked by hand in the product form; products of an `auto` badge are
+    # exactly those matching its rule (apps/service/badges.py).
+    MANUAL, AUTO = "manual", "auto"
+    KIND_CHOICES = (
+        (MANUAL, "Вручную"),
+        (AUTO, "Автоматически"),
+    )
+    DISCOUNT, CREATED_DAYS, QUANTITY, SALES_30D = "discount", "created_days", "quantity", "sales_30d"
+    RULE_FIELD_CHOICES = (
+        (DISCOUNT, "Скидка, %"),
+        (CREATED_DAYS, "Добавлен, дней назад"),
+        (QUANTITY, "Остаток, шт"),
+        (SALES_30D, "Продажи за 30 дней, шт"),
+    )
+    GT, GTE, LT, LTE, EQ = "gt", "gte", "lt", "lte", "eq"
+    RULE_OPERATOR_CHOICES = (
+        (GT, ">"),
+        (GTE, "≥"),
+        (LT, "<"),
+        (LTE, "≤"),
+        (EQ, "="),
+    )
     name = models.CharField(max_length=100, verbose_name="Название")
+    kind = models.CharField(max_length=10, choices=KIND_CHOICES, default=MANUAL, verbose_name="Тип")
+    # the rule (only for `auto`): <rule_field> <rule_operator> <rule_value>, e.g. discount > 0
+    rule_field = models.CharField(max_length=20, choices=RULE_FIELD_CHOICES, blank=True, null=True,
+                                  verbose_name="Правило: показатель")
+    rule_operator = models.CharField(max_length=3, choices=RULE_OPERATOR_CHOICES, blank=True, null=True,
+                                     verbose_name="Правило: оператор")
+    rule_value = models.IntegerField(blank=True, null=True, verbose_name="Правило: значение")
+    color = models.CharField(max_length=7, default="#2563EB", verbose_name="Цвет",
+                             validators=[RegexValidator(r"^#[0-9A-Fa-f]{6}$", "Enter a HEX color, e.g. #2563EB.")])
+    # order of the badges on a product card
+    position = models.IntegerField(default=0, verbose_name="Позиция")
     is_active = models.BooleanField(default=True, verbose_name="Активен")
 
     def __str__(self):
@@ -60,6 +94,7 @@ class ProductBadge(BaseModel):
     class Meta:
         verbose_name = "Бейдж продукта"
         verbose_name_plural = "Бейджи продуктов"
+        ordering = ("position", "id")
 
 
 class Sale(BaseModel):
