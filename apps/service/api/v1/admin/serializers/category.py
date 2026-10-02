@@ -47,7 +47,6 @@ SEO_FIELDS = ("meta_title_uz", "meta_title_ru", "meta_title_en", "meta_descripti
               "meta_description_en")
 VISIBILITY_FIELDS = ("show_on_site", "show_in_app", "is_active")
 COUNT_FIELDS = ("products_count", "filters_count")
-TREE_FIELDS = ("id", "name_uz", "name_ru", "slug", "code", "position", *VISIBILITY_FIELDS, *COUNT_FIELDS)
 
 
 class CategoryBaseSerializer(serializers.ModelSerializer):
@@ -92,33 +91,6 @@ class ProductItemCategoryAdminSerializer(CategoryBaseSerializer):
                   *VISIBILITY_FIELDS, *COUNT_FIELDS, "created_at", "updated_at")
         read_only_fields = ("name", "created_at", "updated_at")
         extra_kwargs = NAME_KWARGS
-
-
-class CategoryTreeBaseSerializer(serializers.ModelSerializer):
-    products_count = serializers.IntegerField(read_only=True, default=0)
-    filters_count = serializers.IntegerField(read_only=True, default=0)
-
-
-class ItemCategoryTreeSerializer(CategoryTreeBaseSerializer):
-    class Meta:
-        model = ProductItemCategory
-        fields = TREE_FIELDS
-
-
-class SubCategoryTreeSerializer(CategoryTreeBaseSerializer):
-    children = ItemCategoryTreeSerializer(source="product_sub_category", many=True, read_only=True)
-
-    class Meta:
-        model = ProductSubCategory
-        fields = (*TREE_FIELDS, "children")
-
-
-class CategoryTreeSerializer(CategoryTreeBaseSerializer):
-    children = SubCategoryTreeSerializer(source="product_category", many=True, read_only=True)
-
-    class Meta:
-        model = ProductCategory
-        fields = (*TREE_FIELDS, "children")
 
 
 class CategoryReorderSerializer(serializers.Serializer):

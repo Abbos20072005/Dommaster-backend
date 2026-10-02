@@ -1,16 +1,14 @@
-from django.db.models import Count, OuterRef, Prefetch, Subquery
+from django.db.models import Count, OuterRef, Subquery
 from django.db.models.functions import Coalesce
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
-from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
 from apps.service.models import ProductCategory, ProductSubCategory, ProductItemCategory, \
     ProductItemCategoryFilterSchema
-from utils.admin_views import AdminModelViewSet, AdminViewMixin
+from utils.admin_views import AdminModelViewSet
 from ..filters import ProductCategoryFilter, ProductSubCategoryFilter, ProductItemCategoryFilter
 from ..serializers import ProductCategorySerializer, ProductSubCategoryAdminSerializer, \
-    ProductItemCategoryAdminSerializer, ItemCategoryAttributesSerializer, CategoryTreeSerializer, \
-    CategoryReorderSerializer
+    ProductItemCategoryAdminSerializer, ItemCategoryAttributesSerializer, CategoryReorderSerializer
 
 
 def filters_count(path):
@@ -77,7 +75,7 @@ class ProductSubCategoryViewSet(CategoryActionsMixin, AdminModelViewSet):
     filterset_class = ProductSubCategoryFilter
     search_fields = ("name_ru", "name_uz", "name_en", "code", "slug")
     ordering_fields = ("id", "name", "position", "children_count", "products_count", "created_at", "updated_at")
-    ordering = ("-created_at",)
+    ordering = ("position", "id")
 
     def get_queryset(self):
         return sub_category_queryset().select_related("product_category")
@@ -88,7 +86,7 @@ class ProductItemCategoryViewSet(CategoryActionsMixin, AdminModelViewSet):
     filterset_class = ProductItemCategoryFilter
     search_fields = ("name_ru", "name_uz", "name_en", "code", "slug")
     ordering_fields = ("id", "name", "position", "products_count", "created_at", "updated_at")
-    ordering = ("-created_at",)
+    ordering = ("position", "id")
 
     def get_queryset(self):
         return item_category_queryset().select_related("product_sub_category__product_category")
@@ -103,16 +101,3 @@ class ProductItemCategoryViewSet(CategoryActionsMixin, AdminModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
-
-
-class CategoryTreeAPIView(AdminViewMixin, ListAPIView):
-    """Whole catalog tree (category -> sub categories -> item categories) in one response, not paginated."""
-    serializer_class = CategoryTreeSerializer
-    pagination_class = None
-    filter_backends = []
-
-    def get_queryset(self):
-        order = ("position", "id")
-        items = item_category_queryset().order_by(*order)
-        subs = sub_category_queryset().order_by(*order).prefetch_related(Prefetch("product_sub_category", queryset=items))
-        return category_queryset().order_by(*order).prefetch_related(Prefetch("product_category", queryset=subs))

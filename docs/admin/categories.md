@@ -5,49 +5,73 @@ Token kerak: `Authorization: Bearer <admin_access_token>` (`auth/login/` dan oli
 
 Katalog 3 darajali: **L1** `categories/` → **L2** `sub-categories/` → **L3** `item-categories/`. Mahsulot faqat L3 ga biriktiriladi.
 
+Har bir daraja **alohida API** bilan olinadi — bitta "daraxt" endpointi yo'q. Jadvalda qator ochilganda (expand) uning bolalari keyingi daraja ro'yxatidan ota `id` si bo'yicha so'raladi.
+
 | Endpoint | Nima uchun |
 | --- | --- |
-| `GET categories/tree/` | butun daraxt bitta javobda (jadval sahifasi) |
-| `GET / POST categories/`, `GET / PATCH / DELETE categories/{id}/` | L1 CRUD |
-| `GET / POST sub-categories/`, `GET / PATCH / DELETE sub-categories/{id}/` | L2 CRUD |
-| `GET / POST item-categories/`, `GET / PATCH / DELETE item-categories/{id}/` | L3 CRUD |
+| `GET categories/` | L1 ro'yxati |
+| `GET sub-categories/?product_category={L1 id}` | bitta L1 ning L2 lari |
+| `GET item-categories/?product_sub_category={L2 id}` | bitta L2 ning L3 lari |
+| `POST categories/`, `GET / PATCH / DELETE categories/{id}/` | L1 CRUD |
+| `POST sub-categories/`, `GET / PATCH / DELETE sub-categories/{id}/` | L2 CRUD |
+| `POST item-categories/`, `GET / PATCH / DELETE item-categories/{id}/` | L3 CRUD |
 | `POST categories/reorder/`, `sub-categories/reorder/`, `item-categories/reorder/` | drag & drop tartiblash |
 
 Swagger: `/swagger/admin/` → **categories**, **sub-categories**, **item-categories**.
 
 ---
 
-## 1. Daraxt — `GET categories/tree/`
+## 1. Jadval (ro'yxatlar)
 
-Paginatsiyasiz, oddiy massiv. Har darajada `position`, keyin `id` bo'yicha tartiblangan. L1 va L2 da `children` bor, L3 da yo'q.
+Uchala ro'yxat ham paginatsiyali: `?page=&page_size=` (default 20, max 100). Standart tartib — `position`, keyin `id`.
+
+1. Sahifa ochilganda: `GET categories/` → L1 qatorlar.
+2. L1 ochilganda: `GET sub-categories/?product_category=6` → uning L2 lari.
+3. L2 ochilganda: `GET item-categories/?product_sub_category=2` → uning L3 lari.
+
+Ochish strelkasi: `children_count > 0` (L1 da L2 lar soni, L2 da L3 lar soni; L3 da bu maydon yo'q).
+
+`GET sub-categories/?product_category=6`:
 
 ```json
-[
-  {
-    "id": 6,
-    "name_uz": "Elektr jihozlari",
-    "name_ru": "Электрика",
-    "slug": "elektr-jihozlari",
-    "code": "000000012",
-    "position": 1,
-    "show_on_site": true,
-    "show_in_app": true,
-    "is_active": true,
-    "products_count": 4820,
-    "filters_count": 6,
-    "children": [
-      {
-        "id": 2,
-        "name_uz": "Avtomatlar",
-        "...": "...",
-        "children": [
-          { "id": 1, "name_uz": "Bir qutbli avtomatlar", "...": "..." }
-        ]
-      }
-    ]
-  }
-]
+{
+  "count": 2,
+  "next": null,
+  "previous": null,
+  "next_page": null,
+  "previous_page": null,
+  "results": [
+    {
+      "id": 2,
+      "name": "Автоматы",
+      "name_uz": "Avtomatlar",
+      "name_ru": "Автоматы",
+      "name_en": null,
+      "slug": "avtomatlar",
+      "code": "000000012",
+      "product_category": { "id": 6, "name": "Электрика" },
+      "image": null,
+      "position": 1,
+      "meta_title_uz": null,
+      "meta_title_ru": null,
+      "meta_title_en": null,
+      "meta_description_uz": null,
+      "meta_description_ru": null,
+      "meta_description_en": null,
+      "show_on_site": true,
+      "show_in_app": true,
+      "is_active": true,
+      "children_count": 2,
+      "products_count": 1240,
+      "filters_count": 5,
+      "created_at": "2026-10-02T12:01:17",
+      "updated_at": "2026-10-02T12:01:17"
+    }
+  ]
+}
 ```
+
+L1 da `product_category` o'rniga `icon` bor; L3 da ota `product_sub_category` (`{id, name, product_category}`) va `children_count` yo'q.
 
 | Jadval ustuni | Maydon |
 | --- | --- |
@@ -60,6 +84,12 @@ Paginatsiyasiz, oddiy massiv. Har darajada `position`, keyin `id` bo'yicha tarti
 | Holat | `is_active`: `true` = Faol, `false` = Qoralama |
 
 `code` — 1C kodi (bitta kategoriya = bitta 1C guruh). "1C guruhlari" soni hozircha yo'q.
+
+Qo'shimcha parametrlar (uchala ro'yxatda):
+
+- Qidiruv: `?search=` (nomi uz/ru/en, `code`, `slug`)
+- Filtrlar: `is_active`, `show_on_site`, `show_in_app`, `has_products`, `has_children` (L1, L2), `product_category` (L2), `product_sub_category` (L3), `category` (L3 — L1 `id` si bo'yicha)
+- Tartib: `?ordering=` `position`, `id`, `name`, `products_count`, `children_count` (L1, L2), `created_at`, `updated_at` (teskari: `-created_at`)
 
 ---
 
@@ -122,14 +152,6 @@ Drag & drop'dan keyin bitta ota ichidagi (bir darajadagi) kategoriyalar `id` lar
 { "ids": [12, 7, 9] }
 ```
 
+Ro'yxat paginatsiyali bo'lgani uchun bitta otaning **barcha** bolalarini yuboring (kerak bo'lsa `page_size=100` bilan olib) — faqat bitta sahifani yuborsangiz `position` lar boshqa sahifadagilar bilan ustma-ust tushadi.
+
 Javob `200` — xuddi shu body. Takroriy yoki mavjud bo'lmagan id → `400 {"ids": ["Not found: [999]"]}`.
-
----
-
-## 4. Ro'yxatlar (paginatsiyali)
-
-`GET categories/`, `sub-categories/`, `item-categories/` — `?page=&page_size=`.
-
-- Qidiruv: `?search=` (nomi uz/ru/en, `code`, `slug`)
-- Filtrlar: `is_active`, `show_on_site`, `show_in_app`, `has_products`, `has_children` (L1, L2), `product_category` (L2), `product_sub_category`, `category` (L3)
-- Tartib: `?ordering=position` (`id`, `name`, `products_count`, `children_count`, `created_at`, `updated_at`)

@@ -9,7 +9,7 @@ from .product import ProductBrandSerializer, ProductBadgeShortSerializer, Produc
 from .category import ProductCategoryShortSerializer, ProductSubCategoryShortSerializer, \
     ProductItemCategorySerializer, CategoryParentSerializer, SubCategoryParentSerializer, CategoryBaseSerializer, \
     ProductCategorySerializer, ProductSubCategoryAdminSerializer, ProductItemCategoryAdminSerializer, \
-    ItemCategoryTreeSerializer, SubCategoryTreeSerializer, CategoryTreeSerializer, CategoryReorderSerializer
+    CategoryReorderSerializer
 from .brand import BrandSerializer, PartnerBrandSerializer
 from .badge import ProductBadgeSerializer
 from .attribute import ProductAttributeOptionSerializer, ProductAttributeSerializer, AttributeShortSerializer, \
@@ -33,8 +33,8 @@ __all__ = [
     "ProductStatsSerializer", "ProductCategoryShortSerializer", "ProductSubCategoryShortSerializer",
     "ProductItemCategorySerializer", "CategoryParentSerializer", "SubCategoryParentSerializer",
     "CategoryBaseSerializer", "ProductCategorySerializer", "ProductSubCategoryAdminSerializer",
-    "ProductItemCategoryAdminSerializer", "ItemCategoryTreeSerializer", "SubCategoryTreeSerializer",
-    "CategoryTreeSerializer", "CategoryReorderSerializer", "BrandSerializer", "PartnerBrandSerializer", "ProductBadgeSerializer",
+    "ProductItemCategoryAdminSerializer", "CategoryReorderSerializer",
+    "BrandSerializer", "PartnerBrandSerializer", "ProductBadgeSerializer",
     "ProductAttributeOptionSerializer", "ProductAttributeSerializer", "AttributeShortSerializer",
     "CategoryAttributeSerializer", "ItemCategoryAttributesSerializer", "ProductAttributeValueSerializer", "FeedbackCustomerSerializer", "FeedbackProductSerializer",
     "CommentImageSerializer", "CommentReplyShortSerializer", "QuestionReplyShortSerializer", "CommentListSerializer",
