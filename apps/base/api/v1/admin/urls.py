@@ -1,8 +1,9 @@
 from rest_framework.routers import SimpleRouter
 from .views import BannerViewSet, MarketBranchViewSet, ChatViewSet, MessageViewSet, NewsViewSet, ArticlesViewSet, \
-    VideoViewSet
+    VideoViewSet, NotificationViewSet
 
 router = SimpleRouter()
+router.register("notifications", NotificationViewSet, basename="admin_notification")
 router.register("banners", BannerViewSet, basename="admin_banner")
 router.register("branches", MarketBranchViewSet, basename="admin_branch")
 router.register("chats", ChatViewSet, basename="admin_chat")

@@ -13,9 +13,12 @@ from apps.base.paginations.get_branches import get_branches_paginator
 from .serializers import BannerSerializer, MessageSerializer, MessageCreateSerializer, AboutUsSerializer, \
     ChatCreateSerializer, PromocodeRequestSerializer, NewsSerializer, NewsDetailSerializer, ArticlesSerializer, \
     ArticlesDetailSerializer, ReviewsSerializer, ReviewsDetailSerializer, VideoSerializer, PromocodeSerializer, \
-    DeleteButtonSerializer, BaseInformationSerializer, MarketBranchSerializer
+    DeleteButtonSerializer, BaseInformationSerializer, MarketBranchSerializer, NotificationSerializer, \
+    NotificationListParamsSerializer, NotificationUnreadCountSerializer
 from apps.base.models import Banner, Chat, AboutUs, Messages, Promocodes, News, Articles, Reviews, Video, DeleteButton, \
-    BaseInformation, MarketBranch
+    BaseInformation, MarketBranch, Notification, NotificationRead
+from apps.base.paginations.get_notifications import get_notifications_paginator
+from django.db.models import Exists, OuterRef
 from apps.service.models import Cart
 from apps.base.telegram import send_chat_message_to_telegram
 from drf_spectacular.types import OpenApiTypes
@@ -366,6 +369,89 @@ class DeleteButtonViewSet(ViewSet):
     def delete_button(self, request):
         delete_button = DeleteButton.objects.last()
         return Response(data={"result": DeleteButtonSerializer(delete_button).data, "ok": True}, status=status.HTTP_200_OK)
+
+
+class NotificationViewSet(ViewSet):
+    @staticmethod
+    def get_queryset(request):
+        # common list + the customer's own read state
+        is_read = NotificationRead.objects.filter(notification=OuterRef("pk"), customer_id=request.user.id)
+        return Notification.visible_to(request.user).annotate(is_read=Exists(is_read))
+
+    @extend_schema(
+        summary="Notifications list",
+        description="Published notifications (newest first), the same for every customer; `is_read` is the "
+                    "current customer's read state. `?is_read=false` - only unread.",
+        parameters=[
+            OpenApiParameter(
+                name='page', location=OpenApiParameter.QUERY, description='Page', type=OpenApiTypes.INT),
+            OpenApiParameter(
+                name='page_size', location=OpenApiParameter.QUERY, description='Page size', type=OpenApiTypes.INT),
+            OpenApiParameter(
+                name='is_read', location=OpenApiParameter.QUERY, description='Read state', type=OpenApiTypes.BOOL),
+        ],
+        responses={200: NotificationSerializer(many=True)},
+        tags=["Notification"]
+    )
+    def notification_list(self, request):
+        params = request.query_params
+        param_serializer = NotificationListParamsSerializer(data=params, context={"request": request})
+        if not param_serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=param_serializer.errors)
+
+        notifications = self.get_queryset(request)
+        is_read = param_serializer.validated_data.get("is_read")
+        if is_read is not None:
+            notifications = notifications.filter(is_read=is_read)
+        return Response(data={
+            "result": get_notifications_paginator(response_data=notifications,
+                                                  page=param_serializer.validated_data.get("page"),
+                                                  page_size=param_serializer.validated_data.get("page_size"),
+                                                  context={"request": request}), "ok": True},
+            status=status.HTTP_200_OK)
+
+    @extend_schema(
+        summary="Notification detail",
+        description="Returns the notification and marks it as read for the current customer.",
+        responses={200: NotificationSerializer()},
+        tags=["Notification"]
+    )
+    def notification_detail(self, request, pk):
+        notification = self.get_queryset(request).filter(id=pk).first()
+        if not notification:
+            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
+
+        if not notification.is_read:
+            NotificationRead.objects.get_or_create(notification=notification, customer_id=request.user.id)
+            notification.is_read = True
+        serializer = NotificationSerializer(notification, context={"request": request})
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+
+    @extend_schema(
+        summary="Unread notifications count",
+        description="How many notifications the current customer has not read yet (badge).",
+        responses={200: NotificationUnreadCountSerializer()},
+        tags=["Notification"]
+    )
+    def notification_unread_count(self, request):
+        unread_count = self.get_queryset(request).filter(is_read=False).count()
+        return Response(data={"result": {"unread_count": unread_count}, "ok": True}, status=status.HTTP_200_OK)
+
+    @extend_schema(
+        summary="Read all notifications",
+        description="Marks every unread notification of the current customer as read.",
+        request=None,
+        responses={200: NotificationUnreadCountSerializer()},
+        tags=["Notification"]
+    )
+    def notification_read_all(self, request):
+        unread = self.get_queryset(request).filter(is_read=False).values_list("id", flat=True)
+        NotificationRead.objects.bulk_create(
+            [NotificationRead(notification_id=pk, customer_id=request.user.id) for pk in unread],
+            # a parallel request (detail / second read-all) may have marked some already
+            ignore_conflicts=True,
+        )
+        return Response(data={"result": {"unread_count": 0}, "ok": True}, status=status.HTTP_200_OK)
 
 
 class BaseInformationViewSet(ViewSet):

@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from apps.base.models import Banner, Chat, LoyaltyCard, AboutUs, Messages, Promocodes, News, Articles, Reviews, Video, DeleteButton, \
-    BaseInformation, MarketBranch, BRANCH_TYPE_CHOICES
+    BaseInformation, MarketBranch, Notification, BRANCH_TYPE_CHOICES
 from config import settings
 
 
@@ -123,6 +123,48 @@ class PromocodeSerializer(serializers.ModelSerializer):
             "discount_precent",
             "expires_at"
         )
+
+
+class NotificationSerializer(serializers.ModelSerializer):
+    title = serializers.SerializerMethodField()
+    description = serializers.SerializerMethodField()
+    # annotated by the view
+    is_read = serializers.BooleanField(read_only=True)
+
+    class Meta:
+        model = Notification
+        fields = (
+            "id",
+            "title",
+            "description",
+            "deeplink",
+            "is_read",
+            "publish_at"
+        )
+
+    def _translated(self, obj, field) -> str:
+        request = self.context.get('request')
+        language = 'ru'
+        if request and request.META.get('HTTP_ACCEPT_LANGUAGE') in settings.MODELTRANSLATION_LANGUAGES:
+            language = request.META.get('HTTP_ACCEPT_LANGUAGE')
+        # only ru is required in the admin API -> fall back to it
+        return getattr(obj, f'{field}_{language}') or getattr(obj, f'{field}_ru') or ""
+
+    def get_title(self, obj) -> str:
+        return self._translated(obj, "title")
+
+    def get_description(self, obj) -> str:
+        return self._translated(obj, "description")
+
+
+class NotificationListParamsSerializer(serializers.Serializer):
+    page = serializers.IntegerField(required=False, default=1, min_value=1)
+    page_size = serializers.IntegerField(required=False, default=10, min_value=1)
+    is_read = serializers.BooleanField(required=False, allow_null=True, default=None)
+
+
+class NotificationUnreadCountSerializer(serializers.Serializer):
+    unread_count = serializers.IntegerField()
 
 
 class PromocodeRequestSerializer(serializers.Serializer):

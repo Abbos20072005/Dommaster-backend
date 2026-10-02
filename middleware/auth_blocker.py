@@ -40,6 +40,10 @@ class IsAuthenticatedMiddleware(MiddlewareMixin):
             "order_cancel",
             "fcm_token",
             "telegram_link",
+            "notification_list",
+            "notification_detail",
+            "notification_unread_count",
+            "notification_read_all",
         }
 
         match = request.resolver_match

@@ -1,4 +1,4 @@
-from .models import News, Banner, Video, Promocodes, AboutUs, MarketBranch
+from .models import News, Banner, Video, Promocodes, AboutUs, MarketBranch, Notification
 from modeltranslation.translator import translator, TranslationOptions
 
 
@@ -26,7 +26,12 @@ class MarketBranchOption(TranslationOptions):
     fields = ("name", "location_name", "description")
 
 
+class NotificationOption(TranslationOptions):
+    fields = ("title", "description")
+
+
 translator.register(AboutUs, AboutUsOption)
+translator.register(Notification, NotificationOption)
 translator.register(Promocodes, PromocodesOption)
 translator.register(Video, VideoOption)
 translator.register(Banner, BannerOption)

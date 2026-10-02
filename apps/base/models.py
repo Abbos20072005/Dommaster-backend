@@ -166,15 +166,73 @@ class LoyaltyCard(BaseModel):
 
 
 class Notification(BaseModel):
+    """Common notification: every customer sees the same list, the read state is per customer
+    (`NotificationRead`)."""
+    # not stored: derived from `is_active` + `publish_at` (see `status`, `status_q`)
+    PUBLISHED, SCHEDULED, DRAFT = "published", "scheduled", "draft"
+    STATUS_CHOICES = (
+        (PUBLISHED, "Опубликовано"),
+        (SCHEDULED, "Запланировано"),
+        (DRAFT, "Черновик"),
+    )
+
     title = models.CharField(max_length=150, verbose_name="Заголовок")
     description = models.TextField(verbose_name="Описание")
+    deeplink = models.CharField(max_length=255, blank=True, default="", verbose_name="Диплинк",
+                                help_text="Экран приложения, например buildex://category/sement")
+    # False = draft
+    is_active = models.BooleanField(default=True, verbose_name="Активен")
+    publish_at = models.DateTimeField(default=timezone.now, db_index=True, verbose_name="Время публикации")
 
     def __str__(self):
         return self.title
 
+    @property
+    def status(self):
+        if not self.is_active:
+            return self.DRAFT
+        if self.publish_at > timezone.now():
+            return self.SCHEDULED
+        return self.PUBLISHED
+
+    @classmethod
+    def status_q(cls, status):
+        """`status` as a queryset filter."""
+        now = timezone.now()
+        if status == cls.DRAFT:
+            return models.Q(is_active=False)
+        if status == cls.SCHEDULED:
+            return models.Q(is_active=True, publish_at__gt=now)
+        return models.Q(is_active=True, publish_at__lte=now)
+
+    @classmethod
+    def visible_to(cls, customer):
+        """Published notifications of the customer's list: those published before the registration are
+        not shown, so a new customer does not start with a pile of old unread ones."""
+        return cls.objects.filter(cls.status_q(cls.PUBLISHED), publish_at__gte=customer.created_at)
+
     class Meta:
         verbose_name = "Уведомление"
         verbose_name_plural = "Уведомления"
+        ordering = ("-publish_at", "-id")
+
+
+class NotificationRead(BaseModel):
+    """The customer has opened the notification (a row = read)."""
+    notification = models.ForeignKey(Notification, on_delete=models.CASCADE, related_name="reads",
+                                     verbose_name="Уведомление")
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="notification_reads",
+                                 verbose_name="Клиент")
+
+    def __str__(self):
+        return f"{self.customer_id} - {self.notification_id}"
+
+    class Meta:
+        verbose_name = "Прочитанное уведомление"
+        verbose_name_plural = "Прочитанные уведомления"
+        constraints = [
+            models.UniqueConstraint(fields=("notification", "customer"), name="unique_notification_read"),
+        ]
 
 
 class AboutUs(BaseModel):

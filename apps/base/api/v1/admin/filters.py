@@ -1,6 +1,6 @@
 import django_filters
 from django.db.models import Q
-from apps.base.models import MarketBranch, Banner, Chat, Messages
+from apps.base.models import MarketBranch, Banner, Chat, Messages, Notification
 
 
 class MarketBranchFilter(django_filters.FilterSet):
@@ -47,6 +47,20 @@ class MessageFilter(django_filters.FilterSet):
     class Meta:
         model = Messages
         fields = ("chat", "is_answer")
+
+
+class NotificationFilter(django_filters.FilterSet):
+    # published / scheduled / draft
+    status = django_filters.ChoiceFilter(choices=Notification.STATUS_CHOICES, method="filter_status")
+    from_publish = django_filters.DateFilter(field_name="publish_at", lookup_expr="date__gte")
+    to_publish = django_filters.DateFilter(field_name="publish_at", lookup_expr="date__lte")
+
+    class Meta:
+        model = Notification
+        fields = ("is_active",)
+
+    def filter_status(self, queryset, name, value):
+        return queryset.filter(Notification.status_q(value))
 
 
 class CreatedRangeFilter(django_filters.FilterSet):
