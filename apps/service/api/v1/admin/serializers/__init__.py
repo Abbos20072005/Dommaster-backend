@@ -4,14 +4,15 @@ from .order import PENDING, COLLECTING, DELIVERING, COMPLETED, CANCELED, DELIVER
     OrderManagerSerializer, ManagerSerializer, OrderCommentOrderSerializer, OrderCommentAuthorSerializer, \
     OrderCommentShortSerializer, OrderCommentSerializer
 from .product import ProductBrandSerializer, ProductBadgeShortSerializer, ProductImageSerializer, \
-    ProductCharacteristicSerializer, ProductListSerializer, ProductSerializer, ProductStatsSerializer
+    ProductCharacteristicSerializer, ProductAttributeValueSerializer, ProductListSerializer, ProductSerializer, \
+    ProductStatsSerializer
 from .category import ProductCategoryShortSerializer, ProductSubCategoryShortSerializer, \
     ProductItemCategorySerializer, CategoryParentSerializer, SubCategoryParentSerializer, CategoryBaseSerializer, \
     ProductCategorySerializer, ProductSubCategoryAdminSerializer, ProductItemCategoryAdminSerializer
 from .brand import BrandSerializer, PartnerBrandSerializer
 from .badge import ProductBadgeSerializer
-from .attribute import ProductAttributeOptionSerializer, ProductAttributeSerializer, CategoryAttributeSerializer, \
-    ItemCategoryAttributesSerializer
+from .attribute import ProductAttributeOptionSerializer, ProductAttributeSerializer, AttributeShortSerializer, \
+    CategoryAttributeSerializer, ItemCategoryAttributesSerializer
 from .feedback import FeedbackCustomerSerializer, FeedbackProductSerializer, CommentImageSerializer, \
     CommentReplyShortSerializer, QuestionReplyShortSerializer, CommentListSerializer, CommentSerializer, \
     QuestionListSerializer, QuestionSerializer, ReplyCommentSerializer, ReplyQuestionSerializer, ReplyBaseSerializer, \
@@ -32,8 +33,8 @@ __all__ = [
     "ProductItemCategorySerializer", "CategoryParentSerializer", "SubCategoryParentSerializer",
     "CategoryBaseSerializer", "ProductCategorySerializer", "ProductSubCategoryAdminSerializer",
     "ProductItemCategoryAdminSerializer", "BrandSerializer", "PartnerBrandSerializer", "ProductBadgeSerializer",
-    "ProductAttributeOptionSerializer", "ProductAttributeSerializer", "CategoryAttributeSerializer",
-    "ItemCategoryAttributesSerializer", "FeedbackCustomerSerializer", "FeedbackProductSerializer",
+    "ProductAttributeOptionSerializer", "ProductAttributeSerializer", "AttributeShortSerializer",
+    "CategoryAttributeSerializer", "ItemCategoryAttributesSerializer", "ProductAttributeValueSerializer", "FeedbackCustomerSerializer", "FeedbackProductSerializer",
     "CommentImageSerializer", "CommentReplyShortSerializer", "QuestionReplyShortSerializer", "CommentListSerializer",
     "CommentSerializer", "QuestionListSerializer", "QuestionSerializer", "ReplyCommentSerializer",
     "ReplyQuestionSerializer", "ReplyBaseSerializer", "CommentReplySerializer", "QuestionReplySerializer",

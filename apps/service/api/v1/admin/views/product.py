@@ -5,7 +5,7 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
-from apps.service.models import Product, ProductImage
+from apps.service.models import Product, ProductImage, ProductAttributeValue
 from utils.admin_views import AdminModelViewSet
 from ..filters import ProductFilter
 from ..serializers import ProductListSerializer, ProductSerializer, ProductImageSerializer, ProductStatsSerializer
@@ -24,7 +24,8 @@ class ProductViewSet(AdminModelViewSet):
         qs = qs.select_related("brand", "badge", "product_item_category__product_sub_category__product_category") \
             .prefetch_related(Prefetch("product_image", queryset=ProductImage.objects.order_by("id")))
         if self.action != "list":
-            qs = qs.prefetch_related("product_characteristics")
+            qs = qs.prefetch_related("product_characteristics", Prefetch(
+                "attribute_values", queryset=ProductAttributeValue.objects.select_related("attribute")))
         return qs
 
     def get_serializer_class(self):

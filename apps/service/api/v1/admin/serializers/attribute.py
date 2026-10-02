@@ -25,11 +25,13 @@ class ProductAttributeSerializer(serializers.ModelSerializer):
     # attached on the category side: item-categories/{id}/attributes/
     item_categories = ProductItemCategorySerializer(many=True, read_only=True)
     item_categories_count = serializers.IntegerField(read_only=True, default=0)
+    products_count = serializers.IntegerField(read_only=True, default=0, help_text="Products with a value")
 
     class Meta:
         model = ProductAttribute
         fields = ("id", "name", "name_uz", "name_ru", "name_en", "value_type", "unit", "options", "is_filterable",
-                  "is_active", "item_categories", "item_categories_count", "created_at", "updated_at")
+                  "is_active", "item_categories", "item_categories_count", "products_count", "created_at",
+                  "updated_at")
         read_only_fields = ("name", "created_at", "updated_at")
         extra_kwargs = {
             "name_uz": {"required": True, "allow_null": False, "allow_blank": False},
@@ -40,9 +42,9 @@ class ProductAttributeSerializer(serializers.ModelSerializer):
         instance = self.instance
         value_type = attrs.get("value_type", instance.value_type if instance else ProductAttribute.LIST)
         type_changed = bool(instance) and value_type != instance.value_type
-        if type_changed and instance.category_links.exists():
+        if type_changed and (instance.category_links.exists() or instance.product_values.exists()):
             raise serializers.ValidationError(
-                {"value_type": "Attribute is used in categories, its value type can't be changed."})
+                {"value_type": "Attribute is used in categories or products, its value type can't be changed."})
 
         if value_type == ProductAttribute.NUMBER:
             if not attrs.get("unit", instance.unit if instance else ""):
@@ -65,6 +67,14 @@ class ProductAttributeSerializer(serializers.ModelSerializer):
         if len(ids) != len(set(ids)) or set(ids) - own_ids:
             raise serializers.ValidationError({"options": "Option ids must be unique and belong to this attribute."})
 
+        # product values keep a copy of the option's text (no FK)
+        if self.instance:
+            used = self.instance.options.exclude(id__in=ids).filter(
+                value_ru__in=self.instance.product_values.values("value_ru"))
+            if used.exists():
+                names = ", ".join(used.values_list("value_ru", flat=True))
+                raise serializers.ValidationError({"options": f"Options used in products can't be removed: {names}."})
+
         for field in ("value_uz", "value_ru"):
             values = [item[field].strip().lower() for item in options]
             if len(values) != len(set(values)):
@@ -77,6 +87,10 @@ class ProductAttributeSerializer(serializers.ModelSerializer):
         attribute.options.exclude(id__in=kept).delete()
         for position, item in enumerate(options):
             option = existing.get(item.get("id")) or ProductAttributeOption(attribute=attribute)
+            if option.pk and (option.value_uz, option.value_ru) != (item["value_uz"], item["value_ru"]):
+                # renamed: product values keep a copy of the option's text
+                attribute.product_values.filter(value_ru=option.value_ru).update(
+                    value_uz=item["value_uz"], value_ru=item["value_ru"])
             for field, value in item.items():
                 if field != "id":
                     setattr(option, field, value)
@@ -99,10 +113,19 @@ class ProductAttributeSerializer(serializers.ModelSerializer):
         return attribute
 
 
-class CategoryAttributeSerializer(RelationSerializer):
+class AttributeShortSerializer(RelationSerializer):
     class Meta:
         model = ProductAttribute
-        fields = ("id", "name", "value_type", "unit", "is_filterable", "is_active")
+        fields = ("id", "name", "value_type", "unit")
+
+
+class CategoryAttributeSerializer(RelationSerializer):
+    # everything the product form needs to render the attribute input
+    options = ProductAttributeOptionSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = ProductAttribute
+        fields = ("id", "name", "value_type", "unit", "options", "is_filterable", "is_active")
 
 
 class ItemCategoryAttributesSerializer(serializers.ModelSerializer):
@@ -116,11 +139,21 @@ class ItemCategoryAttributesSerializer(serializers.ModelSerializer):
     def validate_attributes(self, value):
         if len({attribute.pk for attribute in value}) != len(value):
             raise serializers.ValidationError("Attributes must be unique.")
+
+        # detaching would orphan the values of the category's products
+        used = ProductAttribute.objects.filter(
+            category_links__item_category=self.instance,
+            product_values__product__product_item_category=self.instance,
+        ).exclude(pk__in=[attribute.pk for attribute in value]).distinct()
+        if used.exists():
+            names = ", ".join(used.values_list("name_ru", flat=True))
+            raise serializers.ValidationError(
+                f"Attributes with values in the category's products can't be detached: {names}.")
         return value
 
     def to_representation(self, instance):
         # through rows are ordered by position, `instance.attributes` is not
-        links = instance.attribute_links.select_related("attribute")
+        links = instance.attribute_links.select_related("attribute").prefetch_related("attribute__options")
         attributes = CategoryAttributeSerializer([link.attribute for link in links], many=True, context=self.context)
         return {"id": instance.pk, "attributes": attributes.data}
 

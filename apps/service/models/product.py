@@ -5,7 +5,7 @@ from django.db import models
 
 from abstract_model.base_model import BaseModel
 from apps.base.models import MarketBranch
-from .catalog import Brand, ProductItemCategory
+from .catalog import Brand, ProductItemCategory, ProductAttribute
 from .choices import PUBLISH_STATUS, PUBLISH_STATUS_DRAFT
 
 
@@ -136,6 +136,24 @@ class ProductCharacteristics(BaseModel):
     class Meta:
         verbose_name = "Харктеристика продукта"
         verbose_name_plural = "Характеристики продуктов"
+
+
+class ProductAttributeValue(BaseModel):
+    # Value of a category attribute for a product, kept as text per language (value_uz / value_ru):
+    # number -> "2.5", boolean -> "true" / "false" (same in every language), list -> copy of the option's value
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="attribute_values",
+                                verbose_name="Продукт")
+    attribute = models.ForeignKey(ProductAttribute, on_delete=models.PROTECT, related_name="product_values",
+                                  verbose_name="Атрибут")
+    value = models.CharField(max_length=255, verbose_name="Значение")
+
+    def __str__(self):
+        return f"{self.product_id} — {self.attribute}"
+
+    class Meta:
+        verbose_name = "Значение атрибута продукта"
+        verbose_name_plural = "Значения атрибутов продуктов"
+        unique_together = ("product", "attribute")
 
 
 class ProductVariantGroup(BaseModel):

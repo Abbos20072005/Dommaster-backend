@@ -6,7 +6,8 @@ from .models import Product, ProductCategory, ProductSubCategory, ProductItemCat
     ProductCharacteristics, RecentlyViewedProducts, Service, CommentImages, CommentReply, QuestionsReply, \
     ProductVariantGroup, ProductVariantItem, \
     Announcements, ProductItemCategoryFilterSchema, ProductFilterNumericValue, ProductUnit, ProductRemaining, \
-    ProductAttribute, ProductAttributeOption, ProductItemCategoryAttribute, Manager, OrderComment
+    ProductAttribute, ProductAttributeOption, ProductItemCategoryAttribute, ProductAttributeValue, Manager, \
+    OrderComment
 from .signals import clear_category_filter_cache
 from unfold.admin import ModelAdmin, TabularInline
 from apps.base.admin_actions import make_visible, make_hidden, activate, deactivate, get_model_fields, \
@@ -225,6 +226,12 @@ class ProductCharacteristicsInline(TabularInline):
     extra = 1
 
 
+class ProductAttributeValueInline(TabularInline):
+    model = ProductAttributeValue
+    extra = 0
+    autocomplete_fields = ("attribute",)
+
+
 @admin.register(Product)
 class ProductAdmin(ModelAdmin):
     list_display = get_model_fields(Product, exclude=(
@@ -236,7 +243,7 @@ class ProductAdmin(ModelAdmin):
                    "purchasable", "unit", "created_at")
     readonly_fields = ("discount_price",)
     autocomplete_fields = ("brand", "badge", "product_item_category")
-    inlines = (ProductImageInline, ProductCharacteristicsInline)
+    inlines = (ProductImageInline, ProductCharacteristicsInline, ProductAttributeValueInline)
     fieldsets = (
         (None, {
             "fields": ("name_uz", "name_ru", "name_en", "short_description",
