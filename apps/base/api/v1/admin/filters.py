@@ -47,3 +47,9 @@ class MessageFilter(django_filters.FilterSet):
     class Meta:
         model = Messages
         fields = ("chat", "is_answer")
+
+
+class CreatedRangeFilter(django_filters.FilterSet):
+    """News / articles / videos: only the creation date range."""
+    from_created = django_filters.DateFilter(field_name="created_at", lookup_expr="date__gte")
+    to_created = django_filters.DateFilter(field_name="created_at", lookup_expr="date__lte")
