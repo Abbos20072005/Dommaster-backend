@@ -55,6 +55,20 @@ class OrderManagerSerializer(RelationSerializer):
         fields = ("id", "full_name", "is_active")
 
 
+class OrderCommentAuthorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = get_user_model()
+        fields = ("id", "username", "first_name", "last_name")
+
+
+class OrderCommentShortSerializer(serializers.ModelSerializer):
+    author = OrderCommentAuthorSerializer(read_only=True, allow_null=True, help_text="null for system comments")
+
+    class Meta:
+        model = OrderComment
+        fields = ("id", "author", "text", "is_system", "created_at")
+
+
 class OrderItemSerializer(serializers.ModelSerializer):
     product = OrderProductSerializer()
 
@@ -83,11 +97,12 @@ class OrderSerializer(serializers.ModelSerializer):
     pickup_branch = OrderBranchSerializer(required=False, allow_null=True)
     promocode = OrderPromocodeSerializer(required=False, allow_null=True)
     items = OrderItemSerializer(source="order_items", many=True, required=False)
+    comments = OrderCommentShortSerializer(many=True, read_only=True)
 
     class Meta:
         model = Order
         fields = ("id", "customer", "manager", "status", "payment_status", "payment_type", "payment_method",
-                  "delivery_type", "order_location", "pickup_branch", "promocode", "items",
+                  "delivery_type", "order_location", "pickup_branch", "promocode", "items", "comments",
                   "total_price", "products_total_price", "saved_price", "delivery_price",
                   "receiver_name", "receiver_phone", "hold_id", "ofd_url", "yandex_claim_id", "yandex_claim_status",
                   "created_at", "updated_at")
@@ -215,12 +230,6 @@ class OrderCommentOrderSerializer(RelationSerializer):
     class Meta:
         model = Order
         fields = ("id",)
-
-
-class OrderCommentAuthorSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = get_user_model()
-        fields = ("id", "username", "first_name", "last_name")
 
 
 class OrderCommentSerializer(serializers.ModelSerializer):
