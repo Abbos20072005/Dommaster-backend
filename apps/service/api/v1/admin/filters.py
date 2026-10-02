@@ -72,7 +72,7 @@ class ProductCategoryFilter(CountFilterMixin, django_filters.FilterSet):
 
     class Meta:
         model = ProductCategory
-        fields = ("is_active",)
+        fields = ("is_active", "show_on_site", "show_in_app")
 
 
 class ProductSubCategoryFilter(CountFilterMixin, django_filters.FilterSet):
@@ -81,7 +81,7 @@ class ProductSubCategoryFilter(CountFilterMixin, django_filters.FilterSet):
 
     class Meta:
         model = ProductSubCategory
-        fields = ("product_category", "is_active")
+        fields = ("product_category", "is_active", "show_on_site", "show_in_app")
 
 
 class ProductItemCategoryFilter(CountFilterMixin, django_filters.FilterSet):
@@ -90,7 +90,7 @@ class ProductItemCategoryFilter(CountFilterMixin, django_filters.FilterSet):
 
     class Meta:
         model = ProductItemCategory
-        fields = ("product_sub_category", "is_active")
+        fields = ("product_sub_category", "is_active", "show_on_site", "show_in_app")
 
 
 class ProductAttributeFilter(CountFilterMixin, django_filters.FilterSet):

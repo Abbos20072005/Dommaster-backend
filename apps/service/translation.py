@@ -6,15 +6,15 @@ from .models import Product, Service, ProductCharacteristics, AddsBrands, Brand,
 
 
 class ProductItemCategoryOption(TranslationOptions):
-    fields = ("name",)
+    fields = ("name", "meta_title", "meta_description")
 
 
 class ProductSubCategoryOption(TranslationOptions):
-    fields = ("name",)
+    fields = ("name", "meta_title", "meta_description")
 
 
 class ProductCategoryOption(TranslationOptions):
-    fields = ("name",)
+    fields = ("name", "meta_title", "meta_description")
 
 
 class ProductTranslationOption(TranslationOptions):

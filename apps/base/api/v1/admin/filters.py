@@ -1,12 +1,22 @@
 import django_filters
 from django.db.models import Q
-from apps.base.models import MarketBranch, Chat, Messages
+from apps.base.models import MarketBranch, Banner, Chat, Messages
 
 
 class MarketBranchFilter(django_filters.FilterSet):
     class Meta:
         model = MarketBranch
         fields = ("branch_type", "is_active")
+
+
+class BannerFilter(django_filters.FilterSet):
+    # target model name: product, productcategory, ...
+    target_model = django_filters.CharFilter(field_name="content_type__model")
+    has_target = django_filters.BooleanFilter(field_name="object_id", lookup_expr="isnull", exclude=True)
+
+    class Meta:
+        model = Banner
+        fields = ("is_visible",)
 
 
 class ChatFilter(django_filters.FilterSet):

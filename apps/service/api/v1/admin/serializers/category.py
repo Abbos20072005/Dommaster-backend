@@ -39,8 +39,21 @@ class SubCategoryParentSerializer(RelationSerializer):
         fields = ("id", "name", "product_category")
 
 
+# uz + ru are required, ru is the default (fallback) language
+NAME_REQUIRED = {"required": True, "allow_null": False, "allow_blank": False}
+NAME_KWARGS = {"name_uz": NAME_REQUIRED, "name_ru": NAME_REQUIRED}
+NAME_FIELDS = ("name", "name_uz", "name_ru", "name_en")
+SEO_FIELDS = ("meta_title_uz", "meta_title_ru", "meta_title_en", "meta_description_uz", "meta_description_ru",
+              "meta_description_en")
+VISIBILITY_FIELDS = ("show_on_site", "show_in_app", "is_active")
+COUNT_FIELDS = ("products_count", "filters_count")
+TREE_FIELDS = ("id", "name_uz", "name_ru", "slug", "code", "position", *VISIBILITY_FIELDS, *COUNT_FIELDS)
+
+
 class CategoryBaseSerializer(serializers.ModelSerializer):
+    # `slug` is optional: left out / empty -> generated from the name (model `save`)
     products_count = serializers.IntegerField(read_only=True, default=0)
+    filters_count = serializers.IntegerField(read_only=True, default=0, help_text="Distinct filterable filter keys")
 
     def validate_code(self, value):
         # unique column: store empty codes as NULL
@@ -52,11 +65,10 @@ class ProductCategorySerializer(CategoryBaseSerializer):
 
     class Meta:
         model = ProductCategory
-        fields = ("id", "name", "name_uz", "name_ru", "name_en", "code", "icon", "image", "position",
-                  "is_active", "children_count", "products_count", "created_at", "updated_at")
+        fields = ("id", *NAME_FIELDS, "slug", "code", "icon", "image", "position", *SEO_FIELDS, *VISIBILITY_FIELDS,
+                  "children_count", *COUNT_FIELDS, "created_at", "updated_at")
         read_only_fields = ("name", "created_at", "updated_at")
-        # ru is the default (fallback) language
-        extra_kwargs = {"name_ru": {"required": True, "allow_null": False, "allow_blank": False}}
+        extra_kwargs = NAME_KWARGS
 
 
 class ProductSubCategoryAdminSerializer(CategoryBaseSerializer):
@@ -65,10 +77,10 @@ class ProductSubCategoryAdminSerializer(CategoryBaseSerializer):
 
     class Meta:
         model = ProductSubCategory
-        fields = ("id", "name", "name_uz", "name_ru", "name_en", "code", "product_category", "image",
-                  "is_active", "children_count", "products_count", "created_at", "updated_at")
+        fields = ("id", *NAME_FIELDS, "slug", "code", "product_category", "image", "position", *SEO_FIELDS,
+                  *VISIBILITY_FIELDS, "children_count", *COUNT_FIELDS, "created_at", "updated_at")
         read_only_fields = ("name", "created_at", "updated_at")
-        extra_kwargs = {"name_ru": {"required": True, "allow_null": False, "allow_blank": False}}
+        extra_kwargs = NAME_KWARGS
 
 
 class ProductItemCategoryAdminSerializer(CategoryBaseSerializer):
@@ -76,7 +88,55 @@ class ProductItemCategoryAdminSerializer(CategoryBaseSerializer):
 
     class Meta:
         model = ProductItemCategory
-        fields = ("id", "name", "name_uz", "name_ru", "name_en", "code", "product_sub_category", "image",
-                  "is_active", "products_count", "created_at", "updated_at")
+        fields = ("id", *NAME_FIELDS, "slug", "code", "product_sub_category", "image", "position", *SEO_FIELDS,
+                  *VISIBILITY_FIELDS, *COUNT_FIELDS, "created_at", "updated_at")
         read_only_fields = ("name", "created_at", "updated_at")
-        extra_kwargs = {"name_ru": {"required": True, "allow_null": False, "allow_blank": False}}
+        extra_kwargs = NAME_KWARGS
+
+
+class CategoryTreeBaseSerializer(serializers.ModelSerializer):
+    products_count = serializers.IntegerField(read_only=True, default=0)
+    filters_count = serializers.IntegerField(read_only=True, default=0)
+
+
+class ItemCategoryTreeSerializer(CategoryTreeBaseSerializer):
+    class Meta:
+        model = ProductItemCategory
+        fields = TREE_FIELDS
+
+
+class SubCategoryTreeSerializer(CategoryTreeBaseSerializer):
+    children = ItemCategoryTreeSerializer(source="product_sub_category", many=True, read_only=True)
+
+    class Meta:
+        model = ProductSubCategory
+        fields = (*TREE_FIELDS, "children")
+
+
+class CategoryTreeSerializer(CategoryTreeBaseSerializer):
+    children = SubCategoryTreeSerializer(source="product_category", many=True, read_only=True)
+
+    class Meta:
+        model = ProductCategory
+        fields = (*TREE_FIELDS, "children")
+
+
+class CategoryReorderSerializer(serializers.Serializer):
+    """Drag & drop: `ids` in the new order, list index becomes `position` (model comes from the view)."""
+    ids = serializers.ListField(child=serializers.IntegerField(), allow_empty=False)
+
+    def validate_ids(self, ids):
+        if len(set(ids)) != len(ids):
+            raise serializers.ValidationError("Duplicate ids.")
+        model = self.context["view"].get_queryset().model
+        missing = set(ids) - set(model.objects.filter(id__in=ids).values_list("id", flat=True))
+        if missing:
+            raise serializers.ValidationError(f"Not found: {sorted(missing)}")
+        return ids
+
+    def save(self, **kwargs):
+        model = self.context["view"].get_queryset().model
+        model.objects.bulk_update(
+            [model(id=pk, position=position) for position, pk in enumerate(self.validated_data["ids"], start=1)],
+            ["position"],
+        )

@@ -2,6 +2,7 @@ from django.contrib.postgres.indexes import GinIndex
 from django.db import models
 
 from abstract_model.base_model import BaseModel
+from utils.slug import unique_slug
 
 
 class Brand(BaseModel):
@@ -24,7 +25,26 @@ class Brand(BaseModel):
         ]
 
 
-class ProductCategory(BaseModel):
+class CategoryMixin(models.Model):
+    # shared by the three category levels; `show_on_site` / `show_in_app` are plain flags, no client logic uses them yet
+    slug = models.SlugField(max_length=255, unique=True, blank=True, verbose_name="Slug")
+    meta_title = models.CharField(max_length=255, blank=True, verbose_name="Meta title")
+    meta_description = models.TextField(blank=True, verbose_name="Meta description")
+    show_on_site = models.BooleanField(default=True, verbose_name="Показывать на сайте")
+    show_in_app = models.BooleanField(default=True, verbose_name="Показывать в приложении")
+
+    class Meta:
+        abstract = True
+
+    def save(self, *args, **kwargs):
+        # empty slug (1C sync, admin form left blank) -> generated from the name
+        if not self.slug:
+            self.slug = unique_slug(type(self), self.name_uz or self.name_ru or self.name, exclude_pk=self.pk,
+                                    fallback="category")
+        super().save(*args, **kwargs)
+
+
+class ProductCategory(CategoryMixin, BaseModel):
     code = models.CharField(max_length=50, unique=True, null=True, blank=True, verbose_name="Код из 1С")
     name = models.CharField(max_length=255, verbose_name="Название")
     icon = models.ImageField(upload_to="product_category/icon/")
@@ -51,12 +71,13 @@ class ProductCategory(BaseModel):
         ]
 
 
-class ProductSubCategory(BaseModel):
+class ProductSubCategory(CategoryMixin, BaseModel):
     code = models.CharField(max_length=50, unique=True, null=True, blank=True, verbose_name="Код из 1С")
     product_category = models.ForeignKey(ProductCategory, on_delete=models.CASCADE, related_name="product_category",
                                          verbose_name="Категория продукта")
     name = models.CharField(max_length=255, verbose_name="Название")
     image = models.ImageField(upload_to="sub_category", blank=True, null=True, verbose_name="Изображение")
+    position = models.IntegerField(default=0, verbose_name="Позиция")
     is_active = models.BooleanField(default=True, verbose_name="Активен")
 
     def __str__(self):
@@ -69,15 +90,17 @@ class ProductSubCategory(BaseModel):
     class Meta:
         verbose_name = "Подкатегория продуктов"
         verbose_name_plural = "Подкатегории продуктов"
+        ordering = ("position", "id")
 
 
-class ProductItemCategory(BaseModel):
+class ProductItemCategory(CategoryMixin, BaseModel):
     code = models.CharField(max_length=50, unique=True, null=True, blank=True, verbose_name="Код из 1С")
     product_sub_category = models.ForeignKey(ProductSubCategory, on_delete=models.CASCADE,
                                              related_name="product_sub_category",
                                              verbose_name="Подкатегория продукта")
     name = models.CharField(max_length=255, verbose_name="Название")
     image = models.ImageField(upload_to="item_category", blank=True, null=True, verbose_name="Изображение")
+    position = models.IntegerField(default=0, verbose_name="Позиция")
     is_active = models.BooleanField(default=True, verbose_name="Активен")
 
     def __str__(self):
@@ -90,6 +113,7 @@ class ProductItemCategory(BaseModel):
     class Meta:
         verbose_name = "Предметная категория продуктов"
         verbose_name_plural = "Предметные категории продуктов"
+        ordering = ("position", "id")
 
 
 class ProductUnit(BaseModel):
