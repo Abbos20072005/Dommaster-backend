@@ -11,6 +11,7 @@ from .category import ProductCategoryShortSerializer, ProductSubCategoryShortSer
     ProductCategorySerializer, ProductSubCategoryAdminSerializer, ProductItemCategoryAdminSerializer, \
     CategoryReorderSerializer
 from .brand import BrandSerializer, PartnerBrandSerializer
+from .adds_brands import AddsBrandsProductSerializer, AddsBrandsListSerializer, AddsBrandsSerializer
 from .product_model import ProductModelSerializer
 from .badge import ProductBadgeSerializer
 from .attribute import ProductAttributeOptionSerializer, ProductAttributeSerializer, AttributeShortSerializer, \
@@ -36,7 +37,7 @@ __all__ = [
     "CategoryBaseSerializer", "ProductCategorySerializer", "ProductSubCategoryAdminSerializer",
     "ProductItemCategoryAdminSerializer", "CategoryReorderSerializer",
     "BrandSerializer", "PartnerBrandSerializer", "ProductModelShortSerializer", "ProductModelSerializer",
-    "ProductBadgeSerializer",
+    "ProductBadgeSerializer", "AddsBrandsProductSerializer", "AddsBrandsListSerializer", "AddsBrandsSerializer",
     "ProductAttributeOptionSerializer", "ProductAttributeSerializer", "AttributeShortSerializer",
     "CategoryAttributeSerializer", "ItemCategoryAttributesSerializer", "ProductAttributeValueSerializer", "FeedbackCustomerSerializer", "FeedbackProductSerializer",
     "CommentImageSerializer", "CommentReplyShortSerializer", "QuestionReplyShortSerializer", "CommentListSerializer",

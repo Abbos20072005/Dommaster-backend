@@ -1,6 +1,6 @@
 import django_filters
 from django.db.models import Exists, OuterRef
-from apps.service.models import Brand, PartnerBrand, ProductModel, ProductBadge, ProductCategory, \
+from apps.service.models import AddsBrands, Brand, PartnerBrand, ProductModel, ProductBadge, ProductCategory, \
     ProductSubCategory, ProductItemCategory, ProductAttribute, Order, Product, Comment, CommentReply, Questions, \
     QuestionsReply, ORDER_STATUS
 
@@ -52,6 +52,14 @@ class PartnerBrandFilter(django_filters.FilterSet):
     class Meta:
         model = PartnerBrand
         fields = ("is_active",)
+
+
+class AddsBrandsFilter(django_filters.FilterSet):
+    has_brand = django_filters.BooleanFilter(field_name="brand", lookup_expr="isnull", exclude=True)
+
+    class Meta:
+        model = AddsBrands
+        fields = ("is_visible", "brand")
 
 
 class ProductBadgeFilter(django_filters.FilterSet):
