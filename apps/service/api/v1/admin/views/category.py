@@ -1,10 +1,12 @@
 from django.db.models import Count
+from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
+from rest_framework.response import Response
 from apps.service.models import ProductCategory, ProductSubCategory, ProductItemCategory
 from utils.admin_views import AdminModelViewSet
 from ..filters import ProductCategoryFilter, ProductSubCategoryFilter, ProductItemCategoryFilter
 from ..serializers import ProductCategorySerializer, ProductSubCategoryAdminSerializer, \
-    ProductItemCategoryAdminSerializer
+    ProductItemCategoryAdminSerializer, ItemCategoryAttributesSerializer
 
 
 class CategoryDeleteMixin:
@@ -56,3 +58,14 @@ class ProductItemCategoryViewSet(CategoryDeleteMixin, AdminModelViewSet):
         return ProductItemCategory.objects.select_related("product_sub_category__product_category").annotate(
             products_count=Count("product_item_category"),
         )
+
+    @action(detail=True, methods=["get", "put"], serializer_class=ItemCategoryAttributesSerializer)
+    def attributes(self, request, pk=None):
+        """Attributes of the item category. PUT replaces the whole list, list order = position."""
+        item_category = self.get_object()
+        if request.method == "GET":
+            return Response(self.get_serializer(item_category).data)
+        serializer = self.get_serializer(item_category, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)

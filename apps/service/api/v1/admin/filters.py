@@ -93,13 +93,15 @@ class ProductItemCategoryFilter(CountFilterMixin, django_filters.FilterSet):
         fields = ("product_sub_category", "is_active")
 
 
-class ProductAttributeFilter(django_filters.FilterSet):
-    sub_category = django_filters.NumberFilter(field_name="item_category__product_sub_category")
-    category = django_filters.NumberFilter(field_name="item_category__product_sub_category__product_category")
+class ProductAttributeFilter(CountFilterMixin, django_filters.FilterSet):
+    item_category = django_filters.NumberFilter(field_name="item_categories")
+    sub_category = django_filters.NumberFilter(field_name="item_categories__product_sub_category")
+    category = django_filters.NumberFilter(field_name="item_categories__product_sub_category__product_category")
+    in_use = django_filters.BooleanFilter(field_name="item_categories_count", method="filter_has_count")
 
     class Meta:
         model = ProductAttribute
-        fields = ("item_category", "value_type", "is_active")
+        fields = ("value_type", "is_filterable", "is_active")
 
 
 def comment_answered():

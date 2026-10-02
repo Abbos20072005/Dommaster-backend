@@ -1,7 +1,7 @@
 from modeltranslation.translator import translator, TranslationOptions
 from .models import Product, Service, ProductCharacteristics, AddsBrands, Brand, ProductCategory, ProductSubCategory, \
     ProductItemCategory, ProductVariantGroup, ProductVariantItem, \
-    ProductItemCategoryFilterSchema, ProductUnit, ProductBadge, ProductAttribute
+    ProductItemCategoryFilterSchema, ProductUnit, ProductBadge, ProductAttribute, ProductAttributeOption
 
 
 class ProductItemCategoryOption(TranslationOptions):
@@ -40,8 +40,12 @@ class ProductBadgeOption(TranslationOptions):
     fields = ("name",)
 
 
-class ProductAttributeOption(TranslationOptions):
+class ProductAttributeTranslationOption(TranslationOptions):
     fields = ("name",)
+
+
+class ProductAttributeOptionTranslationOption(TranslationOptions):
+    fields = ("value",)
 
 
 translator.register(ProductItemCategory, ProductItemCategoryOption)
@@ -49,7 +53,8 @@ translator.register(ProductSubCategory, ProductSubCategoryOption)
 translator.register(ProductCategory, ProductCategoryOption)
 translator.register(Brand, BrandOption)
 translator.register(ProductBadge, ProductBadgeOption)
-translator.register(ProductAttribute, ProductAttributeOption)
+translator.register(ProductAttribute, ProductAttributeTranslationOption)
+translator.register(ProductAttributeOption, ProductAttributeOptionTranslationOption)
 translator.register(AddsBrands, AddsBrandsOption)
 translator.register(ProductCharacteristics, ProductCharacteristicsOption)
 translator.register(Product, ProductTranslationOption)

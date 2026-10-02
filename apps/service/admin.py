@@ -6,7 +6,7 @@ from .models import Product, ProductCategory, ProductSubCategory, ProductItemCat
     ProductCharacteristics, RecentlyViewedProducts, Service, CommentImages, CommentReply, QuestionsReply, \
     ProductVariantGroup, ProductVariantItem, \
     Announcements, ProductItemCategoryFilterSchema, ProductFilterNumericValue, ProductUnit, ProductRemaining, \
-    ProductAttribute, Manager, OrderComment
+    ProductAttribute, ProductAttributeOption, ProductItemCategoryAttribute, Manager, OrderComment
 from .signals import clear_category_filter_cache
 from unfold.admin import ModelAdmin, TabularInline
 from apps.base.admin_actions import make_visible, make_hidden, activate, deactivate, get_model_fields, \
@@ -486,13 +486,24 @@ class ProductUnitAdmin(ModelAdmin):
     actions = [activate, deactivate]
 
 
+class ProductAttributeOptionInline(TabularInline):
+    model = ProductAttributeOption
+    extra = 1
+
+
+class ProductItemCategoryAttributeInline(TabularInline):
+    model = ProductItemCategoryAttribute
+    extra = 0
+    autocomplete_fields = ("item_category",)
+
+
 @admin.register(ProductAttribute)
 class ProductAttributeAdmin(ModelAdmin):
     list_display = get_model_fields(ProductAttribute)
     list_display_links = ("id", "name")
-    search_fields = ("name", "item_category__name")
-    list_filter = ("value_type", "is_active", "created_at")
-    autocomplete_fields = ("item_category",)
+    search_fields = ("name", "item_categories__name")
+    list_filter = ("value_type", "is_filterable", "is_active", "created_at")
+    inlines = (ProductAttributeOptionInline, ProductItemCategoryAttributeInline)
     actions = [activate, deactivate]
 
 

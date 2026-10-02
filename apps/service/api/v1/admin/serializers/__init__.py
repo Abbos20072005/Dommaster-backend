@@ -10,7 +10,8 @@ from .category import ProductCategoryShortSerializer, ProductSubCategoryShortSer
     ProductCategorySerializer, ProductSubCategoryAdminSerializer, ProductItemCategoryAdminSerializer
 from .brand import BrandSerializer, PartnerBrandSerializer
 from .badge import ProductBadgeSerializer
-from .attribute import ProductAttributeSerializer
+from .attribute import ProductAttributeOptionSerializer, ProductAttributeSerializer, CategoryAttributeSerializer, \
+    ItemCategoryAttributesSerializer
 from .feedback import FeedbackCustomerSerializer, FeedbackProductSerializer, CommentImageSerializer, \
     CommentReplyShortSerializer, QuestionReplyShortSerializer, CommentListSerializer, CommentSerializer, \
     QuestionListSerializer, QuestionSerializer, ReplyCommentSerializer, ReplyQuestionSerializer, ReplyBaseSerializer, \
@@ -31,7 +32,8 @@ __all__ = [
     "ProductItemCategorySerializer", "CategoryParentSerializer", "SubCategoryParentSerializer",
     "CategoryBaseSerializer", "ProductCategorySerializer", "ProductSubCategoryAdminSerializer",
     "ProductItemCategoryAdminSerializer", "BrandSerializer", "PartnerBrandSerializer", "ProductBadgeSerializer",
-    "ProductAttributeSerializer", "FeedbackCustomerSerializer", "FeedbackProductSerializer",
+    "ProductAttributeOptionSerializer", "ProductAttributeSerializer", "CategoryAttributeSerializer",
+    "ItemCategoryAttributesSerializer", "FeedbackCustomerSerializer", "FeedbackProductSerializer",
     "CommentImageSerializer", "CommentReplyShortSerializer", "QuestionReplyShortSerializer", "CommentListSerializer",
     "CommentSerializer", "QuestionListSerializer", "QuestionSerializer", "ReplyCommentSerializer",
     "ReplyQuestionSerializer", "ReplyBaseSerializer", "CommentReplySerializer", "QuestionReplySerializer",

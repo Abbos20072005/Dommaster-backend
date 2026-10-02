@@ -1,5 +1,6 @@
 from .choices import ORDER_STATUS, PAYMENT_STATUS, DELIVERY_TYPE, PAYMENT_TYPE, CASH_PAYMENT_METHOD
-from .catalog import Brand, ProductCategory, ProductSubCategory, ProductItemCategory, ProductUnit, ProductAttribute
+from .catalog import Brand, ProductCategory, ProductSubCategory, ProductItemCategory, ProductUnit, ProductAttribute, \
+    ProductAttributeOption, ProductItemCategoryAttribute
 from .product import (
     Product, ProductRemaining, ProductImage, ProductCharacteristics, ProductVariantGroup, ProductVariantItem,
 )
@@ -13,6 +14,7 @@ from .feedback import Comment, CommentReply, CommentImages, Questions, Questions
 __all__ = [
     "ORDER_STATUS", "PAYMENT_STATUS", "DELIVERY_TYPE", "PAYMENT_TYPE", "CASH_PAYMENT_METHOD",
     "Brand", "ProductCategory", "ProductSubCategory", "ProductItemCategory", "ProductUnit", "ProductAttribute",
+    "ProductAttributeOption", "ProductItemCategoryAttribute",
     "Product", "ProductRemaining", "ProductImage", "ProductCharacteristics", "ProductVariantGroup",
     "ProductVariantItem",
     "ProductItemCategoryFilterSchema", "ProductFilterNumericValue",

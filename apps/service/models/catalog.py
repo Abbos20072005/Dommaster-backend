@@ -109,22 +109,24 @@ class ProductUnit(BaseModel):
 
 
 class ProductAttribute(BaseModel):
-    # Structured product characteristic of an item category ("Quvvat", "Rang", ...);
-    # not linked to products yet (they still use the free-form ProductCharacteristics from 1C)
+    # Global dictionary of structured product characteristics ("Quvvat", "Rang", ...), attached to item
+    # categories; not linked to products yet (they still use the free-form ProductCharacteristics from 1C)
+    NUMBER, LIST, TEXT, BOOLEAN = "number", "list", "text", "boolean"
     VALUE_TYPE_CHOICES = (
-        ("number", "Число"),
-        ("range", "Диапазон"),
-        ("list", "Список"),
-        ("multi_list", "Множественный выбор"),
-        ("boolean", "Да/Нет"),
-        ("color", "Цвет"),
-        ("text", "Текст"),
+        (NUMBER, "Число"),
+        (LIST, "Список"),
+        (TEXT, "Текст"),
+        (BOOLEAN, "Да/Нет"),
     )
-    item_category = models.ForeignKey(ProductItemCategory, on_delete=models.CASCADE, related_name="attributes",
-                                      verbose_name="Предметная категория")
+    item_categories = models.ManyToManyField(ProductItemCategory, through="ProductItemCategoryAttribute",
+                                             related_name="attributes", blank=True,
+                                             verbose_name="Предметные категории")
     name = models.CharField(max_length=150, verbose_name="Название")
-    value_type = models.CharField(max_length=20, choices=VALUE_TYPE_CHOICES, default="list",
+    value_type = models.CharField(max_length=20, choices=VALUE_TYPE_CHOICES, default=LIST,
                                   verbose_name="Тип значения")
+    # only for `number`; the unit belongs to the attribute, products store just the value
+    unit = models.CharField(max_length=50, blank=True, verbose_name="Единица измерения")
+    is_filterable = models.BooleanField(default=False, verbose_name="Использовать как фильтр")
     is_active = models.BooleanField(default=True, verbose_name="Активен")
 
     def __str__(self):
@@ -133,3 +135,37 @@ class ProductAttribute(BaseModel):
     class Meta:
         verbose_name = "Атрибут продукта"
         verbose_name_plural = "Атрибуты продуктов"
+
+
+class ProductAttributeOption(BaseModel):
+    # Allowed value of a `list` attribute
+    attribute = models.ForeignKey(ProductAttribute, on_delete=models.CASCADE, related_name="options",
+                                  verbose_name="Атрибут")
+    value = models.CharField(max_length=150, verbose_name="Значение")
+    position = models.IntegerField(default=0, verbose_name="Позиция")
+
+    def __str__(self):
+        return self.value
+
+    class Meta:
+        verbose_name = "Значение атрибута"
+        verbose_name_plural = "Значения атрибутов"
+        ordering = ("position", "id")
+
+
+class ProductItemCategoryAttribute(BaseModel):
+    item_category = models.ForeignKey(ProductItemCategory, on_delete=models.CASCADE,
+                                      related_name="attribute_links", verbose_name="Предметная категория")
+    # PROTECT: an attribute used by a category can't be deleted
+    attribute = models.ForeignKey(ProductAttribute, on_delete=models.PROTECT, related_name="category_links",
+                                  verbose_name="Атрибут")
+    position = models.IntegerField(default=0, verbose_name="Позиция")
+
+    def __str__(self):
+        return f"{self.item_category} — {self.attribute}"
+
+    class Meta:
+        verbose_name = "Атрибут категории"
+        verbose_name_plural = "Атрибуты категорий"
+        unique_together = ("item_category", "attribute")
+        ordering = ("position", "id")
