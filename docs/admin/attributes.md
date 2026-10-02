@@ -20,7 +20,7 @@ Uchta joyda ishlatiladi:
 
 Swagger: `/swagger/admin/` → **attributes**, **item-categories**, **products**.
 
-> Bu ma'lumotlar hozircha faqat admin panelda. Mijozga (mobil/web) hali ko'rinmaydi va filtrlarda ishlamaydi — u yerda eskicha `characteristics` ishlayapti.
+> Mahsulotga kiritilgan qiymatlar mijozga (mobil/web) mahsulot detalida `attributes` maydonida ko'rinadi — `docs/mobile/product_attributes.md`. Filtrlarda hali ishlamaydi.
 
 ---
 
@@ -329,6 +329,6 @@ Admin API'da xatolar oddiy DRF formatida (klient API'dagi `{"ok", "error_code"}`
 ## Eslatmalar
 
 - Atribut javobida avvalgi `item_category` maydoni endi yo'q — o'rniga `item_categories` (faqat o'qish). Atributni yaratish/tahrirlashda kategoriya yuborilmaydi.
-- `is_active: false` atributni ham kategoriyaga biriktirish va mahsulotga qiymat kiritish mumkin — backend cheklamaydi. Kerak bo'lsa, formalarda `is_active` bo'yicha o'zingiz yashiring.
+- `is_active: false` atribut mijozga ko'rsatilmaydi (mahsulot detalida kelmaydi). Admin panelda esa uni ham kategoriyaga biriktirish va mahsulotga qiymat kiritish mumkin — backend cheklamaydi.
 - `is_filterable` hozircha faqat saqlanadi — mijoz filtrlariga hali ta'sir qilmaydi.
 - `list` turidagi mahsulot qiymati — variant matnining nusxasi (variant `id` si saqlanmaydi). Variant nomi admin paneldan o'zgartirilsa, mahsulotlardagi qiymat ham yangilanadi.

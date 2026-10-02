@@ -8,7 +8,7 @@ from ..serializers import ProductBadgeSerializer
 class ProductBadgeViewSet(AdminModelViewSet):
     serializer_class = ProductBadgeSerializer
     filterset_class = ProductBadgeFilter
-    search_fields = ("name_ru", "name_uz", "name_en")
+    search_fields = ("name_ru", "name_uz")
     ordering_fields = ("id", "name", "products_count", "created_at", "updated_at")
     ordering = ("-created_at",)
 

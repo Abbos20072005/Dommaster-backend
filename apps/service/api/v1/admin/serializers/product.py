@@ -29,8 +29,8 @@ class ProductImageSerializer(serializers.ModelSerializer):
 class ProductCharacteristicSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductCharacteristics
-        fields = ("id", "name_uz", "name_ru", "name_en", "value_uz", "value_ru", "value_en",
-                  "unit_uz", "unit_ru", "unit_en")
+        fields = ("id", "name_uz", "name_ru", "value_uz", "value_ru",
+                  "unit_uz", "unit_ru")
         extra_kwargs = {
             "name_ru": {"required": True, "allow_null": False, "allow_blank": False},
             "value_ru": {"required": True, "allow_null": False, "allow_blank": False},
@@ -97,8 +97,8 @@ class ProductSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Product
-        fields = ("id", "name", "name_uz", "name_ru", "name_en", "short_description",
-                  "description_uz", "description_ru", "description_en",
+        fields = ("id", "name", "name_uz", "name_ru", "short_description",
+                  "description_uz", "description_ru",
                   "brand", "badge", "product_item_category", "price", "discount_price", "discount", "unit",
                   "quantity",
                   "is_active", "erp_active", "publish_status", "purchasable", "product_code", "articul_code", "barcode", "weight", "length", "width", "height",

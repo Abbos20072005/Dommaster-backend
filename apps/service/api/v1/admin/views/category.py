@@ -20,7 +20,7 @@ class CategoryDeleteMixin:
 class ProductCategoryViewSet(CategoryDeleteMixin, AdminModelViewSet):
     serializer_class = ProductCategorySerializer
     filterset_class = ProductCategoryFilter
-    search_fields = ("name_ru", "name_uz", "name_en", "code")
+    search_fields = ("name_ru", "name_uz", "code")
     ordering_fields = ("id", "name", "position", "children_count", "products_count", "created_at", "updated_at")
     ordering = ("position", "id")
 
@@ -36,7 +36,7 @@ class ProductCategoryViewSet(CategoryDeleteMixin, AdminModelViewSet):
 class ProductSubCategoryViewSet(CategoryDeleteMixin, AdminModelViewSet):
     serializer_class = ProductSubCategoryAdminSerializer
     filterset_class = ProductSubCategoryFilter
-    search_fields = ("name_ru", "name_uz", "name_en", "code")
+    search_fields = ("name_ru", "name_uz", "code")
     ordering_fields = ("id", "name", "children_count", "products_count", "created_at", "updated_at")
     ordering = ("-created_at",)
 
@@ -50,7 +50,7 @@ class ProductSubCategoryViewSet(CategoryDeleteMixin, AdminModelViewSet):
 class ProductItemCategoryViewSet(CategoryDeleteMixin, AdminModelViewSet):
     serializer_class = ProductItemCategoryAdminSerializer
     filterset_class = ProductItemCategoryFilter
-    search_fields = ("name_ru", "name_uz", "name_en", "code")
+    search_fields = ("name_ru", "name_uz", "code")
     ordering_fields = ("id", "name", "products_count", "created_at", "updated_at")
     ordering = ("-created_at",)
 

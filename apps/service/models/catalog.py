@@ -20,7 +20,6 @@ class Brand(BaseModel):
             GinIndex(fields=['name'], opclasses=['gin_trgm_ops'], name='idx_brand_name_trgm'),
             GinIndex(fields=['name_uz'], opclasses=['gin_trgm_ops'], name='idx_brand_name_uz_trgm'),
             GinIndex(fields=['name_ru'], opclasses=['gin_trgm_ops'], name='idx_brand_name_ru_trgm'),
-            GinIndex(fields=['name_en'], opclasses=['gin_trgm_ops'], name='idx_brand_name_en_trgm'),
         ]
 
 
@@ -47,7 +46,6 @@ class ProductCategory(BaseModel):
             GinIndex(fields=['name'], opclasses=['gin_trgm_ops'], name='idx_category_name_trgm'),
             GinIndex(fields=['name_uz'], opclasses=['gin_trgm_ops'], name='idx_category_name_uz_trgm'),
             GinIndex(fields=['name_ru'], opclasses=['gin_trgm_ops'], name='idx_category_name_ru_trgm'),
-            GinIndex(fields=['name_en'], opclasses=['gin_trgm_ops'], name='idx_category_name_en_trgm'),
         ]
 
 
@@ -97,7 +95,6 @@ class ProductUnit(BaseModel):
     name = models.CharField(max_length=50, verbose_name="Краткое название")
     name_full_uz = models.CharField(max_length=255, blank=True, verbose_name="Полное название (узб.)")
     name_full_ru = models.CharField(max_length=255, blank=True, verbose_name="Полное название (рус.)")
-    name_full_en = models.CharField(max_length=255, blank=True, verbose_name="Полное название (англ.)")
     is_active = models.BooleanField(default=True, verbose_name="Активен")
 
     def __str__(self):

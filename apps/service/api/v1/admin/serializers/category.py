@@ -52,7 +52,7 @@ class ProductCategorySerializer(CategoryBaseSerializer):
 
     class Meta:
         model = ProductCategory
-        fields = ("id", "name", "name_uz", "name_ru", "name_en", "code", "icon", "image", "position",
+        fields = ("id", "name", "name_uz", "name_ru", "code", "icon", "image", "position",
                   "is_active", "children_count", "products_count", "created_at", "updated_at")
         read_only_fields = ("name", "created_at", "updated_at")
         # ru is the default (fallback) language
@@ -65,7 +65,7 @@ class ProductSubCategoryAdminSerializer(CategoryBaseSerializer):
 
     class Meta:
         model = ProductSubCategory
-        fields = ("id", "name", "name_uz", "name_ru", "name_en", "code", "product_category", "image",
+        fields = ("id", "name", "name_uz", "name_ru", "code", "product_category", "image",
                   "is_active", "children_count", "products_count", "created_at", "updated_at")
         read_only_fields = ("name", "created_at", "updated_at")
         extra_kwargs = {"name_ru": {"required": True, "allow_null": False, "allow_blank": False}}
@@ -76,7 +76,7 @@ class ProductItemCategoryAdminSerializer(CategoryBaseSerializer):
 
     class Meta:
         model = ProductItemCategory
-        fields = ("id", "name", "name_uz", "name_ru", "name_en", "code", "product_sub_category", "image",
+        fields = ("id", "name", "name_uz", "name_ru", "code", "product_sub_category", "image",
                   "is_active", "products_count", "created_at", "updated_at")
         read_only_fields = ("name", "created_at", "updated_at")
         extra_kwargs = {"name_ru": {"required": True, "allow_null": False, "allow_blank": False}}

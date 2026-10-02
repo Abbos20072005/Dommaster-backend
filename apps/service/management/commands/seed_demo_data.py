@@ -404,20 +404,19 @@ class Command(BaseCommand):
 
     def _create_product_units(self):
         units = [
-            ("796", "шт", "штука", "штук", "pieces"),
-            ("166", "кг", "килограмм", "килограммов", "kilogram"),
-            ("112", "м", "метр", "метров", "meter"),
-            ("704", "компл", "комплект", "комплектов", "set"),
+            ("796", "шт", "штука", "штук"),
+            ("166", "кг", "килограмм", "килограммов"),
+            ("112", "м", "метр", "метров"),
+            ("704", "компл", "комплект", "комплектов"),
         ]
         count = 0
-        for code, name, ru, ru_full, en in units:
+        for code, name, ru, ru_full in units:
             _, created = ProductUnit.objects.get_or_create(
                 unit_code=code,
                 defaults={
                     "name": name,
                     "name_full_ru": ru_full,
                     "name_full_uz": ru_full,
-                    "name_full_en": en,
                     "is_active": True,
                 },
             )

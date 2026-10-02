@@ -469,12 +469,11 @@ class ProductViewSet(ViewSet):
                         TrigramSimilarity("name", param_data),
                         TrigramSimilarity("name_uz", param_data),
                         TrigramSimilarity("name_ru", param_data),
-                        TrigramSimilarity("name_en", param_data),
                     )
                 )
                 .filter(
                     Q(similarity__gt=0.1) |
-                    Q(name__icontains=param_data) | Q(name_uz__icontains=param_data) | Q(name_ru__icontains=param_data) | Q(name_en__icontains=param_data)
+                    Q(name__icontains=param_data) | Q(name_uz__icontains=param_data) | Q(name_ru__icontains=param_data)
                 )
                 .order_by("-similarity")
                 .values_list("name", flat=True)[:5]
@@ -486,7 +485,6 @@ class ProductViewSet(ViewSet):
                         TrigramSimilarity("name", param_data),
                         TrigramSimilarity("name_uz", param_data),
                         TrigramSimilarity("name_ru", param_data),
-                        TrigramSimilarity("name_en", param_data),
                     )
                 )
                 .filter(similarity__gt=0.1)
@@ -502,7 +500,6 @@ class ProductViewSet(ViewSet):
                         TrigramSimilarity("name", param_data),
                         TrigramSimilarity("name_uz", param_data),
                         TrigramSimilarity("name_ru", param_data),
-                        TrigramSimilarity("name_en", param_data),
                     )
                 )
                 .filter(similarity__gt=0.1)
@@ -942,20 +939,18 @@ class ProductViewSet(ViewSet):
                 sim_name=TrigramSimilarity("name", q),
                 sim_name_uz=TrigramSimilarity("name_uz", q),
                 sim_name_ru=TrigramSimilarity("name_ru", q),
-                sim_name_en=TrigramSimilarity("name_en", q),
                 sim_brand_name=TrigramSimilarity("brand__name", q),
                 sim_brand_uz=TrigramSimilarity("brand__name_uz", q),
                 sim_brand_ru=TrigramSimilarity("brand__name_ru", q),
-                sim_brand_en=TrigramSimilarity("brand__name_en", q),
             ).annotate(
                 similarity=Greatest(
-                    "sim_name", "sim_name_uz", "sim_name_ru", "sim_name_en",
-                    "sim_brand_name", "sim_brand_uz", "sim_brand_ru", "sim_brand_en",
+                    "sim_name", "sim_name_uz", "sim_name_ru",
+                    "sim_brand_name", "sim_brand_uz", "sim_brand_ru",
                 )
             ).filter(
                 Q(similarity__gt=0.155) |
-                Q(name__icontains=q) | Q(name_uz__icontains=q) | Q(name_ru__icontains=q) | Q(name_en__icontains=q) |
-                Q(brand__name__icontains=q) | Q(brand__name_uz__icontains=q) | Q(brand__name_ru__icontains=q) | Q(brand__name_en__icontains=q)
+                Q(name__icontains=q) | Q(name_uz__icontains=q) | Q(name_ru__icontains=q) |
+                Q(brand__name__icontains=q) | Q(brand__name_uz__icontains=q) | Q(brand__name_ru__icontains=q)
             ).order_by("-similarity", sort)
         else:
             products = products.order_by(sort)
