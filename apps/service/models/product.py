@@ -5,7 +5,7 @@ from django.db import models
 
 from abstract_model.base_model import BaseModel
 from apps.base.models import MarketBranch
-from .catalog import Brand, ProductItemCategory, ProductAttribute
+from .catalog import Brand, ProductModel, ProductItemCategory, ProductAttribute
 from .choices import PUBLISH_STATUS, PUBLISH_STATUS_DRAFT
 
 
@@ -23,7 +23,10 @@ class Product(BaseModel):
     telegram_id = models.CharField(max_length=11, blank=True, null=True, verbose_name="Телеграм id")
     brand = models.ForeignKey(Brand, on_delete=models.SET_NULL, null=True, blank=True, related_name="product_brand",
                               verbose_name="Бренд")
-    badges = models.ManyToManyField("ProductBadge", blank=True, related_name="products", verbose_name="Бейджи")
+    # a model of `brand` (the admin product serializer drops it when the brand changes; 1C sync doesn't)
+    product_model = models.ForeignKey(ProductModel, on_delete=models.SET_NULL, null=True, blank=True,
+                                      related_name="products", verbose_name="Модель")
+    badges =models.ManyToManyField("ProductBadge", blank=True, related_name="products", verbose_name="Бейджи")
     product_item_category = models.ForeignKey(ProductItemCategory, on_delete=models.CASCADE, blank=True, null=True,
                                               related_name="product_item_category",
                                               verbose_name="Предметная категория продуктов")

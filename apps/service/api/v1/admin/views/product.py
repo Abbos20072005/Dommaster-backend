@@ -21,7 +21,8 @@ class ProductViewSet(AdminModelViewSet):
         qs = Product.objects.all()
         if self.action == "stats":
             return qs
-        qs = qs.select_related("brand", "product_item_category__product_sub_category__product_category") \
+        qs = qs.select_related("brand", "product_model",
+                               "product_item_category__product_sub_category__product_category") \
             .prefetch_related("badges", Prefetch("product_image", queryset=ProductImage.objects.order_by("id")))
         if self.action != "list":
             qs = qs.prefetch_related("product_characteristics", Prefetch(

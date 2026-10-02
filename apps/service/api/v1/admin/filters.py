@@ -1,8 +1,8 @@
 import django_filters
 from django.db.models import Exists, OuterRef
-from apps.service.models import Brand, PartnerBrand, ProductBadge, ProductCategory, ProductSubCategory, \
-    ProductItemCategory, ProductAttribute, Order, Product, Comment, CommentReply, Questions, QuestionsReply, \
-    ORDER_STATUS
+from apps.service.models import Brand, PartnerBrand, ProductModel, ProductBadge, ProductCategory, \
+    ProductSubCategory, ProductItemCategory, ProductAttribute, Order, Product, Comment, CommentReply, Questions, \
+    QuestionsReply, ORDER_STATUS
 
 
 class OrderFilter(django_filters.FilterSet):
@@ -32,8 +32,8 @@ class ProductFilter(django_filters.FilterSet):
 
     class Meta:
         model = Product
-        fields = ("brand", "product_item_category", "is_active", "erp_active", "publish_status", "purchasable",
-                  "unit")
+        fields = ("brand", "product_model", "product_item_category", "is_active", "erp_active", "publish_status",
+                  "purchasable", "unit")
 
     def filter_in_stock(self, queryset, name, value):
         return queryset.filter(quantity__gt=0) if value else queryset.filter(quantity__lte=0)
@@ -65,6 +65,14 @@ class CountFilterMixin:
 
     def filter_has_count(self, queryset, name, value):
         return queryset.filter(**{f"{name}__gt": 0}) if value else queryset.filter(**{name: 0})
+
+
+class ProductModelFilter(CountFilterMixin, django_filters.FilterSet):
+    has_products = django_filters.BooleanFilter(field_name="products_count", method="filter_has_count")
+
+    class Meta:
+        model = ProductModel
+        fields = ("brand", "is_active")
 
 
 class ProductCategoryFilter(CountFilterMixin, django_filters.FilterSet):

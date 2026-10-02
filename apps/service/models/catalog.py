@@ -27,6 +27,22 @@ class Brand(BaseModel):
         ]
 
 
+class ProductModel(BaseModel):
+    # Model line of a brand ("NXB-63" of Chint); a product picks one of its own brand (Product.product_model).
+    # Admin API only, not in client serializers yet
+    brand = models.ForeignKey(Brand, on_delete=models.CASCADE, related_name="product_models", verbose_name="Бренд")
+    name = models.CharField(max_length=150, verbose_name="Название")
+    is_active = models.BooleanField(default=True, verbose_name="Активен")
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name = "Модель"
+        verbose_name_plural = "Модели"
+        unique_together = ("brand", "name")
+
+
 class CategoryMixin(models.Model):
     # shared by the three category levels; `show_on_site` / `show_in_app` are plain flags, no client logic uses them yet
     slug = models.SlugField(max_length=255, unique=True, blank=True, verbose_name="Slug")

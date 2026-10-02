@@ -1,7 +1,7 @@
 import math
 from django.db import transaction
 from rest_framework import serializers
-from apps.service.models import Product, Brand, ProductBadge, ProductImage, ProductCharacteristics, \
+from apps.service.models import Product, Brand, ProductModel, ProductBadge, ProductImage, ProductCharacteristics, \
     ProductAttribute, ProductAttributeValue
 from utils.admin_serializers import RelationSerializer
 from .attribute import AttributeShortSerializer
@@ -11,6 +11,12 @@ from .category import ProductItemCategorySerializer
 class ProductBrandSerializer(RelationSerializer):
     class Meta:
         model = Brand
+        fields = ("id", "name")
+
+
+class ProductModelShortSerializer(RelationSerializer):
+    class Meta:
+        model = ProductModel
         fields = ("id", "name")
 
 
@@ -75,19 +81,22 @@ class ProductAttributeValueSerializer(serializers.ModelSerializer):
 
 class ProductListSerializer(serializers.ModelSerializer):
     brand = ProductBrandSerializer(read_only=True)
+    product_model = ProductModelShortSerializer(read_only=True)
     badges = ProductBadgeShortSerializer(many=True, read_only=True)
     product_item_category = ProductItemCategorySerializer(read_only=True)
     images = ProductImageSerializer(source="product_image", many=True, read_only=True)
 
     class Meta:
         model = Product
-        fields = ("id", "name", "images", "product_code", "articul_code", "barcode", "brand", "badges",
+        fields = ("id", "name", "images", "product_code", "articul_code", "barcode", "brand", "product_model", "badges",
                   "product_item_category", "price", "discount_price", "discount", "unit", "quantity", "rating", "comments_quantity",
                   "is_active", "erp_active", "publish_status", "purchasable", "created_at", "updated_at")
 
 
 class ProductSerializer(serializers.ModelSerializer):
     brand = ProductBrandSerializer(required=False, allow_null=True)
+    # a model of the product's brand (product-models/?brand=); changing the brand without it drops the model
+    product_model = ProductModelShortSerializer(required=False, allow_null=True)
     # the sent list replaces the product's manual badges; auto badges are managed by their rules (ignored here)
     badges = ProductBadgeShortSerializer(many=True, required=False)
     product_item_category = ProductItemCategorySerializer(required=False, allow_null=True)
@@ -100,8 +109,8 @@ class ProductSerializer(serializers.ModelSerializer):
         model = Product
         fields = ("id", "name", "name_uz", "name_ru", "name_en", "short_description",
                   "description_uz", "description_ru", "description_en",
-                  "brand", "badges", "product_item_category", "price", "discount_price", "discount", "unit",
-                  "quantity",
+                  "brand", "product_model", "badges", "product_item_category", "price", "discount_price", "discount",
+                  "unit", "quantity",
                   "is_active", "erp_active", "publish_status", "purchasable", "product_code", "articul_code", "barcode", "weight", "length", "width", "height",
                   "rating", "comments_quantity", "questions_quantity", "filter_data", "characteristics",
                   "attribute_values", "images", "created_at", "updated_at")
@@ -127,6 +136,14 @@ class ProductSerializer(serializers.ModelSerializer):
         discount_price = attrs.get("discount_price", self.instance.discount_price if self.instance else None)
         if discount_price is not None and discount_price > price:
             raise serializers.ValidationError({"discount_price": "Must not be greater than price."})
+
+        brand = attrs.get("brand", self.instance.brand if self.instance else None)
+        if "product_model" in attrs:
+            if attrs["product_model"] and attrs["product_model"].brand != brand:
+                raise serializers.ValidationError({"product_model": "Model belongs to another brand."})
+        elif self.instance and self.instance.product_model and self.instance.product_model.brand != brand:
+            # the brand changed: drop the model of the old one
+            attrs["product_model"] = None
 
         attribute_values = attrs.get("attribute_values")
         if attribute_values:

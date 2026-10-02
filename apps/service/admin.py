@@ -2,7 +2,7 @@ from django.contrib import admin, messages
 from django.db.models import Count
 from django.shortcuts import render
 from .models import Product, ProductCategory, ProductSubCategory, ProductItemCategory, Comment, Order, \
-    OrderItem, Tag, Brand, Sale, AddsBrands, PartnerBrand, ProductBadge, ProductImage, Favourites, Cart, CartItem, Questions, \
+    OrderItem, Tag, Brand, Sale, AddsBrands, PartnerBrand, ProductModel, ProductBadge, ProductImage, Favourites, Cart, CartItem, Questions, \
     ProductCharacteristics, RecentlyViewedProducts, Service, CommentImages, CommentReply, QuestionsReply, \
     ProductVariantGroup, ProductVariantItem, \
     Announcements, ProductItemCategoryFilterSchema, ProductFilterNumericValue, ProductUnit, ProductRemaining, \
@@ -164,6 +164,16 @@ class PartnerBrandAdmin(ModelAdmin):
     list_display_links = ("id", "name")
     search_fields = ("name",)
     list_filter = ("is_active", "created_at")
+    actions = [activate, deactivate]
+
+
+@admin.register(ProductModel)
+class ProductModelAdmin(ModelAdmin):
+    list_display = get_model_fields(ProductModel)
+    list_display_links = ("id", "name")
+    search_fields = ("name",)
+    list_filter = ("is_active", "created_at")
+    autocomplete_fields = ("brand",)
     actions = [activate, deactivate]
 
 
