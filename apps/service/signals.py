@@ -4,13 +4,15 @@ from django.core.cache import cache
 from .models import Comment, CartItem, Questions, Order, Product, ProductFilterNumericValue, ProductItemCategoryFilterSchema
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
-from .models.choices import ORDER_EVENT_COLLECTING, ORDER_EVENT_CANCELED, ORDER_EVENT_REFUNDED
+from .models.choices import ORDER_EVENT_CANCELED, ORDER_EVENT_REFUNDED
 from .outbox import emit_order_event
+from .order_push import notify_order_status
 
 
 # Order.save() is atomic, so stock changes and outbox events here commit together with the order
 @receiver(pre_save, sender=Order)
-def decrease_product_quantity_on_collecting(sender, instance, **kwargs):
+def decrease_product_quantity_on_collecting(sender, instance, update_fields=None, **kwargs):
+    instance._status_changed_to = None
     if not instance.pk:
         return
 
@@ -18,6 +20,10 @@ def decrease_product_quantity_on_collecting(sender, instance, **kwargs):
         previous = sender.objects.get(pk=instance.pk)
     except sender.DoesNotExist:
         return
+
+    # picked up by push_order_status_to_customer once the order is saved
+    if previous.status != instance.status and (update_fields is None or "status" in update_fields):
+        instance._status_changed_to = instance.status
 
     if previous.status != 1 and instance.status == 1:
         items = instance.order_items.select_related('product').all()
@@ -30,7 +36,6 @@ def decrease_product_quantity_on_collecting(sender, instance, **kwargs):
             products_to_update.append(product)
         if products_to_update:
             Product.objects.bulk_update(products_to_update, ['quantity'])
-        emit_order_event(instance, ORDER_EVENT_COLLECTING)
 
     elif previous.status != 4 and instance.status == 4:
         items = instance.order_items.select_related('product').all()
@@ -50,6 +55,15 @@ def decrease_product_quantity_on_collecting(sender, instance, **kwargs):
             "transaction_id": instance.hold_id,
             "amount": instance.total_price,
         })
+
+
+@receiver(post_save, sender=Order)
+def push_order_status_to_customer(sender, instance, **kwargs):
+    status = getattr(instance, "_status_changed_to", None)
+    if status is None:
+        return
+    instance._status_changed_to = None
+    notify_order_status(instance.pk, instance.customer_id, status)
 
 
 @receiver(signal=[post_save, post_delete], sender=Comment)

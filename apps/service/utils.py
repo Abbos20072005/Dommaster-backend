@@ -502,10 +502,6 @@ def _status_lines(order, payload):
     ]
 
 
-def build_collecting_text(order, payload):
-    return "\n".join([f"<b>📦 Заказ № {order.id} передан в сборку</b>", *_status_lines(order, payload)])
-
-
 def build_canceled_text(order, payload):
     lines = [f"<b>❌ Заказ № {order.id} отменён</b>", *_status_lines(order, payload)]
     if payload.get("reason"):
@@ -574,8 +570,7 @@ def send_order_document(order_data):
 def send_order_event_to_telegram(event_type, order, payload=None):
     """Deliver one order event to the orders Telegram group. Raises TelegramSendError on failure."""
     from .models.choices import (
-        ORDER_EVENT_CREATED, ORDER_EVENT_COLLECTING, ORDER_EVENT_CANCELED, ORDER_EVENT_REFUNDED,
-        ORDER_EVENT_SYNC_FAILED,
+        ORDER_EVENT_CREATED, ORDER_EVENT_CANCELED, ORDER_EVENT_REFUNDED, ORDER_EVENT_SYNC_FAILED,
     )
 
     # only a new order goes with the full caption + Excel; the rest are short status updates
@@ -584,7 +579,6 @@ def send_order_event_to_telegram(event_type, order, payload=None):
         return
 
     text_builders = {
-        ORDER_EVENT_COLLECTING: build_collecting_text,
         ORDER_EVENT_CANCELED: build_canceled_text,
         ORDER_EVENT_REFUNDED: build_refunded_text,
         ORDER_EVENT_SYNC_FAILED: build_sync_failed_text,

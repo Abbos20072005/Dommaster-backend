@@ -1,5 +1,6 @@
 from django.contrib import admin, messages
 from apps.payment.services_pay.auth_services import AtmosAuthService, AtmosHoldService
+from apps.service.order_push import notify_order_status
 
 
 def get_model_fields(model, exclude=()):
@@ -32,21 +33,30 @@ mark_as_answer = toggle_bool_field("is_answer", True, "Mark selected as admin an
 mark_default = toggle_bool_field("is_default", True, "Set selected as default")
 
 
+def _update_order_status(queryset, status):
+    # queryset.update() skips the Order signals, so the customer push is sent by hand
+    changed = list(queryset.exclude(status=status).values_list("id", "customer_id"))
+    updated = queryset.update(status=status)
+    for order_id, customer_id in changed:
+        notify_order_status(order_id, customer_id, status)
+    return updated
+
+
 @admin.action(description="Set order status to Collecting")
 def status_collecting(modeladmin, request, queryset):
-    updated = queryset.update(status=1)
+    updated = _update_order_status(queryset, 1)
     messages.success(request, f"{updated} orders set to Collecting.")
 
 
 @admin.action(description="Set order status to Delivering")
 def status_delivering(modeladmin, request, queryset):
-    updated = queryset.update(status=2)
+    updated = _update_order_status(queryset, 2)
     messages.success(request, f"{updated} orders set to Delivering.")
 
 
 @admin.action(description="Set order status to Completed")
 def status_completed(modeladmin, request, queryset):
-    updated = queryset.update(status=3)
+    updated = _update_order_status(queryset, 3)
     messages.success(request, f"{updated} orders set to Completed.")
 
 
