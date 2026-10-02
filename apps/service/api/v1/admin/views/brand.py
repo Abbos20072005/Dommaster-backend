@@ -9,8 +9,8 @@ from ..serializers import BrandSerializer, PartnerBrandSerializer
 class BrandViewSet(AdminModelViewSet):
     serializer_class = BrandSerializer
     filterset_class = BrandFilter
-    search_fields = ("name_ru", "name_uz", "name_en", "code")
-    ordering_fields = ("id", "name", "products_count", "created_at", "updated_at")
+    search_fields = ("name_ru", "name_uz", "name_en", "code", "country")
+    ordering_fields = ("id", "name", "country", "products_count", "created_at", "updated_at")
     ordering = ("-created_at",)
 
     def get_queryset(self):

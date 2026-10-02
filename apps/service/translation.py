@@ -34,7 +34,7 @@ class AddsBrandsOption(TranslationOptions):
 
 
 class BrandOption(TranslationOptions):
-    fields = ("name",)
+    fields = ("name", "description")
 
 
 class ProductBadgeOption(TranslationOptions):

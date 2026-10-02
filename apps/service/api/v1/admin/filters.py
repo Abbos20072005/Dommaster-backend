@@ -44,7 +44,7 @@ class BrandFilter(django_filters.FilterSet):
 
     class Meta:
         model = Brand
-        fields = ("is_visible",)
+        fields = ("is_visible", "country")
 
 
 class PartnerBrandFilter(django_filters.FilterSet):

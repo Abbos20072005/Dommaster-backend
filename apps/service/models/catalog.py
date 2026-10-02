@@ -7,6 +7,8 @@ from utils.slug import unique_slug
 
 class Brand(BaseModel):
     name = models.CharField(max_length=150, verbose_name="Название")
+    description = models.TextField(blank=True, verbose_name="Описание")
+    country = models.CharField(max_length=100, blank=True, verbose_name="Страна")
     image = models.ImageField(upload_to="brand/image/", verbose_name="Изображение")
     is_visible = models.BooleanField(default=True, verbose_name="Виден")
     code = models.CharField(max_length=50, unique=True, null=True, blank=True, verbose_name="Код из 1С")
