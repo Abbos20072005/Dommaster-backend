@@ -1,6 +1,7 @@
 import uuid
 
 from django.db import models
+from django.utils import timezone
 from abstract_model.base_model import BaseModel
 from apps.authorization.models import Customer
 from ckeditor_uploader.fields import RichTextUploadingField
@@ -39,13 +40,50 @@ class MarketBranch(BaseModel):
 
 
 class Banner(BaseModel):
+    SITE_HOME, APP_HOME, CATALOG = "site_home", "app_home", "catalog"
+    PLACEMENT_CHOICES = (
+        (SITE_HOME, "Сайт · главный слайдер"),
+        (APP_HOME, "Приложение · главный экран"),
+        (CATALOG, "Внутри каталога"),
+    )
+    # where a tap leads: category / product / badge / brand -> `content_object`, page -> `page`, url -> `link`
+    CATEGORY, PRODUCT, BADGE, BRAND, PAGE, URL = "category", "product", "badge", "brand", "page", "url"
+    LINK_TYPE_CHOICES = (
+        (CATEGORY, "Категория"),
+        (PRODUCT, "Товар"),
+        (BADGE, "Тег"),
+        (BRAND, "Бренд"),
+        (PAGE, "Страница"),
+        (URL, "Внешний URL"),
+    )
+    # not stored: derived from `is_visible` + `starts_at` / `ends_at` (see `status`, `status_q`)
+    ACTIVE, SCHEDULED, EXPIRED, ARCHIVED = "active", "scheduled", "expired", "archived"
+    STATUS_CHOICES = (
+        (ACTIVE, "Активен"),
+        (SCHEDULED, "Запланирован"),
+        (EXPIRED, "Срок истёк"),
+        (ARCHIVED, "Архив"),
+    )
+
     title = models.CharField(max_length=255, verbose_name="Заголовок")
     desktop_image = models.ImageField(upload_to="banner/desktop/", verbose_name="Компютерное изображение")
     mobile_image = models.ImageField(upload_to="banner/mobile/", blank=True, null=True,
                                      verbose_name="Телефонное изображение")
+    # False = archived
     is_visible = models.BooleanField(default=True, verbose_name="Виден")
-    link = models.URLField(verbose_name="Линк")
+    placement = models.CharField(max_length=20, choices=PLACEMENT_CHOICES, default=SITE_HOME,
+                                 verbose_name="Расположение")
+    show_on_site = models.BooleanField(default=True, verbose_name="Показывать на сайте")
+    show_on_ios = models.BooleanField(default=True, verbose_name="Показывать в iOS")
+    show_on_android = models.BooleanField(default=True, verbose_name="Показывать в Android")
+    starts_at = models.DateTimeField(default=timezone.now, verbose_name="Начало показа")
+    ends_at = models.DateTimeField(blank=True, null=True, verbose_name="Конец показа")
+    position = models.PositiveIntegerField(default=0, verbose_name="Позиция")
 
+    link_type = models.CharField(max_length=10, choices=LINK_TYPE_CHOICES, default=URL, verbose_name="Тип ссылки")
+    link = models.URLField(blank=True, default="", verbose_name="Линк")
+    page = models.CharField(max_length=255, blank=True, default="", verbose_name="Страница",
+                            help_text="Внутренний путь, например /pro")
     content_type = models.ForeignKey(ContentType, blank=True, null=True, on_delete=models.CASCADE)
     object_id = models.PositiveIntegerField(blank=True, null=True)
     content_object = GenericForeignKey("content_type", "object_id")
@@ -53,9 +91,38 @@ class Banner(BaseModel):
     def __str__(self):
         return self.title
 
+    @property
+    def code(self):
+        return f"BNR-{self.pk:04d}"
+
+    @property
+    def status(self):
+        now = timezone.now()
+        if not self.is_visible:
+            return self.ARCHIVED
+        if self.starts_at > now:
+            return self.SCHEDULED
+        if self.ends_at and self.ends_at < now:
+            return self.EXPIRED
+        return self.ACTIVE
+
+    @classmethod
+    def status_q(cls, status):
+        """`status` as a queryset filter."""
+        now = timezone.now()
+        if status == cls.ARCHIVED:
+            return models.Q(is_visible=False)
+        if status == cls.SCHEDULED:
+            return models.Q(is_visible=True, starts_at__gt=now)
+        if status == cls.EXPIRED:
+            return models.Q(is_visible=True, starts_at__lte=now, ends_at__lt=now)
+        return models.Q(is_visible=True, starts_at__lte=now) & (
+            models.Q(ends_at__isnull=True) | models.Q(ends_at__gte=now))
+
     class Meta:
         verbose_name = "Баннер"
         verbose_name_plural = "Баннеры"
+        ordering = ("position", "id")
 
 
 class Chat(BaseModel):

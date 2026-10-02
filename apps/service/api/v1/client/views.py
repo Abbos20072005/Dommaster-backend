@@ -198,7 +198,7 @@ class MainPageViewSet(ViewSet):
             )
 
         result = []
-        banners = list(Banner.objects.filter(is_visible=True).order_by("id"))
+        banners = list(Banner.objects.filter(Banner.status_q(Banner.ACTIVE)))
         addsbrands_list = AddsBrands.objects.filter(is_visible=True).prefetch_related(
             "products"
         )

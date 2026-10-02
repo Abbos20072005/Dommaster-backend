@@ -1,10 +1,10 @@
-from .banner import BannerSerializer, BannerTargetSerializer
+from .banner import BannerSerializer, BannerStatsSerializer, BannerTargetSerializer
 from .branch import MarketBranchSerializer
 from .chat import ChatCustomerSerializer, ChatLastMessageSerializer, ChatSerializer, ChatStatsSerializer, \
     MessageChatSerializer, MessageSerializer
 
 __all__ = [
-    "BannerSerializer", "BannerTargetSerializer",
+    "BannerSerializer", "BannerStatsSerializer", "BannerTargetSerializer",
     "MarketBranchSerializer", "ChatCustomerSerializer", "ChatLastMessageSerializer", "ChatSerializer",
     "ChatStatsSerializer", "MessageChatSerializer", "MessageSerializer",
 ]

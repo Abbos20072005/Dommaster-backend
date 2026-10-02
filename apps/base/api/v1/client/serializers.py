@@ -147,7 +147,10 @@ class BannerSerializer(serializers.ModelSerializer):
             "title",
             "desktop_image",
             "mobile_image",
+            "placement",
+            "link_type",
             "link",
+            "page",
             "content_type_info"
         )
 

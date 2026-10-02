@@ -13,10 +13,15 @@ class BannerFilter(django_filters.FilterSet):
     # target model name: product, productcategory, ...
     target_model = django_filters.CharFilter(field_name="content_type__model")
     has_target = django_filters.BooleanFilter(field_name="object_id", lookup_expr="isnull", exclude=True)
+    # active / scheduled / expired / archived
+    status = django_filters.ChoiceFilter(choices=Banner.STATUS_CHOICES, method="filter_status")
 
     class Meta:
         model = Banner
-        fields = ("is_visible",)
+        fields = ("is_visible", "placement", "link_type", "show_on_site", "show_on_ios", "show_on_android")
+
+    def filter_status(self, queryset, name, value):
+        return queryset.filter(Banner.status_q(value))
 
 
 class ChatFilter(django_filters.FilterSet):

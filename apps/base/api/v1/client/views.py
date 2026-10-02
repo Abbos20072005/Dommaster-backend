@@ -223,10 +223,21 @@ class PromocodeViewSet(ViewSet):
                   "ok": True}, status=status.HTTP_200_OK)
 
 
+# `?platform=` -> channel flag of the banner
+BANNER_PLATFORMS = {"site": "show_on_site", "ios": "show_on_ios", "android": "show_on_android"}
+
+
 class BannerViewSet(ViewSet):
     @extend_schema(
         summary="Banner",
-        description="Banner",
+        description="Banners shown right now (visible, started, not expired), ordered by position. "
+                    "Without `placement` / `platform` all of them are returned.",
+        parameters=[
+            OpenApiParameter(name="placement", location=OpenApiParameter.QUERY, type=OpenApiTypes.STR,
+                             enum=[value for value, _ in Banner.PLACEMENT_CHOICES]),
+            OpenApiParameter(name="platform", location=OpenApiParameter.QUERY, type=OpenApiTypes.STR,
+                             enum=list(BANNER_PLATFORMS)),
+        ],
         responses={200: BannerSerializer(many=True)},
         tags=["Base"]
     )
@@ -235,8 +246,14 @@ class BannerViewSet(ViewSet):
         # cached_data = cache.get(cache_key)
         # if cached_data:
         #     return Response(data={"result": cached_data, "ok": True}, status=status.HTTP_200_OK)
-        
-        banner = Banner.objects.filter(is_visible=True)
+
+        banner = Banner.objects.filter(Banner.status_q(Banner.ACTIVE))
+        placement = request.query_params.get("placement")
+        if placement:
+            banner = banner.filter(placement=placement)
+        platform = BANNER_PLATFORMS.get(request.query_params.get("platform"))
+        if platform:
+            banner = banner.filter(**{platform: True})
         serializer = BannerSerializer(banner, many=True, context={"request": request}).data
         # cache.set(cache_key, serializer, timeout=1000)
         return Response(data={"result": serializer, "ok": True}, status=status.HTTP_200_OK)
