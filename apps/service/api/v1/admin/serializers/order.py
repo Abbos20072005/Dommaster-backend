@@ -1,9 +1,10 @@
 from datetime import date
+from django.contrib.auth import get_user_model
 from django.db import transaction
 from rest_framework import serializers
 from apps.authorization.models import Customer, CustomerAddresses
 from apps.base.models import MarketBranch, Promocodes
-from apps.service.models import Order, OrderItem, Product
+from apps.service.models import Manager, Order, OrderComment, OrderItem, Product
 from utils.admin_serializers import RelationSerializer
 
 # ORDER_STATUS
@@ -48,6 +49,12 @@ class OrderProductSerializer(RelationSerializer):
         fields = ("id", "name", "product_code", "price", "discount_price")
 
 
+class OrderManagerSerializer(RelationSerializer):
+    class Meta:
+        model = Manager
+        fields = ("id", "full_name", "is_active")
+
+
 class OrderItemSerializer(serializers.ModelSerializer):
     product = OrderProductSerializer()
 
@@ -59,17 +66,19 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
 class OrderListSerializer(serializers.ModelSerializer):
     customer = OrderCustomerSerializer(read_only=True)
+    manager = OrderManagerSerializer(read_only=True)
     items_count = serializers.IntegerField(read_only=True, default=0)
 
     class Meta:
         model = Order
-        fields = ("id", "customer", "status", "payment_status", "payment_type", "payment_method", "delivery_type",
-                  "total_price", "products_total_price", "saved_price", "delivery_price",
+        fields = ("id", "customer", "manager", "status", "payment_status", "payment_type", "payment_method",
+                  "delivery_type", "total_price", "products_total_price", "saved_price", "delivery_price",
                   "receiver_name", "receiver_phone", "items_count", "created_at", "updated_at")
 
 
 class OrderSerializer(serializers.ModelSerializer):
     customer = OrderCustomerSerializer()
+    manager = OrderManagerSerializer(required=False, allow_null=True)
     order_location = OrderAddressSerializer(required=False, allow_null=True)
     pickup_branch = OrderBranchSerializer(required=False, allow_null=True)
     promocode = OrderPromocodeSerializer(required=False, allow_null=True)
@@ -77,8 +86,8 @@ class OrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Order
-        fields = ("id", "customer", "status", "payment_status", "payment_type", "payment_method", "delivery_type",
-                  "order_location", "pickup_branch", "promocode", "items",
+        fields = ("id", "customer", "manager", "status", "payment_status", "payment_type", "payment_method",
+                  "delivery_type", "order_location", "pickup_branch", "promocode", "items",
                   "total_price", "products_total_price", "saved_price", "delivery_price",
                   "receiver_name", "receiver_phone", "hold_id", "ofd_url", "yandex_claim_id", "yandex_claim_status",
                   "created_at", "updated_at")
@@ -180,6 +189,7 @@ class OrderSerializer(serializers.ModelSerializer):
     @transaction.atomic
     def update(self, instance, validated_data):
         recalculate = bool(PRICE_FIELDS & validated_data.keys())
+        old_manager_id = instance.manager_id
         items = validated_data.pop("order_items", None)
         if items is not None:
             self._set_items(instance, items)
@@ -188,7 +198,42 @@ class OrderSerializer(serializers.ModelSerializer):
         if recalculate:
             self._recalculate(instance)
         instance.save()
+        if instance.manager_id != old_manager_id:
+            manager = instance.manager
+            text = f"Menejer o'zgartirildi: {manager.full_name}" if manager else "Menejer olib tashlandi"
+            OrderComment.objects.create(order=instance, text=text, is_system=True)
         return instance
+
+
+class ManagerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Manager
+        fields = ("id", "full_name", "is_active", "created_at", "updated_at")
+
+
+class OrderCommentOrderSerializer(RelationSerializer):
+    class Meta:
+        model = Order
+        fields = ("id",)
+
+
+class OrderCommentAuthorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = get_user_model()
+        fields = ("id", "username", "first_name", "last_name")
+
+
+class OrderCommentSerializer(serializers.ModelSerializer):
+    order = OrderCommentOrderSerializer()
+    author = OrderCommentAuthorSerializer(read_only=True, allow_null=True, help_text="null for system comments")
+
+    class Meta:
+        model = OrderComment
+        fields = ("id", "order", "author", "text", "is_system", "created_at")
+        read_only_fields = ("is_system", "created_at")
+
+    def create(self, validated_data):
+        return OrderComment.objects.create(author=self.context["request"].user, **validated_data)
 
 
 class OrderStatsSerializer(serializers.Serializer):

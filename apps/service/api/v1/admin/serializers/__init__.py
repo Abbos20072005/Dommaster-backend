@@ -1,6 +1,8 @@
 from .order import PENDING, COLLECTING, DELIVERING, COMPLETED, CANCELED, DELIVERY, PICKUP, PAYMENT_ON_DELIVERY, PAID, \
     PRICE_FIELDS, OrderCustomerSerializer, OrderAddressSerializer, OrderBranchSerializer, OrderPromocodeSerializer, \
-    OrderProductSerializer, OrderItemSerializer, OrderListSerializer, OrderSerializer, OrderStatsSerializer
+    OrderProductSerializer, OrderItemSerializer, OrderListSerializer, OrderSerializer, OrderStatsSerializer, \
+    OrderManagerSerializer, ManagerSerializer, OrderCommentOrderSerializer, OrderCommentAuthorSerializer, \
+    OrderCommentSerializer
 from .product import ProductBrandSerializer, ProductBadgeShortSerializer, ProductImageSerializer, \
     ProductCharacteristicSerializer, ProductListSerializer, ProductSerializer, ProductStatsSerializer
 from .category import ProductCategoryShortSerializer, ProductSubCategoryShortSerializer, \
@@ -22,7 +24,8 @@ __all__ = [
     "PENDING", "COLLECTING", "DELIVERING", "COMPLETED", "CANCELED", "DELIVERY", "PICKUP", "PAYMENT_ON_DELIVERY", "PAID",
     "PRICE_FIELDS", "OrderCustomerSerializer", "OrderAddressSerializer", "OrderBranchSerializer",
     "OrderPromocodeSerializer", "OrderProductSerializer", "OrderItemSerializer", "OrderListSerializer",
-    "OrderSerializer", "OrderStatsSerializer", "ProductBrandSerializer", "ProductBadgeShortSerializer",
+    "OrderSerializer", "OrderStatsSerializer", "OrderManagerSerializer", "ManagerSerializer",
+    "OrderCommentOrderSerializer", "OrderCommentAuthorSerializer", "OrderCommentSerializer", "ProductBrandSerializer", "ProductBadgeShortSerializer",
     "ProductImageSerializer", "ProductCharacteristicSerializer", "ProductListSerializer", "ProductSerializer",
     "ProductStatsSerializer", "ProductCategoryShortSerializer", "ProductSubCategoryShortSerializer",
     "ProductItemCategorySerializer", "CategoryParentSerializer", "SubCategoryParentSerializer",

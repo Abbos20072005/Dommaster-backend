@@ -3,11 +3,26 @@ from django.db import models
 from abstract_model.base_model import BaseModel
 from apps.authorization.models import Customer, CustomerAddresses
 from apps.base.models import Promocodes, MarketBranch
+from django.conf import settings
 from .choices import ORDER_STATUS, PAYMENT_STATUS, DELIVERY_TYPE, PAYMENT_TYPE, CASH_PAYMENT_METHOD
 from .product import Product
 
 
+class Manager(BaseModel):
+    full_name = models.CharField(max_length=255, verbose_name="ФИО")
+    is_active = models.BooleanField(default=True, verbose_name="Активен")
+
+    def __str__(self):
+        return self.full_name
+
+    class Meta:
+        verbose_name = "Менеджер"
+        verbose_name_plural = "Менеджеры"
+
+
 class Order(BaseModel):
+    manager = models.ForeignKey(Manager, on_delete=models.SET_NULL, blank=True, null=True, related_name="orders",
+                                verbose_name="Менеджер")
     hold_id = models.BigIntegerField(null=True, blank=True)
     promocode = models.ForeignKey(Promocodes, on_delete=models.SET_NULL, blank=True, null=True, verbose_name="Промокод")
     customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, verbose_name="Покупатель")
@@ -54,3 +69,20 @@ class OrderItem(BaseModel):
     class Meta:
         verbose_name = "Заказ продукта"
         verbose_name_plural = "Заказы продуктов"
+
+
+class OrderComment(BaseModel):
+    """Internal note on an order: admin panel only, never shown to the customer."""
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="comments", verbose_name="Заказ")
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, blank=True, null=True,
+                               related_name="order_comments", verbose_name="Автор")
+    text = models.TextField(verbose_name="Комментарий")
+    is_system = models.BooleanField(default=False, verbose_name="Системный")
+
+    def __str__(self):
+        return str(self.id)
+
+    class Meta:
+        verbose_name = "Внутренний комментарий к заказу"
+        verbose_name_plural = "Внутренние комментарии к заказам"
+        ordering = ("-created_at",)

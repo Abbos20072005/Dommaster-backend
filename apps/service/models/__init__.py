@@ -6,7 +6,7 @@ from .product import (
 from .filters import ProductItemCategoryFilterSchema, ProductFilterNumericValue
 from .marketing import AddsBrands, PartnerBrand, Tag, ProductBadge, Sale, Announcements, Service
 from .cart import Cart, CartItem, Favourites, RecentlyViewedProducts
-from .order import Order, OrderItem
+from .order import Manager, Order, OrderItem, OrderComment
 from .outbox import OrderOutboxEvent
 from .feedback import Comment, CommentReply, CommentImages, Questions, QuestionsReply
 
@@ -18,6 +18,6 @@ __all__ = [
     "ProductItemCategoryFilterSchema", "ProductFilterNumericValue",
     "AddsBrands", "PartnerBrand", "Tag", "ProductBadge", "Sale", "Announcements", "Service",
     "Cart", "CartItem", "Favourites", "RecentlyViewedProducts",
-    "Order", "OrderItem", "OrderOutboxEvent",
+    "Manager", "Order", "OrderItem", "OrderComment", "OrderOutboxEvent",
     "Comment", "CommentReply", "CommentImages", "Questions", "QuestionsReply",
 ]

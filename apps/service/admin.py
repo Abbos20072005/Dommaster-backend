@@ -6,7 +6,7 @@ from .models import Product, ProductCategory, ProductSubCategory, ProductItemCat
     ProductCharacteristics, RecentlyViewedProducts, Service, CommentImages, CommentReply, QuestionsReply, \
     ProductVariantGroup, ProductVariantItem, \
     Announcements, ProductItemCategoryFilterSchema, ProductFilterNumericValue, ProductUnit, ProductRemaining, \
-    ProductAttribute
+    ProductAttribute, Manager, OrderComment
 from .signals import clear_category_filter_cache
 from unfold.admin import ModelAdmin, TabularInline
 from apps.base.admin_actions import make_visible, make_hidden, activate, deactivate, get_model_fields, \
@@ -327,11 +327,30 @@ class OrderAdmin(ModelAdmin):
     list_display_links = ("id", "customer")
     search_fields = ("customer__full_name", "customer__phone_number", "id")
     list_filter = ("status", "payment_status", "payment_type", "payment_method", "delivery_type", "created_at")
-    autocomplete_fields = ("customer", "promocode", "order_location", "pickup_branch")
+    autocomplete_fields = ("customer", "manager", "promocode", "order_location", "pickup_branch")
     readonly_fields = ("delivery_price", "yandex_claim_id", "yandex_claim_status")
     date_hierarchy = "created_at"
     list_per_page = 25
     actions = [status_collecting, status_delivering, status_completed, status_canceled]
+
+
+@admin.register(Manager)
+class ManagerAdmin(ModelAdmin):
+    list_display = get_model_fields(Manager)
+    list_display_links = ("id", "full_name")
+    search_fields = ("full_name",)
+    list_filter = ("is_active",)
+    actions = [activate, deactivate]
+
+
+@admin.register(OrderComment)
+class OrderCommentAdmin(ModelAdmin):
+    list_display = ("id", "order", "author", "text", "is_system", "created_at")
+    list_display_links = ("id", "order")
+    search_fields = ("order__id", "text")
+    list_filter = ("is_system", "created_at")
+    autocomplete_fields = ("order", "author")
+    date_hierarchy = "created_at"
 
 
 @admin.register(OrderItem)

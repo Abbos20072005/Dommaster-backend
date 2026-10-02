@@ -2,11 +2,14 @@ from django.urls import path
 from rest_framework.routers import SimpleRouter
 from .views import BrandViewSet, PartnerBrandViewSet, ProductBadgeViewSet, ProductCategoryViewSet, \
     ProductSubCategoryViewSet, ProductItemCategoryViewSet, ProductAttributeViewSet, OrderViewSet, ProductViewSet, \
-    CommentViewSet, QuestionViewSet, CommentReplyViewSet, QuestionReplyViewSet, DashboardAPIView
+    CommentViewSet, QuestionViewSet, CommentReplyViewSet, QuestionReplyViewSet, DashboardAPIView, ManagerViewSet, \
+    OrderCommentViewSet
 
 # SimpleRouter: mounted at the admin root, DefaultRouter's API-root view would take `api/v1/admin/`
 router = SimpleRouter()
 router.register("orders", OrderViewSet, basename="admin_order")
+router.register("order-comments", OrderCommentViewSet, basename="admin_order_comment")
+router.register("managers", ManagerViewSet, basename="admin_manager")
 router.register("products", ProductViewSet, basename="admin_product")
 router.register("brands", BrandViewSet, basename="admin_brand")
 router.register("partner-brands", PartnerBrandViewSet, basename="admin_partner_brand")

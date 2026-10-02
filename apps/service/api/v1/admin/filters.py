@@ -11,11 +11,12 @@ class OrderFilter(django_filters.FilterSet):
     to_created = django_filters.DateFilter(field_name="created_at", lookup_expr="date__lte")
     min_total = django_filters.NumberFilter(field_name="total_price", lookup_expr="gte")
     max_total = django_filters.NumberFilter(field_name="total_price", lookup_expr="lte")
+    has_manager = django_filters.BooleanFilter(field_name="manager", lookup_expr="isnull", exclude=True)
 
     class Meta:
         model = Order
         fields = ("id", "payment_status", "payment_type", "payment_method", "delivery_type", "customer",
-                  "pickup_branch")
+                  "pickup_branch", "manager")
 
 
 class ProductFilter(django_filters.FilterSet):

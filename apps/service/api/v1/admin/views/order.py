@@ -3,11 +3,31 @@ from django.db.models.functions import Coalesce
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
-from apps.service.models import Order
+from apps.service.models import Manager, Order, OrderComment
 from utils.admin_views import AdminModelViewSet
 from ..filters import OrderFilter
-from ..serializers import OrderListSerializer, OrderSerializer, OrderStatsSerializer, PENDING, COLLECTING, DELIVERING, \
-    COMPLETED, CANCELED, PAID
+from ..serializers import OrderListSerializer, OrderSerializer, OrderStatsSerializer, ManagerSerializer, \
+    OrderCommentSerializer, PENDING, COLLECTING, DELIVERING, COMPLETED, CANCELED, PAID
+
+
+class ManagerViewSet(AdminModelViewSet):
+    queryset = Manager.objects.all()
+    serializer_class = ManagerSerializer
+    filterset_fields = ("is_active",)
+    search_fields = ("full_name",)
+    ordering_fields = ("id", "full_name", "created_at")
+    ordering = ("full_name",)
+
+
+class OrderCommentViewSet(AdminModelViewSet):
+    """Internal order notes (`?order=<id>`): list + add only, never exposed to the client API."""
+    queryset = OrderComment.objects.select_related("author")
+    serializer_class = OrderCommentSerializer
+    filterset_fields = ("order", "is_system")
+    search_fields = ("text",)
+    ordering_fields = ("id", "created_at")
+    ordering = ("-created_at",)
+    http_method_names = ["get", "post", "head", "options"]
 
 
 class OrderViewSet(AdminModelViewSet):
@@ -17,7 +37,7 @@ class OrderViewSet(AdminModelViewSet):
     ordering = ("-created_at",)
 
     def get_queryset(self):
-        qs = Order.objects.select_related("customer")
+        qs = Order.objects.select_related("customer", "manager")
         if self.action == "list":
             qs = qs.annotate(items_count=Count("order_items"))
         elif self.action != "stats":

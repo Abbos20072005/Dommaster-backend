@@ -1,4 +1,4 @@
-from .order import OrderViewSet
+from .order import OrderViewSet, ManagerViewSet, OrderCommentViewSet
 from .product import ProductViewSet
 from .category import ProductCategoryViewSet, ProductSubCategoryViewSet, ProductItemCategoryViewSet
 from .brand import BrandViewSet, PartnerBrandViewSet
@@ -8,7 +8,7 @@ from .feedback import CommentViewSet, QuestionViewSet, CommentReplyViewSet, Ques
 from .dashboard import DashboardAPIView
 
 __all__ = [
-    "OrderViewSet", "ProductViewSet", "ProductCategoryViewSet", "ProductSubCategoryViewSet",
+    "OrderViewSet", "ManagerViewSet", "OrderCommentViewSet", "ProductViewSet", "ProductCategoryViewSet", "ProductSubCategoryViewSet",
     "ProductItemCategoryViewSet", "BrandViewSet", "PartnerBrandViewSet", "ProductBadgeViewSet",
     "ProductAttributeViewSet", "CommentViewSet", "QuestionViewSet", "CommentReplyViewSet", "QuestionReplyViewSet",
     "DashboardAPIView",
