@@ -112,9 +112,9 @@ def get_registrations(days):
     }
 
 
-def get_recent_orders():
-    return Order.objects.select_related("customer").annotate(items_count=Count("order_items")) \
-        .order_by("-created_at")[:RECENT_ORDERS]
+def get_recent_orders(limit=RECENT_ORDERS):
+    return Order.objects.select_related("customer", "manager").annotate(items_count=Count("order_items")) \
+        .order_by("-created_at")[:limit]
 
 
 def get_attention():

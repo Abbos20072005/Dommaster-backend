@@ -8,10 +8,11 @@ from .badge import ProductBadgeViewSet
 from .attribute import ProductAttributeViewSet
 from .feedback import CommentViewSet, QuestionViewSet, CommentReplyViewSet, QuestionReplyViewSet
 from .dashboard import DashboardAPIView
+from .today import TodayAPIView
 
 __all__ = [
     "OrderViewSet", "ManagerViewSet", "OrderCommentViewSet", "ProductViewSet", "ProductCategoryViewSet", "ProductSubCategoryViewSet",
     "ProductItemCategoryViewSet", "BrandViewSet", "PartnerBrandViewSet", "ProductModelViewSet", "ProductBadgeViewSet",
     "ProductAttributeViewSet", "CommentViewSet", "QuestionViewSet", "CommentReplyViewSet", "QuestionReplyViewSet",
-    "DashboardAPIView", "AddsBrandsViewSet",
+    "DashboardAPIView", "AddsBrandsViewSet", "TodayAPIView",
 ]

@@ -3,7 +3,7 @@ from rest_framework.routers import SimpleRouter
 from .views import BrandViewSet, PartnerBrandViewSet, ProductBadgeViewSet, ProductCategoryViewSet, \
     ProductSubCategoryViewSet, ProductItemCategoryViewSet, ProductAttributeViewSet, OrderViewSet, ProductViewSet, \
     CommentViewSet, QuestionViewSet, CommentReplyViewSet, QuestionReplyViewSet, DashboardAPIView, ManagerViewSet, \
-    OrderCommentViewSet, ProductModelViewSet, AddsBrandsViewSet
+    OrderCommentViewSet, ProductModelViewSet, AddsBrandsViewSet, TodayAPIView
 
 # SimpleRouter: mounted at the admin root, DefaultRouter's API-root view would take `api/v1/admin/`
 router = SimpleRouter()
@@ -27,4 +27,5 @@ router.register("question-replies", QuestionReplyViewSet, basename="admin_questi
 
 urlpatterns = router.urls + [
     path("dashboard/", DashboardAPIView.as_view(), name="admin_dashboard"),
+    path("today/", TodayAPIView.as_view(), name="admin_today"),
 ]
