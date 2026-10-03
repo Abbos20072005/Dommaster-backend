@@ -2,7 +2,7 @@ import django_filters
 from django.db.models import Exists, OuterRef
 from apps.service.models import AddsBrands, Brand, PartnerBrand, ProductModel, ProductBadge, ProductCategory, \
     ProductSubCategory, ProductItemCategory, ProductAttribute, Order, Product, Comment, CommentReply, Questions, \
-    QuestionsReply, ORDER_STATUS
+    QuestionsReply, ORDER_STATUS, Sale
 
 
 class OrderFilter(django_filters.FilterSet):
@@ -158,6 +158,15 @@ class QuestionFilter(django_filters.FilterSet):
 
     def filter_answered(self, queryset, name, value):
         return queryset.annotate(_answered=question_answered()).filter(_answered=value)
+
+
+class SaleFilter(django_filters.FilterSet):
+    from_discount = django_filters.DateFilter(field_name="discount_from", lookup_expr="gte")
+    to_discount = django_filters.DateFilter(field_name="discount_to", lookup_expr="lte")
+
+    class Meta:
+        model = Sale
+        fields = ("is_main", "is_visible")
 
 
 class CommentReplyFilter(django_filters.FilterSet):

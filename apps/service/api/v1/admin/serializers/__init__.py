@@ -16,6 +16,7 @@ from .product_model import ProductModelSerializer
 from .badge import ProductBadgeSerializer
 from .attribute import ProductAttributeOptionSerializer, ProductAttributeSerializer, AttributeShortSerializer, \
     CategoryAttributeSerializer, ItemCategoryAttributesSerializer
+from .sale import SaleProductSerializer, SaleListSerializer, SaleSerializer
 from .feedback import FeedbackCustomerSerializer, FeedbackProductSerializer, CommentImageSerializer, \
     CommentReplyShortSerializer, QuestionReplyShortSerializer, CommentListSerializer, CommentSerializer, \
     QuestionListSerializer, QuestionSerializer, ReplyCommentSerializer, ReplyQuestionSerializer, ReplyBaseSerializer, \
@@ -32,6 +33,7 @@ from .today import STALE_PENDING_ORDERS, REFUND_PENDING_ORDERS, UNASSIGNED_ORDER
     TodayOrdersPointSerializer, TodayOrdersChartSerializer, TodaySerializer
 
 __all__ = [
+    "SaleProductSerializer", "SaleListSerializer", "SaleSerializer",
     "PENDING", "COLLECTING", "DELIVERING", "COMPLETED", "CANCELED", "DELIVERY", "PICKUP", "PAYMENT_ON_DELIVERY", "PAID",
     "PRICE_FIELDS", "OrderCustomerSerializer", "OrderAddressSerializer", "OrderBranchSerializer",
     "OrderPromocodeSerializer", "OrderProductSerializer", "OrderItemSerializer", "OrderListSerializer",
