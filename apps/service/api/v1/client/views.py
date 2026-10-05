@@ -1,4 +1,3 @@
-from utils.send_notification import send_notification_to_customer
 from apps.service.outbox import emit_order_event
 from apps.service.models.choices import ORDER_EVENT_CREATED
 from rest_framework.viewsets import ViewSet
@@ -613,8 +612,6 @@ class ProductViewSet(ViewSet):
 
         cache_key_main = f"categories:lists"
         cached_data = cache.get(cache_key_main)
-        send_notification_to_customer(customer_id=request.user.id)
-        print("sent")
         if cached_data:
             return Response(
                 data={"result": cached_data, "ok": True}, status=status.HTTP_200_OK

@@ -3,6 +3,7 @@ import logging
 
 import requests
 from django.conf import settings
+from django.db.models import F
 from pyfcm import FCMNotification
 from pyfcm.errors import FCMNotRegisteredError
 from apps.authorization.models import FcmToken
@@ -38,7 +39,9 @@ def push_notification(message_title: str, message_body: str, fcm: str) -> bool:
 
 def send_push_to_customer(customer_id, title: str, body: str, data: dict | None = None) -> int:
     """Push to every device of the customer. Returns how many devices accepted it."""
-    tokens = FcmToken.objects.filter(customer_id=customer_id).exclude(fcm_token="")
+    # `phone_auth` stores the device id as a placeholder until the app sends the real token
+    tokens = FcmToken.objects.filter(customer_id=customer_id).exclude(fcm_token="") \
+        .exclude(fcm_token=F("device_id"))
     if not tokens:
         return 0
 
