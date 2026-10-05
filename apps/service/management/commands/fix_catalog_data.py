@@ -9,13 +9,14 @@ from django.db.models import Count, Q
 
 from apps.base.models import Banner
 from apps.service.models import (
-    AddsBrands, Brand, Product, ProductAttributeValue, ProductItemCategory, ProductModel, ProductSubCategory,
+    AddsBrands, Brand, Comment, Product, ProductAttributeValue, ProductItemCategory, ProductModel, ProductSubCategory,
 )
 
 # Mass fixes from the sheet "2. Массовые операции" of the catalog audit (BUILDEX_итоговый_план_исправлений).
 # "row N" below = the row of that sheet.
 # Not automated: row 4 (brand spelling style - needs a decision), rows 16-18 (barcodes, images, real stock -
-# need source data), row 58 ("андава" - no replacement given); row 13 keeps the plural wording.
+# need source data). The sheet gives no replacement for row 58 ("андава") and for "VIKO PILOT" of row 14 -
+# the wording here is ours.
 
 NAME_FIELDS = ("name", "name_uz", "name_ru", "name_en")
 
@@ -26,6 +27,29 @@ BRAND_MERGE = ("AWP",)  # row 3: the same brand entered twice
 MISPLACED_SUB_CATEGORY = "Сместитель для кухни"  # row 15
 MISPLACED_TARGET_ITEM_CATEGORY = "Смесители для мойки"
 TEST_DISCOUNT = {"pk": 670, "discount": 30, "discount_price": 700}  # row 19
+# row 19: the comments ("hi", "asdasd", "Test", ...) behind the test ratings; deleted only with --delete-test-comments
+TEST_COMMENT_IDS = (26, 27, 28, 29, 36, 37, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53)
+
+# row 13: plural heads of the Onka names -> singular, as in the sheet's example
+# "Блок клеммный винтовой MRK 2,5 мм² серый Onka"; a longer head goes before its prefix
+ONKA_HEADS = (
+    ("Блоки клеммные вставочные утроенные", "Блок клеммный вставочный утроенный"),
+    ("Блоки клеммные вставочные удвоенные", "Блок клеммный вставочный удвоенный"),
+    ("Блоки клеммные вставочные", "Блок клеммный вставочный"),
+    ("Блоки клеммные винтовые", "Блок клеммный винтовой"),
+    ("Блоки клеммные зажимные", "Блок клеммный зажимной"),
+    ("Блоки предохранителя клеммовые винтовые", "Блок предохранителя клеммный винтовой"),
+    ("Блоки контрольные", "Блок контрольный"),
+    ("Колодки клеммные мостовые винтовые удвоенные", "Колодка клеммная мостовая винтовая удвоенная"),
+    ("Колодки клеммные винтовые удвоенные", "Колодка клеммная винтовая удвоенная"),
+    ("Клеммы винтовые", "Клемма винтовая"),
+    ("Клеммы вставочные", "Клемма вставочная"),
+    ("Клеммы с модулем", "Клемма с модулем"),
+    ("Разъемы на", "Разъём на"),
+)
+ONKA_COLOR = re.compile(
+    r"\( ?(серый|красный|желтый|зеленый|синий|оранжевый|белый|мятно-зеленый|желто-зеленый) ?\)"
+)
 
 
 def keep_case(source, replacement):
@@ -59,6 +83,19 @@ def tidy(value):
     return value.strip(" ,")
 
 
+def onka_singular(value):
+    if not value.endswith(" Onka"):
+        return value
+    for plural, singular in ONKA_HEADS:
+        if value.startswith(f"{plural} "):
+            value = singular + value[len(plural):]
+            break
+    # the colour stays in brackets unless it agrees with the head: only "Блок ..." is masculine singular for sure
+    if value.startswith("Блок "):
+        value = ONKA_COLOR.sub(r"\1", value)
+    return value
+
+
 LATIN_TO_CYRILLIC = {"C": "С", "c": "с", "O": "О", "o": "о"}
 CYRILLIC_TO_LATIN = {"Т": "T", "т": "t"}
 
@@ -72,8 +109,10 @@ NAME_RULES = [
      lambda v: re.sub(r"[Oo](?=твертк)", lambda m: LATIN_TO_CYRILLIC[m.group()], v, flags=re.IGNORECASE)),
     ("row 7: STANDARТ (Cyrillic Т)",
      lambda v: re.sub(r"(?<=standar)[Тт]", lambda m: CYRILLIC_TO_LATIN[m.group()], v, flags=re.IGNORECASE)),
+    ("row 13: Onka singular", onka_singular),
     ("row 14: Viko translit", lambda v: v.replace("Dif Avtomat", "Дифавтомат")
-     .replace("Modulniy Puskatel", "Модульный пускатель").replace("Planka Rozetka", "Розеточная колодка")),
+     .replace("Modulniy Puskatel", "Модульный пускатель").replace("Planka Rozetka", "Розеточная колодка")
+     .replace("VIKO PILOT 6X1,5MT", "Viko Сетевой фильтр 6 гнёзд 1,5 м")),
     # "Смесительдля AWP для кухни": the glued "для" is a duplicate of the next one
     replace_rule("row 5: Смесительдля", r"месительдля(?= \S+ для\b)", "меситель"),
     replace_rule("row 5: Смесительдля", r"месительдля", "меситель для"),
@@ -116,6 +155,8 @@ NAME_RULES = [
     replace_rule("row 55: пластиковый винтами", r"пластиковый винтами", "пластиковыми винтами"),
     replace_rule("row 56: стеклотканеваяи", r"стеклотканеваяи", "стеклотканевая"),
     replace_rule("row 57: термоусадочные трубка", r"термоусадочные трубка", "термоусадочная трубка"),
+    replace_rule("row 58: андава", r"андава для жидкого обоя", "кельма для жидких обоев"),
+    replace_rule("row 58: андава", r"андава для наждачная бумага", "тёрка для наждачной бумаги"),
     replace_rule("row 59: утканос", r"утканос", "утконос"),
     replace_rule("row 60: 50мт", r"(шланг сливной.*?50)\s*мт\b", r"\1 м", literal=True),
     replace_rule("row 61: кусочков", r"кусочков", "предметов"),
@@ -222,10 +263,16 @@ class Command(BaseCommand):
             default=STEPS,
             help="Run only these steps (default: all).",
         )
+        parser.add_argument(
+            "--delete-test-comments",
+            action="store_true",
+            help="test-data step: also delete the test comments the test ratings come from.",
+        )
 
     def handle(self, *args, **options):
         self.dry_run = options["dry_run"]
         self.verbose = options["verbose"]
+        self.delete_test_comments = options["delete_test_comments"]
 
         if self.dry_run:
             self.stdout.write(self.style.WARNING("DRY RUN - everything below is rolled back at the end"))
@@ -298,7 +345,10 @@ class Command(BaseCommand):
     def fix_brands(self):
         old_name, new_name = BRAND_RENAME
         existing = named(Brand, new_name).first()
-        for brand in named(Brand, old_name):
+        misspelled = list(named(Brand, old_name))
+        if not misspelled:
+            self.stdout.write(f"  Brand {old_name!r}: 0 found, nothing to rename")
+        for brand in misspelled:
             if existing:
                 self.merge_brand(existing, brand)
             else:
@@ -416,13 +466,21 @@ class Command(BaseCommand):
     # ---- row 19: test rating / discount ----
 
     def fix_test_data(self):
-        rated = Product.objects.filter(rating__gt=0).annotate(comments=Count("product_comment"))
+        if self.delete_test_comments:
+            # one by one: the Comment signal recalculates the product rating
+            comments = Comment.objects.filter(pk__in=TEST_COMMENT_IDS)
+            for comment in comments:
+                self.stdout.write(f"  Comment {comment.pk} of product {comment.product_id} deleted: {comment.comment!r}")
+                comment.delete()
+
+        rated =Product.objects.filter(rating__gt=0).annotate(comments=Count("product_comment"))
         without_comments = [product.pk for product in rated if not product.comments]
         with_comments = [product.pk for product in rated if product.comments]
         Product.objects.filter(pk__in=without_comments).update(rating=0, comments_quantity=0)
         self.stdout.write(f"  Rating without a single comment reset to 0: {len(without_comments)} {without_comments}")
         if with_comments:
-            self.warn(f"rating kept, it comes from comments (delete the test comments in the admin): {with_comments}")
+            self.warn(f"rating kept, it comes from comments (--delete-test-comments removes the test ones): "
+                      f"{with_comments}")
 
         cleared = Product.objects.filter(**TEST_DISCOUNT).update(discount=None, discount_price=None)
         self.stdout.write(f"  Test discount of product {TEST_DISCOUNT['pk']} cleared: {cleared}")
