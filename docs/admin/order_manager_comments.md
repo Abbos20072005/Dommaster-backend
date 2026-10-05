@@ -23,62 +23,9 @@ Swagger: `/swagger/admin/` → **managers**, **orders**, **order-comments**.
 
 ## 1. Menejerlar
 
-### Obyekt
+Menejerlar ro'yxati va CRUD (`managers/`) — alohida hujjatda: [managers.md](managers.md).
 
-```json
-{
-  "id": 1,
-  "full_name": "M. Xolmatova",
-  "is_active": true,
-  "created_at": "2026-10-02T09:41:45.688434",
-  "updated_at": "2026-10-02T09:41:45.688434"
-}
-```
-
-| Maydon | Turi | Izoh |
-| --- | --- | --- |
-| `full_name` | string, majburiy | maks. 255 belgi |
-| `is_active` | bool | default `true` |
-
-### Ro'yxat — `GET managers/`
-
-| Query | Misol | Izoh |
-| --- | --- | --- |
-| `is_active` | `?is_active=true` | dropdown uchun faqat faollarni olish |
-| `search` | `?search=Xol` | `full_name` bo'yicha qidiruv |
-| `ordering` | `?ordering=-created_at` | `id`, `full_name`, `created_at`; default `full_name` |
-| `page`, `page_size` | `?page=1&page_size=100` | default 20, maksimum 100 |
-
-```json
-{
-  "count": 1,
-  "next": null,
-  "previous": null,
-  "next_page": null,
-  "previous_page": null,
-  "results": [
-    { "id": 1, "full_name": "M. Xolmatova", "is_active": true, "created_at": "...", "updated_at": "..." }
-  ]
-}
-```
-
-### Yaratish / o'zgartirish / o'chirish
-
-```bash
-curl -X POST {{host}}/api/v1/admin/managers/ \
-  -H "Authorization: Bearer <admin_access_token>" \
-  -H "Content-Type: application/json" \
-  -d '{"full_name": "M. Xolmatova"}'
-```
-
-| Amal | So'rov | Javob |
-| --- | --- | --- |
-| Yaratish | `POST managers/` | `201` + obyekt |
-| Bitta menejer | `GET managers/{id}/` | `200` + obyekt |
-| O'zgartirish | `PATCH managers/{id}/` (`{"is_active": false}`) | `200` + obyekt |
-| O'chirish | `DELETE managers/{id}/` | `204`, body yo'q |
-
-> Menejer o'chirilsa, unga biriktirilgan buyurtmalar "Biriktirilmagan" holatiga o'tadi va bu haqda tizim izohi **yozilmaydi**. Ishdan ketgan menejerni o'chirish o'rniga `is_active: false` qilish tavsiya etiladi — eski buyurtmalarda ismi saqlanib qoladi.
+Dropdown uchun: `GET managers/?is_active=true&page_size=100` → `results` ichida `{ "id", "full_name", "is_active", ... }`.
 
 ---
 
