@@ -30,6 +30,7 @@ from apps.base.models import Promocodes
 from datetime import date
 from apps.base.models import Banner
 from apps.base.api.v1.client.serializers import BannerSerializer
+from apps.base.telegram import send_comment_to_telegram, send_question_to_telegram
 from utils.pyment_link import generate_link
 from apps.payment.services_pay.auth_services import AtmosAuthService, AtmosHoldService
 from apps.service.models import (
@@ -1429,6 +1430,7 @@ class CommentViewSet(ViewSet):
                     customer_id=request.user.id, comment_id=comment.id, image=image
                 )
 
+        send_comment_to_telegram(comment)
         return Response(
             data={"result": serializer.data, "ok": True}, status=status.HTTP_201_CREATED
         )
@@ -2317,7 +2319,7 @@ class QuestionsViewSet(ViewSet):
                 error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors
             )
 
-        serializer.save()
+        send_question_to_telegram(serializer.save())
         return Response(
             data={"result": serializer.data, "ok": True}, status=status.HTTP_201_CREATED
         )
