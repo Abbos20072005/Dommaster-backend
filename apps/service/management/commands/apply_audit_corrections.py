@@ -58,21 +58,12 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        self.dry_run = options["dry_run"]
-        self.verbose = options["verbose"]
-        self.stats = Counter()
-        self.brands = {}
-        self.item_categories = {}
-        self.touched_item_categories = set()
-        self.moved_to = set()
+        self.setup(options)
 
         edits, other_columns = self.read_sheet(options["file"], options["sheet"])
         self.stdout.write(f"Rows with corrected cells: {len(edits)}")
         for column, count in other_columns.items():
             self.warn(f"{count} corrected cells in the column {column!r} are not applied (not supported)")
-
-        if self.dry_run:
-            self.stdout.write(self.style.WARNING("DRY RUN - everything below is rolled back at the end"))
 
         with transaction.atomic():
             products = {
@@ -91,6 +82,20 @@ class Command(BaseCommand):
             if self.dry_run:
                 transaction.set_rollback(True)
 
+        self.finish()
+
+    def setup(self, options):
+        self.dry_run = options["dry_run"]
+        self.verbose = options["verbose"]
+        self.stats = Counter()
+        self.brands = {}
+        self.item_categories = {}
+        self.touched_item_categories = set()
+        self.moved_to = set()
+        if self.dry_run:
+            self.stdout.write(self.style.WARNING("DRY RUN - everything below is rolled back at the end"))
+
+    def finish(self):
         if not self.dry_run:
             # update() sends no signals; the brand list of an item category is cached too
             for item_category_id in self.touched_item_categories:
@@ -108,6 +113,10 @@ class Command(BaseCommand):
     def warn(self, message):
         self.stdout.write(self.style.WARNING(f"  ! {message}"))
 
+    @staticmethod
+    def is_corrected(cell):
+        return bool(cell.fill and cell.fill.fill_type == "solid" and cell.fill.fgColor.rgb == EDITED_FILL)
+
     def read_sheet(self, path, sheet_name):
         # read_only: the workbook carries thousands of embedded pictures and cell notes we don't need
         workbook = openpyxl.load_workbook(path, read_only=True)
@@ -123,10 +132,7 @@ class Command(BaseCommand):
         other_columns = Counter()
         for row in rows:
             values = {header: cell.value for header, cell in zip(headers, row)}
-            edited = [
-                header for header, cell in zip(headers, row)
-                if cell.fill and cell.fill.fill_type == "solid" and cell.fill.fgColor.rgb == EDITED_FILL
-            ]
+            edited = [header for header, cell in zip(headers, row) if self.is_corrected(cell)]
             if not edited or not isinstance(values[COLUMN_ID], (int, float)):
                 continue
             other_columns.update(header for header in edited if header not in APPLIED_COLUMNS)
@@ -165,11 +171,7 @@ class Command(BaseCommand):
             elif brand.pk == product["brand_id"]:
                 self.stats["brands already applied"] += 1
             else:
-                changes["brand"] = brand
-                # a product's model belongs to its brand (same rule as the admin API)
-                if product["product_model__brand_id"] not in (None, brand.pk):
-                    changes["product_model"] = None
-                self.touched_item_categories.add(product["product_item_category_id"])
+                changes.update(self.brand_change(product, brand))
                 self.stats["brands changed"] += 1
                 self.log(product, "brand", product["brand_id"], f"{brand.pk} {brand.name}")
 
@@ -185,16 +187,7 @@ class Command(BaseCommand):
             elif item_category.pk == product["product_item_category_id"]:
                 self.stats["item categories already applied"] += 1
             else:
-                # what belongs to the old category goes: attribute values (as in the admin API) and range filter values
-                ProductAttributeValue.objects.filter(product_id=product["id"]).exclude(
-                    attribute__category_links__item_category=item_category
-                ).delete()
-                ProductFilterNumericValue.objects.filter(product_id=product["id"]).exclude(
-                    schema__item_category=item_category
-                ).delete()
-                changes["product_item_category"] = item_category
-                self.touched_item_categories.update((product["product_item_category_id"], item_category.pk))
-                self.moved_to.add(item_category.pk)
+                changes.update(self.item_category_change(product, item_category))
                 self.stats["item categories changed"] += 1
                 self.log(product, "item category", product["product_item_category_id"],
                          f"{item_category.pk} {item_category.name}")
@@ -202,6 +195,26 @@ class Command(BaseCommand):
         if changes:
             Product.objects.rewrite(False).filter(pk=product["id"]).update(**changes)
             self.stats["products changed"] += 1
+
+    def brand_change(self, product, brand):
+        changes = {"brand": brand}
+        # a product's model belongs to its brand (same rule as the admin API)
+        if product["product_model__brand_id"] not in (None, brand.pk):
+            changes["product_model"] = None
+        self.touched_item_categories.add(product["product_item_category_id"])
+        return changes
+
+    def item_category_change(self, product, item_category):
+        # what belongs to the old category goes: attribute values (as in the admin API) and range filter values
+        ProductAttributeValue.objects.filter(product_id=product["id"]).exclude(
+            attribute__category_links__item_category=item_category
+        ).delete()
+        ProductFilterNumericValue.objects.filter(product_id=product["id"]).exclude(
+            schema__item_category=item_category
+        ).delete()
+        self.touched_item_categories.update((product["product_item_category_id"], item_category.pk))
+        self.moved_to.add(item_category.pk)
+        return {"product_item_category": item_category}
 
     def log(self, product, field, old, new):
         if self.verbose:
