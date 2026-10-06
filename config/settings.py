@@ -342,14 +342,8 @@ except (TypeError, ValueError):
     TELEGRAM_CHAT_TOPIC_ID = None
 
 # Product reviews / questions from customers: same group, own topics
-try:
-    TELEGRAM_COMMENT_TOPIC_ID = int(os.getenv("TELEGRAM_COMMENT_TOPIC_ID") or 91)
-except (TypeError, ValueError):
-    TELEGRAM_COMMENT_TOPIC_ID = 91
-try:
-    TELEGRAM_QUESTION_TOPIC_ID = int(os.getenv("TELEGRAM_QUESTION_TOPIC_ID") or 93)
-except (TypeError, ValueError):
-    TELEGRAM_QUESTION_TOPIC_ID = 93
+TELEGRAM_COMMENT_TOPIC_ID = 91
+TELEGRAM_QUESTION_TOPIC_ID = 93
 
 # Telegram bot for OTP fallback (SMS didn't arrive -> code via bot)
 # same bot as order notifications unless a separate one is configured
