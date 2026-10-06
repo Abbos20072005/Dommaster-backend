@@ -246,6 +246,7 @@ class ProductAttributeValueInline(TabularInline):
 class ProductAdmin(ModelAdmin):
     list_display = get_model_fields(Product, exclude=(
         "short_description", "description", "description_uz", "description_ru", "description_en",
+        "filter_data",
     ))
     list_display_links = ("id", "name")
     search_fields = ("name", "brand__name", "product_item_category__name")
@@ -269,11 +270,6 @@ class ProductAdmin(ModelAdmin):
             "classes": ("collapse",),
             "fields": ("weight", "length", "width", "height"),
             "description": "Вес в кг, размеры в метрах. Используются для расчёта доставки Яндекс."
-        }),
-        ("Данные для фильтров", {
-            "classes": ("collapse",),
-            "fields": ("filter_data",),
-            "description": "Формат: {\"ключ_фильтра\": \"значение\"}. Для checkbox/radio фильтров."
         }),
     )
     date_hierarchy = "created_at"
