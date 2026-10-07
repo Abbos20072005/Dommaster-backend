@@ -144,6 +144,14 @@ def make_base_key(name, exclude_unit_label=None, all_labels=None):
     return normalized
 
 
+LANGUAGE_SUFFIXES = ("", "_uz", "_ru", "_en")
+
+
+def variant_sort_key(value):
+    number = re.search(r"\d+(?:[.,]\d+)?", value)
+    return (float(number.group().replace(",", ".")) if number else float("inf"), value)
+
+
 def resolve_dimension_label(raw_label):
     if not raw_label:
         return "Характеристика"
@@ -189,6 +197,12 @@ class Command(BaseCommand):
             default=2,
             help="Minimum products per group (default: 2)",
         )
+        parser.add_argument(
+            "--rebuild",
+            action="store_true",
+            help="Drop the variant groups of the processed products first and group them again "
+                 "(groups made by hand for these products are dropped too)",
+        )
 
     def handle(self, *args, **options):
         dry_run = options["dry_run"]
@@ -196,6 +210,7 @@ class Command(BaseCommand):
         item_category_ids = options.get("item_category")
         product_ids = options.get("product_ids")
         min_group_size = options["min_group_size"]
+        rebuild = options["rebuild"]
 
         if dry_run:
             self.stdout.write(self.style.WARNING(">>> DRY RUN — no changes will be made\n"))
@@ -216,12 +231,19 @@ class Command(BaseCommand):
             "groups_created": 0,
             "items_created": 0,
             "products_already_grouped": 0,
+            "items_deleted": 0,
+            "groups_deleted": 0,
         }
 
         start_time = time.time()
 
-        for cat in cat_qs:
-            self._process_category(cat, stats, dry_run, verbose, min_group_size, filter_product_ids)
+        # one transaction: a failed rebuild must not leave the catalog without its variant groups
+        with transaction.atomic():
+            for cat in cat_qs:
+                self._process_category(cat, stats, dry_run, verbose, min_group_size, filter_product_ids, rebuild)
+            if rebuild and not dry_run:
+                stats["groups_deleted"] = ProductVariantGroup.objects.filter(items__isnull=True).delete()[1].get(
+                    ProductVariantGroup._meta.label, 0)
 
         elapsed = time.time() - start_time
         self.stdout.write("")
@@ -230,6 +252,9 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS("=" * 60))
         self.stdout.write(f"  Categories processed:    {stats['categories_processed']}")
         self.stdout.write(f"  Products processed:      {stats['products_processed']}")
+        if rebuild:
+            self.stdout.write(f"  Old variant items dropped: {stats['items_deleted']}")
+            self.stdout.write(f"  Old groups dropped:      {stats['groups_deleted']}")
         self.stdout.write(f"  Already in a group:      {stats['products_already_grouped']}")
         self.stdout.write(f"  Variant groups created:  {stats['groups_created']}")
         self.stdout.write(f"  Variant items created:   {stats['items_created']}")
@@ -239,12 +264,16 @@ class Command(BaseCommand):
             self.stdout.write("")
             self.stdout.write(self.style.WARNING(">>> DRY RUN — no changes were made"))
 
-    def _group_name(self, cat, dim_label, base_key):
-        base_slug = re.sub(r'[^a-zа-я0-9]', '_', base_key[:60].strip().lower())
-        base_slug = re.sub(r'_+', '_', base_slug).strip('_')[:40]
-        return f"{cat.name} / {dim_label} ({base_slug})"
+    def _process_category(self, cat, stats, dry_run, verbose, min_group_size, filter_product_ids=None,
+                          rebuild=False):
+        if rebuild:
+            stale = ProductVariantItem.objects.filter(product__product_item_category=cat)
+            if filter_product_ids:
+                stale = stale.filter(product_id__in=filter_product_ids)
+            stats["items_deleted"] += stale.count()
+            if not dry_run:
+                stale.delete()
 
-    def _process_category(self, cat, stats, dry_run, verbose, min_group_size, filter_product_ids=None):
         products = list(
             Product.objects.filter(
                 product_item_category=cat,
@@ -261,7 +290,8 @@ class Command(BaseCommand):
         stats["categories_processed"] += 1
         stats["products_processed"] += len(products)
 
-        already_grouped = {p.id for p in products if p.variant_items.exists()}
+        # a dry run of a rebuild deletes nothing, so it just looks at every product as ungrouped
+        already_grouped = set() if rebuild else {p.id for p in products if p.variant_items.exists()}
         stats["products_already_grouped"] += len(already_grouped)
 
         ungrouped = [p for p in products if p.id not in already_grouped]
@@ -306,10 +336,14 @@ class Command(BaseCommand):
                     base_groups[base_key].append((p, variant_value))
 
             for base_key, entries in base_groups.items():
-                if len(entries) < min_group_size:
+                # nothing to choose between when every product has the same value
+                # (names that differ only in a bracketed code share a base key)
+                if len({value for _, value in entries}) < min_group_size:
                     continue
 
                 dim_label = resolve_dimension_label(label)
+                # items are shown in the order they were created: 6A, 10A, 16A... instead of the product id order
+                entries.sort(key=lambda entry: variant_sort_key(entry[1]))
 
                 if dry_run:
                     stats["groups_created"] += 1
@@ -318,23 +352,22 @@ class Command(BaseCommand):
                         self._print_group(dim_label, base_key, entries)
                     continue
 
-                group_name = self._group_name(cat, dim_label, base_key)
+                # One group per base key. The group used to be looked up by a name built from the first 40
+                # characters of the base key, so every "автоматический выключатель модульный chint ..." set
+                # (1P/2P/3P/4P, type B/C, other series) landed in the same group and its values repeated.
+                # The name is the title customers see; the serializer reads name_<lang>, so every language gets it.
                 with transaction.atomic():
-                    group, created = ProductVariantGroup.objects.get_or_create(
-                        name=group_name,
-                        defaults={"display_type": "text"},
-                    )
-                    if created:
-                        stats["groups_created"] += 1
+                    group = ProductVariantGroup.objects.create(
+                        display_type="text", **{f"name{suffix}": dim_label for suffix in LANGUAGE_SUFFIXES})
+                    stats["groups_created"] += 1
 
                     for product, variant_value in entries:
-                        _, item_created = ProductVariantItem.objects.get_or_create(
+                        ProductVariantItem.objects.create(
                             group=group,
                             product=product,
-                            defaults={"display_value": variant_value},
+                            **{f"display_value{suffix}": variant_value for suffix in LANGUAGE_SUFFIXES},
                         )
-                        if item_created:
-                            stats["items_created"] += 1
+                        stats["items_created"] += 1
 
                     if verbose and entries:
                         self._print_group(dim_label, base_key, entries, group_id=group.id)
