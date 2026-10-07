@@ -8,12 +8,14 @@ from django.db.models import Max
 
 from apps.service.models import Product, ProductItemCategory, ProductSubCategory
 
-from .apply_audit_corrections import COLUMN_ID, NAME_FIELDS, Command as CorrectionsCommand, clean, named
+from .apply_audit_corrections import (
+    COLUMN_ID, NAME_FIELDS, Command as CorrectionsCommand, clean, named, strip_articul,
+)
 
 # The audit workbook lists every remark on the sheet "Все замечания": which product, which field, what is wrong
 # and what to do. The texts are generated from a few templates, so the remarks that say exactly what to do are
-# executed here. A remark is skipped when the content team already corrected that cell by hand (yellow fill)
-# or when the product no longer looks like it did at the audit.
+# executed here. A remark is skipped when the content team already corrected that cell by hand (yellow / green
+# fill) or when the product no longer looks like it did at the audit.
 
 REMARKS_SHEET = "Все замечания"
 CREATE_MARK = "(создать)"
@@ -143,15 +145,6 @@ NAME_FIXES = (
      or "Название транслитом" in problem, fix_translit),
     ("name: tabs / line breaks", lambda problem, action: "табуляция" in problem, fix_spaces),
 )
-
-
-def strip_articul(name, code):
-    """The name without the articul, or None when the code is not a separate piece at the start / end of it."""
-    escaped = re.escape(code)
-    for pattern in (rf"\s*\({escaped}\)$", rf"\s+{escaped}$", rf"^{escaped}\s+"):
-        if re.search(pattern, name):
-            return clean(re.sub(pattern, "", name)).strip(" ,")
-    return None
 
 
 class Command(CorrectionsCommand):

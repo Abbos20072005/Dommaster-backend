@@ -12,11 +12,12 @@ from apps.service.models import (
 )
 
 # The content team corrects a sheet of the audit workbook (an export of export_products_by_category with audit
-# notes) and marks every cell it changed with a yellow fill. Only those cells are applied - the rest of the
-# sheet is an old snapshot of the DB and must not overwrite it.
+# notes) and marks every cell it changed with a fill: yellow in the first round, green in the second. Only those
+# cells are applied - the rest of the sheet is an old snapshot of the DB and must not overwrite it.
+# A red fill is the team's own "problem" mark, not a correction.
 
 NAME_FIELDS = ("name", "name_uz", "name_ru", "name_en")
-EDITED_FILL = "FFFFFF00"
+EDITED_FILLS = {"FFFFFF00", "FF92D050"}
 
 COLUMN_ID = "ID"
 COLUMN_NAME = "Наименование"
@@ -37,9 +38,25 @@ def named(model, name):
     return model.objects.rewrite(False).filter(condition).order_by("id")
 
 
+def strip_articul(name, code):
+    """The name without the articul, or None when the code is not a separate piece at the start / end of it."""
+    escaped = re.escape(code)
+    for pattern in (rf"\s*\({escaped}\)$", rf"\s+{escaped}$", rf"^{escaped}\s+"):
+        if re.search(pattern, name):
+            return clean(re.sub(pattern, "", name)).strip(" ,")
+    return None
+
+
+def without_articul(name, articul):
+    # the team types over an old export, so a corrected name may still end with the code that has moved to
+    # articul_code since then; a mistyped code at that place is no better
+    stripped = strip_articul(name, articul)
+    return stripped if stripped is not None else clean(re.sub(r"[\s,]+\d{6,}$", "", name))
+
+
 class Command(BaseCommand):
     help = (
-        "Apply the cells the content team corrected (yellow fill) on one sheet of the audit workbook: "
+        "Apply the cells the content team corrected (yellow / green fill) on one sheet of the audit workbook: "
         "product name, item category, brand. Run with --dry-run first."
     )
 
@@ -68,10 +85,11 @@ class Command(BaseCommand):
         with transaction.atomic():
             products = {
                 product["id"]: product for product in Product.objects.rewrite(False).filter(pk__in=edits).values(
-                    "id", *NAME_FIELDS, "brand_id", "product_model__brand_id", "product_item_category_id",
-                    "product_item_category__product_sub_category__product_category_id",
+                    "id", *NAME_FIELDS, "articul_code", "brand_id", "product_model__brand_id",
+                    "product_item_category_id", "product_item_category__product_sub_category__product_category_id",
                 )
             }
+            self.find_new_duplicates(edits, products)
             for product_id, cells in edits.items():
                 product = products.get(product_id)
                 if not product:
@@ -115,7 +133,28 @@ class Command(BaseCommand):
 
     @staticmethod
     def is_corrected(cell):
-        return bool(cell.fill and cell.fill.fill_type == "solid" and cell.fill.fgColor.rgb == EDITED_FILL)
+        return bool(cell.fill and cell.fill.fill_type == "solid" and cell.fill.fgColor.rgb in EDITED_FILLS)
+
+    @staticmethod
+    def corrected_name(product, cells):
+        name = clean(cells[COLUMN_NAME])
+        articul = clean(product["articul_code"])
+        return without_articul(name, articul) if name and articul else name
+
+    def find_new_duplicates(self, edits, products):
+        # a corrected name must not make two different products look the same (a copy-paste slip in the sheet);
+        # products that already share a name may keep sharing it
+        current = {pk: clean(name) for pk, name in Product.objects.rewrite(False).values_list("id", "name_ru")}
+        planned = dict(current)
+        for product_id, cells in edits.items():
+            if COLUMN_NAME in cells and product_id in products:
+                planned[product_id] = self.corrected_name(products[product_id], cells) or current[product_id]
+        owners = {}
+        for product_id, name in planned.items():
+            owners.setdefault(name, []).append(product_id)
+        self.new_duplicates = {
+            name for name, ids in owners.items() if len(ids) > 1 and len({current[pk] for pk in ids}) > 1
+        }
 
     def read_sheet(self, path, sheet_name):
         # read_only: the workbook carries thousands of embedded pictures and cell notes we don't need
@@ -148,14 +187,19 @@ class Command(BaseCommand):
         changes = {}
 
         if COLUMN_NAME in cells:
-            name = clean(cells[COLUMN_NAME])
+            name = self.corrected_name(product, cells)
             current = product["name_ru"] or product["name"]
             if not name:
                 self.stats["names skipped (empty)"] += 1
                 self.warn(f"product {product['id']}: empty name, skipped")
-            elif name == current:
+            elif name == clean(current):
                 self.stats["names already applied"] += 1
+            elif name in self.new_duplicates:
+                self.stats["names skipped (another product would get the same name)"] += 1
+                self.warn(f"product {product['id']}: {name!r} would repeat another product's name, skipped")
             else:
+                if name != clean(cells[COLUMN_NAME]):
+                    self.stats["names: code left out (it lives in articul_code)"] += 1
                 # the columns that repeat the Russian name follow it, a real translation stays
                 changes.update({
                     field: name for field in NAME_FIELDS if field == "name_ru" or product[field] == current
