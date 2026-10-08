@@ -365,6 +365,10 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
     "SWAGGER_UI_SETTINGS": {"persistAuthorization": True, "deepLinking": True},
+    # `status` exists on other serializers with other choices; without a name it gets a hashed one
+    "ENUM_NAME_OVERRIDES": {
+        "StaffStatusEnum": "apps.authorization.models.StaffProfile.Status",
+    },
 }
 
 CKEDITOR_CONFIGS = {

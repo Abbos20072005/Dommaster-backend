@@ -1,4 +1,6 @@
+from django.conf import settings
 from django.db import models
+from django.db.models import F
 from abstract_model.base_model import BaseModel
 from apps.authorization.utils import validate_number
 import uuid
@@ -127,3 +129,85 @@ class TelegramLinkToken(BaseModel):
     class Meta:
         verbose_name = "Telegram токен привязки"
         verbose_name_plural = "Telegram токены привязки"
+
+
+class StaffProfile(BaseModel):
+    """Dashboard staff data django `User` has no fields for. One per `is_staff` user (created by a signal).
+    Blocked = `user.is_active=False`; access level = `user.is_superuser`."""
+
+    class AccessLevel(models.TextChoices):
+        STAFF = 'staff', 'Сотрудник'
+        SUPER_ADMIN = 'super_admin', 'Супер админ'
+
+    class Status(models.TextChoices):
+        ACTIVE = 'active', 'Активен'
+        BLOCKED = 'blocked', 'Заблокирован'
+
+    class BlockReason(models.TextChoices):
+        MANUAL = 'manual', 'Вручную'
+        FAILED_ATTEMPTS = 'failed_attempts', 'Неверные попытки входа'
+
+    MAX_FAILED_LOGINS = 5
+
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="staff_profile",
+                                verbose_name="Пользователь")
+    full_name = models.CharField(max_length=150, blank=True, default="", verbose_name="Ф.И.О.")
+    position = models.CharField(max_length=150, blank=True, default="", verbose_name="Должность")
+    must_change_password = models.BooleanField(default=False, verbose_name="Сменить пароль при первом входе")
+    failed_login_attempts = models.PositiveSmallIntegerField(default=0, verbose_name="Неверные попытки входа")
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, blank=True, null=True,
+                                   related_name="created_staff", verbose_name="Создал")
+
+    def __str__(self):
+        return self.full_name or self.user.get_username()
+
+    @classmethod
+    def of(cls, user):
+        """Profile of a staff user; creates it for users that got `is_staff` past the signal (queryset.update)."""
+        try:
+            return user.staff_profile
+        except cls.DoesNotExist:
+            return cls.objects.create(user=user, full_name=user.get_full_name() or user.get_username())
+
+    @property
+    def access_level(self):
+        return self.AccessLevel.SUPER_ADMIN if self.user.is_superuser else self.AccessLevel.STAFF
+
+    @property
+    def status(self):
+        return self.Status.ACTIVE if self.user.is_active else self.Status.BLOCKED
+
+    @property
+    def block_reason(self):
+        if self.user.is_active:
+            return None
+        if self.failed_login_attempts >= self.MAX_FAILED_LOGINS:
+            return self.BlockReason.FAILED_ATTEMPTS
+        return self.BlockReason.MANUAL
+
+    def block(self):
+        self.user.is_active = False
+        self.user.save(update_fields=["is_active"])
+
+    def unblock(self):
+        self.user.is_active = True
+        self.user.save(update_fields=["is_active"])
+        self.reset_failed_logins()
+
+    def reset_failed_logins(self):
+        if self.failed_login_attempts:
+            self.failed_login_attempts = 0
+            self.save(update_fields=["failed_login_attempts", "updated_at"])
+
+    def register_failed_login(self):
+        """Counts a wrong password; returns True when this attempt blocked the account."""
+        StaffProfile.objects.filter(pk=self.pk).update(failed_login_attempts=F("failed_login_attempts") + 1)
+        self.refresh_from_db(fields=["failed_login_attempts"])
+        if self.failed_login_attempts < self.MAX_FAILED_LOGINS:
+            return False
+        self.block()
+        return True
+
+    class Meta:
+        verbose_name = "Сотрудник"
+        verbose_name_plural = "Сотрудники"

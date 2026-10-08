@@ -1,8 +1,9 @@
+from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.db.models.signals import pre_save, post_delete
+from django.db.models.signals import pre_save, post_delete, post_save
 from django.dispatch import receiver
 
-from apps.authorization.models import Customer
+from apps.authorization.models import Customer, StaffProfile
 
 
 def delete_file_on_commit(storage, name):
@@ -24,3 +25,12 @@ def delete_replaced_avatar(sender, instance, update_fields=None, **kwargs):
 @receiver(post_delete, sender=Customer)
 def delete_avatar_on_customer_delete(sender, instance, **kwargs):
     delete_file_on_commit(instance.avatar.storage, instance.avatar.name)
+
+
+@receiver(post_save, sender=get_user_model())
+def create_staff_profile(sender, instance, raw=False, update_fields=None, **kwargs):
+    """Every staff user (admin API, createsuperuser, django admin) gets a `StaffProfile`."""
+    if raw or not instance.is_staff or (update_fields is not None and "is_staff" not in update_fields):
+        return
+    StaffProfile.objects.get_or_create(
+        user=instance, defaults={"full_name": instance.get_full_name() or instance.get_username()})

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Customer, OTP, FcmToken, CustomerAddresses, PasswordResetToken, TelegramLink, \
+from .models import Customer, OTP, FcmToken, CustomerAddresses, PasswordResetToken, StaffProfile, TelegramLink, \
     TelegramLinkToken
 from django.contrib.auth.hashers import make_password
 from unfold.admin import ModelAdmin
@@ -78,3 +78,13 @@ class TelegramLinkTokenAdmin(ModelAdmin):
     list_filter = ("is_used", "created_at")
     autocomplete_fields = ("customer", "otp")
     date_hierarchy = "created_at"
+
+
+@admin.register(StaffProfile)
+class StaffProfileAdmin(ModelAdmin):
+    list_display = ("id", "user", "full_name", "position", "must_change_password", "failed_login_attempts",
+                    "created_by", "created_at")
+    list_display_links = ("id", "user")
+    search_fields = ("full_name", "position", "user__username")
+    list_filter = ("must_change_password", "created_at")
+    autocomplete_fields = ("user", "created_by")

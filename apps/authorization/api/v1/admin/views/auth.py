@@ -1,7 +1,8 @@
 from rest_framework.generics import GenericAPIView, RetrieveAPIView
 from rest_framework.response import Response
 from utils.admin_views import AdminViewMixin
-from ..serializers import AdminLoginSerializer, AdminTokenRefreshSerializer, AdminSerializer
+from ..serializers import AdminLoginSerializer, AdminTokenRefreshSerializer, AdminSerializer, \
+    AdminChangePasswordSerializer
 
 
 class AdminTokenAPIView(GenericAPIView):
@@ -31,3 +32,13 @@ class AdminMeAPIView(AdminViewMixin, RetrieveAPIView):
 
     def get_object(self):
         return self.request.user
+
+
+class AdminChangePasswordAPIView(AdminViewMixin, GenericAPIView):
+    serializer_class = AdminChangePasswordSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(request.user, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
