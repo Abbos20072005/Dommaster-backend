@@ -4,13 +4,10 @@ from collections import Counter, defaultdict
 import openpyxl
 from django.core.management.base import CommandError
 from django.db import transaction
-from django.db.models import Max
 
-from apps.service.models import Product, ProductItemCategory, ProductSubCategory
+from apps.service.models import Product
 
-from .apply_audit_corrections import (
-    COLUMN_ID, NAME_FIELDS, Command as CorrectionsCommand, clean, named, strip_articul,
-)
+from .apply_audit_corrections import COLUMN_ID, NAME_FIELDS, Command as CorrectionsCommand, clean, strip_articul
 
 # The audit workbook lists every remark on the sheet "Все замечания": which product, which field, what is wrong
 # and what to do. The texts are generated from a few templates, so the remarks that say exactly what to do are
@@ -329,16 +326,6 @@ class Command(CorrectionsCommand):
             return self.item_categories[key]
 
         item_category = self.get_item_category(name, sub_category_name, category_id)
-        if not item_category and CREATE_MARK in path and not named(ProductItemCategory, name).exists():
-            sub_categories = list(named(ProductSubCategory, sub_category_name).filter(product_category_id=category_id))
-            if len(sub_categories) == 1:
-                position = ProductItemCategory.objects.filter(product_sub_category=sub_categories[0]).aggregate(
-                    last=Max("position"))["last"] or 0
-                # save() (not create()): CategoryMixin builds the slug there
-                item_category = ProductItemCategory(
-                    product_sub_category=sub_categories[0], name=name, name_ru=name, position=position + 1)
-                item_category.save()
-                self.item_categories[key] = item_category
-                self.stats["item categories created"] += 1
-                self.stdout.write(f"  Item category {item_category.pk} {name!r} created in {sub_category_name!r}")
+        if not item_category and CREATE_MARK in path:
+            item_category = self.create_item_category(name, sub_category_name, category_id)
         return item_category

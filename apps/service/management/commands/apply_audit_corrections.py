@@ -5,10 +5,10 @@ import openpyxl
 from django.core.cache import cache
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Max, Q
 
 from apps.service.models import (
-    Brand, Product, ProductAttributeValue, ProductFilterNumericValue, ProductItemCategory,
+    Brand, Product, ProductAttributeValue, ProductFilterNumericValue, ProductItemCategory, ProductSubCategory,
 )
 
 # The content team corrects a sheet of the audit workbook (an export of export_products_by_category with audit
@@ -74,6 +74,11 @@ class Command(BaseCommand):
             help="Product ids to leave out (a slip in the sheet that the content team has to fix first).",
         )
         parser.add_argument(
+            "--create-item-categories",
+            action="store_true",
+            help="Create an item category that doesn't exist yet, in the sub category written on the row.",
+        )
+        parser.add_argument(
             "--dry-run",
             action="store_true",
             help="Do everything in a transaction and roll it back, nothing is saved.",
@@ -118,6 +123,7 @@ class Command(BaseCommand):
     def setup(self, options):
         self.dry_run = options["dry_run"]
         self.verbose = options["verbose"]
+        self.create_item_categories = options["create_item_categories"]
         self.stats = Counter()
         self.brands = {}
         self.item_categories = {}
@@ -233,10 +239,13 @@ class Command(BaseCommand):
                 self.log(product, "brand", product["brand_id"], f"{brand.pk} {brand.name}")
 
         if COLUMN_ITEM_CATEGORY in cells:
-            item_category = self.get_item_category(
+            path = (
                 clean(cells[COLUMN_ITEM_CATEGORY]), clean(cells[COLUMN_SUB_CATEGORY]),
                 product["product_item_category__product_sub_category__product_category_id"],
             )
+            item_category = self.get_item_category(*path)
+            if not item_category and self.create_item_categories:
+                item_category = self.create_item_category(*path)
             if not item_category:
                 self.stats["item categories skipped (not found / ambiguous)"] += 1
                 self.warn(f"product {product['id']}: item category {cells[COLUMN_ITEM_CATEGORY]!r} "
@@ -303,3 +312,22 @@ class Command(BaseCommand):
                 found = [item for item in found if item.product_sub_category.product_category_id == category_id]
             self.item_categories[key] = found[0] if len(found) == 1 else None
         return self.item_categories[key]
+
+    def create_item_category(self, name, sub_category_name, category_id):
+        """A new item category at the end of its sub category; None when the name is taken or the sub category
+        is not the only one with that name."""
+        if not name or named(ProductItemCategory, name).exists():
+            return None
+        sub_categories = list(named(ProductSubCategory, sub_category_name).filter(product_category_id=category_id))
+        if len(sub_categories) != 1:
+            return None
+        position = ProductItemCategory.objects.filter(product_sub_category=sub_categories[0]).aggregate(
+            last=Max("position"))["last"] or 0
+        # save() (not create()): CategoryMixin builds the slug there
+        item_category = ProductItemCategory(
+            product_sub_category=sub_categories[0], name=name, name_ru=name, position=position + 1)
+        item_category.save()
+        self.item_categories[(name.lower(), sub_category_name.lower(), category_id)] = item_category
+        self.stats["item categories created"] += 1
+        self.stdout.write(f"  Item category {item_category.pk} {name!r} created in {sub_category_name!r}")
+        return item_category
