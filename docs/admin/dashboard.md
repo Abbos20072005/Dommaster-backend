@@ -17,14 +17,30 @@ Hammasi ixtiyoriy. Noto'g'ri qiymat → `400 {"<param>": ["..."]}`.
 
 | Parametr | Default | Chegara | Qaysi vidjetga ta'sir qiladi |
 | --- | --- | --- | --- |
-| `days` | `30` | `1`–`365` | `summary` (KPI kartochkalar) |
-| `period` | `week` | `week` (7 kun) / `month` (30 kun) | `delivered_orders` va `registrations` grafiklari |
+| `days` | `30` | `1`–`365` | `summary` (KPI kartochkalar) — bugunda tugaydigan oyna |
+| `date_from`, `date_to` | — | `YYYY-MM-DD`, `date_from <= date_to` | `summary` — ixtiyoriy sana oralig'i (ikkala chegara ham kiradi). Berilsa `days` **e'tiborga olinmaydi** |
+| `period` | `week` | `week` (7 kun) / `month` (30 kun) / `year` (12 oy) | `delivered_orders` va `registrations` grafiklari, `managers_plan` |
 | `months` | `6` | `1`–`24` | `revenue` grafigi |
 | `low_stock` | `10` | `>= 0` | `catalog` — "kam qoldi" chegarasi |
 
 Qolgan vidjetlar (`recent_orders`, `attention`, `customers`) parametrga bog'liq emas.
 
-Misol: `GET dashboard/?days=7&period=month&months=12&low_stock=5`
+Hafta / oy / yil tugmalari:
+
+| Tugma | Grafiklar va `managers_plan` | KPI kartochkalar (`summary`) |
+| --- | --- | --- |
+| Hafta | `period=week` — bugun va oldingi 6 kun, nuqta = kun | `days=7` |
+| Oy | `period=month` — bugun va oldingi 29 kun, nuqta = kun | `days=30` |
+| Yil | `period=year` — joriy oy va oldingi 11 ta **kalendar oy**, nuqta = oy (12 ta nuqta) | `days=365` |
+
+`summary` `period` ga **bog'liq emas** — unga `days` yoki `date_from` + `date_to` yuboriladi. `period=year` kalendar oylar bo'yicha (1-sanadan), `days=365` esa aynan 365 kun — shuning uchun yillik grafik jami bilan `summary` biroz farq qilishi mumkin.
+
+`date_from` va `date_to` faqat **birga** yuboriladi: bittasi bo'lsa → `400 {"date_to": ["..."]}` (yoki `date_from`), `date_from > date_to` → `400 {"date_to": ["..."]}`, format noto'g'ri → `400 {"date_from": ["..."]}`. Bo'sh qiymat (`?date_from=&date_to=`) — yuborilmagan hisoblanadi. Oraliq uzunligi cheklanmagan, kelajakdagi sana ham qabul qilinadi (o'sha kunlar `0`).
+
+Misollar:
+
+- `GET dashboard/?days=7&period=month&months=12&low_stock=5`
+- `GET dashboard/?date_from=2026-09-01&date_to=2026-09-30` — sentabr uchun KPI, `change` — 2-avgust … 31-avgust (oldingi 30 kun) bilan solishtiriladi
 
 ---
 
@@ -39,14 +55,15 @@ Misol: `GET dashboard/?days=7&period=month&months=12&low_stock=5`
   "attention": { ... },
   "customers": { ... },
   "catalog": { ... },
-  "revenue": { ... }
+  "revenue": { ... },
+  "managers_plan": { ... }
 }
 ```
 
 Umumiy qoidalar:
 
 - Davrlar **kalendar kun** bo'yicha, bugun ham kiradi: `days=30` — bugun va undan oldingi 29 kun. Vaqt — Toshkent vaqti.
-- `change` — shu uzunlikdagi **oldingi davrga** nisbatan o'zgarish, foizda (`12.5` = +12.5%, `-8.0` = −8%). Oldingi davr `0` bo'lsa — `null` (foizni hisoblab bo'lmaydi, "—" ko'rsating).
+- `change` — shu uzunlikdagi **oldingi davrga** nisbatan o'zgarish, foizda (`12.5` = +12.5%, `-8.0` = −8%). Oldingi davr `0` bo'lsa — `null` (foizni hisoblab bo'lmaydi, "—" ko'rsating). Oldingi davr joriy davrdan bevosita oldin turadi: `date_from=2026-09-10&date_to=2026-09-16` (7 kun) → `2026-09-03 … 2026-09-09`.
 - Tushum (`revenue`, `average_check`) faqat **yakunlangan** buyurtmalardan (`status=3`) hisoblanadi.
 - Grafik nuqtalari (`points`, `months`) bo'sh kunlar/oylar bilan to'liq keladi (`0` bilan), eskidan yangiga tartibda.
 - Summalar — so'mda, `float`.
@@ -56,6 +73,8 @@ Umumiy qoidalar:
 ```json
 "summary": {
   "days": 30,
+  "date_from": "2026-09-09",
+  "date_to": "2026-10-08",
   "orders":        { "value": 184.0,       "change": 12.5 },
   "revenue":       { "value": 96450000.0,  "change": -8.0 },
   "average_check": { "value": 612000.0,    "change": 3.1 },
@@ -65,7 +84,8 @@ Umumiy qoidalar:
 
 | Maydon | Izoh |
 | --- | --- |
-| `days` | so'ralgan oyna (`?days=`) |
+| `days` | davr uzunligi, kunlarda: `?days=` yoki `date_from … date_to` oralig'idagi kunlar soni |
+| `date_from`, `date_to` | hisoblangan davr chegaralari (ikkalasi ham kiradi). `?days=` bilan so'ralganda ham keladi: `date_to` = bugun |
 | `orders` | shu davrda yaratilgan **barcha** buyurtmalar soni (holatidan qat'i nazar) |
 | `revenue` | shu davrda yaratilgan yakunlangan buyurtmalar summasi |
 | `average_check` | yakunlangan buyurtmalarning o'rtacha summasi |
@@ -78,6 +98,7 @@ Umumiy qoidalar:
 ```json
 "delivered_orders": {
   "period": "week",
+  "step": "day",
   "count": 41,
   "revenue": 23800000.0,
   "change": 5.4,
@@ -90,10 +111,11 @@ Umumiy qoidalar:
 
 | Maydon | Izoh |
 | --- | --- |
-| `period` | `week` — 7 ta nuqta, `month` — 30 ta nuqta |
+| `period` | `week` — 7 ta nuqta, `month` — 30 ta nuqta, `year` — 12 ta nuqta |
+| `step` | bitta nuqta nima: `day` (`week`, `month`) yoki `month` (`year`) |
 | `count`, `revenue` | davr bo'yicha jami |
-| `change` | **tushum**ning oldingi davrga nisbatan o'zgarishi, % |
-| `points[]` | har bir kun: `date`, `count`, `revenue`, `average_check` |
+| `change` | **tushum**ning oldingi davrga nisbatan o'zgarishi, % (`year` — oldingi 12 oy) |
+| `points[]` | har bir kun (`step=month` bo'lsa — oy, `date` = oyning birinchi kuni): `date`, `count`, `revenue`, `average_check` |
 
 Kun buyurtmaning **yaratilgan sanasi** (`created_at`) bo'yicha olinadi, yetkazilgan sanasi bo'yicha emas.
 
@@ -101,6 +123,8 @@ Kun buyurtmaning **yaratilgan sanasi** (`created_at`) bo'yicha olinadi, yetkazil
 
 ```json
 "registrations": {
+  "period": "week",
+  "step": "day",
   "days": 7,
   "total": 23,
   "mobile": 15,
@@ -116,12 +140,13 @@ Kun buyurtmaning **yaratilgan sanasi** (`created_at`) bo'yicha olinadi, yetkazil
 
 | Maydon | Izoh |
 | --- | --- |
-| `days` | `period` dan keladi: `week` → 7, `month` → 30 (`?days=` ga bog'liq **emas**) |
+| `period`, `step` | `delivered_orders` dagi bilan bir xil |
+| `days` | davrdagi kunlar soni: `week` → 7, `month` → 30, `year` → 12 oyning birinchi kunidan bugungacha (`?days=` ga bog'liq **emas**) |
 | `total` | davrdagi yangi mijozlar |
 | `mobile` | FCM tokeni bor mijozlar (ilovada qurilma ro'yxatdan o'tkazgan) |
 | `web` | `total - mobile` |
 | `mobile_percent`, `web_percent` | ulushlar, % (`total=0` bo'lsa `0.0`) |
-| `points[]` | har bir kun: `date`, `count` |
+| `points[]` | har bir kun (`step=month` bo'lsa — oy): `date`, `count` |
 
 ### `recent_orders` — oxirgi buyurtmalar
 
@@ -256,6 +281,40 @@ Oxirgi **5 ta** buyurtma (yangi birinchi). Obyekt `orders/` ro'yxatidagi bilan b
 | `b2b` | prorab mijozlarning yakunlangan buyurtmalari summasi (butun davr) |
 | `individual` | qolgan barcha yakunlangan buyurtmalar (mijozsiz buyurtmalar ham shu yerda) |
 | `months[]` | oxirgi `months` ta oy (joriy oy ham kiradi): `month` — oyning birinchi kuni |
+
+### `managers_plan` — menejerlar rejasi
+
+```json
+"managers_plan": {
+  "period": "month",
+  "date_from": "2026-09-09",
+  "date_to": "2026-10-08",
+  "plan": 3000000.0,
+  "revenue": 1720000.0,
+  "team_percent": 57.3,
+  "b2b_percent": 62.1,
+  "chat_response_minutes": 24,
+  "managers": [
+    { "id": 1, "full_name": "Kamola Ibrohimova", "plan": 1000000.0, "revenue": 1120000.0, "orders_count": 1, "percent": 112.0 },
+    { "id": 2, "full_name": "Dilshod Rasulov", "plan": 2000000.0, "revenue": 600000.0, "orders_count": 1, "percent": 30.0 },
+    { "id": 3, "full_name": "Malika Sobirova", "plan": 0.0, "revenue": 50000.0, "orders_count": 1, "percent": null }
+  ]
+}
+```
+
+| Maydon | Izoh |
+| --- | --- |
+| `period`, `date_from`, `date_to` | `?period=` va uning chegaralari (`date_to` = bugun) |
+| `managers[]` | **faol** menejerlar (hammasi, limit yo'q), `percent` kamayishi bo'yicha; rejasi yo'qlar oxirida |
+| `managers[].plan` | menejerning davr uchun rejasi: oylik reja (`managers/` dagi `monthly_plan`) × `7/30` (hafta), × `1` (oy), × `12` (yil). `0.0` = reja qo'yilmagan |
+| `managers[].revenue`, `orders_count` | menejerga biriktirilgan, shu davrda **yaratilgan**, yakunlangan (`status=3`) buyurtmalar summasi va soni |
+| `managers[].percent` | `revenue / plan`, % — `100` dan oshishi mumkin (progress-barni `100` da cheklang); rejasi yo'q bo'lsa `null` |
+| `plan`, `revenue` | rejasi **bor** menejerlar bo'yicha jami |
+| `team_percent` | "Jamoa rejasi": `revenue / plan`, %; hech kimda reja bo'lmasa `null` |
+| `b2b_percent` | "B2B ulushi": davrdagi **barcha** yakunlangan buyurtmalar tushumida prorab mijozlar ulushi, % (menejeri yo'q buyurtmalar ham kiradi) |
+| `chat_response_minutes` | "Javob vaqti": qo'llab-quvvatlash **chatida** mijoz xabaridan xodim javobigacha o'rtacha vaqt, daqiqada (butun son). Ketma-ket kelgan mijoz xabarlari bitta deb olinadi (birinchisidan), hali javob berilmaganlari hisobga kirmaydi. Javob bo'lmasa `null` |
+
+> Reja menejer bo'yicha bitta oylik son (`monthly_plan`) — oyma-oy alohida reja saqlanmaydi, shuning uchun o'tgan davrlar ham hozirgi reja bilan solishtiriladi. "Javob vaqti" menejerlar bo'yicha emas, butun chat bo'yicha (chat xabarida kim javob bergani saqlanmaydi); buyurtmaga reaksiya vaqti hisoblanmaydi — holat tarixi saqlanmaydi.
 
 ---
 

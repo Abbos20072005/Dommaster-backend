@@ -1,3 +1,6 @@
+from decimal import Decimal
+
+from django.core.validators import MinValueValidator
 from django.db import models
 
 from abstract_model.base_model import BaseModel
@@ -10,6 +13,8 @@ from .product import Product
 
 class Manager(BaseModel):
     full_name = models.CharField(max_length=255, verbose_name="ФИО")
+    monthly_plan = models.DecimalField(max_digits=16, decimal_places=2, default=0,
+                                       validators=[MinValueValidator(Decimal("0"))], verbose_name="План продаж на месяц")
     is_active = models.BooleanField(default=True, verbose_name="Активен")
 
     def __str__(self):

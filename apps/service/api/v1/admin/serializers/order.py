@@ -223,7 +223,7 @@ class OrderSerializer(serializers.ModelSerializer):
 class ManagerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Manager
-        fields = ("id", "full_name", "is_active", "created_at", "updated_at")
+        fields = ("id", "full_name", "monthly_plan", "is_active", "created_at", "updated_at")
 
 
 class OrderCommentOrderSerializer(RelationSerializer):

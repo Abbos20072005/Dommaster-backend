@@ -15,7 +15,7 @@ class ManagerViewSet(AdminModelViewSet):
     serializer_class = ManagerSerializer
     filterset_fields = ("is_active",)
     search_fields = ("full_name",)
-    ordering_fields = ("id", "full_name", "created_at")
+    ordering_fields = ("id", "full_name", "monthly_plan", "created_at")
     ordering = ("full_name",)
 
 

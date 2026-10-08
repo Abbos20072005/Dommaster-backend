@@ -1,17 +1,33 @@
 from rest_framework import serializers
 from .order import OrderListSerializer
 
-WEEK, MONTH = "week", "month"
-PERIOD_DAYS = {WEEK: 7, MONTH: 30}
+WEEK, MONTH, YEAR = "week", "month", "year"
+PERIOD_DAYS = {WEEK: 7, MONTH: 30}  # year = the last 12 calendar months, grouped by month
+PERIODS = (WEEK, MONTH, YEAR)
+PERIOD_PLAN_MONTHS = {WEEK: 7 / 30, MONTH: 1, YEAR: 12}  # share of `Manager.monthly_plan` a period stands for
+DAY, MONTH_STEP = "day", "month"
 
 
 class DashboardQuerySerializer(serializers.Serializer):
     """Query params of the dashboard endpoint."""
-    days = serializers.IntegerField(default=30, min_value=1, max_value=365, help_text="KPI cards window")
-    period = serializers.ChoiceField(choices=list(PERIOD_DAYS), default=WEEK,
-                                     help_text="Delivered orders / registrations charts: 7 or 30 days")
+    days = serializers.IntegerField(default=30, min_value=1, max_value=365,
+                                    help_text="KPI cards window ending today; ignored when a date range is sent")
+    date_from = serializers.DateField(required=False, help_text="KPI cards range start, sent together with date_to")
+    date_to = serializers.DateField(required=False, help_text="KPI cards range end (inclusive)")
+    period = serializers.ChoiceField(choices=PERIODS, default=WEEK,
+                                     help_text="Delivered orders / registrations charts and the managers plan: "
+                                               "7 days, 30 days or 12 months")
     months = serializers.IntegerField(default=6, min_value=1, max_value=24)
     low_stock = serializers.IntegerField(default=10, min_value=0)
+
+    def validate(self, attrs):
+        date_from, date_to = attrs.get("date_from"), attrs.get("date_to")
+        if (date_from is None) != (date_to is None):
+            missing = "date_to" if date_to is None else "date_from"
+            raise serializers.ValidationError({missing: "date_from and date_to are sent together."})
+        if date_from and date_from > date_to:
+            raise serializers.ValidationError({"date_to": "Must not be earlier than date_from."})
+        return attrs
 
 
 class MetricSerializer(serializers.Serializer):
@@ -21,7 +37,9 @@ class MetricSerializer(serializers.Serializer):
 
 
 class DashboardSummarySerializer(serializers.Serializer):
-    days = serializers.IntegerField()
+    days = serializers.IntegerField(help_text="Length of the range in days")
+    date_from = serializers.DateField()
+    date_to = serializers.DateField()
     orders = MetricSerializer(help_text="All created orders")
     revenue = MetricSerializer(help_text="Sum of completed orders")
     average_check = MetricSerializer(help_text="Average total of completed orders")
@@ -29,14 +47,15 @@ class DashboardSummarySerializer(serializers.Serializer):
 
 
 class DeliveredOrdersPointSerializer(serializers.Serializer):
-    date = serializers.DateField()
+    date = serializers.DateField(help_text="The day, or the first day of the month when step = month")
     count = serializers.IntegerField()
     revenue = serializers.FloatField()
     average_check = serializers.FloatField()
 
 
 class DeliveredOrdersSerializer(serializers.Serializer):
-    period = serializers.ChoiceField(choices=list(PERIOD_DAYS))
+    period = serializers.ChoiceField(choices=PERIODS)
+    step = serializers.ChoiceField(choices=(DAY, MONTH_STEP), help_text="What one point is: month for period=year")
     count = serializers.IntegerField()
     revenue = serializers.FloatField()
     change = serializers.FloatField(allow_null=True, help_text="Revenue % vs the previous period")
@@ -44,12 +63,14 @@ class DeliveredOrdersSerializer(serializers.Serializer):
 
 
 class RegistrationsPointSerializer(serializers.Serializer):
-    date = serializers.DateField()
+    date = serializers.DateField(help_text="The day, or the first day of the month when step = month")
     count = serializers.IntegerField()
 
 
 class RegistrationsSerializer(serializers.Serializer):
-    days = serializers.IntegerField()
+    period = serializers.ChoiceField(choices=PERIODS)
+    step = serializers.ChoiceField(choices=(DAY, MONTH_STEP))
+    days = serializers.IntegerField(help_text="Days in the period incl. today")
     total = serializers.IntegerField()
     mobile = serializers.IntegerField(help_text="Has an FCM token (registered a device in the app)")
     web = serializers.IntegerField()
@@ -103,6 +124,28 @@ class RevenueSerializer(serializers.Serializer):
     months = RevenueMonthSerializer(many=True)
 
 
+class ManagerPlanSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    full_name = serializers.CharField()
+    plan = serializers.FloatField(help_text="monthly_plan scaled to the period, 0 = no plan")
+    revenue = serializers.FloatField(help_text="Completed orders of the manager created in the period")
+    orders_count = serializers.IntegerField()
+    percent = serializers.FloatField(allow_null=True, help_text="revenue / plan, null without a plan")
+
+
+class ManagersPlanSerializer(serializers.Serializer):
+    period = serializers.ChoiceField(choices=PERIODS)
+    date_from = serializers.DateField()
+    date_to = serializers.DateField()
+    plan = serializers.FloatField(help_text="Sum of the managers' plans")
+    revenue = serializers.FloatField(help_text="Revenue of the managers who have a plan")
+    team_percent = serializers.FloatField(allow_null=True, help_text="revenue / plan, null without plans")
+    b2b_percent = serializers.FloatField(help_text="Prorab customers' share in the period's completed revenue")
+    chat_response_minutes = serializers.IntegerField(
+        allow_null=True, help_text="Average time to the first answer in the support chat, null if nothing answered")
+    managers = ManagerPlanSerializer(many=True, help_text="Active managers, best percent first")
+
+
 class DashboardSerializer(serializers.Serializer):
     summary = DashboardSummarySerializer()
     delivered_orders = DeliveredOrdersSerializer()
@@ -112,3 +155,4 @@ class DashboardSerializer(serializers.Serializer):
     customers = CustomersCompositionSerializer()
     catalog = CatalogSerializer()
     revenue = RevenueSerializer()
+    managers_plan = ManagersPlanSerializer()
