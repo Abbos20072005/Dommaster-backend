@@ -10,10 +10,12 @@ from .feedback import CommentViewSet, QuestionViewSet, CommentReplyViewSet, Ques
 from .dashboard import DashboardAPIView
 from .today import TodayAPIView
 from .sale import SaleViewSet
+from .analytics import SalesAnalyticsAPIView
 
 __all__ = [
     "OrderViewSet", "ManagerViewSet", "OrderCommentViewSet", "ProductViewSet", "ProductCategoryViewSet", "ProductSubCategoryViewSet",
     "ProductItemCategoryViewSet", "BrandViewSet", "PartnerBrandViewSet", "ProductModelViewSet", "ProductBadgeViewSet",
     "ProductAttributeViewSet", "CommentViewSet", "QuestionViewSet", "CommentReplyViewSet", "QuestionReplyViewSet",
     "DashboardAPIView", "AddsBrandsViewSet", "TodayAPIView", "SaleViewSet",
+    "SalesAnalyticsAPIView",
 ]

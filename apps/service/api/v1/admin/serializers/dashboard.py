@@ -7,17 +7,12 @@ PERIODS = (WEEK, MONTH, YEAR)
 DAY, MONTH_STEP = "day", "month"
 
 
-class DashboardQuerySerializer(serializers.Serializer):
-    """Query params of the dashboard endpoint."""
+class DateRangeQuerySerializer(serializers.Serializer):
+    """?days= window ending today, or ?date_from=&date_to= instead of it."""
     days = serializers.IntegerField(default=30, min_value=1, max_value=365,
-                                    help_text="KPI cards window ending today; ignored when a date range is sent")
-    date_from = serializers.DateField(required=False, help_text="KPI cards range start, sent together with date_to")
-    date_to = serializers.DateField(required=False, help_text="KPI cards range end (inclusive)")
-    period = serializers.ChoiceField(choices=PERIODS, default=WEEK,
-                                     help_text="Delivered orders / registrations charts: "
-                                               "7 days, 30 days or 12 months")
-    months = serializers.IntegerField(default=6, min_value=1, max_value=24)
-    low_stock = serializers.IntegerField(default=10, min_value=0)
+                                    help_text="Window ending today; ignored when a date range is sent")
+    date_from = serializers.DateField(required=False, help_text="Range start, sent together with date_to")
+    date_to = serializers.DateField(required=False, help_text="Range end (inclusive)")
 
     def validate(self, attrs):
         date_from, date_to = attrs.get("date_from"), attrs.get("date_to")
@@ -27,6 +22,15 @@ class DashboardQuerySerializer(serializers.Serializer):
         if date_from and date_from > date_to:
             raise serializers.ValidationError({"date_to": "Must not be earlier than date_from."})
         return attrs
+
+
+class DashboardQuerySerializer(DateRangeQuerySerializer):
+    """Query params of the dashboard endpoint: the date range drives the KPI cards only."""
+    period = serializers.ChoiceField(choices=PERIODS, default=WEEK,
+                                     help_text="Delivered orders / registrations charts: "
+                                               "7 days, 30 days or 12 months")
+    months = serializers.IntegerField(default=6, min_value=1, max_value=24)
+    low_stock = serializers.IntegerField(default=10, min_value=0)
 
 
 class MetricSerializer(serializers.Serializer):
