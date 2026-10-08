@@ -21,7 +21,6 @@ Swagger: `/swagger/admin/` → **managers**.
 {
   "id": 1,
   "full_name": "M. Xolmatova",
-  "monthly_plan": "50000000.00",
   "is_active": true,
   "created_at": "2026-10-02T09:41:45.688434",
   "updated_at": "2026-10-02T09:41:45.688434"
@@ -31,7 +30,6 @@ Swagger: `/swagger/admin/` → **managers**.
 | Maydon | Izoh |
 | --- | --- |
 | `full_name` * | F.I.Sh., majburiy, 255 belgigacha; unikal emas — bir xil ism ikki marta kiritilishi mumkin |
-| `monthly_plan` | oylik savdo rejasi, so'mda (yakunlangan buyurtmalar tushumi bo'yicha). **String** (decimal) qaytadi, son yoki string qabul qiladi; default `"0.00"` = reja yo'q; `>= 0`. Dashboard'dagi "Menejerlar rejasi" vidjeti shundan hisoblanadi — [dashboard.md](dashboard.md) |
 | `is_active` | default `true`; `false` = ishlamayapti (dropdown'da ko'rsatilmaydi) |
 
 Faqat o'qiladi: `id`, `created_at`, `updated_at`.
@@ -39,7 +37,7 @@ Faqat o'qiladi: `id`, `created_at`, `updated_at`.
 Yaratish (`POST managers/` → `201` + obyekt):
 
 ```json
-{ "full_name": "M. Xolmatova", "monthly_plan": 50000000 }
+{ "full_name": "M. Xolmatova" }
 ```
 
 O'zgartirish (`PATCH managers/{id}/` — faqat kerakli maydon → `200` + obyekt):
@@ -66,14 +64,14 @@ O'chirish: `DELETE managers/{id}/` → `204`, body yo'q.
   "next_page": null,
   "previous_page": null,
   "results": [
-    { "id": 1, "full_name": "M. Xolmatova", "monthly_plan": "50000000.00", "is_active": true, "created_at": "...", "updated_at": "..." }
+    { "id": 1, "full_name": "M. Xolmatova", "is_active": true, "created_at": "...", "updated_at": "..." }
   ]
 }
 ```
 
 - Qidiruv: `?search=` (`full_name`)
 - Filtr: `is_active` (`true` / `false`)
-- Tartib: `?ordering=` `id`, `full_name`, `monthly_plan`, `created_at` (teskari: `-created_at`); default — alifbo bo'yicha (`full_name`)
+- Tartib: `?ordering=` `id`, `full_name`, `created_at` (teskari: `-created_at`); default — alifbo bo'yicha (`full_name`)
 
 Dropdown uchun: `GET managers/?is_active=true&page_size=100`.
 
@@ -101,7 +99,6 @@ Oddiy DRF formatida (klient API'dagi `{"ok", "error_code"}` o'rami yo'q). Xabar 
 | Token yo'q yoki yaroqsiz | 401 | `{"detail": "..."}` |
 | `full_name` yuborilmadi | 400 | `{"full_name": ["Обязательное поле."]}` |
 | `full_name` bo'sh yoki 255 belgidan uzun | 400 | `{"full_name": ["..."]}` |
-| `monthly_plan` manfiy yoki son emas | 400 | `{"monthly_plan": ["..."]}` |
 | Mavjud bo'lmagan `id` | 404 | `{"detail": "..."}` |
 
 ---

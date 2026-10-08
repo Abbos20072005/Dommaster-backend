@@ -4,7 +4,6 @@ from .order import OrderListSerializer
 WEEK, MONTH, YEAR = "week", "month", "year"
 PERIOD_DAYS = {WEEK: 7, MONTH: 30}  # year = the last 12 calendar months, grouped by month
 PERIODS = (WEEK, MONTH, YEAR)
-PERIOD_PLAN_MONTHS = {WEEK: 7 / 30, MONTH: 1, YEAR: 12}  # share of `Manager.monthly_plan` a period stands for
 DAY, MONTH_STEP = "day", "month"
 
 
@@ -15,7 +14,7 @@ class DashboardQuerySerializer(serializers.Serializer):
     date_from = serializers.DateField(required=False, help_text="KPI cards range start, sent together with date_to")
     date_to = serializers.DateField(required=False, help_text="KPI cards range end (inclusive)")
     period = serializers.ChoiceField(choices=PERIODS, default=WEEK,
-                                     help_text="Delivered orders / registrations charts and the managers plan: "
+                                     help_text="Delivered orders / registrations charts: "
                                                "7 days, 30 days or 12 months")
     months = serializers.IntegerField(default=6, min_value=1, max_value=24)
     low_stock = serializers.IntegerField(default=10, min_value=0)
@@ -124,28 +123,6 @@ class RevenueSerializer(serializers.Serializer):
     months = RevenueMonthSerializer(many=True)
 
 
-class ManagerPlanSerializer(serializers.Serializer):
-    id = serializers.IntegerField()
-    full_name = serializers.CharField()
-    plan = serializers.FloatField(help_text="monthly_plan scaled to the period, 0 = no plan")
-    revenue = serializers.FloatField(help_text="Completed orders of the manager created in the period")
-    orders_count = serializers.IntegerField()
-    percent = serializers.FloatField(allow_null=True, help_text="revenue / plan, null without a plan")
-
-
-class ManagersPlanSerializer(serializers.Serializer):
-    period = serializers.ChoiceField(choices=PERIODS)
-    date_from = serializers.DateField()
-    date_to = serializers.DateField()
-    plan = serializers.FloatField(help_text="Sum of the managers' plans")
-    revenue = serializers.FloatField(help_text="Revenue of the managers who have a plan")
-    team_percent = serializers.FloatField(allow_null=True, help_text="revenue / plan, null without plans")
-    b2b_percent = serializers.FloatField(help_text="Prorab customers' share in the period's completed revenue")
-    chat_response_minutes = serializers.IntegerField(
-        allow_null=True, help_text="Average time to the first answer in the support chat, null if nothing answered")
-    managers = ManagerPlanSerializer(many=True, help_text="Active managers, best percent first")
-
-
 class DashboardSerializer(serializers.Serializer):
     summary = DashboardSummarySerializer()
     delivered_orders = DeliveredOrdersSerializer()
@@ -155,4 +132,3 @@ class DashboardSerializer(serializers.Serializer):
     customers = CustomersCompositionSerializer()
     catalog = CatalogSerializer()
     revenue = RevenueSerializer()
-    managers_plan = ManagersPlanSerializer()

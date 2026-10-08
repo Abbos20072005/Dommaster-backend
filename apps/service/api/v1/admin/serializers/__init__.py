@@ -21,10 +21,11 @@ from .feedback import FeedbackCustomerSerializer, FeedbackProductSerializer, Com
     CommentReplyShortSerializer, QuestionReplyShortSerializer, CommentListSerializer, CommentSerializer, \
     QuestionListSerializer, QuestionSerializer, ReplyCommentSerializer, ReplyQuestionSerializer, ReplyBaseSerializer, \
     CommentReplySerializer, QuestionReplySerializer, CommentStatsSerializer, QuestionStatsSerializer
-from .dashboard import WEEK, MONTH, YEAR, PERIOD_DAYS, PERIODS, PERIOD_PLAN_MONTHS, DAY, MONTH_STEP,     DashboardQuerySerializer, MetricSerializer, \
+from .dashboard import WEEK, MONTH, YEAR, PERIOD_DAYS, PERIODS, DAY, MONTH_STEP, \
+    DashboardQuerySerializer, MetricSerializer, \
     DashboardSummarySerializer, DeliveredOrdersPointSerializer, DeliveredOrdersSerializer, \
     RegistrationsPointSerializer, RegistrationsSerializer, AttentionSerializer, CustomersCompositionSerializer, \
-    CatalogSerializer, RevenueMonthSerializer, RevenueSerializer, ManagerPlanSerializer, ManagersPlanSerializer,     DashboardSerializer
+    CatalogSerializer, RevenueMonthSerializer, RevenueSerializer, DashboardSerializer
 from .today import STALE_PENDING_ORDERS, REFUND_PENDING_ORDERS, UNASSIGNED_ORDERS, OUT_OF_STOCK_PRODUCTS, \
     NO_PRICE_PRODUCTS, REVIEW_PRODUCTS, UNANSWERED_QUESTIONS, UNANSWERED_CHATS, MODERATION_QUEUE, EXPIRING_BANNERS, \
     DRAFT_NOTIFICATIONS, ATTENTION_KEYS, ORDERS, CATALOG, FEEDBACK, CONTENT, DANGER, WARNING, INFO, \
@@ -51,12 +52,11 @@ __all__ = [
     "CommentImageSerializer", "CommentReplyShortSerializer", "QuestionReplyShortSerializer", "CommentListSerializer",
     "CommentSerializer", "QuestionListSerializer", "QuestionSerializer", "ReplyCommentSerializer",
     "ReplyQuestionSerializer", "ReplyBaseSerializer", "CommentReplySerializer", "QuestionReplySerializer",
-    "CommentStatsSerializer", "QuestionStatsSerializer", "WEEK", "MONTH", "YEAR", "PERIOD_DAYS", "PERIODS", "PERIOD_PLAN_MONTHS", "DAY", "MONTH_STEP",
+    "CommentStatsSerializer", "QuestionStatsSerializer", "WEEK", "MONTH", "YEAR", "PERIOD_DAYS", "PERIODS", "DAY", "MONTH_STEP",
     "DashboardQuerySerializer", "MetricSerializer",
     "DashboardSummarySerializer", "DeliveredOrdersPointSerializer", "DeliveredOrdersSerializer",
     "RegistrationsPointSerializer", "RegistrationsSerializer", "AttentionSerializer", "CustomersCompositionSerializer",
-    "CatalogSerializer", "RevenueMonthSerializer", "RevenueSerializer", "ManagerPlanSerializer",
-    "ManagersPlanSerializer", "DashboardSerializer",
+    "CatalogSerializer", "RevenueMonthSerializer", "RevenueSerializer", "DashboardSerializer",
     "STALE_PENDING_ORDERS", "REFUND_PENDING_ORDERS", "UNASSIGNED_ORDERS", "OUT_OF_STOCK_PRODUCTS",
     "NO_PRICE_PRODUCTS", "REVIEW_PRODUCTS", "UNANSWERED_QUESTIONS", "UNANSWERED_CHATS", "MODERATION_QUEUE",
     "EXPIRING_BANNERS", "DRAFT_NOTIFICATIONS", "ATTENTION_KEYS", "ORDERS", "CATALOG", "FEEDBACK", "CONTENT",

@@ -1,5 +1,5 @@
 from datetime import date, timedelta
-from django.db.models import Avg, Count, DateField, Exists, F, Max, OuterRef, Q, Subquery, Sum
+from django.db.models import Avg, Count, DateField, Exists, Max, OuterRef, Q, Subquery, Sum
 from django.db.models.functions import Coalesce, TruncDate, TruncMonth
 from django.utils import timezone
 from rest_framework.generics import GenericAPIView
@@ -7,11 +7,11 @@ from rest_framework.response import Response
 from apps.authorization.api.v1.admin.filters import active_since
 from apps.authorization.models import Customer, FcmToken
 from apps.base.models import Chat, Messages
-from apps.service.models import Manager, Order, Product, ProductCategory, ProductImage, ProductRemaining, \
-    Questions, QuestionsReply
+from apps.service.models import Order, Product, ProductCategory, ProductImage, ProductRemaining, Questions, \
+    QuestionsReply
 from utils.admin_views import AdminViewMixin
-from ..serializers import DashboardQuerySerializer, DashboardSerializer, PERIOD_DAYS, PERIOD_PLAN_MONTHS, YEAR, DAY, \
-    MONTH_STEP, PENDING, COMPLETED, CANCELED
+from ..serializers import DashboardQuerySerializer, DashboardSerializer, PERIOD_DAYS, YEAR, DAY, MONTH_STEP, \
+    PENDING, COMPLETED, CANCELED
 
 PENDING_ORDER_HOURS = 2
 RECENT_ORDERS = 5
@@ -220,60 +220,10 @@ def get_revenue(months):
     }
 
 
-def get_chat_response_minutes(start, end):
-    """Average minutes from a customer's chat message to the staff answer. A run of customer messages
-    counts once, from its first message; runs still unanswered are skipped."""
-    in_chat = Messages.objects.filter(chat=OuterRef("chat"))
-    previous_is_answer = in_chat.filter(created_at__lt=OuterRef("created_at")) \
-        .order_by("-created_at", "-id").values("is_answer")[:1]
-    answered_at = in_chat.filter(is_answer=True, created_at__gt=OuterRef("created_at")) \
-        .order_by("created_at").values("created_at")[:1]
-    average = Messages.objects.filter(is_answer=False, created_at__date__range=(start, end)) \
-        .annotate(previous_is_answer=Subquery(previous_is_answer), answered_at=Subquery(answered_at)) \
-        .filter(Q(previous_is_answer=True) | Q(previous_is_answer__isnull=True), answered_at__isnull=False) \
-        .aggregate(average=Avg(F("answered_at") - F("created_at")))["average"]
-    return round(average.total_seconds() / 60) if average is not None else None
-
-
-def get_managers_plan(period):
-    """Active managers' completed revenue over the period vs their plan + team totals."""
-    start, end = period_buckets(period)[0], timezone.now().date()
-    in_period = Q(status=COMPLETED, created_at__date__range=(start, end))
-    by_manager = {row["manager"]: row for row in Order.objects.filter(in_period).exclude(manager=None)
-                  .values("manager").annotate(revenue=Coalesce(Sum("total_price"), 0.0), orders_count=Count("id"))}
-
-    managers = []
-    for manager in Manager.objects.filter(is_active=True).order_by("full_name"):
-        row = by_manager.get(manager.id, {"revenue": 0.0, "orders_count": 0})
-        plan = float(manager.monthly_plan) * PERIOD_PLAN_MONTHS[period]
-        managers.append({"id": manager.id, "full_name": manager.full_name, "plan": plan, "revenue": row["revenue"],
-                         "orders_count": row["orders_count"],
-                         "percent": percent(row["revenue"], plan) if plan else None})
-    managers.sort(key=lambda m: (m["percent"] is None, -(m["percent"] or 0)))
-
-    with_plan = [m for m in managers if m["plan"]]
-    plan, revenue = sum(m["plan"] for m in with_plan), sum(m["revenue"] for m in with_plan)
-    totals = Order.objects.filter(in_period).aggregate(
-        total=Coalesce(Sum("total_price"), 0.0),
-        b2b=Coalesce(Sum("total_price", filter=Q(customer__role=PRORAB)), 0.0),
-    )
-    return {
-        "period": period,
-        "date_from": start,
-        "date_to": end,
-        "plan": plan,
-        "revenue": revenue,
-        "team_percent": percent(revenue, plan) if plan else None,
-        "b2b_percent": percent(totals["b2b"], totals["total"]),
-        "chat_response_minutes": get_chat_response_minutes(start, end),
-        "managers": managers,
-    }
-
-
 class DashboardAPIView(AdminViewMixin, GenericAPIView):
     """Admin home page, all widgets in one response.
-    ?days= KPI window (30) or ?date_from=&date_to= instead of it, ?period=week|month|year charts and
-    managers plan (week), ?months= revenue chart (6), ?low_stock= (10)."""
+    ?days= KPI window (30) or ?date_from=&date_to= instead of it, ?period=week|month|year charts (week),
+    ?months= revenue chart (6), ?low_stock= (10)."""
     serializer_class = DashboardSerializer
     filter_backends = []
     pagination_class = None
@@ -291,6 +241,5 @@ class DashboardAPIView(AdminViewMixin, GenericAPIView):
             "customers": get_customers(),
             "catalog": get_catalog(params["low_stock"]),
             "revenue": get_revenue(params["months"]),
-            "managers_plan": get_managers_plan(params["period"]),
         }
         return Response(self.get_serializer(data).data)

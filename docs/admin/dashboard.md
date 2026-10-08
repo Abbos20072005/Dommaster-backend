@@ -19,7 +19,7 @@ Hammasi ixtiyoriy. Noto'g'ri qiymat → `400 {"<param>": ["..."]}`.
 | --- | --- | --- | --- |
 | `days` | `30` | `1`–`365` | `summary` (KPI kartochkalar) — bugunda tugaydigan oyna |
 | `date_from`, `date_to` | — | `YYYY-MM-DD`, `date_from <= date_to` | `summary` — ixtiyoriy sana oralig'i (ikkala chegara ham kiradi). Berilsa `days` **e'tiborga olinmaydi** |
-| `period` | `week` | `week` (7 kun) / `month` (30 kun) / `year` (12 oy) | `delivered_orders` va `registrations` grafiklari, `managers_plan` |
+| `period` | `week` | `week` (7 kun) / `month` (30 kun) / `year` (12 oy) | `delivered_orders` va `registrations` grafiklari |
 | `months` | `6` | `1`–`24` | `revenue` grafigi |
 | `low_stock` | `10` | `>= 0` | `catalog` — "kam qoldi" chegarasi |
 
@@ -27,7 +27,7 @@ Qolgan vidjetlar (`recent_orders`, `attention`, `customers`) parametrga bog'liq 
 
 Hafta / oy / yil tugmalari:
 
-| Tugma | Grafiklar va `managers_plan` | KPI kartochkalar (`summary`) |
+| Tugma | Grafiklar | KPI kartochkalar (`summary`) |
 | --- | --- | --- |
 | Hafta | `period=week` — bugun va oldingi 6 kun, nuqta = kun | `days=7` |
 | Oy | `period=month` — bugun va oldingi 29 kun, nuqta = kun | `days=30` |
@@ -55,8 +55,7 @@ Misollar:
   "attention": { ... },
   "customers": { ... },
   "catalog": { ... },
-  "revenue": { ... },
-  "managers_plan": { ... }
+  "revenue": { ... }
 }
 ```
 
@@ -281,40 +280,6 @@ Oxirgi **5 ta** buyurtma (yangi birinchi). Obyekt `orders/` ro'yxatidagi bilan b
 | `b2b` | prorab mijozlarning yakunlangan buyurtmalari summasi (butun davr) |
 | `individual` | qolgan barcha yakunlangan buyurtmalar (mijozsiz buyurtmalar ham shu yerda) |
 | `months[]` | oxirgi `months` ta oy (joriy oy ham kiradi): `month` — oyning birinchi kuni |
-
-### `managers_plan` — menejerlar rejasi
-
-```json
-"managers_plan": {
-  "period": "month",
-  "date_from": "2026-09-09",
-  "date_to": "2026-10-08",
-  "plan": 3000000.0,
-  "revenue": 1720000.0,
-  "team_percent": 57.3,
-  "b2b_percent": 62.1,
-  "chat_response_minutes": 24,
-  "managers": [
-    { "id": 1, "full_name": "Kamola Ibrohimova", "plan": 1000000.0, "revenue": 1120000.0, "orders_count": 1, "percent": 112.0 },
-    { "id": 2, "full_name": "Dilshod Rasulov", "plan": 2000000.0, "revenue": 600000.0, "orders_count": 1, "percent": 30.0 },
-    { "id": 3, "full_name": "Malika Sobirova", "plan": 0.0, "revenue": 50000.0, "orders_count": 1, "percent": null }
-  ]
-}
-```
-
-| Maydon | Izoh |
-| --- | --- |
-| `period`, `date_from`, `date_to` | `?period=` va uning chegaralari (`date_to` = bugun) |
-| `managers[]` | **faol** menejerlar (hammasi, limit yo'q), `percent` kamayishi bo'yicha; rejasi yo'qlar oxirida |
-| `managers[].plan` | menejerning davr uchun rejasi: oylik reja (`managers/` dagi `monthly_plan`) × `7/30` (hafta), × `1` (oy), × `12` (yil). `0.0` = reja qo'yilmagan |
-| `managers[].revenue`, `orders_count` | menejerga biriktirilgan, shu davrda **yaratilgan**, yakunlangan (`status=3`) buyurtmalar summasi va soni |
-| `managers[].percent` | `revenue / plan`, % — `100` dan oshishi mumkin (progress-barni `100` da cheklang); rejasi yo'q bo'lsa `null` |
-| `plan`, `revenue` | rejasi **bor** menejerlar bo'yicha jami |
-| `team_percent` | "Jamoa rejasi": `revenue / plan`, %; hech kimda reja bo'lmasa `null` |
-| `b2b_percent` | "B2B ulushi": davrdagi **barcha** yakunlangan buyurtmalar tushumida prorab mijozlar ulushi, % (menejeri yo'q buyurtmalar ham kiradi) |
-| `chat_response_minutes` | "Javob vaqti": qo'llab-quvvatlash **chatida** mijoz xabaridan xodim javobigacha o'rtacha vaqt, daqiqada (butun son). Ketma-ket kelgan mijoz xabarlari bitta deb olinadi (birinchisidan), hali javob berilmaganlari hisobga kirmaydi. Javob bo'lmasa `null` |
-
-> Reja menejer bo'yicha bitta oylik son (`monthly_plan`) — oyma-oy alohida reja saqlanmaydi, shuning uchun o'tgan davrlar ham hozirgi reja bilan solishtiriladi. "Javob vaqti" menejerlar bo'yicha emas, butun chat bo'yicha (chat xabarida kim javob bergani saqlanmaydi); buyurtmaga reaksiya vaqti hisoblanmaydi — holat tarixi saqlanmaydi.
 
 ---
 
