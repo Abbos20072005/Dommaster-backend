@@ -25,6 +25,8 @@ COLUMN_SUB_CATEGORY = "Подкатегория"
 COLUMN_ITEM_CATEGORY = "Предметная категория"
 COLUMN_BRAND = "Бренд"
 APPLIED_COLUMNS = (COLUMN_NAME, COLUMN_ITEM_CATEGORY, COLUMN_BRAND)
+# the one-sheet workbook ("Все замечания по SKU") calls the item category a group
+COLUMN_ALIASES = {"Группа": COLUMN_ITEM_CATEGORY}
 
 
 def clean(value):
@@ -64,6 +66,14 @@ class Command(BaseCommand):
         parser.add_argument("file", help="Path to the audit workbook (.xlsx).")
         parser.add_argument("--sheet", required=True, help='Sheet to apply, e.g. "Электрика".')
         parser.add_argument(
+            "--exclude",
+            nargs="+",
+            type=int,
+            default=[],
+            metavar="ID",
+            help="Product ids to leave out (a slip in the sheet that the content team has to fix first).",
+        )
+        parser.add_argument(
             "--dry-run",
             action="store_true",
             help="Do everything in a transaction and roll it back, nothing is saved.",
@@ -79,6 +89,9 @@ class Command(BaseCommand):
 
         edits, other_columns = self.read_sheet(options["file"], options["sheet"])
         self.stdout.write(f"Rows with corrected cells: {len(edits)}")
+        for product_id in options["exclude"]:
+            if edits.pop(product_id, None):
+                self.stats["rows left out (--exclude)"] += 1
         for column, count in other_columns.items():
             self.warn(f"{count} corrected cells in the column {column!r} are not applied (not supported)")
 
@@ -162,7 +175,7 @@ class Command(BaseCommand):
         if sheet_name not in workbook.sheetnames:
             raise CommandError(f"No sheet {sheet_name!r}. Sheets: {', '.join(workbook.sheetnames)}")
         rows = workbook[sheet_name].iter_rows()
-        headers = [clean(cell.value) for cell in next(rows)]
+        headers = [COLUMN_ALIASES.get(header, header) for header in (clean(cell.value) for cell in next(rows))]
         missing = [column for column in (COLUMN_ID, *APPLIED_COLUMNS) if column not in headers]
         if missing:
             raise CommandError(f"Columns not found on the sheet: {', '.join(missing)}")
