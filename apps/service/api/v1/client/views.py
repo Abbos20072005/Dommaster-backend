@@ -12,8 +12,8 @@ from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from apps.service.paginations.get_orders import get_orders_paginator
 from rest_framework import status
-from django.db.models import Q, Sum, Exists, OuterRef, Value, BooleanField, Prefetch, IntegerField, Subquery, Min, Max, F
-from django.db.models.functions import Coalesce
+from django.db.models import Q, Sum, Exists, OuterRef, Value, BooleanField, Prefetch, IntegerField, Subquery, Min, Max, F, CharField
+from django.db.models.functions import Coalesce, MD5, Concat, Cast
 from apps.service.paginations.get_products_pagination import get_products_paginator
 from apps.service.paginations.get_comments import get_comments_paginator
 from apps.service.paginations.get_question import get_questions_paginator
@@ -67,6 +67,7 @@ from .serializers import (
     BrandSerializer,
     FilterSerializer,
     PaginationSerializer,
+    ProductListParamSerializer,
     BrandDetailSerializer,
     SaleSerializer,
     AddsBrandsSerializer,
@@ -728,6 +729,66 @@ class ProductViewSet(ViewSet):
         return Response(
             data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK
         )
+
+    @extend_schema(
+        summary="Products list (random order)",
+        description=(
+            "Active products in random order. The order is fixed by `seed`: "
+            "the first request goes without it, the response returns the generated `seed`, "
+            "send it back with the next pages so products don't repeat."
+        ),
+        parameters=[
+            OpenApiParameter(
+                name="page",
+                location=OpenApiParameter.QUERY,
+                description="Page",
+                type=OpenApiTypes.INT,
+            ),
+            OpenApiParameter(
+                name="page_size",
+                location=OpenApiParameter.QUERY,
+                description="Page size",
+                type=OpenApiTypes.INT,
+            ),
+            OpenApiParameter(
+                name="seed",
+                location=OpenApiParameter.QUERY,
+                description="Seed of the random order (from the first page response)",
+                type=OpenApiTypes.INT,
+            ),
+        ],
+        responses={200: ProductSerializer(many=True)},
+        tags=["Product"],
+    )
+    def product_list(self, request):
+        param_serializer = ProductListParamSerializer(
+            data=request.query_params, context={"request": request}
+        )
+        if not param_serializer.is_valid():
+            raise CustomApiException(
+                error_code=ErrorCodes.VALIDATION_FAILED, message=param_serializer.errors
+            )
+
+        seed = param_serializer.validated_data.get("seed")
+        if seed is None:
+            seed = secrets.randbelow(2 ** 31)
+
+        # order_by("?") reshuffles on every request, so pages would repeat products
+        base_qs = Product.objects.filter(is_active=True).annotate(
+            _random_order=MD5(
+                Concat(Cast("id", CharField()), Value(f":{seed}"), output_field=CharField())
+            )
+        ).order_by("_random_order")
+        products = get_optimized_product_qs(base_qs, request)
+
+        result = get_products_paginator(
+            response_data=products,
+            page=param_serializer.validated_data.get("page"),
+            page_size=param_serializer.validated_data.get("page_size"),
+            context={"request": request},
+        )
+        result["seed"] = seed
+        return Response(data={"result": result, "ok": True}, status=status.HTTP_200_OK)
 
     @extend_schema(
         summary="Product detail",

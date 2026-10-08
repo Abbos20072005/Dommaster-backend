@@ -392,6 +392,14 @@ class PaginationSerializer(serializers.Serializer):
         return super().validate(attrs)
 
 
+class ProductListParamSerializer(PaginationSerializer):
+    seed = serializers.IntegerField(
+        required=False,
+        min_value=0,
+        max_value=2147483647
+    )
+
+
 class CommentParamSerializer(serializers.Serializer):
     page = serializers.IntegerField(
         required=False,
