@@ -29,7 +29,29 @@ class ProductBadgeShortSerializer(RelationSerializer):
 class ProductImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductImage
-        fields = ("id", "image", "created_at")
+        fields = ("id", "image", "position", "created_at")
+        read_only_fields = ("position",)
+
+
+class ProductImageReorderSerializer(serializers.Serializer):
+    """`ids` = the product's images in the new order (list index becomes `position`), the first one is the main image."""
+    ids = serializers.ListField(child=serializers.IntegerField(), allow_empty=False)
+
+    def validate_ids(self, ids):
+        if len(set(ids)) != len(ids):
+            raise serializers.ValidationError("Duplicate ids.")
+        existing = [image.id for image in self.context["product"].product_image.all()]
+        missing = set(ids) - set(existing)
+        if missing:
+            raise serializers.ValidationError(f"Not found: {sorted(missing)}")
+        # images that were not sent keep their order after the sent ones
+        return ids + [pk for pk in existing if pk not in ids]
+
+    def save(self, **kwargs):
+        ProductImage.objects.bulk_update(
+            [ProductImage(id=pk, position=position) for position, pk in enumerate(self.validated_data["ids"], start=1)],
+            ["position"],
+        )
 
 
 class ProductCharacteristicSerializer(serializers.ModelSerializer):

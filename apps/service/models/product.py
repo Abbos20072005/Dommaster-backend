@@ -116,11 +116,21 @@ class ProductRemaining(BaseModel):
 class ProductImage(BaseModel):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="product_image", verbose_name="Продукт")
     image = models.ImageField(upload_to="product_image", verbose_name="Изображение")
+    # order within the product, the first image is the main one
+    position = models.PositiveIntegerField(default=0, verbose_name="Позиция")
 
     def __str__(self):
         return str(self.id)
 
+    def save(self, *args, **kwargs):
+        # a new image goes to the end (also the ones created by 1C / django admin)
+        if self._state.adding and not self.position:
+            last = ProductImage.objects.filter(product_id=self.product_id).aggregate(last=models.Max("position"))["last"]
+            self.position = 0 if last is None else last + 1
+        super().save(*args, **kwargs)
+
     class Meta:
+        ordering = ("position", "id")
         verbose_name = "Изображение продукта"
         verbose_name_plural = "Изображения продуктов"
 

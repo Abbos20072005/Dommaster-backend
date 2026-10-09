@@ -8,7 +8,8 @@ from rest_framework.response import Response
 from apps.service.models import Product, ProductImage, ProductAttributeValue
 from utils.admin_views import AdminModelViewSet
 from ..filters import ProductFilter
-from ..serializers import ProductListSerializer, ProductSerializer, ProductImageSerializer, ProductStatsSerializer
+from ..serializers import ProductListSerializer, ProductSerializer, ProductImageSerializer, \
+    ProductImageReorderSerializer, ProductStatsSerializer
 
 
 class ProductViewSet(AdminModelViewSet):
@@ -23,7 +24,7 @@ class ProductViewSet(AdminModelViewSet):
             return qs
         qs = qs.select_related("brand", "product_model",
                                "product_item_category__product_sub_category__product_category") \
-            .prefetch_related("badges", Prefetch("product_image", queryset=ProductImage.objects.order_by("id")))
+            .prefetch_related("badges", "product_image")
         if self.action != "list":
             qs = qs.prefetch_related("product_characteristics", Prefetch(
                 "attribute_values", queryset=ProductAttributeValue.objects.select_related("attribute")))
@@ -36,6 +37,8 @@ class ProductViewSet(AdminModelViewSet):
             return ProductStatsSerializer
         if self.action in ("images", "delete_image"):
             return ProductImageSerializer
+        if self.action == "reorder_images":
+            return ProductImageReorderSerializer
         return ProductSerializer
 
     def perform_destroy(self, instance):
@@ -52,6 +55,16 @@ class ProductViewSet(AdminModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save(product=product)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=["post"], url_path="images/reorder")
+    def reorder_images(self, request, pk=None):
+        """Order of the product's images: `ids` in the new order, the first one becomes the main image."""
+        product = self.get_object()
+        serializer = self.get_serializer(data=request.data,
+                                         context={**self.get_serializer_context(), "product": product})
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
 
     @action(detail=True, methods=["delete"], url_path=r"images/(?P<image_id>[0-9]+)")
     def delete_image(self, request, pk=None, image_id=None):
