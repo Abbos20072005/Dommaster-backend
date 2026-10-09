@@ -91,6 +91,22 @@ class ProductAttributeValueSerializer(serializers.ModelSerializer):
             return False
 
 
+class ProductCharacteristicSerializer(serializers.ModelSerializer):
+    """Deprecated `characteristics` of a product, kept read-only until the admin panel moves to `attribute_values`:
+    the same attribute values in the shape of the old free-form characteristics."""
+    name_uz = serializers.CharField(source="attribute.name_uz")
+    name_ru = serializers.CharField(source="attribute.name_ru")
+    name_en = serializers.CharField(source="attribute.name_en", allow_null=True)
+    unit_uz = serializers.CharField(source="attribute.unit")
+    unit_ru = serializers.CharField(source="attribute.unit")
+    unit_en = serializers.CharField(source="attribute.unit")
+
+    class Meta:
+        model = ProductAttributeValue
+        fields = ("id", "name_uz", "name_ru", "name_en", "value_uz", "value_ru", "value_en",
+                  "unit_uz", "unit_ru", "unit_en")
+
+
 class ProductListSerializer(serializers.ModelSerializer):
     brand = ProductBrandSerializer(read_only=True)
     product_model = ProductModelShortSerializer(read_only=True)
@@ -115,6 +131,8 @@ class ProductSerializer(serializers.ModelSerializer):
     # the product's characteristics: values of the item category's attributes (item-categories/{id}/attributes/);
     # the sent list replaces all
     attribute_values = ProductAttributeValueSerializer(many=True, required=False)
+    # deprecated, read-only (a sent list is ignored): `attribute_values` in the old shape, for the old product form
+    characteristics = ProductCharacteristicSerializer(source="attribute_values", many=True, read_only=True)
     images = ProductImageSerializer(source="product_image", many=True, read_only=True)
 
     class Meta:
@@ -124,7 +142,7 @@ class ProductSerializer(serializers.ModelSerializer):
                   "brand", "product_model", "badges", "product_item_category", "price", "discount_price", "discount",
                   "unit", "quantity",
                   "is_active", "erp_active", "publish_status", "purchasable", "product_code", "articul_code", "barcode", "weight", "length", "width", "height",
-                  "rating", "comments_quantity", "questions_quantity",
+                  "rating", "comments_quantity", "questions_quantity", "characteristics",
                   "attribute_values", "images", "created_at", "updated_at")
         read_only_fields = ("name", "rating", "comments_quantity", "questions_quantity", "created_at", "updated_at")
         extra_kwargs = {

@@ -261,7 +261,7 @@ Mahsulot detalida (`GET products/{id}/`) `attribute_values` massivi keladi. Ro'y
 
 Bitta mahsulotda bitta atributga bitta qiymat. Birlik mahsulotda saqlanmaydi — `attribute.unit` dan olinadi.
 
-> Mahsulot obyektidagi avvalgi `characteristics` va `filter_data` maydonlari **olib tashlangan** — xususiyatlar faqat `attribute_values` orqali o'qiladi va yoziladi.
+> **`characteristics` eskirgan.** Maydon javobda vaqtincha qoldirilgan (eski forma buzilmasligi uchun), lekin endi u `attribute_values` ning eski ko'rinishdagi nusxasi (`id`, `name_uz/ru/en`, `value_uz/ru/en`, `unit_uz/ru/en`) va **faqat o'qiladi**: so'rovda yuborilgan `characteristics` xatosiz e'tiborga olinmaydi, hech narsa saqlanmaydi. Xususiyatlarni `attribute_values` orqali yozing; forma shunga o'tgach maydon olib tashlanadi. `filter_data` maydoni olib tashlangan.
 
 ### Yozish — `POST products/`, `PATCH products/{id}/`
 
