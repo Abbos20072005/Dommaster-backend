@@ -152,7 +152,7 @@ Qatorlar:
 | `incomplete` | to'liqsiz **faol** mahsulotlar: pastdagi uchtadan kamida bittasi yetishmaydi |
 | `no_translation` | faol, `name_uz` yoki `name_ru` bo'sh |
 | `no_image` | faol, rasmi yo'q |
-| `no_characteristics` | faol, xususiyati ham, atribut qiymati ham yo'q |
+| `no_characteristics` | faol, birorta ham atribut qiymati yo'q |
 | `out_of_stock` | faol, qoldig'i `<= 0` |
 
 `no_translation` + `no_image` + `no_characteristics` kesishadi — yig'indisi `incomplete` dan katta bo'lishi mumkin.

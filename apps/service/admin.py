@@ -231,11 +231,6 @@ class ProductImageInline(TabularInline):
     extra = 1
 
 
-class ProductCharacteristicsInline(TabularInline):
-    model = ProductCharacteristics
-    extra = 1
-
-
 class ProductAttributeValueInline(TabularInline):
     model = ProductAttributeValue
     extra = 0
@@ -254,7 +249,7 @@ class ProductAdmin(ModelAdmin):
                    "purchasable", "unit", "created_at")
     readonly_fields = ("discount_price",)
     autocomplete_fields = ("brand", "badges", "product_item_category")
-    inlines = (ProductImageInline, ProductCharacteristicsInline, ProductAttributeValueInline)
+    inlines = (ProductImageInline, ProductAttributeValueInline)
     fieldsets = (
         (None, {
             "fields": ("name_uz", "name_ru", "name_en", "short_description",

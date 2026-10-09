@@ -52,7 +52,7 @@ COUNT_FIELDS = ("products_count", "filters_count")
 class CategoryBaseSerializer(serializers.ModelSerializer):
     # `slug` is optional: left out / empty -> generated from the name (model `save`)
     products_count = serializers.IntegerField(read_only=True, default=0)
-    filters_count = serializers.IntegerField(read_only=True, default=0, help_text="Distinct filterable filter keys")
+    filters_count = serializers.IntegerField(read_only=True, default=0, help_text="Distinct filterable attributes")
 
     def validate_code(self, value):
         # unique column: store empty codes as NULL

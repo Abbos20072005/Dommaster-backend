@@ -1,12 +1,13 @@
 from django.db.models.signals import post_save, post_delete, pre_save
 from django.dispatch import receiver
-from django.core.cache import cache
-from .models import Comment, CartItem, Questions, Order, Product, ProductFilterNumericValue, ProductItemCategoryFilterSchema
+from .models import Comment, CartItem, Questions, Order, Product, ProductAttribute, ProductAttributeOption, \
+    ProductAttributeValue, ProductItemCategoryAttribute
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from .models.choices import ORDER_EVENT_CANCELED, ORDER_EVENT_REFUNDED
 from .outbox import emit_order_event
 from .order_push import notify_order_status
+from .product_filters import clear_category_filter_cache
 
 
 # Order.save() is atomic, so stock changes and outbox events here commit together with the order
@@ -83,26 +84,31 @@ def update_questions_quantity(sender, instance, **kwargs):
     instance.product.update_questions()
 
 
-def clear_category_filter_cache(category_id):
-    if category_id:
-        cache.delete(f"product:available_filters:cat:{category_id}")
-
-
+# Client filters are cached per item category; rows written with bulk_create / update() send no signals,
+# that code calls clear_category_filter_cache() itself
 @receiver(signal=[post_save, post_delete], sender=Product)
 def invalidate_filter_cache_on_product_change(sender, instance, **kwargs):
-    if hasattr(instance, 'product_item_category_id'):
-        clear_category_filter_cache(instance.product_item_category_id)
+    clear_category_filter_cache(instance.product_item_category_id)
 
 
-@receiver(signal=[post_save, post_delete], sender=ProductItemCategoryFilterSchema)
-def invalidate_filter_cache_on_schema_change(sender, instance, **kwargs):
+@receiver(signal=[post_save, post_delete], sender=ProductAttributeValue)
+def invalidate_filter_cache_on_value_change(sender, instance, **kwargs):
+    clear_category_filter_cache(*Product.objects.filter(pk=instance.product_id)
+                                .values_list("product_item_category_id", flat=True))
+
+
+@receiver(signal=[post_save, post_delete], sender=ProductItemCategoryAttribute)
+def invalidate_filter_cache_on_category_attribute_change(sender, instance, **kwargs):
     clear_category_filter_cache(instance.item_category_id)
 
 
-@receiver(signal=[post_save, post_delete], sender=ProductFilterNumericValue)
-def invalidate_filter_cache_on_numeric_change(sender, instance, **kwargs):
-    if hasattr(instance, 'schema') and instance.schema_id:
-        cat_id = ProductItemCategoryFilterSchema.objects.filter(
-            id=instance.schema_id
-        ).values_list('item_category_id', flat=True).first()
-        clear_category_filter_cache(cat_id)
+@receiver(signal=[post_save, post_delete], sender=ProductAttribute)
+def invalidate_filter_cache_on_attribute_change(sender, instance, **kwargs):
+    clear_category_filter_cache(*instance.category_links.values_list("item_category_id", flat=True))
+
+
+@receiver(signal=[post_save, post_delete], sender=ProductAttributeOption)
+def invalidate_filter_cache_on_option_change(sender, instance, **kwargs):
+    # renaming an option renames the product values (the admin serializer does it with update())
+    clear_category_filter_cache(*ProductItemCategoryAttribute.objects.filter(attribute_id=instance.attribute_id)
+                                .values_list("item_category_id", flat=True))

@@ -119,13 +119,25 @@ class AttributeShortSerializer(RelationSerializer):
         fields = ("id", "name", "value_type", "unit")
 
 
-class CategoryAttributeSerializer(RelationSerializer):
-    # everything the product form needs to render the attribute input
-    options = ProductAttributeOptionSerializer(many=True, read_only=True)
+class CategoryAttributeSerializer(serializers.ModelSerializer):
+    """An attribute of an item category: the attribute itself (picked by `id`, the rest is read-only: everything
+    the product form needs to render its input) + its settings in this category (the quick filter)."""
+    id = serializers.IntegerField(source="attribute_id")
+    name = serializers.CharField(source="attribute.name", read_only=True)
+    value_type = serializers.CharField(source="attribute.value_type", read_only=True)
+    unit = serializers.CharField(source="attribute.unit", read_only=True)
+    options = ProductAttributeOptionSerializer(source="attribute.options", many=True, read_only=True)
+    is_filterable = serializers.BooleanField(source="attribute.is_filterable", read_only=True)
+    is_active = serializers.BooleanField(source="attribute.is_active", read_only=True)
 
     class Meta:
-        model = ProductAttribute
-        fields = ("id", "name", "value_type", "unit", "options", "is_filterable", "is_active")
+        model = ProductItemCategoryAttribute
+        fields = ("id", "name", "value_type", "unit", "options", "is_filterable", "is_active",
+                  "is_quick_filter", "max_quick_filters")
+
+    def to_internal_value(self, data):
+        # a bare attribute id is accepted besides {"id": ...}
+        return super().to_internal_value(data if isinstance(data, dict) else {"id": data})
 
 
 class ItemCategoryAttributesSerializer(serializers.ModelSerializer):
@@ -137,14 +149,19 @@ class ItemCategoryAttributesSerializer(serializers.ModelSerializer):
         fields = ("id", "attributes")
 
     def validate_attributes(self, value):
-        if len({attribute.pk for attribute in value}) != len(value):
+        ids = [item["attribute_id"] for item in value]
+        if len(set(ids)) != len(ids):
             raise serializers.ValidationError("Attributes must be unique.")
+
+        missing = sorted(set(ids) - set(ProductAttribute.objects.filter(pk__in=ids).values_list("pk", flat=True)))
+        if missing:
+            raise serializers.ValidationError(f"Attributes {missing} do not exist.")
 
         # detaching would orphan the values of the category's products
         used = ProductAttribute.objects.filter(
             category_links__item_category=self.instance,
             product_values__product__product_item_category=self.instance,
-        ).exclude(pk__in=[attribute.pk for attribute in value]).distinct()
+        ).exclude(pk__in=ids).distinct()
         if used.exists():
             names = ", ".join(used.values_list("name_ru", flat=True))
             raise serializers.ValidationError(
@@ -154,14 +171,15 @@ class ItemCategoryAttributesSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         # through rows are ordered by position, `instance.attributes` is not
         links = instance.attribute_links.select_related("attribute").prefetch_related("attribute__options")
-        attributes = CategoryAttributeSerializer([link.attribute for link in links], many=True, context=self.context)
-        return {"id": instance.pk, "attributes": attributes.data}
+        return {"id": instance.pk, "attributes": CategoryAttributeSerializer(links, many=True, context=self.context).data}
 
     @transaction.atomic
     def update(self, instance, validated_data):
         attributes = validated_data["attributes"]
-        instance.attribute_links.exclude(attribute__in=attributes).delete()
-        for position, attribute in enumerate(attributes):
+        instance.attribute_links.exclude(attribute_id__in=[item["attribute_id"] for item in attributes]).delete()
+        for position, item in enumerate(attributes):
+            # the quick filter settings stay as they are unless sent
+            attribute_id = item.pop("attribute_id")
             ProductItemCategoryAttribute.objects.update_or_create(
-                item_category=instance, attribute=attribute, defaults={"position": position})
+                item_category=instance, attribute_id=attribute_id, defaults={**item, "position": position})
         return instance

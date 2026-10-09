@@ -8,8 +8,9 @@ from django.db import transaction
 from django.db.models import Max, Q
 
 from apps.service.models import (
-    Brand, Product, ProductAttributeValue, ProductFilterNumericValue, ProductItemCategory, ProductSubCategory,
+    Brand, Product, ProductAttributeValue, ProductItemCategory, ProductSubCategory,
 )
+from apps.service.product_filters import clear_category_filter_cache
 
 # The content team corrects a sheet of the audit workbook (an export of export_products_by_category with audit
 # notes) and marks every cell it changed with a fill: yellow in the first round, green in the second. Only those
@@ -132,23 +133,19 @@ class Command(BaseCommand):
         self.brands = {}
         self.item_categories = {}
         self.touched_item_categories = set()
-        self.moved_to = set()
         if self.dry_run:
             self.stdout.write(self.style.WARNING("DRY RUN - everything below is rolled back at the end"))
 
     def finish(self):
         if not self.dry_run:
             # update() sends no signals; the brand list of an item category is cached too
+            clear_category_filter_cache(*self.touched_item_categories)
             for item_category_id in self.touched_item_categories:
-                cache.delete(f"product:available_filters:cat:{item_category_id}")
                 cache.delete(f"categories:list:item:category={item_category_id}")
 
         self.stdout.write("")
         for label, count in self.stats.items():
             self.stdout.write(f"  {label}: {count}")
-        if self.moved_to:
-            ids = " ".join(str(pk) for pk in sorted(self.moved_to))
-            self.warn(f"filters of the moved products: manage.py backfill_filter_data --item-category {ids}")
         self.stdout.write(self.style.SUCCESS("DRY RUN finished, nothing saved" if self.dry_run else "Done"))
 
     def warn(self, message):
@@ -291,15 +288,11 @@ class Command(BaseCommand):
         return changes
 
     def item_category_change(self, product, item_category):
-        # what belongs to the old category goes: attribute values (as in the admin API) and range filter values
+        # what belongs to the old category goes: the values of attributes the new one lacks (as in the admin API)
         ProductAttributeValue.objects.filter(product_id=product["id"]).exclude(
             attribute__category_links__item_category=item_category
         ).delete()
-        ProductFilterNumericValue.objects.filter(product_id=product["id"]).exclude(
-            schema__item_category=item_category
-        ).delete()
         self.touched_item_categories.update((product["product_item_category_id"], item_category.pk))
-        self.moved_to.add(item_category.pk)
         return {"product_item_category": item_category}
 
     def log(self, product, field, old, new):

@@ -60,7 +60,7 @@ class TodayCatalogSerializer(serializers.Serializer):
                                                     "characteristics (the three counters below overlap)")
     no_translation = serializers.IntegerField(help_text="Active, name_uz or name_ru is empty")
     no_image = serializers.IntegerField(help_text="Active, no images")
-    no_characteristics = serializers.IntegerField(help_text="Active, no characteristics and no attribute values")
+    no_characteristics = serializers.IntegerField(help_text="Active, no attribute values")
     out_of_stock = serializers.IntegerField(help_text="Active with quantity <= 0")
 
 

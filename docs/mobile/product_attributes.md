@@ -3,15 +3,15 @@
 Base URL: `{{host}}/api/v1/`
 Token shart emas.
 
-Mahsulot detalida yangi `attributes` maydoni keladi — admin panelda mahsulotga kiritilgan xususiyatlar (quvvat, material, boshqaruv turi va h.k.):
+Mahsulot detalida `attributes` maydoni keladi — mahsulotning xususiyatlari (quvvat, material, boshqaruv turi va h.k.):
 
 ```
 GET products/{id}/
 ```
 
-- Yangi endpoint yo'q, mavjud javobga maydon qo'shildi. Qolgan maydonlar (jumladan `characteristics`) o'zgarmagan.
+- Mahsulotning **barcha** xususiyatlari shu yerda. Eski `characteristics` maydoni ham qolgan, lekin endi u `attributes` ning nusxasi (pastda) — yangi kodda `attributes` ni ishlating.
 - Til `Accept-Language` headeridan olinadi (`uz`, `ru`, `en`; default `ru`).
-- Swagger'dagi "Product detail" javob sxemasida bu maydon ko'rinmaydi — shu hujjatga tayaning.
+- Filtrlar ham shu atributlardan quriladi — `docs/mobile/product_filters.md`.
 
 ---
 
@@ -23,7 +23,12 @@ GET products/{id}/
   "result": {
     "id": 154,
     "name": "...",
-    "characteristics": [],
+    "characteristics": [
+      { "id": 25, "name": "Kafolat", "unit": "", "value": "Ha" },
+      { "id": 23, "name": "Boshqaruv", "unit": "", "value": "Pult" },
+      { "id": 22, "name": "Quvvat", "unit": "kVt", "value": "2.5" },
+      { "id": 24, "name": "Material", "unit": "", "value": "Po'lat" }
+    ],
     "attributes": [
       { "id": 25, "name": "Kafolat", "value_type": "boolean", "unit": "", "value": "Ha" },
       { "id": 23, "name": "Boshqaruv", "value_type": "list", "unit": "", "value": "Pult" },
@@ -42,7 +47,11 @@ GET products/{id}/
 | `unit` | o'lchov birligi; faqat `number` da to'ladi, qolganlarida `""` |
 | `value` | ko'rsatishga tayyor qiymat, **har doim string** |
 
-Ko'rsatish: `name` — `value` `unit` (masalan "Quvvat — 2.5 kVt"). `characteristics` bilan bir xil komponentda chizsa bo'ladi.
+Ko'rsatish: `name` — `value` `unit` (masalan "Quvvat — 2.5 kVt").
+
+### `characteristics` (eskirgan)
+
+Eski ilova versiyalari uchun qoldirilgan: `attributes` dagi qatorlarning o'zi, o'sha tartibda, `value_type` siz (`id`, `name`, `unit`, `value`). `id` endi atribut ID'si. Ikkalasini birga chizmang — bir xil ma'lumot ikki marta chiqadi. Mahsulotlar ro'yxatidagi (`product/filter/` va boshqalar) `characteristics` ham shu ko'rinishda.
 
 | `value_type` | `value` |
 | --- | --- |
@@ -58,5 +67,5 @@ Ko'rsatish: `name` — `value` `unit` (masalan "Quvvat — 2.5 kVt"). `character
 - Mahsulotda atribut kiritilmagan bo'lsa — `"attributes": []` (maydon har doim bor, `null` bo'lmaydi).
 - Tartib — admin kategoriyada belgilagan tartib; frontendda saralash kerak emas.
 - Admin o'chirib qo'ygan (nofaol) atributlar kelmaydi.
-- So'ralgan tilda tarjima bo'lmasa, ruscha qiymat qaytadi (hozircha `en` da nom va matnli qiymatlar ko'pincha ruscha keladi).
-- `attributes` faqat detalda. Mahsulotlar ro'yxatida va filtrlarda hozircha yo'q.
+- So'ralgan tilda tarjima bo'lmasa, ruscha qiymat qaytadi. 1C dan kelgan xususiyatlar hozircha faqat ruscha — `uz` va `en` da ham ruscha matn keladi.
+- `attributes` faqat detalda; ro'yxatlarda faqat `characteristics` bor.

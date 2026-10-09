@@ -1,4 +1,3 @@
-from django.db.models import OuterRef, Subquery
 from rest_framework import serializers
 from drf_spectacular.utils import extend_schema_field
 from decimal import Decimal, InvalidOperation
@@ -7,11 +6,10 @@ from apps.authorization.api.v1.client.serializers import CustomerSerializer, Cus
 from apps.service.models import Product, ProductCategory, ProductItemCategory, ProductSubCategory, ProductImage, Comment, \
     Order, OrderItem, Brand, Sale, AddsBrands, Favourites, Cart, CartItem, ProductCharacteristics, Questions, \
     RecentlyViewedProducts, Service, CommentReply, CommentImages, QuestionsReply, \
-    ProductVariantGroup, ProductVariantItem, ProductItemCategoryFilterSchema, ProductAttribute, \
-    ProductItemCategoryAttribute, HomeBlock
+    ProductVariantGroup, ProductVariantItem, ProductItemCategoryFilterSchema, HomeBlock
+from apps.service.attributes import display_value, product_attribute_values, request_language, translated
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
-from config import settings
 from apps.base.api.v1.client.serializers import PromocodeSerializer, MarketBranchSerializer, BannerSerializer
 from apps.base.models import MarketBranch
 
@@ -39,9 +37,7 @@ def normalize_delivery_price(raw):
 class TranslatedSerializerMixin:
     """Mixin to resolve the current language from the request Accept-Language header."""
     def get_language(self):
-        request = self.context.get('request')
-        lang = request.META.get('HTTP_ACCEPT_LANGUAGE', 'ru') if request else 'ru'
-        return lang if lang in settings.MODELTRANSLATION_LANGUAGES else 'ru'
+        return request_language(self.context.get('request'))
 
 
 class ProductAnnotationMixin:
@@ -245,24 +241,6 @@ class ServiceDetailSerializer(TranslatedSerializerMixin, serializers.ModelSerial
             "description"
         )
 
-class ProductCharacteristicsSerializer(TranslatedSerializerMixin, serializers.ModelSerializer):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        language = self.get_language()
-        self.fields["name"] = serializers.CharField(source=f'name_{language}')
-        self.fields["unit"] = serializers.CharField(source=f'unit_{language}')
-        self.fields["value"] = serializers.CharField(source=f'value_{language}')
-
-
-    class Meta:
-        model = ProductCharacteristics
-        fields = (
-            "id",
-            "name",
-            "unit",
-            "value"
-        )
-
 class ProductCharacteristicsCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductCharacteristics
@@ -444,7 +422,8 @@ class FilterSerializer(PaginationSerializer):
 
 
 class FilterValueSerializer(serializers.Serializer):
-    value = serializers.CharField()
+    value = serializers.CharField(help_text="Sent back in `filters`")
+    label = serializers.CharField(help_text="Shown to the customer, in the requested language")
     count = serializers.IntegerField()
 
 
@@ -591,33 +570,39 @@ class ProductVariantGroupSerializer(TranslatedSerializerMixin, serializers.Seria
         ).data
 
 class ProductDetailAttributeSerializer(TranslatedSerializerMixin, serializers.Serializer):
-    BOOLEAN_LABELS = {
-        "uz": {"true": "Ha", "false": "Yo'q"},
-        "ru": {"true": "Да", "false": "Нет"},
-        "en": {"true": "Yes", "false": "No"},
-    }
-
+    """A product's attribute value (ProductAttributeValue), ready to display."""
     id = serializers.IntegerField(source="attribute_id")
     name = serializers.SerializerMethodField()
     value_type = serializers.CharField(source="attribute.value_type")
     unit = serializers.CharField(source="attribute.unit")
     value = serializers.SerializerMethodField()
 
-    def _translated(self, obj, field):
-        # ru is the default (fallback) language
-        return getattr(obj, f"{field}_{self.get_language()}", None) or getattr(obj, f"{field}_ru")
+    def get_name(self, obj) -> str:
+        return translated(obj.attribute, "name", self.get_language())
 
-    def get_name(self, obj):
-        return self._translated(obj.attribute, "name")
-
-    def get_value(self, obj):
-        value = self._translated(obj, "value")
-        if obj.attribute.value_type == ProductAttribute.BOOLEAN:
-            return self.BOOLEAN_LABELS[self.get_language()].get(value, value)
-        return value
+    def get_value(self, obj) -> str:
+        language = self.get_language()
+        return display_value(obj.attribute.value_type, translated(obj, "value", language), language)
 
 
-class ProductDetailSerializer(ProductAnnotationMixin, serializers.Serializer):
+class ProductCharacteristicsSerializer(ProductDetailAttributeSerializer):
+    """`characteristics` of the old app: the same attribute values in the shape it knows (id, name, unit, value)."""
+    value_type = None
+
+
+class ProductAttributesMixin:
+    """`attributes` and the legacy `characteristics` of a product, both read from its attribute values."""
+
+    @extend_schema_field(ProductCharacteristicsSerializer(many=True))
+    def get_characteristics(self, obj):
+        return ProductCharacteristicsSerializer(product_attribute_values(obj), many=True, context=self.context).data
+
+    @extend_schema_field(ProductDetailAttributeSerializer(many=True))
+    def get_attributes(self, obj):
+        return ProductDetailAttributeSerializer(product_attribute_values(obj), many=True, context=self.context).data
+
+
+class ProductDetailSerializer(ProductAnnotationMixin, ProductAttributesMixin, serializers.Serializer):
     id = serializers.IntegerField()
     name = serializers.CharField()
     description = serializers.CharField()
@@ -633,7 +618,7 @@ class ProductDetailSerializer(ProductAnnotationMixin, serializers.Serializer):
     breadcrumbs = serializers.SerializerMethodField()
     comments_quantity = serializers.IntegerField()
     questions_quantity = serializers.IntegerField()
-    characteristics = ProductCharacteristicsSerializer(source="product_characteristics", many=True, read_only=True)
+    characteristics = serializers.SerializerMethodField()
     attributes = serializers.SerializerMethodField()
     images = ProductImageSerializer(source="product_image", many=True, read_only=True)
     brand = BrandSerializer(read_only=True)
@@ -645,14 +630,6 @@ class ProductDetailSerializer(ProductAnnotationMixin, serializers.Serializer):
 
     def get_breadcrumbs(self, obj):
         return obj.get_breadcrumbs()
-
-    def get_attributes(self, obj):
-        # values of the active attributes, in the order the attributes have in the product's item category
-        position = ProductItemCategoryAttribute.objects.filter(
-            attribute=OuterRef("attribute"), item_category=obj.product_item_category_id).values("position")[:1]
-        values = obj.attribute_values.filter(attribute__is_active=True).select_related("attribute") \
-            .annotate(position=Subquery(position)).order_by("position", "id")
-        return ProductDetailAttributeSerializer(values, many=True, context=self.context).data
 
     def get_variant_groups(self, obj):
         group_ids = obj.variant_items.values_list('group_id', flat=True)
@@ -667,7 +644,8 @@ class ProductDetailSerializer(ProductAnnotationMixin, serializers.Serializer):
         ).data
 
 
-class ProductSerializer(ProductAnnotationMixin, TranslatedSerializerMixin, serializers.ModelSerializer):
+class ProductSerializer(ProductAnnotationMixin, ProductAttributesMixin, TranslatedSerializerMixin,
+                        serializers.ModelSerializer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         language = self.get_language()
@@ -679,7 +657,7 @@ class ProductSerializer(ProductAnnotationMixin, TranslatedSerializerMixin, seria
     is_favourite = serializers.SerializerMethodField()
     in_cart_quantity = serializers.SerializerMethodField()
     breadcrumbs = serializers.SerializerMethodField()
-    characteristics = ProductCharacteristicsSerializer(source="product_characteristics", many=True, read_only=True)
+    characteristics = serializers.SerializerMethodField()
     brand = BrandSerializer(read_only=True)
 
     class Meta:

@@ -4,7 +4,7 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from apps.service.models import Product, ProductCategory, ProductSubCategory, ProductItemCategory, \
-    ProductItemCategoryFilterSchema
+    ProductItemCategoryAttribute
 from utils.admin_views import AdminModelViewSet
 from ..filters import ProductCategoryFilter, ProductSubCategoryFilter, ProductItemCategoryFilter
 from ..serializers import ProductCategorySerializer, ProductSubCategoryAdminSerializer, \
@@ -23,8 +23,9 @@ def rows_count(queryset, path, field="*", distinct=False):
 
 
 def filters_count(path):
-    """Distinct filterable filter keys of the item categories under a category (`path`: schema -> that category)."""
-    return rows_count(ProductItemCategoryFilterSchema.objects.filter(is_filterable=True), path, "key", distinct=True)
+    """Distinct filterable attributes of the item categories under a category (`path`: link -> that category)."""
+    links = ProductItemCategoryAttribute.objects.filter(attribute__is_filterable=True, attribute__is_active=True)
+    return rows_count(links, path, "attribute", distinct=True)
 
 
 def category_queryset():

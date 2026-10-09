@@ -6,8 +6,10 @@ Token kerak: `Authorization: Bearer <admin_access_token>` (`auth/login/` dan oli
 Uchta joyda ishlatiladi:
 
 - **Atributlar ma'lumotnomasi** — "Xususiyat" formasi: nom, qiymat turi, birlik, ruxsat etilgan qiymatlar, "Filtr sifatida".
-- **Kategoriya atributlari** — qaysi atributlar qaysi kategoriyada (item category) ishlatilishi va tartibi.
+- **Kategoriya atributlari** — qaysi atributlar qaysi kategoriyada (item category) ishlatilishi, tartibi va tezkor filtrlar.
 - **Mahsulot kartasi** — mahsulotga shu kategoriya atributlarining qiymatlarini kiritish.
+
+Atributlar — mahsulot xususiyatlarining **yagona manbai**: mijozga mahsulot kartasida ham, filtrlarda ham shular ko'rinadi. 1C dan kelgan xususiyatlar ham atributga aylantiriladi ([5-bo'lim](#5-1c-dan-kelgan-xususiyatlar)).
 
 | Endpoint | Nima uchun |
 | --- | --- |
@@ -20,7 +22,7 @@ Uchta joyda ishlatiladi:
 
 Swagger: `/swagger/admin/` → **attributes**, **item-categories**, **products**.
 
-> Mahsulotga kiritilgan qiymatlar mijozga (mobil/web) mahsulot detalida `attributes` maydonida ko'rinadi — `docs/mobile/product_attributes.md`. Filtrlarda hali ishlamaydi.
+> Mahsulotga kiritilgan qiymatlar mijozga (mobil/web) mahsulot detalida ko'rinadi (`docs/mobile/product_attributes.md`) va filtrlarda ishlaydi (`docs/mobile/product_filters.md`, [4-bo'lim](#4-mijoz-filtrlari)).
 
 ---
 
@@ -66,7 +68,7 @@ Swagger: `/swagger/admin/` → **attributes**, **item-categories**, **products**
 | `value_type` | Qiymat turi | string | `number` (Son), `list` (Ro'yxat), `text` (Matn), `boolean` (Ha / yo'q); default `list` |
 | `unit` | Birlik | string | faqat `number` uchun, o'shanda majburiy; maks. 50 belgi |
 | `options` | Ruxsat etilgan qiymatlar | massiv | faqat `list` uchun, o'shanda kamida 1 ta |
-| `is_filterable` | Filtr sifatida | bool | default `false` |
+| `is_filterable` | Filtr sifatida | bool | default `false`; `true` — atribut biriktirilgan kategoriyalarda mijoz filtri bo'lib chiqadi |
 | `is_active` | — | bool | default `true` |
 | `item_categories` | Ishlatiladigan kategoriyalar | faqat o'qish | kategoriya tomonidan biriktiriladi (2-bo'lim) |
 | `item_categories_count` | "N ta kategoriyada ishlatilmoqda" | faqat o'qish | |
@@ -178,7 +180,9 @@ Atribut formasidagi "Ishlatiladigan kategoriyalar" faqat ko'rsatiladi. Biriktiri
       "unit": "t",
       "options": [],
       "is_filterable": true,
-      "is_active": true
+      "is_active": true,
+      "is_quick_filter": false,
+      "max_quick_filters": 0
     },
     {
       "id": 5,
@@ -189,8 +193,10 @@ Atribut formasidagi "Ishlatiladigan kategoriyalar" faqat ko'rsatiladi. Biriktiri
         { "id": 1, "value_uz": "Pult (simli)", "value_ru": "Пульт (проводной)", "value_en": null },
         { "id": 2, "value_uz": "Radio pult", "value_ru": "Радиопульт", "value_en": null }
       ],
-      "is_filterable": false,
-      "is_active": true
+      "is_filterable": true,
+      "is_active": true,
+      "is_quick_filter": true,
+      "max_quick_filters": 3
     }
   ]
 }
@@ -198,9 +204,17 @@ Atribut formasidagi "Ishlatiladigan kategoriyalar" faqat ko'rsatiladi. Biriktiri
 
 Pagination yo'q. Atributlar kategoriyadagi tartibda keladi.
 
+| Maydon | Izoh |
+| --- | --- |
+| `id` ... `is_active` | atributning o'zi (faqat o'qish; ma'lumotnomada tahrirlanadi) |
+| `is_quick_filter` | shu kategoriyada tezkor filtr (ro'yxat ustidagi chiplar) sifatida chiqsinmi; default `false` |
+| `max_quick_filters` | nechta qiymat chip bo'lib chiqadi (eng ko'p ishlatilganlari); `0` — hammasi |
+
+`is_quick_filter` va `max_quick_filters` — atributning emas, **shu kategoriyadagi** sozlamasi. Faqat `is_filterable: true` va `number` bo'lmagan atributlarda ta'sir qiladi.
+
 ### Saqlash — `PUT item-categories/{id}/attributes/`
 
-Butun ro'yxat yuboriladi; massivdagi tartib = kategoriyadagi tartib. Har bir element `4` yoki `{"id": 4}` ko'rinishida.
+Butun ro'yxat yuboriladi; massivdagi tartib = kategoriyadagi tartib. Har bir element `4`, `{"id": 4}` yoki tezkor filtr sozlamasi bilan `{"id": 4, "is_quick_filter": true, "max_quick_filters": 3}` ko'rinishida.
 
 ```bash
 curl -X PUT {{host}}/api/v1/admin/item-categories/33/attributes/ \
@@ -213,6 +227,7 @@ curl -X PUT {{host}}/api/v1/admin/item-categories/33/attributes/ \
 | --- | --- |
 | Biriktirish | ro'yxatga atribut `id` sini qo'shish |
 | Tartibni o'zgartirish | o'sha `id` larni yangi tartibda yuborish |
+| Tezkor filtr | elementga `is_quick_filter` / `max_quick_filters` qo'shish; yuborilmasa, avvalgi qiymati saqlanadi |
 | Ajratish | `id` ni ro'yxatdan olib tashlash |
 | Hammasini ajratish | `{"attributes": []}` |
 
@@ -245,6 +260,8 @@ Mahsulot detalida (`GET products/{id}/`) `attribute_values` massivi keladi. Ro'y
 ```
 
 Bitta mahsulotda bitta atributga bitta qiymat. Birlik mahsulotda saqlanmaydi — `attribute.unit` dan olinadi.
+
+> Mahsulot obyektidagi avvalgi `characteristics` va `filter_data` maydonlari **olib tashlangan** — xususiyatlar faqat `attribute_values` orqali o'qiladi va yoziladi.
 
 ### Yozish — `POST products/`, `PATCH products/{id}/`
 
@@ -294,6 +311,54 @@ Bitta mahsulotda bitta atributga bitta qiymat. Birlik mahsulotda saqlanmaydi —
 
 ---
 
+## 4. Mijoz filtrlari
+
+Mijozdagi (mobil/web) kategoriya filtrlari shu atributlardan avtomatik quriladi — alohida filtr sozlash sahifasi yo'q.
+
+| Admin panelda | Mijozda |
+| --- | --- |
+| `is_filterable: true` va `is_active: true` | atribut biriktirilgan kategoriyalarda filtr bo'lib chiqadi |
+| `value_type: number` | diapazon (min–max) filtri, `unit` bilan |
+| `list`, `text`, `boolean` | belgilash (checkbox) filtri: mahsulotlarda uchragan qiymatlar va ularning soni |
+| Kategoriyadagi tartib | filtrlar tartibi |
+| `is_quick_filter` | ro'yxat ustidagi tezkor chiplar |
+
+- Kategoriya mahsulotlarida qiymati yo'q atribut filtrda ko'rinmaydi.
+- Kategoriyalar ro'yxatidagi `filters_count` — shu kategoriya ostidagi filtrlanadigan atributlar soni.
+- O'zgarishlar (atribut, kategoriya atributlari, mahsulot qiymatlari) mijozda darhol ko'rinadi — filtr keshi avtomatik tozalanadi.
+- `text` atributni filtr qilish mumkin, lekin qiymati deyarli har mahsulotda har xil bo'lsa (model, artikul) foydasiz — bunday atributlarda "Filtr sifatida"ni o'chirib qo'ying.
+
+---
+
+## 5. 1C dan kelgan xususiyatlar
+
+1C mahsulot xususiyatlarini erkin matn sifatida yuboradi (nom + qiymat). Ular `manage.py import_characteristics` buyrug'i bilan atributga aylantiriladi (serverda cron orqali muntazam ishlaydi):
+
+| 1C dagi | Admin panelda |
+| --- | --- |
+| Xususiyat nomi | shu nomli (`name_ru`) atribut; yo'q bo'lsa yaratiladi, `name_uz` = ruscha nusxa |
+| Mahsulot kategoriyasi | atribut shu kategoriyaga biriktiriladi (ro'yxat oxiriga) |
+| Qiymat | mahsulotning atribut qiymati (`value_uz` = ruscha nusxa) |
+
+Yangi atributning turi qiymatlariga qarab aniqlanadi:
+
+| Qiymatlar | Tur |
+| --- | --- |
+| hammasi `да` / `нет` | `boolean` |
+| hammasi "son + bir xil birlik" (`10 А`, `16 А`) | `number`, birlik atributga chiqadi |
+| takrorlanadigan, 20 tadan ko'p bo'lmagan turli qiymat | `list`, variantlar avtomatik yaratiladi |
+| qolganlari | `text` |
+
+- Mahsulotda shu atributning qiymati allaqachon bo'lsa, 1C dagi qiymat uni **almashtirmaydi** — admin panelda kiritilgan qiymat ustun.
+- Admin panelda o'chirilgan qiymat qayta paydo bo'lmaydi (har bir 1C qatori bir marta olinadi).
+- Qiymat atribut turiga to'g'ri kelmasa (masalan `number` atributga matn), u tashlab ketiladi.
+- `list` atributga 1C dan yangi qiymat kelsa, variantlar ro'yxatiga qo'shiladi.
+- Avtomatik yaratilgan atributlar tarjimasiz (o'zbekcha nom va qiymatlar ruscha) — ma'lumotnomada tahrirlab chiqish kerak.
+- "Filtr sifatida" avtomatik yoqiladi; faqat qiymati deyarli har mahsulotda har xil bo'lgan `text` atributlarda (model, artikul) o'chiq.
+- Ishlatilayotgan atributning `value_type` ini o'zgartirib bo'lmaydi, shuning uchun noto'g'ri aniqlangan turni tuzatish uchun backendga murojaat qiling.
+
+---
+
 ## Xatolar
 
 Admin API'da xatolar oddiy DRF formatida (klient API'dagi `{"ok", "error_code"}` o'rami yo'q). Xabar matnlari tilga bog'liq, shuning uchun matnga emas, HTTP status va maydon nomiga tayaning.
@@ -311,7 +376,7 @@ Admin API'da xatolar oddiy DRF formatida (klient API'dagi `{"ok", "error_code"}`
 | Ishlatilayotgan atribut turini o'zgartirish | 400 | `{"value_type": ["Attribute is used in categories or products, its value type can't be changed."]}` |
 | Ishlatilayotgan atributni o'chirish | 400 | `{"detail": "Attribute is used in categories, detach it from them first."}` |
 | Kategoriyada takroriy atribut | 400 | `{"attributes": ["Attributes must be unique."]}` |
-| Mavjud bo'lmagan atributni biriktirish | 400 | `{"attributes": [{"id": "Object with id=999999 does not exist."}]}` |
+| Mavjud bo'lmagan atributni biriktirish | 400 | `{"attributes": ["Attributes [999999] do not exist."]}` |
 | Qiymati bor atributni kategoriyadan ajratish | 400 | `{"attributes": ["Attributes with values in the category's products can't be detached: Мощность."]}` |
 | Mahsulot: atribut kategoriyaga biriktirilmagan | 400 | `{"attribute_values": ["Attributes [10] are not attached to the product's item category."]}` |
 | Mahsulot: atribut takrorlangan | 400 | `{"attribute_values": ["Attributes must be unique."]}` |
@@ -330,5 +395,5 @@ Admin API'da xatolar oddiy DRF formatida (klient API'dagi `{"ok", "error_code"}`
 
 - Atribut javobida avvalgi `item_category` maydoni endi yo'q — o'rniga `item_categories` (faqat o'qish). Atributni yaratish/tahrirlashda kategoriya yuborilmaydi.
 - `is_active: false` atribut mijozga ko'rsatilmaydi (mahsulot detalida kelmaydi). Admin panelda esa uni ham kategoriyaga biriktirish va mahsulotga qiymat kiritish mumkin — backend cheklamaydi.
-- `is_filterable` hozircha faqat saqlanadi — mijoz filtrlariga hali ta'sir qilmaydi.
+- `is_active: false` atribut mijoz filtrlarida ham chiqmaydi.
 - `list` turidagi mahsulot qiymati — variant matnining nusxasi (variant `id` si saqlanmaydi). Variant nomi admin paneldan o'zgartirilsa, mahsulotlardagi qiymat ham yangilanadi.

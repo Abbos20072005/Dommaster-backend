@@ -6,8 +6,7 @@ from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
 from apps.authorization.models import Customer
 from apps.base.models import Banner, Chat, Messages, Notification
-from apps.service.models import Order, Product, ProductAttributeValue, ProductCharacteristics, ProductImage, \
-    Questions, QuestionsReply
+from apps.service.models import Order, Product, ProductAttributeValue, ProductImage, Questions, QuestionsReply
 from apps.service.models.choices import PUBLISH_STATUS_DRAFT, PUBLISH_STATUS_PUBLISHED, PUBLISH_STATUS_REVIEW
 from utils.admin_views import AdminViewMixin
 from ..serializers import TodaySerializer, PENDING, COLLECTING, DELIVERING, CANCELED, STALE_PENDING_ORDERS, \
@@ -113,10 +112,10 @@ def get_catalog():
     active = Q(is_active=True)
     no_translation = Q(name_uz__isnull=True) | Q(name_uz="") | Q(name_ru__isnull=True) | Q(name_ru="")
     no_image = Q(has_image=False)
-    no_characteristics = Q(has_characteristics=False, has_attribute_values=False)
+    # characteristics of a product = its attribute values
+    no_characteristics = Q(has_attribute_values=False)
     return Product.objects.annotate(
         has_image=Exists(ProductImage.objects.filter(product=OuterRef("pk"))),
-        has_characteristics=Exists(ProductCharacteristics.objects.filter(product=OuterRef("pk"))),
         has_attribute_values=Exists(ProductAttributeValue.objects.filter(product=OuterRef("pk"))),
     ).aggregate(
         published=Count("id", filter=Q(publish_status=PUBLISH_STATUS_PUBLISHED)),

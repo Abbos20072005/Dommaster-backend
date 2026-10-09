@@ -2,7 +2,6 @@ import re
 from collections import Counter
 
 from django.contrib.contenttypes.models import ContentType
-from django.core.cache import cache
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.db.models import Count, Q
@@ -11,6 +10,7 @@ from apps.base.models import Banner
 from apps.service.models import (
     AddsBrands, Brand, Comment, Product, ProductAttributeValue, ProductItemCategory, ProductModel, ProductSubCategory,
 )
+from apps.service.product_filters import clear_category_filter_cache
 
 # Mass fixes from the sheet "2. Массовые операции" of the catalog audit (BUILDEX_итоговый_план_исправлений).
 # "row N" below = the row of that sheet.
@@ -455,10 +455,8 @@ class Command(BaseCommand):
         self.stdout.write(f"  Sub category {sub_category_id} deleted: {deleted}")
 
         # update() sends no signals
-        for item_category_id in [target.pk, *old_item_category_ids]:
-            cache.delete(f"product:available_filters:cat:{item_category_id}")
+        clear_category_filter_cache(target.pk, *old_item_category_ids)
 
-        self.warn(f"filters of the moved products: manage.py backfill_filter_data --item-category {target.pk}")
         if sub_category.code:
             self.warn("the sub category came from 1C - the next 1C product sync puts the products back "
                       "until they are moved in 1C too")

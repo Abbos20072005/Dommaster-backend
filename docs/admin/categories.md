@@ -80,7 +80,7 @@ L1 da `product_category` o'rniga `icon` bor; L3 da ota `product_sub_category` (`
 | Mahsulot | `products_count` — shu kategoriya ostidagi barcha mahsulotlar |
 | Sayt | `show_on_site` |
 | Ilova | `show_in_app` |
-| Filtrlar | `filters_count` — ostidagi L3 kategoriyalarning turli (unikal) filtrlari soni |
+| Filtrlar | `filters_count` — ostidagi L3 kategoriyalarga biriktirilgan, "Filtr sifatida" yoqilgan turli (unikal) atributlar soni |
 | Holat | `is_active`: `true` = Faol, `false` = Qoralama |
 
 `code` — 1C kodi (bitta kategoriya = bitta 1C guruh). "1C guruhlari" soni hozircha yo'q.

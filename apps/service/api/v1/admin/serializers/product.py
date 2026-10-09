@@ -1,8 +1,9 @@
 import math
 from django.db import transaction
 from rest_framework import serializers
-from apps.service.models import Product, Brand, ProductModel, ProductBadge, ProductImage, ProductCharacteristics, \
-    ProductAttribute, ProductAttributeValue
+from apps.service.models import Product, Brand, ProductModel, ProductBadge, ProductImage, ProductAttribute, \
+    ProductAttributeValue
+from apps.service.product_filters import clear_category_filter_cache
 from utils.admin_serializers import RelationSerializer
 from .attribute import AttributeShortSerializer
 from .category import ProductItemCategorySerializer
@@ -52,17 +53,6 @@ class ProductImageReorderSerializer(serializers.Serializer):
             [ProductImage(id=pk, position=position) for position, pk in enumerate(self.validated_data["ids"], start=1)],
             ["position"],
         )
-
-
-class ProductCharacteristicSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ProductCharacteristics
-        fields = ("id", "name_uz", "name_ru", "name_en", "value_uz", "value_ru", "value_en",
-                  "unit_uz", "unit_ru", "unit_en")
-        extra_kwargs = {
-            "name_ru": {"required": True, "allow_null": False, "allow_blank": False},
-            "value_ru": {"required": True, "allow_null": False, "allow_blank": False},
-        }
 
 
 class ProductAttributeValueSerializer(serializers.ModelSerializer):
@@ -122,8 +112,8 @@ class ProductSerializer(serializers.ModelSerializer):
     # the sent list replaces the product's manual badges; auto badges are managed by their rules (ignored here)
     badges = ProductBadgeShortSerializer(many=True, required=False)
     product_item_category = ProductItemCategorySerializer(required=False, allow_null=True)
-    characteristics = ProductCharacteristicSerializer(source="product_characteristics", many=True, required=False)
-    # values of the item category's attributes (item-categories/{id}/attributes/); the sent list replaces all
+    # the product's characteristics: values of the item category's attributes (item-categories/{id}/attributes/);
+    # the sent list replaces all
     attribute_values = ProductAttributeValueSerializer(many=True, required=False)
     images = ProductImageSerializer(source="product_image", many=True, read_only=True)
 
@@ -134,11 +124,9 @@ class ProductSerializer(serializers.ModelSerializer):
                   "brand", "product_model", "badges", "product_item_category", "price", "discount_price", "discount",
                   "unit", "quantity",
                   "is_active", "erp_active", "publish_status", "purchasable", "product_code", "articul_code", "barcode", "weight", "length", "width", "height",
-                  "rating", "comments_quantity", "questions_quantity", "filter_data", "characteristics",
+                  "rating", "comments_quantity", "questions_quantity",
                   "attribute_values", "images", "created_at", "updated_at")
-        # filter_data is built from 1C data
-        read_only_fields = ("name", "rating", "comments_quantity", "questions_quantity", "filter_data",
-                            "created_at", "updated_at")
+        read_only_fields = ("name", "rating", "comments_quantity", "questions_quantity", "created_at", "updated_at")
         extra_kwargs = {
             # ru is the default (fallback) language
             "name_ru": {"required": True, "allow_null": False, "allow_blank": False},
@@ -182,17 +170,14 @@ class ProductSerializer(serializers.ModelSerializer):
         return attrs
 
     @staticmethod
-    def _set_characteristics(product, characteristics):
-        product.product_characteristics.all().delete()
-        ProductCharacteristics.objects.bulk_create(
-            ProductCharacteristics(product=product, **item) for item in characteristics
-        )
-
-    @staticmethod
     def _set_attribute_values(product, attribute_values):
         product.attribute_values.all().delete()
+        # bulk_create skips save(): value_number is set here
         ProductAttributeValue.objects.bulk_create(
-            ProductAttributeValue(product=product, **item) for item in attribute_values
+            ProductAttributeValue(
+                product=product, value_number=ProductAttributeValue.number_of(item["attribute"], item["value_ru"]),
+                **item,
+            ) for item in attribute_values
         )
 
     @staticmethod
@@ -202,26 +187,23 @@ class ProductSerializer(serializers.ModelSerializer):
 
     @transaction.atomic
     def create(self, validated_data):
-        characteristics = validated_data.pop("product_characteristics", [])
         attribute_values = validated_data.pop("attribute_values", [])
         badges = validated_data.pop("badges", [])
         product = super().create(validated_data)
-        self._set_characteristics(product, characteristics)
         self._set_attribute_values(product, attribute_values)
         self._set_badges(product, badges)
         return product
 
     @transaction.atomic
     def update(self, instance, validated_data):
-        characteristics = validated_data.pop("product_characteristics", None)
         attribute_values = validated_data.pop("attribute_values", None)
         badges = validated_data.pop("badges", None)
         old_category_id = instance.product_item_category_id
         product = super().update(instance, validated_data)
+        # the product left its old category: the filters of that one change too (the new one is cleared on save)
+        clear_category_filter_cache(old_category_id)
         if badges is not None:
             self._set_badges(product, badges)
-        if characteristics is not None:
-            self._set_characteristics(product, characteristics)
         if attribute_values is not None:
             self._set_attribute_values(product, attribute_values)
         elif product.product_item_category_id != old_category_id:

@@ -26,7 +26,7 @@ class ProductViewSet(AdminModelViewSet):
                                "product_item_category__product_sub_category__product_category") \
             .prefetch_related("badges", "product_image")
         if self.action != "list":
-            qs = qs.prefetch_related("product_characteristics", Prefetch(
+            qs = qs.prefetch_related(Prefetch(
                 "attribute_values", queryset=ProductAttributeValue.objects.select_related("attribute")))
         return qs
 

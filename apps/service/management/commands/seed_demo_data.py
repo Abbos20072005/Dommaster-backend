@@ -7,6 +7,7 @@ from datetime import timedelta
 from django.contrib.auth.hashers import make_password
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.base import ContentFile
+from django.core.management import call_command
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils import timezone
@@ -23,7 +24,7 @@ from apps.service.models import (
     Favourites, Announcements, OrderItem, ProductImage, Comment, CommentReply,
     CommentImages, Service, ProductCharacteristics, ProductItemCategoryFilterSchema,
     ProductFilterNumericValue, Cart, CartItem, Questions, QuestionsReply,
-    RecentlyViewedProducts, ProductVariantGroup, ProductVariantItem,
+    RecentlyViewedProducts, ProductVariantGroup, ProductVariantItem, ProductAttribute,
 )
 
 try:
@@ -126,7 +127,7 @@ class Command(BaseCommand):
             brands = self._create_brands()
             self._create_adds_brands(brands)
             products = self._create_catalog(brands, branches)
-            self._create_filter_schemas_and_values(products)
+            self._create_attributes()
             self._create_variants(products)
             self._create_product_units()
             self._create_tags(products)
@@ -161,7 +162,7 @@ class Command(BaseCommand):
             ProductFilterNumericValue, ProductItemCategoryFilterSchema,
             ProductVariantItem, ProductVariantGroup, ProductCharacteristics,
             ProductImage, ProductRemaining, Product, ProductItemCategory,
-            ProductSubCategory, ProductCategory, Tag, Sale, AddsBrands, Brand,
+            ProductSubCategory, ProductCategory, ProductAttribute, Tag, Sale, AddsBrands, Brand,
             ProductUnit, Announcements, Service, MarketBranch,
             Messages, Chat, LoyaltyCard, Notification, Banner, News, Articles,
             Reviews, Video, Promocodes, DeleteButton, BaseInformation,
@@ -360,34 +361,9 @@ class Command(BaseCommand):
         self.stdout.write(f"Products: {len(products)}")
         return products
 
-    def _create_filter_schemas_and_values(self, products):
-        by_item_category = {}
-        for product in products:
-            by_item_category.setdefault(product.product_item_category, []).append(product)
-
-        count_schemas = 0
-        count_values = 0
-        for item_category, item_products in by_item_category.items():
-            schema, created = ProductItemCategoryFilterSchema.objects.get_or_create(
-                item_category=item_category,
-                key="weight",
-                defaults={
-                    "source_name_ru": "Вес",
-                    "label": "Вес, кг",
-                    "type": "range",
-                    "unit": "кг",
-                    "position": 0,
-                    "is_filterable": True,
-                },
-            )
-            count_schemas += created
-            for product in item_products:
-                _, created = ProductFilterNumericValue.objects.get_or_create(
-                    product=product, schema=schema,
-                    defaults={"value": round(random.uniform(0.5, 25.0), 2)},
-                )
-                count_values += created
-        self.stdout.write(f"Filter schemas: {count_schemas}, filter values: {count_values}")
+    def _create_attributes(self):
+        # the characteristics created above become attributes, attribute values and client filters
+        call_command("import_characteristics", stdout=self.stdout)
 
     def _create_variants(self, products):
         group, _ = ProductVariantGroup.objects.get_or_create(

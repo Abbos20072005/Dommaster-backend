@@ -154,7 +154,7 @@ class ProductUnit(BaseModel):
 
 class ProductAttribute(BaseModel):
     # Global dictionary of structured product characteristics ("Quvvat", "Rang", ...), attached to item
-    # categories; not linked to products yet (they still use the free-form ProductCharacteristics from 1C)
+    # categories; products keep their values in ProductAttributeValue. `is_filterable` = shown as a client filter
     NUMBER, LIST, TEXT, BOOLEAN = "number", "list", "text", "boolean"
     VALUE_TYPE_CHOICES = (
         (NUMBER, "Число"),
@@ -204,6 +204,9 @@ class ProductItemCategoryAttribute(BaseModel):
     attribute = models.ForeignKey(ProductAttribute, on_delete=models.PROTECT, related_name="category_links",
                                   verbose_name="Атрибут")
     position = models.IntegerField(default=0, verbose_name="Позиция")
+    # quick filter chips of the category: the most used values of the attribute (0 = all of them)
+    is_quick_filter = models.BooleanField(default=False, verbose_name="Быстрый фильтр (чип)")
+    max_quick_filters = models.PositiveIntegerField(default=0, verbose_name="Макс. кол-во быстрых фильтров")
 
     def __str__(self):
         return f"{self.item_category} — {self.attribute}"

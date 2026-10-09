@@ -1,3 +1,5 @@
+import math
+
 from ckeditor.fields import RichTextField
 from django.contrib.postgres.indexes import GinIndex
 from django.core.validators import MinValueValidator, MaxValueValidator
@@ -136,11 +138,15 @@ class ProductImage(BaseModel):
 
 
 class ProductCharacteristics(BaseModel):
+    # Raw free-form characteristics as 1C sends them. Customers and the admin API don't read them:
+    # `manage.py import_characteristics` turns them into attribute values (ProductAttributeValue)
     product = models.ForeignKey(Product, blank=True, null=True, related_name="product_characteristics",
                                 on_delete=models.CASCADE, verbose_name="Продукт")
     name = models.CharField(max_length=150, verbose_name="Название")
     unit = models.CharField(max_length=150, blank=True, null=True, verbose_name="Еденица измерения")
     value = models.CharField(max_length=150, verbose_name="Значение")
+    # set once the import command has processed the row (imported or skipped), so it is never taken again
+    imported_at = models.DateTimeField(null=True, blank=True, db_index=True, verbose_name="Перенесено в атрибуты")
 
     def __str__(self):
         return self.name
@@ -158,14 +164,35 @@ class ProductAttributeValue(BaseModel):
     attribute = models.ForeignKey(ProductAttribute, on_delete=models.PROTECT, related_name="product_values",
                                   verbose_name="Атрибут")
     value = models.CharField(max_length=255, verbose_name="Значение")
+    # the value of a `number` attribute as a number (range filters); save() keeps it, bulk_create must set it
+    value_number = models.FloatField(null=True, blank=True, verbose_name="Числовое значение")
 
     def __str__(self):
         return f"{self.product_id} — {self.attribute}"
+
+    @staticmethod
+    def number_of(attribute, value):
+        if attribute.value_type != ProductAttribute.NUMBER:
+            return None
+        try:
+            number = float(value)
+        except (TypeError, ValueError):
+            return None
+        return number if math.isfinite(number) else None
+
+    def save(self, *args, **kwargs):
+        self.value_number = self.number_of(self.attribute, self.value_ru)
+        super().save(*args, **kwargs)
 
     class Meta:
         verbose_name = "Значение атрибута продукта"
         verbose_name_plural = "Значения атрибутов продуктов"
         unique_together = ("product", "attribute")
+        indexes = [
+            # client filters: value counts and ranges of an attribute
+            models.Index(fields=["attribute", "value_ru"], name="idx_attr_value_ru"),
+            models.Index(fields=["attribute", "value_number"], name="idx_attr_value_number"),
+        ]
 
 
 class ProductVariantGroup(BaseModel):
