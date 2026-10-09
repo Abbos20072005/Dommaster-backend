@@ -25,8 +25,12 @@ COLUMN_SUB_CATEGORY = "Подкатегория"
 COLUMN_ITEM_CATEGORY = "Предметная категория"
 COLUMN_BRAND = "Бренд"
 APPLIED_COLUMNS = (COLUMN_NAME, COLUMN_ITEM_CATEGORY, COLUMN_BRAND)
-# the one-sheet workbook ("Все замечания по SKU") calls the item category a group
-COLUMN_ALIASES = {"Группа": COLUMN_ITEM_CATEGORY}
+# the one-sheet workbook ("Все замечания по SKU") calls the item category a group; on the names sheet of the
+# repeated audit ("5_НАЗВАНИЯ") the new name is the suggested one, next to the name the product had at the audit
+COLUMN_ALIASES = {"Группа": COLUMN_ITEM_CATEGORY, "Предлагаемое (авто)": COLUMN_NAME}
+COLUMN_AUDITED_NAME = "Наименование сейчас"
+# written there instead of a name when the audit has no ready wording
+MANUAL_FIX_MARK = "(смысловая правка вручную)"
 
 
 def clean(value):
@@ -158,7 +162,10 @@ class Command(BaseCommand):
     def corrected_name(product, cells):
         name = clean(cells[COLUMN_NAME])
         articul = clean(product["articul_code"])
-        return without_articul(name, articul) if name and articul else name
+        # a suggestion made for the name the product has now is taken as is: a code in it is meant to stay
+        if cells.get(COLUMN_AUDITED_NAME) or not (name and articul):
+            return name
+        return without_articul(name, articul)
 
     def find_new_duplicates(self, edits, products):
         # a corrected name must not make two different products look the same (a copy-paste slip in the sheet);
@@ -181,10 +188,15 @@ class Command(BaseCommand):
         if sheet_name not in workbook.sheetnames:
             raise CommandError(f"No sheet {sheet_name!r}. Sheets: {', '.join(workbook.sheetnames)}")
         rows = workbook[sheet_name].iter_rows()
-        headers = [COLUMN_ALIASES.get(header, header) for header in (clean(cell.value) for cell in next(rows))]
-        missing = [column for column in (COLUMN_ID, *APPLIED_COLUMNS) if column not in headers]
-        if missing:
-            raise CommandError(f"Columns not found on the sheet: {', '.join(missing)}")
+        # a sheet may start with a title and notes, the table begins at the row that has the ID column
+        for row in rows:
+            headers = [COLUMN_ALIASES.get(header, header) for header in (clean(cell.value) for cell in row)]
+            if COLUMN_ID in headers:
+                break
+        else:
+            raise CommandError(f"Column not found on the sheet: {COLUMN_ID}")
+        if not any(column in headers for column in APPLIED_COLUMNS):
+            raise CommandError(f"None of the columns is found on the sheet: {', '.join(APPLIED_COLUMNS)}")
 
         edits = {}
         other_columns = Counter()
@@ -198,6 +210,7 @@ class Command(BaseCommand):
             if cells:
                 # the sub category only helps to tell apart item categories with the same name
                 cells[COLUMN_SUB_CATEGORY] = values.get(COLUMN_SUB_CATEGORY)
+                cells[COLUMN_AUDITED_NAME] = values.get(COLUMN_AUDITED_NAME)
                 edits[int(values[COLUMN_ID])] = cells
         workbook.close()
         return edits, other_columns
@@ -211,8 +224,15 @@ class Command(BaseCommand):
             if not name:
                 self.stats["names skipped (empty)"] += 1
                 self.warn(f"product {product['id']}: empty name, skipped")
+            elif name == MANUAL_FIX_MARK:
+                self.stats["names skipped (left for a manual fix)"] += 1
             elif name == clean(current):
                 self.stats["names already applied"] += 1
+            elif cells[COLUMN_AUDITED_NAME] and clean(cells[COLUMN_AUDITED_NAME]) != clean(current):
+                # the suggestion was made for another name: someone has renamed the product since the audit
+                self.stats["names skipped (changed since the audit)"] += 1
+                self.warn(f"product {product['id']}: the name has changed since the audit "
+                          f"({clean(current)!r}), skipped")
             elif name in self.new_duplicates:
                 self.stats["names skipped (another product would get the same name)"] += 1
                 self.warn(f"product {product['id']}: {name!r} would repeat another product's name, skipped")
