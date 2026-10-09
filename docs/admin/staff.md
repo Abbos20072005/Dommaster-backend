@@ -44,7 +44,7 @@ Swagger: `/swagger/admin/` → **staff**, **auth**.
 | `position` | Lavozim, ixtiyoriy (bo'sh satr bo'lishi mumkin) |
 | `username` * | Login. Faqat lotin harflari, raqamlar va nuqta; kichik harfga o'tkaziladi; unikal. **Faqat yaratishda** — `PATCH`'da yuborilsa e'tiborga olinmaydi |
 | `access_level` | Kirish darajasi: `staff` (Xodim, default) / `super_admin` |
-| `password` * | Faqat `POST staff/` da, javobda qaytmaydi. Kamida 8 belgi, faqat raqamdan iborat yoki juda oddiy bo'lmasligi kerak |
+| `password` * | `POST staff/` da majburiy, `PATCH staff/{id}/` da ixtiyoriy (yuborilsa — yangi parol o'rnatiladi). Javobda qaytmaydi. Kamida 8 belgi, faqat raqamdan iborat yoki juda oddiy bo'lmasligi kerak |
 | `must_change_password` | "Birinchi kirishda parolni almashtirsin". Yaratishda default `true` |
 | `status` | `active` (Faol) / `blocked` (Bloklangan) — faqat o'qiladi, `block/` va `unblock/` orqali o'zgaradi |
 | `block_reason` | `null` / `manual` (admin blokladi) / `failed_attempts` (5 ta xato urinish) |
@@ -68,7 +68,18 @@ Yaratish (`POST staff/` → `201` + obyekt):
 
 "Parol yaratish" tugmasi parolni frontda generatsiya qiladi (backend'da generatsiya faqat `reset-password/` da bor).
 
-O'zgartirish (`PATCH staff/{id}/` — faqat kerakli maydon): `full_name`, `position`, `access_level`, `must_change_password`.
+O'zgartirish (`PATCH staff/{id}/` — faqat kerakli maydon): `full_name`, `position`, `access_level`, `must_change_password`, `password`.
+
+**Parolni almashtirish** — super admin istalgan xodimning, shu jumladan **o'zining** parolini eski parolsiz almashtiradi:
+
+```json
+{ "password": "New-pass-991" }
+```
+
+- `password` yuborilmasa parol o'zgarmaydi.
+- `must_change_password` o'z-o'zidan o'zgarmaydi — kerak bo'lsa birga yuboring (`"must_change_password": true`).
+- Tokenlar o'zgarmaydi: o'z parolini almashtirgan super admin tizimdan chiqib ketmaydi.
+- Blokni ochmaydi, xato urinishlar hisoblagichini nolga tushirmaydi.
 
 O'chirish: `DELETE staff/{id}/` → `204`. Xodimning buyurtma izohlari qoladi (`author: null`). Odatda o'chirish o'rniga bloklash tavsiya etiladi.
 

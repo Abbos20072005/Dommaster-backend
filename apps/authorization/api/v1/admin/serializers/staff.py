@@ -56,11 +56,13 @@ class StaffSerializer(serializers.ModelSerializer):
     failed_login_attempts = serializers.IntegerField(source="staff_profile.failed_login_attempts", read_only=True)
     created_by = StaffShortSerializer(source="staff_profile.created_by", read_only=True, allow_null=True)
     created_at = serializers.DateTimeField(source="date_joined", read_only=True)
+    # on update: sets a new password for the staff (the super admin's own account too)
+    password = serializers.CharField(max_length=128, write_only=True, required=False, trim_whitespace=False)
 
     class Meta:
         model = User
         fields = ("id", "username", "full_name", "position", "access_level", "must_change_password", "status",
-                  "block_reason", "failed_login_attempts", "last_login", "created_by", "created_at")
+                  "block_reason", "failed_login_attempts", "last_login", "created_by", "created_at", "password")
         # login can't be changed after creation
         read_only_fields = ("username", "last_login")
 
@@ -70,12 +72,21 @@ class StaffSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("You cannot change your own access level")
         return value
 
+    def validate(self, attrs):
+        if "password" in attrs:
+            validate_staff_password(attrs["password"], self.instance)
+        return attrs
+
     @transaction.atomic
     def update(self, instance, validated_data):
         access_level = validated_data.get("access_level")
         if access_level is not None:
             instance.is_superuser = access_level == StaffProfile.AccessLevel.SUPER_ADMIN
             instance.save(update_fields=["is_superuser"])
+
+        if "password" in validated_data:
+            instance.set_password(validated_data["password"])
+            instance.save(update_fields=["password"])
 
         profile_data = validated_data.get("staff_profile")
         if profile_data:
@@ -93,7 +104,6 @@ class StaffCreateSerializer(StaffSerializer):
     must_change_password = serializers.BooleanField(source="staff_profile.must_change_password", default=True)
 
     class Meta(StaffSerializer.Meta):
-        fields = StaffSerializer.Meta.fields + ("password",)
         read_only_fields = ("last_login",)
 
     def validate_username(self, value):
