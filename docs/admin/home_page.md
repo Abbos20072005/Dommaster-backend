@@ -147,9 +147,18 @@ Blok yoki qoida o'zgargandan keyin `has_changes` ni yangilash uchun `GET home-pa
 
 ---
 
+## Mijozga (sayt / ilova) nima chiqadi
+
+Nashr qilingan versiya mijozga `GET /api/v1/home/?platform=site|ios|android` orqali beriladi ([docs/mobile/home_page.md](../mobile/home_page.md)).
+
+- Qoralamadagi o'zgarishlar "Nashr qilish" gacha mijozga ko'rinmaydi; nashrdan keyin darhol ko'rinadi.
+- Mijozga faqat ko'rsatadigan narsasi bor bloklar chiqadi. `status = visible` bo'lsa ham blok **chiqmaydi**, agar: shu platformada o'chirilgan; `items_count = 0` (faol banner yo'q, "Bosh sahifada" belgilangan brend yo'q, ...); manbasi o'chirilgan (banner / teg / aksiya) yoki aksiya yashirilgan.
+- `rule_hidden` blok chiqmaydi; mahsulotlar soni `min_products` ga yetishi bilan o'zi qaytadi (qayta nashr shart emas — sanoq jonli).
+- Bannerlar, kategoriyalar, brendlar, mahsulotlar tarkibi jonli olinadi (5 daqiqagacha kesh), nashr faqat bloklar ro'yxati, tartibi, sozlamalari va qoidalarni muzlatadi.
+- Ilovaning hozirgi versiyasi eski endpointlardan (`main/` va boshqalar) foydalanadi — ular o'zgarmagan. Yangi endpointga o'tgandan keyingina bu sahifadagi sozlamalar ilovaga ta'sir qiladi.
+
 ## Hozircha yo'q
 
-- **Mijoz API'si** (sayt / ilova) bu bloklarni hali o'qimaydi — bosh sahifa eski tartibda (`main/` va alohida endpointlar) ishlayapti. Nashr qilingan versiya bazada saqlanadi, lekin tashqariga chiqarilmagan.
 - `hide_stale_price` — mahsulotda "1C narxi qachon yangilangan" degan vaqt saqlanmaydi, shuning uchun filtrlash imkoni yo'q.
 - "Oldindan ko'rish" / "Jonli ko'rinish" uchun alohida endpoint yo'q — bloklar tarkibi mavjud endpointlardan olinadi (`banners/?placement=`, `products/?badge=`, ...).
-- Boshlang'ich holat: migratsiya hozirgi bosh sahifani (8 ta blok) yaratadi; birinchi "Nashr qilish" gacha `published_at = null`, `has_changes = true`.
+- Boshlang'ich holat: migratsiya hozirgi bosh sahifani (8 ta blok) yaratadi va uni nashr qilingan versiya qilib qo'yadi — birinchi "Nashr qilish" gacha `published_at = null`, `has_changes = false`.

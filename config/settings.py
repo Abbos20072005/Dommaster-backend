@@ -372,6 +372,7 @@ SPECTACULAR_SETTINGS = {
         "BannerPlacementEnum": "apps.base.models.Banner.PLACEMENT_CHOICES",
         "BannerStatusEnum": "apps.base.models.Banner.STATUS_CHOICES",
         "HomeBlockStatusEnum": "apps.service.models.HomeBlock.STATUS_CHOICES",
+        "HomeBlockTypeEnum": "apps.service.models.HomeBlock.TYPE_CHOICES",
     },
 }
 

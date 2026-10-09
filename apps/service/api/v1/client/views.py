@@ -33,7 +33,10 @@ from apps.base.api.v1.client.serializers import BannerSerializer
 from apps.base.telegram import send_comment_to_telegram, send_question_to_telegram
 from utils.pyment_link import generate_link
 from apps.payment.services_pay.auth_services import AtmosAuthService, AtmosHoldService
+from apps.service import home
 from apps.service.models import (
+    HomeBlock,
+    HomePage,
     ProductCategory,
     ProductSubCategory,
     ProductItemCategory,
@@ -116,6 +119,7 @@ from .serializers import (
     ProductUpdateSerializer,
     AvailableFilterSerializer,
     QuickFilterSerializer,
+    HomeLayoutBlockSerializer,
 )
 
 
@@ -229,6 +233,84 @@ class MainPageViewSet(ViewSet):
                 banner_index += 1
 
         cache.set(cache_key, result, timeout=1000)
+        return Response(data={"result": result, "ok": True}, status=status.HTTP_200_OK)
+
+
+class HomeViewSet(ViewSet):
+    @extend_schema(
+        summary="Home page blocks",
+        description="Published blocks of the home page, top to bottom. Only the blocks that have something to show "
+                    "on the platform are returned. Products of a product block: `home/blocks/{id}/products/`.",
+        parameters=[
+            OpenApiParameter(name="platform", location=OpenApiParameter.QUERY, type=OpenApiTypes.STR,
+                             enum=list(home.PLATFORMS)),
+        ],
+        responses={200: HomeLayoutBlockSerializer(many=True)},
+        tags=["Main"],
+    )
+    def blocks(self, request):
+        platform = request.query_params.get("platform")
+        if platform not in home.PLATFORMS:
+            platform = None
+        language = request.META.get("HTTP_ACCEPT_LANGUAGE")
+        cache_key = home.layout_cache_key(platform, language if language in home.LANGUAGES else "ru")
+
+        cached_data = cache.get(cache_key)
+        if cached_data is not None:
+            return Response(data={"result": cached_data, "ok": True}, status=status.HTTP_200_OK)
+
+        rules, blocks = home.published_page(HomePage.load())
+        shown = []
+        for block in blocks:
+            block.content = home.block_content(block, rules, platform)
+            if block.content is not None:
+                shown.append(block)
+        data = HomeLayoutBlockSerializer(shown, many=True, context={"request": request}).data
+        cache.set(cache_key, data, timeout=home.LAYOUT_CACHE_TIMEOUT)
+        return Response(data={"result": data, "ok": True}, status=status.HTTP_200_OK)
+
+    @extend_schema(
+        summary="Products of a home page block",
+        description="Products of a published product block (badge_products, sale_products, new_products, "
+                    "bestsellers, all_products), display rules applied. `all_products` comes in random order "
+                    "fixed by `seed` (the same way as `products/`); for the other blocks `seed` is null.",
+        parameters=[
+            OpenApiParameter(name="page", location=OpenApiParameter.QUERY, description="Page",
+                             type=OpenApiTypes.INT),
+            OpenApiParameter(name="page_size", location=OpenApiParameter.QUERY, description="Page size",
+                             type=OpenApiTypes.INT),
+            OpenApiParameter(name="seed", location=OpenApiParameter.QUERY, type=OpenApiTypes.INT,
+                             description="all_products: seed of the random order (from the first page response)"),
+        ],
+        responses={200: ProductSerializer(many=True)},
+        tags=["Main"],
+    )
+    def block_products(self, request, pk):
+        param_serializer = ProductListParamSerializer(data=request.query_params, context={"request": request})
+        if not param_serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=param_serializer.errors)
+
+        rules, block = home.published_block(HomePage.load(), pk)
+        if not block or block.type not in HomeBlock.PRODUCT_TYPES or home.block_content(block, rules) is None:
+            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
+
+        products = home.block_products(block, rules)
+        seed = None
+        if block.type == HomeBlock.ALL_PRODUCTS:
+            seed = param_serializer.validated_data.get("seed")
+            if seed is None:
+                seed = secrets.randbelow(2 ** 31)
+            products = products.annotate(
+                _random_order=MD5(Concat(Cast("id", CharField()), Value(f":{seed}"), output_field=CharField()))
+            ).order_by("_random_order")
+
+        result = get_products_paginator(
+            response_data=get_optimized_product_qs(products, request),
+            page=param_serializer.validated_data.get("page"),
+            page_size=param_serializer.validated_data.get("page_size"),
+            context={"request": request},
+        )
+        result["seed"] = seed
         return Response(data={"result": result, "ok": True}, status=status.HTTP_200_OK)
 
 

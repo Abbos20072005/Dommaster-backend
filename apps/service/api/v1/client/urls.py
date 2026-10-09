@@ -11,6 +11,7 @@ from .views import (
     OrderViewSet,
     ServiceViewSet,
     MainPageViewSet,
+    HomeViewSet,
 )
 
 urlpatterns = [
@@ -174,6 +175,12 @@ urlpatterns = [
     ),
     path(
         "main/", MainPageViewSet.as_view({"get": "homepage_data"}), name="homepage_data"
+    ),
+    path("home/", HomeViewSet.as_view({"get": "blocks"}), name="home_blocks"),
+    path(
+        "home/blocks/<int:pk>/products/",
+        HomeViewSet.as_view({"get": "block_products"}),
+        name="home_block_products",
     ),
     path(
         "most/search/",

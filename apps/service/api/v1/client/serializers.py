@@ -1,5 +1,6 @@
 from django.db.models import OuterRef, Subquery
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
 from decimal import Decimal, InvalidOperation
 import re
 from apps.authorization.api.v1.client.serializers import CustomerSerializer, CustomerAddressesSerializer
@@ -7,11 +8,11 @@ from apps.service.models import Product, ProductCategory, ProductItemCategory, P
     Order, OrderItem, Brand, Sale, AddsBrands, Favourites, Cart, CartItem, ProductCharacteristics, Questions, \
     RecentlyViewedProducts, Service, CommentReply, CommentImages, QuestionsReply, \
     ProductVariantGroup, ProductVariantItem, ProductItemCategoryFilterSchema, ProductAttribute, \
-    ProductItemCategoryAttribute
+    ProductItemCategoryAttribute, HomeBlock
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from config import settings
-from apps.base.api.v1.client.serializers import PromocodeSerializer, MarketBranchSerializer
+from apps.base.api.v1.client.serializers import PromocodeSerializer, MarketBranchSerializer, BannerSerializer
 from apps.base.models import MarketBranch
 
 
@@ -1163,3 +1164,92 @@ class QuestionsUpdateSerializer(serializers.ModelSerializer):
             "id",
             "question"
         )
+
+
+class HomeLayoutNameSerializer(TranslatedSerializerMixin, serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.SerializerMethodField()
+
+    def get_name(self, obj) -> str:
+        return getattr(obj, f"name_{self.get_language()}", None) or obj.name_ru or obj.name
+
+
+class HomeLayoutCategorySerializer(HomeLayoutNameSerializer):
+    icon = serializers.ImageField()
+    image = serializers.ImageField()
+
+
+class HomeLayoutBrandSerializer(HomeLayoutNameSerializer):
+    image = serializers.ImageField()
+
+
+class HomeLayoutBadgeSerializer(HomeLayoutNameSerializer):
+    color = serializers.CharField()
+
+
+class HomeLayoutPageSerializer(serializers.Serializer):
+    title = serializers.CharField()
+    path = serializers.CharField()
+
+
+class HomeLayoutBlockSerializer(TranslatedSerializerMixin, serializers.Serializer):
+    """A published home page block. `block.content` comes from apps.service.home.block_content();
+    the keys the block type does not use are null."""
+    id = serializers.IntegerField()
+    type = serializers.ChoiceField(choices=HomeBlock.TYPE_CHOICES)
+    title = serializers.SerializerMethodField()
+    banners = serializers.SerializerMethodField(help_text="slider")
+    banner = serializers.SerializerMethodField(help_text="banner")
+    categories = serializers.SerializerMethodField(help_text="categories")
+    brands = serializers.SerializerMethodField(help_text="brands")
+    pages = serializers.SerializerMethodField(help_text="pages")
+    badge = serializers.SerializerMethodField(help_text="badge_products")
+    sale = serializers.SerializerMethodField(help_text="sale_products")
+    days = serializers.IntegerField(allow_null=True, help_text="new_products: added within the last N days")
+    products_count = serializers.SerializerMethodField(
+        help_text="Product blocks: number of products in home/blocks/<id>/products/")
+
+    def _nested(self, block, key, serializer, many=False):
+        value = block.content.get(key)
+        if value is None:
+            return None
+        return serializer(value, many=many, context=self.context).data
+
+    def get_title(self, block) -> str:
+        return getattr(block, f"title_{self.get_language()}", None) or block.title_ru
+
+    @extend_schema_field(BannerSerializer(many=True, allow_null=True))
+    def get_banners(self, block):
+        return self._nested(block, "banners", BannerSerializer, many=True)
+
+    @extend_schema_field(BannerSerializer(allow_null=True))
+    def get_banner(self, block):
+        return self._nested(block, "banner", BannerSerializer)
+
+    @extend_schema_field(HomeLayoutCategorySerializer(many=True, allow_null=True))
+    def get_categories(self, block):
+        return self._nested(block, "categories", HomeLayoutCategorySerializer, many=True)
+
+    @extend_schema_field(HomeLayoutBrandSerializer(many=True, allow_null=True))
+    def get_brands(self, block):
+        return self._nested(block, "brands", HomeLayoutBrandSerializer, many=True)
+
+    @extend_schema_field(HomeLayoutPageSerializer(many=True, allow_null=True))
+    def get_pages(self, block):
+        if "pages" not in block.content:
+            return None
+        language = self.get_language()
+        return [{"title": page.get(f"title_{language}") or page["title_ru"], "path": page["path"]}
+                for page in block.content["pages"]]
+
+    @extend_schema_field(HomeLayoutBadgeSerializer(allow_null=True))
+    def get_badge(self, block):
+        return self._nested(block, "badge", HomeLayoutBadgeSerializer)
+
+    @extend_schema_field(SaleSerializer(allow_null=True))
+    def get_sale(self, block):
+        return self._nested(block, "sale", SaleSerializer)
+
+    @extend_schema_field(serializers.IntegerField(allow_null=True))
+    def get_products_count(self, block):
+        return block.content.get("products_count")
