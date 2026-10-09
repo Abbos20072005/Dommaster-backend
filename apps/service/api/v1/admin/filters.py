@@ -2,7 +2,7 @@ import django_filters
 from django.db.models import Exists, OuterRef
 from apps.service.models import AddsBrands, Brand, PartnerBrand, ProductModel, ProductBadge, ProductCategory, \
     ProductSubCategory, ProductItemCategory, ProductAttribute, Order, Product, Comment, CommentReply, Questions, \
-    QuestionsReply, ORDER_STATUS, Sale
+    QuestionsReply, ORDER_STATUS, Sale, HomeBlock
 
 
 class OrderFilter(django_filters.FilterSet):
@@ -45,7 +45,7 @@ class BrandFilter(django_filters.FilterSet):
 
     class Meta:
         model = Brand
-        fields = ("is_visible", "country")
+        fields = ("is_visible", "show_on_home", "country")
 
 
 class PartnerBrandFilter(django_filters.FilterSet):
@@ -179,3 +179,15 @@ class QuestionReplyFilter(django_filters.FilterSet):
     class Meta:
         model = QuestionsReply
         fields = ("question", "customer", "is_admin", "is_visible")
+
+
+class HomeBlockFilter(django_filters.FilterSet):
+    # the tab of the page: blocks shown on the site / in the app
+    channel = django_filters.ChoiceFilter(choices=(("site", "site"), ("app", "app")), method="filter_channel")
+
+    class Meta:
+        model = HomeBlock
+        fields = ("type", "is_visible", "show_on_site", "show_in_app")
+
+    def filter_channel(self, queryset, name, value):
+        return queryset.filter(**{"show_on_site" if value == "site" else "show_in_app": True})

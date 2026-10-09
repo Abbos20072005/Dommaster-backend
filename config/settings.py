@@ -368,6 +368,10 @@ SPECTACULAR_SETTINGS = {
     # `status` exists on other serializers with other choices; without a name it gets a hashed one
     "ENUM_NAME_OVERRIDES": {
         "StaffStatusEnum": "apps.authorization.models.StaffProfile.Status",
+        # used by more than one serializer
+        "BannerPlacementEnum": "apps.base.models.Banner.PLACEMENT_CHOICES",
+        "BannerStatusEnum": "apps.base.models.Banner.STATUS_CHOICES",
+        "HomeBlockStatusEnum": "apps.service.models.HomeBlock.STATUS_CHOICES",
     },
 }
 

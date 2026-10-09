@@ -11,6 +11,7 @@ from .cart import Cart, CartItem, Favourites, RecentlyViewedProducts
 from .order import Manager, Order, OrderItem, OrderComment
 from .outbox import OrderOutboxEvent
 from .feedback import Comment, CommentReply, CommentImages, Questions, QuestionsReply
+from .home import HomeBlock, HomePage
 
 __all__ = [
     "ORDER_STATUS", "PAYMENT_STATUS", "DELIVERY_TYPE", "PAYMENT_TYPE", "CASH_PAYMENT_METHOD",
@@ -24,4 +25,5 @@ __all__ = [
     "Cart", "CartItem", "Favourites", "RecentlyViewedProducts",
     "Manager", "Order", "OrderItem", "OrderComment", "OrderOutboxEvent",
     "Comment", "CommentReply", "CommentImages", "Questions", "QuestionsReply",
+    "HomeBlock", "HomePage",
 ]

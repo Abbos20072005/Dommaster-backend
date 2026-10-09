@@ -28,6 +28,7 @@ Swagger: `/swagger/admin/` → **brands**.
   "country": "Germaniya",
   "image": "https://.../media/brand/image/bosch.png",
   "is_visible": true,
+  "show_on_home": false,
   "code": "000000045",
   "products_count": 318,
   "created_at": "2026-10-02T12:28:41",
@@ -43,6 +44,7 @@ Swagger: `/swagger/admin/` → **brands**.
 | `country` | mamlakat — oddiy matn (bitta maydon, tarjimasiz), ixtiyoriy, 100 belgigacha; bo'sh = `""` |
 | `image` * | logotip, yaratishda majburiy (multipart) |
 | `is_visible` | default `true` |
+| `show_on_home` | "Bosh sahifada" belgisi, default `false`. Bosh sahifaning `brands` bloki shu belgili (va `is_visible`) brendlarni sanaydi — [home_page.md](home_page.md) |
 | `code` | 1C kodi, unikal, ixtiyoriy (bo'sh → `null`) |
 
 Faqat o'qiladi: `id`, `name` (joriy tildagi nom), `products_count`, `created_at`, `updated_at`.
@@ -55,7 +57,7 @@ Rasm o'zgarmasa `PATCH` ni JSON bilan yuborish mumkin:
 
 O'chirish: mahsuloti bor brend o'chirilmaydi → `400 {"detail": "Brand has products, hide it instead (is_visible=false)."}`.
 
-> `description` va `country` hozircha faqat admin API'da — mijoz (sayt / ilova) API'lariga chiqarilmagan.
+> `description`, `country` va `show_on_home` hozircha faqat admin API'da — mijoz (sayt / ilova) API'lariga chiqarilmagan.
 
 ---
 
@@ -64,5 +66,5 @@ O'chirish: mahsuloti bor brend o'chirilmaydi → `400 {"detail": "Brand has prod
 `GET brands/?page=&page_size=`
 
 - Qidiruv: `?search=` (nomi uz/ru/en, `code`, `country`)
-- Filtrlar: `is_visible`, `country` (aniq mos kelishi kerak), `has_products`
+- Filtrlar: `is_visible`, `show_on_home`, `country` (aniq mos kelishi kerak), `has_products`
 - Tartib: `?ordering=` `id`, `name`, `country`, `products_count`, `created_at`, `updated_at` (teskari: `-name`)

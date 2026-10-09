@@ -17,6 +17,10 @@ from .badge import ProductBadgeSerializer
 from .attribute import ProductAttributeOptionSerializer, ProductAttributeSerializer, AttributeShortSerializer, \
     CategoryAttributeSerializer, ItemCategoryAttributesSerializer
 from .sale import SaleProductSerializer, SaleListSerializer, SaleSerializer
+from .home import (
+    HomeBlockBannerSerializer, HomeBlockSaleSerializer, HomeBlockPageSerializer, HomeBlockSerializer,
+    HomeBlockReorderSerializer, HomePageSerializer, HomePagePublishSerializer,
+)
 from .feedback import FeedbackCustomerSerializer, FeedbackProductSerializer, CommentImageSerializer, \
     CommentReplyShortSerializer, QuestionReplyShortSerializer, CommentListSerializer, CommentSerializer, \
     QuestionListSerializer, QuestionSerializer, ReplyCommentSerializer, ReplyQuestionSerializer, ReplyBaseSerializer, \
@@ -76,4 +80,6 @@ __all__ = [
     "SalesPaymentMethodSerializer", "SalesDeliveryTypeSerializer", "SalesProductSerializer",
     "SalesTopProductSerializer", "SalesRefundedProductSerializer", "SalesCohortSerializer", "SalesCohortsSerializer",
     "SalesAnalyticsSerializer",
+    "HomeBlockBannerSerializer", "HomeBlockSaleSerializer", "HomeBlockPageSerializer", "HomeBlockSerializer",
+    "HomeBlockReorderSerializer", "HomePageSerializer", "HomePagePublishSerializer",
 ]

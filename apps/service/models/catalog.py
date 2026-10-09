@@ -11,6 +11,8 @@ class Brand(BaseModel):
     country = models.CharField(max_length=100, blank=True, verbose_name="Страна")
     image = models.ImageField(upload_to="brand/image/", verbose_name="Изображение")
     is_visible = models.BooleanField(default=True, verbose_name="Виден")
+    # picked for the "brands" block of the home page (HomeBlock); the client brand list does not use it yet
+    show_on_home = models.BooleanField(default=False, verbose_name="На главной странице")
     code = models.CharField(max_length=50, unique=True, null=True, blank=True, verbose_name="Код из 1С")
 
     def __str__(self):
