@@ -273,16 +273,22 @@ def excluded_product_ids(viewer, now):
 
 
 def block_pattern(personal, neighbour):
-    """What each of the BLOCK places of the feed is filled from, the kinds spread evenly.
-    7 personal with 1 neighbour: top top top popular top top popular top neighbour popular."""
-    pattern, taken = [], 0
-    for place in range(BLOCK):
-        if math.ceil((place + 1) * personal / BLOCK) == math.ceil(place * personal / BLOCK):
-            pattern.append("popular")
-            continue
-        is_neighbour = (taken + 1) * neighbour // personal > taken * neighbour // personal
-        pattern.append("neighbour" if is_neighbour else "top")
-        taken += 1
+    """What each of the BLOCK places of the feed is filled from, the personal ones spread evenly.
+    7 personal with 1 neighbour: top neighbour top popular top top popular top top popular.
+    A neighbour goes into the middle of the longest run of "top": a profile of one category cannot fill three
+    places in a row (MAX_RUN), and would lose the third one."""
+    pattern = ["popular" if math.ceil((place + 1) * personal / BLOCK) == math.ceil(place * personal / BLOCK)
+               else "top" for place in range(BLOCK)]
+    for _ in range(neighbour):
+        runs, start = [], None
+        for place, kind in enumerate([*pattern, None]):
+            if kind == "top" and start is None:
+                start = place
+            elif kind != "top" and start is not None:
+                runs.append((place - start, start))
+                start = None
+        length, start = max(runs, key=lambda run: (run[0], -run[1]))
+        pattern[start + length // 2] = "neighbour"
     return pattern
 
 
