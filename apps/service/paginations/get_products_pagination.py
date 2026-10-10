@@ -1,7 +1,8 @@
 from apps.service.api.v1.client.serializers import ProductSerializer
 from django.core.paginator import Paginator
 
-def get_products_paginator(context: dict, response_data ,page: int, page_size: int):
+def get_products_paginator(context: dict, response_data ,page: int, page_size: int,
+                           serializer_class=ProductSerializer):
     paginator = Paginator(response_data, page_size)
     products_page = paginator.get_page(page)
     total_count = paginator.count
@@ -15,6 +16,6 @@ def get_products_paginator(context: dict, response_data ,page: int, page_size: i
         "first": not products_page.has_previous(),
         "last": not products_page.has_next(),
         "empty": total_count == 0,
-        "content": ProductSerializer(products_page, many=True, context=context).data,
+        "content": serializer_class(products_page, many=True, context=context).data,
     }
     return responses

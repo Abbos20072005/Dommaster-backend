@@ -125,6 +125,8 @@ GET home-page/
   "hide_out_of_stock": true,
   "hide_stale_price": true,
   "min_products": 4,
+  "personal_feed_enabled": true,
+  "personal_feed_holdout_percent": 10,
   "published_at": "2026-09-28T18:20:00",
   "published_by": { "id": 3, "username": "shakhzod", "full_name": "Shakhzod A." },
   "has_changes": false
@@ -136,10 +138,12 @@ GET home-page/
 | `hide_out_of_stock` | "Qoldig'i yo'q mahsulotlarni bloklarda yashirish" — qoldig'i 0 mahsulotlar `items_count` ga kirmaydi |
 | `hide_stale_price` | "Narxi eskirgan mahsulotlarni yashirish" — **faqat saqlanadi**, hozircha hech narsaga ta'sir qilmaydi (pastga qarang) |
 | `min_products` | "Blokdagi minimal mahsulotlar soni" — mos mahsuloti bundan kam mahsulotli blok `rule_hidden` bo'ladi |
+| `personal_feed_enabled` | shaxsiy lenta (`products/recommended/`) o'chirgichi. `false` — endpoint oddiy tasodifiy lentani qaytaradi. **Nashrga bog'liq emas**: saqlangan zahoti kuchga kiradi, `has_changes` ga ta'sir qilmaydi |
+| `personal_feed_holdout_percent` | nazorat guruhi, 0–100 (%): shuncha foydalanuvchi shaxsiy lenta o'rniga tasodifiy lentani oladi (lenta foyda berayotganini solishtirish uchun). Test akkaunt shu guruhga tushib qolsa shaxsiy lentani ko'rmaydi — tekshiruv paytida `0` qiling. Bu ham darhol kuchga kiradi |
 | `published_at`, `published_by` | "Oxirgi nashr"; hali nashr qilinmagan bo'lsa `null` |
 | `has_changes` | qoralama (bloklar + qoidalar) nashr qilingan versiyadan farq qiladi → "Nashr qilish" tugmasi faol |
 
-`PATCH home-page/` — faqat uchta qoida yoziladi: `{"min_products": 6}`.
+`PATCH home-page/` — uchta qoida va shaxsiy lentaning ikki sozlamasi yoziladi: `{"min_products": 6}`.
 
 `POST home-page/publish/` — body kerak emas. Joriy bloklar va qoidalarni nashr qilingan versiya sifatida saqlaydi, javobda o'sha `home-page/` obyekti (`has_changes=false`).
 

@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.validators import MaxValueValidator
 from django.db import models
 
 from abstract_model.base_model import BaseModel
@@ -74,6 +75,13 @@ class HomePage(BaseModel):
     hide_stale_price = models.BooleanField(default=True, verbose_name="Скрывать товары с устаревшей ценой")
     # a product block with fewer matching products hides itself
     min_products = models.PositiveIntegerField(default=4, verbose_name="Минимум товаров в блоке")
+
+    # the personal feed (`products/recommended/`, apps/service/feed.py). Not a part of the published version:
+    # both apply at once. Off = the endpoint returns the random feed; holdout = the share of visitors who keep
+    # getting the random feed, to compare with
+    personal_feed_enabled = models.BooleanField(default=True, verbose_name="Персональная лента включена")
+    personal_feed_holdout_percent = models.PositiveSmallIntegerField(
+        default=10, validators=[MaxValueValidator(100)], verbose_name="Персональная лента: контрольная группа, %")
 
     published_at = models.DateTimeField(null=True, blank=True, verbose_name="Последняя публикация")
     published_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,

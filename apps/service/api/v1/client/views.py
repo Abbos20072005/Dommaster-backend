@@ -23,6 +23,7 @@ from django.core.cache import cache
 from django.contrib.postgres.search import TrigramSimilarity
 from django.db.models.functions import Greatest
 
+import logging
 import secrets
 from django.db import transaction
 from apps.base.models import Promocodes
@@ -32,7 +33,7 @@ from apps.base.api.v1.client.serializers import BannerSerializer
 from apps.base.telegram import send_comment_to_telegram, send_question_to_telegram
 from utils.pyment_link import generate_link
 from apps.payment.services_pay.auth_services import AtmosAuthService, AtmosHoldService
-from apps.service import home
+from apps.service import feed, home
 from apps.service.models import (
     HomeBlock,
     HomePage,
@@ -51,6 +52,7 @@ from apps.service.models import (
     Order,
     OrderItem,
     RecentlyViewedProducts,
+    FeedImpression,
     Service,
     CommentReply,
     CommentImages,
@@ -65,11 +67,13 @@ from .serializers import (
     ProductSubCategorySerializer,
     ProductItemCategorySerializer,
     ProductSerializer,
+    RecommendedProductSerializer,
     CommentSerializer,
     BrandSerializer,
     FilterSerializer,
     PaginationSerializer,
     ProductListParamSerializer,
+    RecommendedParamSerializer,
     BrandDetailSerializer,
     SaleSerializer,
     AddsBrandsSerializer,
@@ -120,6 +124,8 @@ from .serializers import (
     QuickFilterSerializer,
     HomeLayoutBlockSerializer,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def get_optimized_product_qs(base_qs, request):
@@ -183,6 +189,35 @@ def get_optimized_product_qs(base_qs, request):
     )
 
     return qs
+
+
+def recommended_feed_page(request, viewer, page, page_size, seed):
+    """A page of the personal feed in the shape of `get_products_paginator` (+ `personalized`)."""
+    snapshot = feed.snapshot(viewer, seed)
+    total, items = feed.page_items(snapshot, seed, page, page_size)
+    products = get_optimized_product_qs(
+        Product.objects.filter(id__in=[product_id for product_id, _ in items], is_active=True), request
+    ).in_bulk()
+    content = []
+    for product_id, source in items:
+        # deactivated after the feed was built: the page comes one product shorter
+        product = products.get(product_id)
+        if product:
+            product._rec_source = source
+            content.append(product)
+    total_pages = -(-total // page_size)
+    return {
+        "totalElements": total,
+        "totalPages": total_pages,
+        "size": page_size,
+        "number": page,
+        "numberOfElements": len(content),
+        "first": page == 1,
+        "last": page >= total_pages,
+        "empty": total == 0,
+        "content": RecommendedProductSerializer(content, many=True, context={"request": request}).data,
+        "personalized": snapshot["personalized"],
+    }
 
 
 class MainPageViewSet(ViewSet):
@@ -854,13 +889,7 @@ class ProductViewSet(ViewSet):
         if seed is None:
             seed = secrets.randbelow(2 ** 31)
 
-        # order_by("?") reshuffles on every request, so pages would repeat products
-        base_qs = Product.objects.filter(is_active=True).annotate(
-            _random_order=MD5(
-                Concat(Cast("id", CharField()), Value(f":{seed}"), output_field=CharField())
-            )
-        ).order_by("_random_order")
-        products = get_optimized_product_qs(base_qs, request)
+        products = get_optimized_product_qs(feed.random_products(seed), request)
 
         result = get_products_paginator(
             response_data=products,
@@ -869,6 +898,66 @@ class ProductViewSet(ViewSet):
             context={"request": request},
         )
         result["seed"] = seed
+        return Response(data={"result": result, "ok": True}, status=status.HTTP_200_OK)
+
+    @extend_schema(
+        summary="Products list (personal feed)",
+        description=(
+            "The home feed for this visitor: products of the item categories they are interested in "
+            "(purchases, cart, favourites, searches, views), mixed with popular ones, then the rest of the catalog "
+            "in random order. Same response as `products/` plus `feed_request_id`, `personalized` and "
+            "`rec_source` of every product. Paged by `seed` the same way as `products/`. Without signals, "
+            "when the feed is switched off or fails, the visitor gets popular products / the random feed: "
+            "never an error, never an empty list."
+        ),
+        parameters=[
+            OpenApiParameter(name="page", location=OpenApiParameter.QUERY, description="Page",
+                             type=OpenApiTypes.INT),
+            OpenApiParameter(name="page_size", location=OpenApiParameter.QUERY, description="Page size (max 100)",
+                             type=OpenApiTypes.INT),
+            OpenApiParameter(name="seed", location=OpenApiParameter.QUERY, type=OpenApiTypes.INT,
+                             description="Seed of the feed (from the first page response)"),
+            OpenApiParameter(name="X-Device-Id", location=OpenApiParameter.HEADER, type=OpenApiTypes.STR,
+                             description="Device id: the identity of a visitor who is not logged in"),
+        ],
+        responses={200: RecommendedProductSerializer(many=True)},
+        tags=["Product"],
+    )
+    def product_recommended(self, request):
+        param_serializer = RecommendedParamSerializer(data=request.query_params, context={"request": request})
+        if not param_serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=param_serializer.errors)
+
+        page = param_serializer.validated_data.get("page")
+        page_size = param_serializer.validated_data.get("page_size")
+        seed = param_serializer.validated_data.get("seed")
+        if seed is None:
+            seed = secrets.randbelow(2 ** 31)
+
+        viewer = feed.Viewer.of(request)
+        result = None
+        try:
+            variant = feed.feed_variant(viewer, HomePage.load())
+            if variant == FeedImpression.PERSONAL:
+                result = recommended_feed_page(request, viewer, page, page_size, seed)
+                if not result["personalized"]:
+                    variant = FeedImpression.POPULAR
+        except Exception:
+            # the feed must not break the home page: the visitor gets the random one
+            logger.exception("feed: personal feed failed")
+            variant = FeedImpression.ERROR
+        if result is None:
+            result = get_products_paginator(
+                response_data=get_optimized_product_qs(feed.random_products(seed), request),
+                page=page,
+                page_size=page_size,
+                context={"request": request},
+                serializer_class=RecommendedProductSerializer,
+            )
+            result["personalized"] = False
+        result["seed"] = seed
+        result["feed_request_id"] = str(feed.feed_request_id(viewer, seed))
+        feed.log_impression(viewer, seed, variant, result)
         return Response(data={"result": result, "ok": True}, status=status.HTTP_200_OK)
 
     @extend_schema(
@@ -888,6 +977,7 @@ class ProductViewSet(ViewSet):
             RecentlyViewedProducts.objects.get_or_create(
                 customer_id=customer, product_id=products.id
             )
+        feed.record_view(request, products.id)
 
         serializer = ProductDetailSerializer(products, context={"request": request})
         return Response(
@@ -985,9 +1075,10 @@ class ProductViewSet(ViewSet):
         else:
             products = products.order_by(sort)
 
+        search_cat_ids = [item_category] if item_category else []
         if not item_category and has_filters:
             # search results: the filters of the categories most of the found products are in
-            cat_ids = list(
+            cat_ids = search_cat_ids = list(
                 products.values("product_item_category")
                 .annotate(cnt=Count("id"))
                 .order_by("-cnt")
@@ -998,15 +1089,18 @@ class ProductViewSet(ViewSet):
 
         available_filters_list = AvailableFilterSerializer(available_filters, many=True).data
         products = get_optimized_product_qs(products, request)
+        result = get_products_paginator(
+            response_data=products,
+            page=page,
+            page_size=page_size,
+            context={"request": request},
+        )
+        if q and page == 1:
+            feed.record_search(request, q, search_cat_ids, result["totalElements"])
 
         return Response(
             data={
-                "result": get_products_paginator(
-                    response_data=products,
-                    page=page,
-                    page_size=page_size,
-                    context={"request": request},
-                ),
+                "result": result,
                 "available_filters": available_filters_list,
                 "quick_filters": QuickFilterSerializer(quick_filters, many=True).data,
                 "ok": True,

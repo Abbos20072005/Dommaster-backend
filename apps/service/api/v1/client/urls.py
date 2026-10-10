@@ -46,6 +46,11 @@ urlpatterns = [
         name="product_list",
     ),
     path(
+        "products/recommended/",
+        ProductViewSet.as_view({"get": "product_recommended"}),
+        name="product_recommended",
+    ),
+    path(
         "products/<int:pk>/",
         ProductViewSet.as_view({"get": "product_detail"}),
         name="products_detail",

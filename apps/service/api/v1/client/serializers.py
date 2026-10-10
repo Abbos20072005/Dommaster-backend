@@ -7,6 +7,7 @@ from apps.service.models import Product, ProductCategory, ProductItemCategory, P
     Order, OrderItem, Brand, Sale, AddsBrands, Favourites, Cart, CartItem, ProductCharacteristics, Questions, \
     RecentlyViewedProducts, Service, CommentReply, CommentImages, QuestionsReply, \
     ProductVariantGroup, ProductVariantItem, ProductItemCategoryFilterSchema, HomeBlock
+from apps.service import feed
 from apps.service.attributes import display_value, product_attribute_values, request_language, translated
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
@@ -379,6 +380,11 @@ class ProductListParamSerializer(PaginationSerializer):
     )
 
 
+class RecommendedParamSerializer(ProductListParamSerializer):
+    page = serializers.IntegerField(required=False, default=1, min_value=1)
+    page_size = serializers.IntegerField(required=False, default=10, min_value=1, max_value=100)
+
+
 class CommentParamSerializer(serializers.Serializer):
     page = serializers.IntegerField(
         required=False,
@@ -691,6 +697,18 @@ class ProductSerializer(ProductAnnotationMixin, ProductAttributesMixin, Translat
 
     def get_breadcrumbs(self, obj):
         return obj.get_breadcrumbs()
+
+
+class RecommendedProductSerializer(ProductSerializer):
+    """A product of `products/recommended/`: the view puts the source on the object; without it (the random
+    feed returned instead of the personal one) it is "fallback"."""
+    rec_source = serializers.CharField(
+        source="_rec_source", default=feed.FALLBACK,
+        help_text="Where the product comes from: personal / cross_sell / popular / fallback. New values may appear.")
+
+    class Meta(ProductSerializer.Meta):
+        fields = (*ProductSerializer.Meta.fields, "rec_source")
+
 
 class ProductShortSerializer(ProductAnnotationMixin, serializers.Serializer):
     id = serializers.IntegerField()

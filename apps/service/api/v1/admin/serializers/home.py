@@ -138,8 +138,8 @@ class HomePageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = HomePage
-        fields = ("hide_out_of_stock", "hide_stale_price", "min_products", "published_at", "published_by",
-                  "has_changes")
+        fields = ("hide_out_of_stock", "hide_stale_price", "min_products", "personal_feed_enabled",
+                  "personal_feed_holdout_percent", "published_at", "published_by", "has_changes")
         read_only_fields = ("published_at",)
 
     def get_has_changes(self, page) -> bool:

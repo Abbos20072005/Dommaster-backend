@@ -95,7 +95,8 @@ CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = [
     'x-api-key',
     'content-type',
-    'Authorization'
+    'Authorization',
+    'x-device-id',
 ]
 
 WSGI_APPLICATION = 'config.wsgi.application'
