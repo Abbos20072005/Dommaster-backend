@@ -131,4 +131,5 @@ class BannerStatsSerializer(serializers.Serializer):
     external = serializers.IntegerField(help_text="Not archived banners with link_type=url")
     site_home = serializers.IntegerField(help_text="Not archived banners of the placement")
     app_home = serializers.IntegerField(help_text="Not archived banners of the placement")
+    home_bottom = serializers.IntegerField(help_text="Not archived banners of the placement")
     catalog = serializers.IntegerField(help_text="Not archived banners of the placement")

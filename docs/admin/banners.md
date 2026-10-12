@@ -51,7 +51,7 @@ Swagger: `/swagger/admin/` → **banners**.
 | `title_ru` * | Ichki nom | majburiy; `title_uz`, `title_en` ixtiyoriy |
 | `desktop_image` * | Rasm 16:5 | fayl |
 | `mobile_image` | Rasm 1:1 | fayl, ixtiyoriy; bo'sh `mobile_image=` — o'chiradi |
-| `placement` | Joylashuv | `site_home` — Sayt · bosh slayder (default), `app_home` — Ilova · bosh ekran, `catalog` — Katalog ichida |
+| `placement` | Joylashuv | `site_home` — Sayt · bosh slayder (default), `app_home` — Ilova · bosh ekran, `home_bottom` — Bosh sahifa · pastda, `catalog` — Katalog (kategoriya sahifasi) ichida. Pastdagi "Banner turlari" ga qarang |
 | `show_on_site`, `show_on_ios`, `show_on_android` | Kanallar | default `true`; kamida bittasi `true` bo'lishi shart |
 | `link_type` * | Havola turi | `category`, `product`, `badge` (Teg), `brand`, `page` (Sahifa), `url` (Tashqi URL) |
 | `target` | Manzil | `category` / `product` / `badge` / `brand` uchun — pastga qarang |
@@ -106,6 +106,7 @@ Tab'lar:
 | --- | --- |
 | Sayt · bosh slayder | `banners/?placement=site_home&is_visible=true` |
 | Ilova · bosh ekran | `banners/?placement=app_home&is_visible=true` |
+| Bosh sahifa · pastda | `banners/?placement=home_bottom&is_visible=true` |
 | Katalog ichida | `banners/?placement=catalog&is_visible=true` |
 | Arxiv | `banners/?is_visible=false` |
 
@@ -121,11 +122,12 @@ GET banners/stats/
   "external": 1,
   "site_home": 6,
   "app_home": 3,
+  "home_bottom": 2,
   "catalog": 3
 }
 ```
 
-`external` — "Tekshirish kerak": arxivda bo'lmagan `link_type=url` bannerlar. `site_home` / `app_home` / `catalog` — shu joylashuvdagi arxivda bo'lmagan bannerlar (tab'dagi son). Ro'yxat filtrlari statistikaga ta'sir qilmaydi.
+`external` — "Tekshirish kerak": arxivda bo'lmagan `link_type=url` bannerlar. `site_home` / `app_home` / `home_bottom` / `catalog` — shu joylashuvdagi arxivda bo'lmagan bannerlar (tab'dagi son). Ro'yxat filtrlari statistikaga ta'sir qilmaydi.
 
 ## Tartib
 
@@ -138,4 +140,38 @@ Bitta tab'dagi bannerlar yangi tartibda yuboriladi, ro'yxatdagi o'rni = `positio
 
 ## Mijoz API (sayt / ilova)
 
-`GET /api/v1/base/banner/` — faqat `active` bannerlar, `position` bo'yicha. Ixtiyoriy: `?placement=site_home|app_home|catalog`, `?platform=site|ios|android`. Parametrsiz barcha faol bannerlar qaytadi (eski ilova shunday ishlaydi). Javobga `placement`, `link_type`, `page` qo'shilgan.
+`GET /api/v1/base/banner/` — faqat `active` bannerlar, `position` bo'yicha. Ixtiyoriy: `?placement=site_home|app_home|home_bottom|catalog`, `?platform=site|ios|android`. Javobga `placement`, `link_type`, `page` qo'shilgan.
+
+### Banner turlari — qayerda chiqadi
+
+| Tur | `placement` | Mijoz qayerdan oladi |
+| --- | --- | --- |
+| Bosh sahifa **yuqorisi** (slayder) | `site_home`, `app_home` | `base/banner/` — `placement` **yuborilmasa** aynan shular qaytadi (eski sayt / ilova shunday ishlaydi); yoki `?placement=site_home` / `app_home` |
+| Bosh sahifa **pasti** | `home_bottom` | `GET /api/v1/main/` — reklama bloklari (`addsbrands`) orasidagi `type: "banner"` elementlari; yoki `base/banner/?placement=home_bottom` |
+| **Kategoriya sahifasi** | `catalog` | `base/banner/?placement=catalog` |
+
+- `main/` da banner har bir reklama blokidan keyin bittadan qo'yiladi: `home_bottom` bannerlar bloklardan ko'p bo'lsa, ortiqchasi chiqmaydi. `main/` ~17 daqiqa keshlanadi — yangi banner darhol ko'rinmaydi.
+- `catalog` bannerlari aniq bir kategoriyaga bog'lanmaydi: hamma kategoriya sahifalari uchun bitta ro'yxat (`target` — bosilganda qayerga olib borishi, qayerda ko'rinishi emas).
+- Yangi bosh sahifa (`GET /api/v1/home/`) da slayder bloki `banner_placement` bo'yicha ishlaydi — `home_bottom` uchun shu joylashuvli yana bitta `slider` blok qo'shiladi.
+
+Mijoz tomoni to'liq: `docs/mobile/banners.md`.
+
+## Nima o'zgardi — `home_bottom` joylashuvi
+
+Yangi joylashuv qo'shildi: **`home_bottom` — Bosh sahifa · pastda**. Admin panelda qilish kerak:
+
+| Joy | Nima qilish kerak |
+| --- | --- |
+| Banner formasi → "Joylashuv" | tanlovga `home_bottom` qo'shish (jami 4 ta: `site_home`, `app_home`, `home_bottom`, `catalog`) |
+| Bannerlar sahifasi → tab'lar | yangi tab: `banners/?placement=home_bottom&is_visible=true` |
+| Tab'dagi son | `banners/stats/` javobida yangi `home_bottom` maydoni |
+| Tartib (drag & drop) | o'zgarmagan — `banners/reorder/` ga shu tab'dagi bannerlar yuboriladi |
+| "Bosh sahifa" → `slider` blok | `banner_placement` tanloviga `home_bottom` qo'shish (`docs/admin/home_page.md`) |
+
+Banner obyekti, maydonlar va validatsiya **o'zgarmagan** — faqat `placement` ning yangi qiymati.
+
+Adminga tushuntirish uchun (qaysi joylashuv qayerda ko'rinadi):
+
+- **Sayt · bosh slayder / Ilova · bosh ekran** — bosh sahifaning eng yuqorisidagi slayder.
+- **Bosh sahifa · pastda** — bosh sahifadagi reklama bloklari ("Asosiy bo'limlar") orasida, har blokdan keyin bittadan. Reklama bloklari nechta bo'lsa, shuncha banner ko'rinadi — ortiqchasi chiqmaydi. Yangi banner saytda ~17 daqiqagacha kechikib ko'rinishi mumkin (kesh).
+- **Katalog ichida** — kategoriya sahifasida; hamma kategoriyalar uchun bitta ro'yxat.

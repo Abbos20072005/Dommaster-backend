@@ -40,12 +40,15 @@ class MarketBranch(BaseModel):
 
 
 class Banner(BaseModel):
-    SITE_HOME, APP_HOME, CATALOG = "site_home", "app_home", "catalog"
+    SITE_HOME, APP_HOME, HOME_BOTTOM, CATALOG = "site_home", "app_home", "home_bottom", "catalog"
     PLACEMENT_CHOICES = (
         (SITE_HOME, "Сайт · главный слайдер"),
         (APP_HOME, "Приложение · главный экран"),
+        (HOME_BOTTOM, "Главная · внизу страницы"),
         (CATALOG, "Внутри каталога"),
     )
+    # top of the home page: what a client gets when it asks for banners without a placement
+    HOME_TOP = (SITE_HOME, APP_HOME)
     # where a tap leads: category / product / badge / brand -> `content_object`, page -> `page`, url -> `link`
     CATEGORY, PRODUCT, BADGE, BRAND, PAGE, URL = "category", "product", "badge", "brand", "page", "url"
     LINK_TYPE_CHOICES = (

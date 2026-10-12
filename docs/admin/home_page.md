@@ -61,7 +61,7 @@ Faqat o'qiladi: `id`, `title` (joriy tildagi sarlavha), `items_count`, `items_to
 
 | `type` | Blok | Manba maydoni | `items_count` |
 | --- | --- | --- | --- |
-| `slider` | Bannerlar slayderi | `banner_placement` *: `site_home` / `app_home` / `catalog` | shu joylashuvdagi faol bannerlar |
+| `slider` | Bannerlar slayderi | `banner_placement` *: `site_home` / `app_home` / `home_bottom` / `catalog` | shu joylashuvdagi faol bannerlar |
 | `banner` | Bitta banner | `banner` *: `{"id": 4}` yoki `4` | `1` — banner faol, aks holda `0` |
 | `categories` | 1-daraja kategoriyalar | — | faol kategoriyalar |
 | `brands` | Brendlar | — | "Bosh sahifada" belgilangan brendlar (`brands/` dagi `show_on_home`) |
