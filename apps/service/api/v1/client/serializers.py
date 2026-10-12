@@ -6,7 +6,7 @@ from apps.authorization.api.v1.client.serializers import CustomerSerializer, Cus
 from apps.service.models import Product, ProductCategory, ProductItemCategory, ProductSubCategory, ProductImage, Comment, \
     Order, OrderItem, Brand, Sale, AddsBrands, Favourites, Cart, CartItem, ProductCharacteristics, Questions, \
     RecentlyViewedProducts, Service, CommentReply, CommentImages, QuestionsReply, \
-    ProductVariantGroup, ProductVariantItem, ProductItemCategoryFilterSchema, HomeBlock
+    ProductVariantGroup, ProductVariantItem, ProductItemCategoryFilterSchema, HomeBlock, ORDER_CHANNEL
 from apps.service import feed
 from apps.service.attributes import display_value, product_attribute_values, request_language, translated
 from exceptions.error_exception import CustomApiException
@@ -98,6 +98,8 @@ class OrderCreateSerializer(serializers.Serializer):
     payment_type = serializers.IntegerField(required=True)
     payment_method = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     is_web = serializers.BooleanField(required=False)
+    channel = serializers.ChoiceField(choices=ORDER_CHANNEL, required=False,
+                                      help_text="Where the order is placed; without it `is_web` = site")
     address_id = serializers.IntegerField(required=False)
     delivery_type = serializers.IntegerField(required=False, default=0)
     delivery_price = serializers.CharField(required=False, allow_blank=True)

@@ -37,7 +37,7 @@ from .today import STALE_PENDING_ORDERS, REFUND_PENDING_ORDERS, UNASSIGNED_ORDER
     TodayAttentionObjectSerializer, TodayAttentionItemSerializer, TodayAttentionSerializer, TodayCatalogSerializer, \
     TodayOrdersPointSerializer, TodayOrdersChartSerializer, TodaySerializer
 from .analytics import CLICK, PAYME, UZUM, CASH, CARD, OTHER, PAYMENT_KEYS, DELIVERY_KEY, PICKUP_KEY, DELIVERY_KEYS, \
-    SalesAnalyticsQuerySerializer, RateSerializer, SalesSummarySerializer, SalesChartPointSerializer, \
+    CHANNEL_KEYS, INDIVIDUAL, B2B, SEGMENTS, SalesChannelSerializer, SalesAnalyticsQuerySerializer, RateSerializer, SalesSummarySerializer, SalesChartPointSerializer, \
     SalesChartSerializer, SalesCategorySerializer, SalesShareSerializer, SalesPaymentMethodSerializer, \
     SalesDeliveryTypeSerializer, SalesProductSerializer, SalesTopProductSerializer, SalesRefundedProductSerializer, \
     SalesCohortSerializer, SalesCohortsSerializer, SalesAnalyticsSerializer
@@ -75,7 +75,8 @@ __all__ = [
     "TodayAttentionSerializer", "TodayCatalogSerializer", "TodayOrdersPointSerializer",
     "TodayOrdersChartSerializer", "TodaySerializer",
     "DateRangeQuerySerializer", "CLICK", "PAYME", "UZUM", "CASH", "CARD", "OTHER", "PAYMENT_KEYS", "DELIVERY_KEY",
-    "PICKUP_KEY", "DELIVERY_KEYS", "SalesAnalyticsQuerySerializer", "RateSerializer", "SalesSummarySerializer",
+    "PICKUP_KEY", "DELIVERY_KEYS", "CHANNEL_KEYS", "INDIVIDUAL", "B2B", "SEGMENTS", "SalesChannelSerializer",
+    "SalesAnalyticsQuerySerializer", "RateSerializer", "SalesSummarySerializer",
     "SalesChartPointSerializer", "SalesChartSerializer", "SalesCategorySerializer", "SalesShareSerializer",
     "SalesPaymentMethodSerializer", "SalesDeliveryTypeSerializer", "SalesProductSerializer",
     "SalesTopProductSerializer", "SalesRefundedProductSerializer", "SalesCohortSerializer", "SalesCohortsSerializer",

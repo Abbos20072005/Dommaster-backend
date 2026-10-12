@@ -30,6 +30,17 @@ CASH_PAYMENT_METHOD = (
     ("card", "Карта"),
 )
 
+ORDER_CHANNEL_SITE = "site"
+ORDER_CHANNEL_IOS = "ios"
+ORDER_CHANNEL_ANDROID = "android"
+
+# where the order was placed, the same values as the client `?platform=`
+ORDER_CHANNEL = (
+    (ORDER_CHANNEL_SITE, "Сайт"),
+    (ORDER_CHANNEL_IOS, "iOS"),
+    (ORDER_CHANNEL_ANDROID, "Android"),
+)
+
 ORDER_EVENT_CREATED = "order.created"
 ORDER_EVENT_COLLECTING = "order.collecting"
 ORDER_EVENT_CANCELED = "order.canceled"

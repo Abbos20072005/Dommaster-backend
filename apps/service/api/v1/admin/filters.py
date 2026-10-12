@@ -15,7 +15,7 @@ class OrderFilter(django_filters.FilterSet):
 
     class Meta:
         model = Order
-        fields = ("id", "payment_status", "payment_type", "payment_method", "delivery_type", "customer",
+        fields = ("id", "channel", "payment_status", "payment_type", "payment_method", "delivery_type", "customer",
                   "pickup_branch", "manager")
 
 

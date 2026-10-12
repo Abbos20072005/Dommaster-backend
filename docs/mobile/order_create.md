@@ -40,6 +40,7 @@ POST order/
 | `receiver_name` | string (≤ 255) | yo'q | qabul qiluvchi ismi |
 | `receiver_phone` | string (≤ 14) | yo'q | qabul qiluvchi telefoni |
 | `is_web` | bool | yo'q | faqat web uchun (to'lovdan keyin saytga qaytarish). Mobile yubormaydi |
+| `channel` | string | yo'q, lekin **har doim yuboring** | buyurtma qayerdan berilgani: `ios`, `android` (web — `site`). Admin paneldagi savdo tahlili ("Kanallar") shu maydonga tayanadi |
 
 Muhim qoidalar:
 
@@ -48,6 +49,7 @@ Muhim qoidalar:
 - **`delivery_price`** — `"25000"`, `"25 000"`, `"25000.50"`, `"25,5"` yoki son (`25000`) qabul qilinadi. Bo'sh string (`""`) → validatsiya xatosi; narx yo'q bo'lsa maydonni umuman yubormang. Pickup'da yubormang.
 - **`promocode`** — `promocode/checker/` dan o'tgan kodni **kichik harflarda** yuboring. Kod topilmasa xato qaytmaydi — buyurtma promokodsiz, to'liq narxda yaratiladi.
 - **`branch_id`** ni faqat pickup'da yuboring.
+- **`channel`** — faqat `site` / `ios` / `android` (`home/?platform=` dagi qiymatlar). Boshqa qiymat → validatsiya xatosi. Yuborilmasa buyurtma yaratiladi, lekin kanali noma'lum bo'lib qoladi (`is_web: true` bo'lsa — `site`).
 
 Yetkazib berish + Click:
 
@@ -57,6 +59,7 @@ curl -X POST {{host}}/api/v1/order/ \
   -H "Content-Type: application/json" \
   -d '{
     "payment_type": 1,
+    "channel": "android",
     "delivery_type": 0,
     "address_id": 12,
     "delivery_price": "25000",
@@ -75,6 +78,7 @@ curl -X POST {{host}}/api/v1/order/ \
   -d '{
     "payment_type": 4,
     "payment_method": "cash",
+    "channel": "ios",
     "delivery_type": 1,
     "branch_id": 3
   }'
@@ -164,6 +168,7 @@ Validatsiya (`error_code: 5`) — `detail` maydonlar bo'yicha obyekt:
 | `delivery_type = 1`, `branch_id` yo'q | `{"non_field_errors": ["branch_id is required for pickup delivery"]}` |
 | Filial topilmadi yoki aktiv emas | `{"non_field_errors": ["Market branch not found"]}` |
 | `delivery_price` noto'g'ri yoki bo'sh string | `{"delivery_price": ["Некорректная цена доставки"]}` |
+| `channel` ro'yxatda yo'q qiymat | `{"channel": ["Значения web нет среди допустимых вариантов."]}` |
 
 > Xatoni aniqlashda xabar matniga emas, `error_code` ga tayaning (`detail` matni o'zgarishi mumkin).
 

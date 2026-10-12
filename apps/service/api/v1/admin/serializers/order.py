@@ -85,7 +85,7 @@ class OrderListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Order
-        fields = ("id", "customer", "manager", "status", "payment_status", "payment_type", "payment_method",
+        fields = ("id", "customer", "manager", "status", "channel", "payment_status", "payment_type", "payment_method",
                   "delivery_type", "total_price", "products_total_price", "saved_price", "delivery_price",
                   "receiver_name", "receiver_phone", "items_count", "created_at", "updated_at")
 
@@ -101,7 +101,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Order
-        fields = ("id", "customer", "manager", "status", "payment_status", "payment_type", "payment_method",
+        fields = ("id", "customer", "manager", "status", "channel", "payment_status", "payment_type", "payment_method",
                   "delivery_type", "order_location", "pickup_branch", "promocode", "items", "comments",
                   "total_price", "products_total_price", "saved_price", "delivery_price",
                   "receiver_name", "receiver_phone", "hold_id", "ofd_url", "yandex_claim_id", "yandex_claim_status",

@@ -17,11 +17,23 @@ Swagger: `/swagger/admin/` → **analytics**.
 | --- | --- | --- |
 | `days` | `30` | bugun bilan tugaydigan oyna (1–365). `date_from` + `date_to` yuborilsa e'tiborga olinmaydi |
 | `date_from`, `date_to` | — | aniq davr (`YYYY-MM-DD`, ikkalasi ham kiradi). **Birga** yuboriladi, ko'pi bilan 366 kun |
+| `channel` | — (hammasi) | "Kanal" filtri: `site`, `ios`, `android` — faqat shu kanaldan berilgan buyurtmalar |
+| `segment` | — (hammasi) | "Segment" filtri: `b2b` — prorablar (`role=prorab`) buyurtmalari, `individual` — qolgan hammasi |
 
-Davr `cohorts` dan boshqa **hamma** vidjetga ta'sir qiladi. "Oldingi davr" — shu davrdan oldingi, xuddi shu uzunlikdagi davr
-(masalan `09.09–08.10` uchun `10.08–08.09`).
+Davr va filtrlar `cohorts` dan boshqa **hamma** vidjetga ta'sir qiladi. "Oldingi davr" — shu davrdan oldingi, xuddi shu
+uzunlikdagi davr (masalan `09.09–08.10` uchun `10.08–08.09`), filtrlar unga ham qo'llanadi.
 
-Xatolar — `400`: `{"date_to": ["date_from and date_to are sent together."]}`, `{"date_to": ["The range is at most 366 days."]}`.
+"Hammasi" tanlanganda parametrni **yubormang** (bo'sh `?channel=` → `400`).
+
+- **Kanal** buyurtma yaratilganda yoziladi (`Order.channel`, klient `POST order/` da `channel` yuboradi). Bu maydon
+  qo'shilishidan oldingi, eski ilova versiyasidan kelgan va admin paneldan yaratilgan buyurtmalarda kanal **yo'q** —
+  ular `channel` filtri bilan hech qaysi kanalga tushmaydi, `channels` vidjetida `other` qatorida turadi.
+- `segment` bosh sahifadagi (`dashboard/` → `revenue`) `b2b` / `individual` bilan bir xil qoida.
+- `repeat_rate`: filtr **xaridorlarni** tanlaydi (masalan, davrda iOS'dan buyurtma berganlar), "birinchi buyurtma emasmi"
+  esa mijozning barcha buyurtmalari bo'yicha tekshiriladi (kanalidan qat'i nazar).
+
+Xatolar — `400`: `{"date_to": ["date_from and date_to are sent together."]}`, `{"date_to": ["The range is at most 366 days."]}`,
+`{"channel": ["..."]}` / `{"segment": ["..."]}` — ro'yxatda yo'q qiymat.
 
 ---
 
@@ -31,6 +43,7 @@ Xatolar — `400`: `{"date_to": ["date_from and date_to are sent together."]}`, 
 {
   "summary": { ... },
   "chart": { ... },
+  "channels": [ ... ],
   "categories": [ ... ],
   "payment_methods": [ ... ],
   "delivery_types": [ ... ],
@@ -102,6 +115,27 @@ Umumiy qoidalar:
 | `revenue` | "Tushum" chizig'i (chap o'q) |
 | `orders` | "Buyurtmalar" chizig'i (o'ng o'q) |
 | `previous_revenue` | "Tushum · oldingi davr" chizig'i: oldingi davrning shu tartibdagi kuni (`previous_date`) |
+
+### `channels` — kanallar
+
+```json
+"channels": [
+  { "key": "site", "orders": 1250, "revenue": 1179000000.0, "orders_percent": 52.0, "revenue_percent": 52.0 },
+  { "key": "ios", "orders": 673, "revenue": 635000000.0, "orders_percent": 28.0, "revenue_percent": 28.0 },
+  { "key": "android", "orders": 481, "revenue": 453000000.0, "orders_percent": 20.0, "revenue_percent": 20.0 },
+  { "key": "other", "orders": 0, "revenue": 0.0, "orders_percent": 0.0, "revenue_percent": 0.0 }
+]
+```
+
+Yakunlangan buyurtmalar. **Har doim 4 ta qator** (bo'shlari `0` bilan), tushum bo'yicha kattadan kichikka. Dizayndagi
+"52% · 1179 mln" = `revenue_percent` · `revenue`.
+
+| `key` | Nima |
+| --- | --- |
+| `site`, `ios`, `android` | buyurtma berilgan kanal |
+| `other` | kanali noma'lum buyurtmalar (yuqoridagi izohga qarang). `0` bo'lsa ko'rsatmasa ham bo'ladi |
+
+`channel` filtri yuborilsa, tabiiyki, bitta qator `100%` bo'ladi.
 
 ### `categories` — kategoriyalar bo'yicha tushum
 
@@ -193,7 +227,7 @@ Puli qaytarilgan (`payment_status=3`) buyurtmalardagi **10 tagacha** mahsulot, s
 }
 ```
 
-Davr filtriga **bog'liq emas**: har doim oxirgi 4 oy (joriy oy ham), eskidan yangiga.
+Davr, `channel` va `segment` filtrlariga **bog'liq emas**: har doim oxirgi 4 oy (joriy oy ham), eskidan yangiga.
 
 | Maydon | Izoh |
 | --- | --- |
@@ -211,7 +245,7 @@ berganlari. Joriy oyga to'g'ri kelgan katak (avgust kogortasining "2-oy"i oktabr
 
 | Dizayndagi element | Sabab |
 | --- | --- |
-| "Kanallar" (Sayt / iOS / Android) | buyurtmada kanal saqlanmaydi |
 | "Qaytarish" — tovarni qaytarish, qaytarish sababi | tovar qaytarish modeli yo'q. O'rniga **pul qaytarilgan** buyurtmalar (`payment_status=3`): `refund_rate`, `refunded_products`; sabab saqlanmaydi |
 | To'lov usullari: "Onlayn · Atmos", "Omborda", "Pul ko'chirish" | bunday to'lov turlari yo'q — haqiqiylari: `click`, `payme`, `uzum`, `cash`, `card` |
-| Yuqoridagi boshqa filtrlar (kanal, kategoriya va h.k.) | faqat davr filtri bor |
+| "Eksport (CSV)" | alohida endpoint yo'q — CSV shu javobdagi ma'lumotdan frontda yig'iladi |
+| "Oldingi davr bilan solishtirish" | parametr yo'q: `change` va `previous_revenue` har doim keladi, o'chirilganda front ko'rsatmaydi |

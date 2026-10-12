@@ -1,4 +1,4 @@
-from .choices import ORDER_STATUS, PAYMENT_STATUS, DELIVERY_TYPE, PAYMENT_TYPE, CASH_PAYMENT_METHOD
+from .choices import ORDER_STATUS, PAYMENT_STATUS, DELIVERY_TYPE, PAYMENT_TYPE, CASH_PAYMENT_METHOD, ORDER_CHANNEL
 from .catalog import Brand, ProductModel, ProductCategory, ProductSubCategory, ProductItemCategory, ProductUnit, \
     ProductAttribute, ProductAttributeOption, ProductItemCategoryAttribute
 from .product import (
@@ -15,7 +15,7 @@ from .home import HomeBlock, HomePage
 from .feed import InterestEvent, FeedImpression
 
 __all__ = [
-    "ORDER_STATUS", "PAYMENT_STATUS", "DELIVERY_TYPE", "PAYMENT_TYPE", "CASH_PAYMENT_METHOD",
+    "ORDER_STATUS", "PAYMENT_STATUS", "DELIVERY_TYPE", "PAYMENT_TYPE", "CASH_PAYMENT_METHOD", "ORDER_CHANNEL",
     "Brand", "ProductModel", "ProductCategory", "ProductSubCategory", "ProductItemCategory", "ProductUnit",
     "ProductAttribute", "ProductAttributeOption", "ProductItemCategoryAttribute",
     "Product", "ProductRemaining", "ProductImage", "ProductCharacteristics", "ProductAttributeValue",

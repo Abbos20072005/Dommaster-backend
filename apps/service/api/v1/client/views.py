@@ -1,5 +1,5 @@
 from apps.service.outbox import emit_order_event
-from apps.service.models.choices import ORDER_EVENT_CREATED
+from apps.service.models.choices import ORDER_CHANNEL_SITE, ORDER_EVENT_CREATED
 from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
 from drf_spectacular.types import OpenApiTypes
@@ -2469,6 +2469,11 @@ class OrderViewSet(ViewSet):
                     message="Customer location not found",
                 )
 
+        # an old web client sends only `is_web`
+        channel = serializer.validated_data.get("channel") or (
+            ORDER_CHANNEL_SITE if serializer.validated_data.get("is_web") else None
+        )
+
         # order, its items and the order.created outbox event are committed together
         with transaction.atomic():
             promocode = Promocodes.objects.filter(
@@ -2492,6 +2497,7 @@ class OrderViewSet(ViewSet):
 
                 order = Order.objects.create(
                     customer_id=request.user.id,
+                    channel=channel,
                     promocode_id=promocode.id,
                     total_price=promocode_discount_price + delivery_cost,
                     saved_price=cart.saved_price,
@@ -2508,6 +2514,7 @@ class OrderViewSet(ViewSet):
 
                 order = Order.objects.create(
                     customer_id=request.user.id,
+                    channel=channel,
                     total_price=cart.total_price + delivery_cost,
                     saved_price=cart.saved_price,
                     products_total_price=cart.products_total_price,

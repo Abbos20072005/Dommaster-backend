@@ -331,10 +331,10 @@ class CommentAdmin(ModelAdmin):
 
 @admin.register(Order)
 class OrderAdmin(ModelAdmin):
-    list_display = ("id", "customer", "status", "payment_status", "payment_type", "payment_method", "delivery_type", "pickup_branch", "total_price", "delivery_price", "created_at")
+    list_display = ("id", "customer", "status", "channel", "payment_status", "payment_type", "payment_method", "delivery_type", "pickup_branch", "total_price", "delivery_price", "created_at")
     list_display_links = ("id", "customer")
     search_fields = ("customer__full_name", "customer__phone_number", "id")
-    list_filter = ("status", "payment_status", "payment_type", "payment_method", "delivery_type", "created_at")
+    list_filter = ("status", "channel", "payment_status", "payment_type", "payment_method", "delivery_type", "created_at")
     autocomplete_fields = ("customer", "manager", "promocode", "order_location", "pickup_branch")
     readonly_fields = ("delivery_price", "yandex_claim_id", "yandex_claim_status")
     date_hierarchy = "created_at"

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from apps.service.models import Product
+from apps.service.models import ORDER_CHANNEL, Product
 from .category import ProductCategoryShortSerializer
 from .dashboard import DAY, DateRangeQuerySerializer, MetricSerializer
 
@@ -11,10 +11,20 @@ PAYMENT_KEYS = (CLICK, PAYME, UZUM, CASH, CARD, OTHER)
 # delivery breakdown keys
 DELIVERY_KEY, PICKUP_KEY = "delivery", "pickup"
 DELIVERY_KEYS = (DELIVERY_KEY, PICKUP_KEY)
+# channel breakdown keys: Order.channel, the orders without it
+CHANNEL_KEYS = (*(key for key, _ in ORDER_CHANNEL), OTHER)
+# customer segments: role user / prorab, as on the dashboard
+INDIVIDUAL, B2B = "individual", "b2b"
+SEGMENTS = (INDIVIDUAL, B2B)
 
 
 class SalesAnalyticsQuerySerializer(DateRangeQuerySerializer):
-    """Query params of the sales analytics endpoint: one range for every widget but the cohorts."""
+    """Query params of the sales analytics endpoint: one range and one set of filters for every widget
+    but the cohorts."""
+    channel = serializers.ChoiceField(choices=ORDER_CHANNEL, required=False,
+                                      help_text="Only the orders placed there")
+    segment = serializers.ChoiceField(choices=SEGMENTS, required=False,
+                                      help_text="Only the orders of prorabs (b2b) / of everyone else")
 
     def validate(self, attrs):
         attrs = super().validate(attrs)
@@ -75,6 +85,10 @@ class SalesDeliveryTypeSerializer(SalesShareSerializer):
     key = serializers.ChoiceField(choices=DELIVERY_KEYS)
 
 
+class SalesChannelSerializer(SalesShareSerializer):
+    key = serializers.ChoiceField(choices=CHANNEL_KEYS, help_text="other = the channel is not known")
+
+
 class SalesProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
@@ -112,6 +126,7 @@ class SalesCohortsSerializer(serializers.Serializer):
 class SalesAnalyticsSerializer(serializers.Serializer):
     summary = SalesSummarySerializer()
     chart = SalesChartSerializer()
+    channels = SalesChannelSerializer(many=True)
     categories = SalesCategorySerializer(many=True)
     payment_methods = SalesPaymentMethodSerializer(many=True)
     delivery_types = SalesDeliveryTypeSerializer(many=True)

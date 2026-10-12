@@ -8,7 +8,7 @@ from apps.service.models import Order, OrderItem, Product, ProductCategory
 from utils.admin_views import AdminViewMixin
 from ..serializers import SalesAnalyticsQuerySerializer, SalesAnalyticsSerializer, COMPLETED, CANCELED, DELIVERY, \
     PAYMENT_ON_DELIVERY, DAY, CLICK, PAYME, UZUM, CASH, CARD, OTHER, PAYMENT_KEYS, DELIVERY_KEY, PICKUP_KEY, \
-    DELIVERY_KEYS
+    DELIVERY_KEYS, CHANNEL_KEYS, B2B
 from .dashboard import month_starts, percent, percent_change, summary_range
 
 TOP_CATEGORIES = 8
@@ -17,6 +17,7 @@ COHORT_MONTHS = 4
 COHORT_OFFSETS = 3
 # PAYMENT_STATUS Cancelled: set only after the money went back to the customer
 REFUNDED = 3
+PRORAB = Customer.Role.PRORAB
 PAYMENT_TYPE_KEYS = {1: CLICK, 2: PAYME, 3: UZUM}
 CATEGORY = "product__product_item_category__product_sub_category__product_category"
 # OrderItem keeps no price: the product's current price, the same rule the order total is built with
@@ -38,24 +39,45 @@ def shift_month(month, offset):
     return date(index // 12, index % 12 + 1, 1)
 
 
-def completed_orders(start, end):
-    return Order.objects.filter(status=COMPLETED, created_at__date__range=(start, end))
+def scope(filters, prefix=""):
+    """?channel= / ?segment= of the page as a Q over orders; `prefix` = path from the queried model to the order."""
+    q = Q()
+    if filters.get("channel"):
+        q &= Q(**{f"{prefix}channel": filters["channel"]})
+    if filters.get("segment"):
+        is_b2b = Q(**{f"{prefix}customer__role": PRORAB})
+        q &= is_b2b if filters["segment"] == B2B else ~is_b2b
+    return q
 
 
-def completed_items(start, end):
-    return OrderItem.objects.filter(order__status=COMPLETED, order__created_at__date__range=(start, end))
+def orders_of(filters):
+    return Order.objects.filter(scope(filters))
 
 
-def repeat_buyers(start, end):
-    """(buyers of start..end, those of them with an earlier or one more non-canceled order by `end`)."""
+def items_of(filters):
+    return OrderItem.objects.filter(scope(filters, "order__"))
+
+
+def completed_orders(start, end, filters):
+    return orders_of(filters).filter(status=COMPLETED, created_at__date__range=(start, end))
+
+
+def completed_items(start, end, filters):
+    return items_of(filters).filter(order__status=COMPLETED, order__created_at__date__range=(start, end))
+
+
+def repeat_buyers(start, end, filters):
+    """(buyers of start..end, those of them with an earlier or one more non-canceled order by `end`).
+    The filters pick the buyers; their other orders count whatever the channel is."""
+    in_range = Q(created_at__date__gte=start) & scope(filters)
     buyers = Order.objects.exclude(status=CANCELED).exclude(customer=None).filter(created_at__date__lte=end) \
         .values("customer") \
-        .annotate(total=Count("id"), in_range=Count("id", filter=Q(created_at__date__gte=start))) \
+        .annotate(total=Count("id"), in_range=Count("id", filter=in_range)) \
         .filter(in_range__gt=0)
     return buyers.count(), buyers.filter(total__gte=2).count()
 
 
-def get_summary(start, end):
+def get_summary(start, end, filters):
     """KPI cards over start..end (inclusive) vs the previous range of the same length."""
     prev_start = previous_start(start, end)
     completed = Q(status=COMPLETED)
@@ -68,7 +90,7 @@ def get_summary(start, end):
             f"{prefix}canceled": Count("id", filter=in_range & Q(status=CANCELED)),
             f"{prefix}refunded": Count("id", filter=in_range & Q(payment_status=REFUNDED)),
         })
-    values = Order.objects.filter(created_at__date__range=(prev_start, end)).aggregate(**aggregates)
+    values = orders_of(filters).filter(created_at__date__range=(prev_start, end)).aggregate(**aggregates)
 
     data = {"days": (end - start).days + 1, "date_from": start, "date_to": end}
     for key in ("revenue", "orders", "average_check"):
@@ -78,18 +100,18 @@ def get_summary(start, end):
         prev_rate = percent(values[f"prev_{counter}"], values["prev_orders"])
         data[key] = {"value": rate, "change": points_change(rate, prev_rate, values["prev_orders"])}
 
-    buyers, repeat = repeat_buyers(start, end)
-    prev_buyers, prev_repeat = repeat_buyers(prev_start, start - timedelta(days=1))
+    buyers, repeat = repeat_buyers(start, end, filters)
+    prev_buyers, prev_repeat = repeat_buyers(prev_start, start - timedelta(days=1), filters)
     rate = percent(repeat, buyers)
     data["repeat_rate"] = {"value": rate, "change": points_change(rate, percent(prev_repeat, prev_buyers), prev_buyers)}
     return data
 
 
-def get_chart(start, end):
+def get_chart(start, end, filters):
     """Per day: completed orders revenue (+ the same day of the previous range) and all created orders."""
     days = (end - start).days + 1
     prev_start = previous_start(start, end)
-    rows = Order.objects.filter(created_at__date__range=(prev_start, end)) \
+    rows = orders_of(filters).filter(created_at__date__range=(prev_start, end)) \
         .annotate(day=TruncDate("created_at")).values("day") \
         .annotate(orders=Count("id"), revenue=Coalesce(Sum("total_price", filter=Q(status=COMPLETED)), 0.0))
     by_day = {row["day"]: row for row in rows}
@@ -103,9 +125,9 @@ def get_chart(start, end):
     return {"step": DAY, "points": points}
 
 
-def get_categories(start, end):
+def get_categories(start, end, filters):
     """Top categories by the revenue of their products in completed orders."""
-    rows = list(completed_items(start, end).values(CATEGORY)
+    rows = list(completed_items(start, end, filters).values(CATEGORY)
                 .annotate(revenue=Coalesce(Sum(ITEM_REVENUE), 0.0)).order_by("-revenue"))
     total = sum(row["revenue"] for row in rows)
     top = [row for row in rows if row[CATEGORY]][:TOP_CATEGORIES]
@@ -134,15 +156,21 @@ def payment_key(payment_type, payment_method):
     return PAYMENT_TYPE_KEYS.get(payment_type, OTHER)
 
 
-def get_payment_methods(start, end):
-    rows = completed_orders(start, end).values("payment_type", "payment_method") \
+def get_channels(start, end, filters):
+    rows = completed_orders(start, end, filters).values("channel") \
+        .annotate(orders=Count("id"), revenue=Coalesce(Sum("total_price"), 0.0))
+    return shares([{**row, "key": row["channel"] or OTHER} for row in rows], CHANNEL_KEYS)
+
+
+def get_payment_methods(start, end, filters):
+    rows = completed_orders(start, end, filters).values("payment_type", "payment_method") \
         .annotate(orders=Count("id"), revenue=Coalesce(Sum("total_price"), 0.0))
     return shares([{**row, "key": payment_key(row["payment_type"], row["payment_method"])} for row in rows],
                   PAYMENT_KEYS)
 
 
-def get_delivery_types(start, end):
-    rows = completed_orders(start, end).values("delivery_type") \
+def get_delivery_types(start, end, filters):
+    rows = completed_orders(start, end, filters).values("delivery_type") \
         .annotate(orders=Count("id"), revenue=Coalesce(Sum("total_price"), 0.0))
     return shares([{**row, "key": DELIVERY_KEY if row["delivery_type"] == DELIVERY else PICKUP_KEY} for row in rows],
                   DELIVERY_KEYS)
@@ -153,10 +181,10 @@ def with_products(rows):
     return [{**row, "product": products[row["product"]]} for row in rows]
 
 
-def get_top_products(start, end):
+def get_top_products(start, end, filters):
     """Best sellers of completed orders by revenue, `change` vs the previous range."""
     current, previous = Q(order__created_at__date__gte=start), Q(order__created_at__date__lt=start)
-    rows = completed_items(previous_start(start, end), end).values("product").annotate(
+    rows = completed_items(previous_start(start, end), end, filters).values("product").annotate(
         sold=Coalesce(Sum("quantity", filter=current), 0),
         revenue=Coalesce(Sum(ITEM_REVENUE, filter=current), 0.0),
         prev_revenue=Coalesce(Sum(ITEM_REVENUE, filter=previous), 0.0),
@@ -165,9 +193,9 @@ def get_top_products(start, end):
                            "change": percent_change(row["revenue"], row["prev_revenue"])} for row in rows])
 
 
-def get_refunded_products(start, end):
+def get_refunded_products(start, end, filters):
     """Products of the orders whose payment was returned (the whole order counts as returned)."""
-    rows = OrderItem.objects.filter(order__payment_status=REFUNDED, order__created_at__date__range=(start, end)) \
+    rows = items_of(filters).filter(order__payment_status=REFUNDED, order__created_at__date__range=(start, end)) \
         .values("product").annotate(returned=Coalesce(Sum("quantity"), 0), orders=Count("order", distinct=True)) \
         .order_by("-returned", "-orders")[:TOP_PRODUCTS]
     return with_products([{"product": row["product"], "quantity": row["returned"], "orders": row["orders"]}
@@ -176,7 +204,7 @@ def get_refunded_products(start, end):
 
 def get_cohorts():
     """Customers by the month of their first non-canceled order: % who ordered again by the end of the
-    1st .. `COHORT_OFFSETS`-th month after it. Does not depend on the date range."""
+    1st .. `COHORT_OFFSETS`-th month after it. Does not depend on the date range and the filters."""
     months = month_starts(COHORT_MONTHS)
     orders = Order.objects.exclude(status=CANCELED).filter(customer=OuterRef("pk")) \
         .order_by("created_at", "id").values("created_at")
@@ -201,7 +229,8 @@ def get_cohorts():
 
 class SalesAnalyticsAPIView(AdminViewMixin, GenericAPIView):
     """"Sales analytics" page, all widgets in one response.
-    ?days= window ending today (30) or ?date_from=&date_to= instead of it; the cohorts ignore the range."""
+    ?days= window ending today (30) or ?date_from=&date_to= instead of it, ?channel=site|ios|android,
+    ?segment=individual|b2b; the cohorts ignore all of them."""
     serializer_class = SalesAnalyticsSerializer
     filter_backends = []
     pagination_class = None
@@ -209,15 +238,17 @@ class SalesAnalyticsAPIView(AdminViewMixin, GenericAPIView):
     def get(self, request):
         params = SalesAnalyticsQuerySerializer(data=request.query_params)
         params.is_valid(raise_exception=True)
-        start, end = summary_range(params.validated_data)
+        filters = params.validated_data
+        scoped = (*summary_range(filters), filters)
         data = {
-            "summary": get_summary(start, end),
-            "chart": get_chart(start, end),
-            "categories": get_categories(start, end),
-            "payment_methods": get_payment_methods(start, end),
-            "delivery_types": get_delivery_types(start, end),
-            "top_products": get_top_products(start, end),
-            "refunded_products": get_refunded_products(start, end),
+            "summary": get_summary(*scoped),
+            "chart": get_chart(*scoped),
+            "channels": get_channels(*scoped),
+            "categories": get_categories(*scoped),
+            "payment_methods": get_payment_methods(*scoped),
+            "delivery_types": get_delivery_types(*scoped),
+            "top_products": get_top_products(*scoped),
+            "refunded_products": get_refunded_products(*scoped),
             "cohorts": get_cohorts(),
         }
         return Response(self.get_serializer(data).data)

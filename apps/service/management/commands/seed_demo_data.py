@@ -527,6 +527,7 @@ class Command(BaseCommand):
                 order = Order.objects.create(
                     customer=customer,
                     status=random.choice([0, 1, 2, 3]),
+                    channel=random.choice(["site", "ios", "android"]),
                     payment_status=random.choice([0, 2]),
                     delivery_type=delivery_type,
                     order_location=address if delivery_type == 0 else None,

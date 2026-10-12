@@ -4,7 +4,7 @@ from abstract_model.base_model import BaseModel
 from apps.authorization.models import Customer, CustomerAddresses
 from apps.base.models import Promocodes, MarketBranch
 from django.conf import settings
-from .choices import ORDER_STATUS, PAYMENT_STATUS, DELIVERY_TYPE, PAYMENT_TYPE, CASH_PAYMENT_METHOD
+from .choices import ORDER_STATUS, PAYMENT_STATUS, DELIVERY_TYPE, PAYMENT_TYPE, CASH_PAYMENT_METHOD, ORDER_CHANNEL
 from .product import Product
 
 
@@ -27,6 +27,8 @@ class Order(BaseModel):
     promocode = models.ForeignKey(Promocodes, on_delete=models.SET_NULL, blank=True, null=True, verbose_name="Промокод")
     customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, verbose_name="Покупатель")
     status = models.IntegerField(choices=ORDER_STATUS, default=0, verbose_name="Статус")
+    # null = unknown: orders placed before the field, by an old app version or from the admin panel
+    channel = models.CharField(max_length=10, choices=ORDER_CHANNEL, blank=True, null=True, verbose_name="Канал")
     total_price = models.FloatField(default=0.0, verbose_name="Общая стоимость")
     payment_status = models.IntegerField(choices=PAYMENT_STATUS, default=0, verbose_name="Статус оплаты")
     order_location = models.ForeignKey(CustomerAddresses, on_delete=models.SET_NULL, blank=True, null=True,
