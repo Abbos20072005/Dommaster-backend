@@ -41,15 +41,16 @@ class MarketBranch(BaseModel):
 
 
 class Banner(BaseModel):
-    SITE_HOME, APP_HOME, HOME_BOTTOM, CATALOG = "site_home", "app_home", "home_bottom", "catalog"
+    # home_top = slider at the top of the home page, one list for the site and the app (the channels
+    # `show_on_*` say where a banner is shown); a client gets it when it asks for banners without a placement
+    HOME_TOP, HOME_BOTTOM, CATALOG = "home_top", "home_bottom", "catalog"
     PLACEMENT_CHOICES = (
-        (SITE_HOME, "Сайт · главный слайдер"),
-        (APP_HOME, "Приложение · главный экран"),
+        (HOME_TOP, "Главная · верхний слайдер"),
         (HOME_BOTTOM, "Главная · внизу страницы"),
         (CATALOG, "Внутри каталога"),
     )
-    # top of the home page: what a client gets when it asks for banners without a placement
-    HOME_TOP = (SITE_HOME, APP_HOME)
+    # the top slider used to be two placements: clients may still ask for it by the old names
+    PLACEMENT_ALIASES = {"site_home": HOME_TOP, "app_home": HOME_TOP}
     # where a tap leads: category / product / badge / brand -> `content_object`, page -> `page`, url -> `link`
     CATEGORY, PRODUCT, BADGE, BRAND, PAGE, URL = "category", "product", "badge", "brand", "page", "url"
     LINK_TYPE_CHOICES = (
@@ -75,7 +76,7 @@ class Banner(BaseModel):
                                      verbose_name="Телефонное изображение")
     # False = archived
     is_visible = models.BooleanField(default=True, verbose_name="Виден")
-    placement = models.CharField(max_length=20, choices=PLACEMENT_CHOICES, default=SITE_HOME,
+    placement = models.CharField(max_length=20, choices=PLACEMENT_CHOICES, default=HOME_TOP,
                                  verbose_name="Расположение")
     show_on_site = models.BooleanField(default=True, verbose_name="Показывать на сайте")
     show_on_ios = models.BooleanField(default=True, verbose_name="Показывать в iOS")

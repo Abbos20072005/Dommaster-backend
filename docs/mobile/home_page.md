@@ -33,7 +33,7 @@ or it has fewer products than the minimum set in the admin panel. So: **render w
           "title": "Knauf kuzgi aksiya",
           "desktop_image": "https://.../media/banner/desktop/b1.webp",
           "mobile_image": "https://.../media/banner/mobile/b1.webp",
-          "placement": "site_home",
+          "placement": "home_top",
           "link_type": "url",
           "link": "https://dommaster.uz/ru",
           "page": "",

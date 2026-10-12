@@ -57,13 +57,19 @@ def apply_rules(products, page):
     return products
 
 
+def slider_banners(block):
+    """Active banners of a slider block (the block's old names of the top slider = Banner.HOME_TOP)."""
+    placement = Banner.PLACEMENT_ALIASES.get(block.banner_placement, block.banner_placement)
+    return Banner.objects.filter(Banner.status_q(Banner.ACTIVE), placement=placement)
+
+
 def block_counts(block, page):
     """(items the block shows now, items of its source). The second one is None for non-product blocks."""
     if block.type in HomeBlock.PRODUCT_TYPES:
         products = source_products(block)
         return apply_rules(products, page).count(), products.count()
     if block.type == HomeBlock.SLIDER:
-        count = Banner.objects.filter(Banner.status_q(Banner.ACTIVE), placement=block.banner_placement).count()
+        count = slider_banners(block).count()
     elif block.type == HomeBlock.BANNER:
         count = int(block.banner.status == Banner.ACTIVE)
     elif block.type == HomeBlock.CATEGORIES:
@@ -166,8 +172,7 @@ def block_content(block, rules, platform=None):
             return None
         return {**content, "products_count": count}
     if block.type == HomeBlock.SLIDER:
-        banners = Banner.objects.filter(Banner.status_q(Banner.ACTIVE), placement=block.banner_placement,
-                                        **banner_channel)
+        banners = slider_banners(block).filter(**banner_channel)
         return {"banners": banners} if banners else None
     if block.type == HomeBlock.BANNER:
         banner = Banner.objects.filter(Banner.status_q(Banner.ACTIVE), pk=block.banner_id, **banner_channel).first()

@@ -234,8 +234,9 @@ class BannerViewSet(ViewSet):
     @extend_schema(
         summary="Banner",
         description="Banners shown right now (visible, started, not expired), ordered by position. "
-                    "`placement`: `site_home` / `app_home` = top of the home page, `home_bottom` = bottom of "
-                    "the home page, `catalog` = category page. Without it the top ones are returned.",
+                    "`placement`: `home_top` = slider at the top of the home page (default; the old names "
+                    "`site_home` / `app_home` mean the same), `home_bottom` = bottom of the home page, "
+                    "`catalog` = category page.",
         parameters=[
             OpenApiParameter(name="placement", location=OpenApiParameter.QUERY, type=OpenApiTypes.STR,
                              enum=[value for value, _ in Banner.PLACEMENT_CHOICES]),
@@ -251,13 +252,10 @@ class BannerViewSet(ViewSet):
         # if cached_data:
         #     return Response(data={"result": cached_data, "ok": True}, status=status.HTTP_200_OK)
 
-        banner = Banner.objects.filter(Banner.status_q(Banner.ACTIVE))
-        placement = request.query_params.get("placement")
-        if placement:
-            banner = banner.filter(placement=placement)
-        else:
-            # a client that knows no placements shows what it gets in the slider at the top of the home page
-            banner = banner.filter(placement__in=Banner.HOME_TOP)
+        # a client that knows no placements shows what it gets in the slider at the top of the home page
+        placement = request.query_params.get("placement") or Banner.HOME_TOP
+        banner = Banner.objects.filter(Banner.status_q(Banner.ACTIVE),
+                                       placement=Banner.PLACEMENT_ALIASES.get(placement, placement))
         platform = BANNER_PLATFORMS.get(request.query_params.get("platform"))
         if platform:
             banner = banner.filter(**{platform: True})

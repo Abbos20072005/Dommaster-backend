@@ -110,7 +110,7 @@ class BannerSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         if "position" not in validated_data:
             # new banner goes to the end of its placement
-            last = Banner.objects.filter(placement=validated_data.get("placement", Banner.SITE_HOME))                 .aggregate(last=Max("position"))["last"]
+            last = Banner.objects.filter(placement=validated_data.get("placement", Banner.HOME_TOP))                 .aggregate(last=Max("position"))["last"]
             validated_data["position"] = (last or 0) + 1
         return super().create(validated_data)
 
@@ -131,7 +131,6 @@ class BannerStatsSerializer(serializers.Serializer):
     expired = serializers.IntegerField(help_text="ends_at has passed, not archived yet")
     archived = serializers.IntegerField(help_text="is_visible=false")
     external = serializers.IntegerField(help_text="Not archived banners with link_type=url")
-    site_home = serializers.IntegerField(help_text="Not archived banners of the placement")
-    app_home = serializers.IntegerField(help_text="Not archived banners of the placement")
+    home_top = serializers.IntegerField(help_text="Not archived banners of the placement")
     home_bottom = serializers.IntegerField(help_text="Not archived banners of the placement")
     catalog = serializers.IntegerField(help_text="Not archived banners of the placement")

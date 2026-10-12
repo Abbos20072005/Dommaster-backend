@@ -37,6 +37,14 @@ class HomeBlock(BaseModel):
         (HIDDEN, "Скрыт"),
         (RULE_HIDDEN, "Скрыт по правилу"),
     )
+    # source of a slider. The block keeps the two names of the top slider that Banner merged into
+    # `home_top`: both mean its banners (Banner.PLACEMENT_ALIASES), the channels pick what a platform gets
+    BANNER_PLACEMENT_CHOICES = (
+        ("site_home", "Сайт · главный слайдер"),
+        ("app_home", "Приложение · главный экран"),
+        (Banner.HOME_BOTTOM, "Главная · внизу страницы"),
+        (Banner.CATALOG, "Внутри каталога"),
+    )
 
     type = models.CharField(max_length=20, choices=TYPE_CHOICES, verbose_name="Тип")
     title = models.CharField(max_length=255, verbose_name="Заголовок")
@@ -46,7 +54,7 @@ class HomeBlock(BaseModel):
     show_in_app = models.BooleanField(default=True, verbose_name="Показывать в приложении")
 
     # the source of the block, one per type (the admin serializer empties the ones the type does not use)
-    banner_placement = models.CharField(max_length=20, choices=Banner.PLACEMENT_CHOICES, blank=True, default="",
+    banner_placement = models.CharField(max_length=20, choices=BANNER_PLACEMENT_CHOICES, blank=True, default="",
                                         verbose_name="Слайдер: расположение баннеров")
     banner = models.ForeignKey(Banner, on_delete=models.CASCADE, null=True, blank=True, related_name="home_blocks",
                                verbose_name="Баннер")

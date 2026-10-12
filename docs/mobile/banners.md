@@ -7,7 +7,7 @@ Bannerlar **3 xil joyda** chiqadi. Qaysi banner qayerda turishini admin panelda 
 
 | Qayerda | `placement` | Qayerdan olinadi |
 | --- | --- | --- |
-| Bosh sahifa **yuqorisi** (slayder) | `site_home` — sayt, `app_home` — ilova | `GET base/banner/?placement=app_home` |
+| Bosh sahifa **yuqorisi** (slayder) | `home_top` — sayt va ilova uchun bitta | `GET base/banner/?placement=home_top` |
 | Bosh sahifa **pasti** (reklama bloklari orasida) | `home_bottom` | `GET main/` ichida, yoki `GET base/banner/?placement=home_bottom` |
 | **Kategoriya sahifasi** | `catalog` | `GET base/banner/?placement=catalog` |
 
@@ -21,18 +21,18 @@ Hozir ko'rsatilishi kerak bo'lgan bannerlar (arxivda emas, muddati boshlangan va
 
 | Parametr | Qiymatlar | Izoh |
 | --- | --- | --- |
-| `placement` | `site_home`, `app_home`, `home_bottom`, `catalog` | qaysi joy uchun. **Yuborilmasa — faqat yuqoridagilar** (`site_home` + `app_home`) |
+| `placement` | `home_top`, `home_bottom`, `catalog` | qaysi joy uchun. **Yuborilmasa — `home_top`**. Eski `site_home` / `app_home` nomlari ham qabul qilinadi (= `home_top`) |
 | `platform` | `site`, `ios`, `android` | faqat shu platformada ko'rsatishga ruxsat berilgan bannerlar. **Har doim yuboring** |
 
 Ilova uchun so'rovlar:
 
 ```
-GET base/banner/?placement=app_home&platform=ios        → bosh ekran, yuqori slayder
+GET base/banner/?placement=home_top&platform=ios        → bosh ekran, yuqori slayder
 GET base/banner/?placement=home_bottom&platform=ios     → bosh ekran, pastki bannerlar
 GET base/banner/?placement=catalog&platform=ios         → kategoriya sahifasi
 ```
 
-Sayt uchun `placement=site_home`, `platform=site`.
+Sayt uchun xuddi shu so'rovlar, `platform=site`. Yuqori slayder sayt va ilova uchun **bitta ro'yxat** — qaysi banner qayerda chiqishini faqat `platform` ajratadi.
 
 Javob — `200`:
 
@@ -112,13 +112,14 @@ Reklama bloklari (mahsulotlar bo'limlari) va ular orasidagi **pastki bannerlar**
 
 | Oldin | Hozir |
 | --- | --- |
-| `base/banner/` parametrsiz **hamma** faol bannerlarni qaytarardi | parametrsiz faqat **yuqoridagilar** (`site_home`, `app_home`). Eski ilova o'zgarishsiz ishlayveradi — unga pastki va kategoriya bannerlari tushmaydi |
+| `base/banner/` parametrsiz **hamma** faol bannerlarni qaytarardi | parametrsiz faqat **yuqoridagilar** (`home_top`). Eski ilova o'zgarishsiz ishlayveradi — unga pastki va kategoriya bannerlari tushmaydi |
 | `main/` dagi `type: "banner"` — hamma faol bannerlar (yuqoridagilar takrorlanardi) | faqat `home_bottom` bannerlar. Admin shu turdagi banner qo'shmaguncha `main/` da banner bo'lmaydi |
 | Kategoriya sahifasi uchun alohida banner yo'q edi | `base/banner/?placement=catalog` |
+| Yuqori slayder ikkita joylashuv edi: `site_home` (sayt), `app_home` (ilova) | bitta `home_top`. Javobdagi `placement` ham `home_top` keladi; so'rovda eski nomlar ishlayveradi, lekin ikkalasi ham bir xil ro'yxatni qaytaradi — shuning uchun `platform` yuborish shart |
 
 Yangi versiyada qilish kerak:
 
-1. Bosh ekran yuqorisi: `base/banner/` ga `placement=app_home` (sayt — `site_home`) va `platform` qo'shish.
+1. Bosh ekran yuqorisi: `base/banner/` ga `placement=home_top` va `platform` qo'shish.
 2. Bosh ekran pasti: `main/` dagi `type: "banner"` elementlarini ko'rsatish (oldin ko'rsatilmagan bo'lsa).
 3. Kategoriya sahifasi: `base/banner/?placement=catalog&platform=...` — ro'yxat bo'sh bo'lsa hech narsa ko'rsatmaslik.
 
