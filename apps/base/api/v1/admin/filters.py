@@ -57,7 +57,7 @@ class NotificationFilter(django_filters.FilterSet):
 
     class Meta:
         model = Notification
-        fields = ("is_active",)
+        fields = ("is_active", "segment", "platform", "link_type")
 
     def filter_status(self, queryset, name, value):
         return queryset.filter(Notification.status_q(value))

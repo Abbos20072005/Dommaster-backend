@@ -4,20 +4,26 @@ from django.db.models import Count, Q
 from django.utils import timezone
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from apps.base.audience import audience_summary
 from apps.base.models import Notification, NotificationRead
 from utils.admin_views import AdminModelViewSet
 from ..filters import NotificationFilter
-from ..serializers import NotificationSerializer, NotificationStatsSerializer
+from ..serializers import NotificationAudienceSerializer, NotificationSerializer, NotificationStatsSerializer
 
 
 class NotificationViewSet(AdminModelViewSet):
-    queryset = Notification.objects.annotate(reads_count=Count("reads"))
+    queryset = Notification.objects.annotate(reads_count=Count("reads")).prefetch_related("content_object")
     serializer_class = NotificationSerializer
     filterset_class = NotificationFilter
     search_fields = ("title_ru", "title_uz", "title_en", "description_ru", "description_uz", "description_en",
                      "deeplink")
     ordering_fields = ("id", "title", "publish_at", "is_active", "reads_count", "created_at", "updated_at")
     ordering = ("-publish_at", "-id")
+
+    def perform_destroy(self, instance):
+        if instance.image:
+            instance.image.delete(save=False)
+        instance.delete()
 
     @action(detail=False, methods=["get"], filter_backends=[], pagination_class=None,
             serializer_class=NotificationStatsSerializer)
@@ -33,3 +39,9 @@ class NotificationViewSet(AdminModelViewSet):
         )
         data["reads_30d"] = NotificationRead.objects.filter(created_at__gte=since).count()
         return Response(self.get_serializer(data).data)
+
+    @action(detail=False, methods=["get"], filter_backends=[], pagination_class=None,
+            serializer_class=NotificationAudienceSerializer)
+    def audience(self, request):
+        """Audience segments of the form with their sizes as of now: customers and devices per platform."""
+        return Response(self.get_serializer(audience_summary(), many=True).data)

@@ -648,7 +648,8 @@ class FCMTokenViewSet(ViewSet):
         if not fcm_token:
             fcm_token = FcmToken.objects.create(device_id=serializer.validated_data.get("device_id"),
                                                 customer_id=request.user.id,
-                                                fcm_token=serializer.validated_data.get("fcm_token"))
+                                                fcm_token=serializer.validated_data.get("fcm_token"),
+                                                platform=serializer.validated_data.get("platform", ""))
             create_serializer = FCMTokenSerializer(fcm_token, context={"request": request})
             return Response(data={"result": create_serializer.data, 'ok': True}, status=status.HTTP_200_OK)
 

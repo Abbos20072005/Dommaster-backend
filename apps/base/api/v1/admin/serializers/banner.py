@@ -24,6 +24,8 @@ CHANNEL_FIELDS = ("show_on_site", "show_on_ios", "show_on_android")
 class BannerTargetSerializer(serializers.Serializer):
     """Banner's generic relation (`content_type` + `object_id`) as one object:
     renders `{"model", "id", "name"}`, on write resolves `{"model": "product", "id": 5}` to the instance."""
+    # a subclass with another whitelist redeclares `model` with its keys
+    target_models = BANNER_TARGET_MODELS
     model = serializers.ChoiceField(choices=list(BANNER_TARGET_MODELS))
     id = serializers.IntegerField(min_value=1)
     name = serializers.CharField(read_only=True)
@@ -36,7 +38,7 @@ class BannerTargetSerializer(serializers.Serializer):
 
     def to_internal_value(self, data):
         attrs = super().to_internal_value(data)
-        model = BANNER_TARGET_MODELS[attrs["model"]]
+        model = self.target_models[attrs["model"]]
         try:
             return model.objects.get(pk=attrs["id"])
         except model.DoesNotExist:

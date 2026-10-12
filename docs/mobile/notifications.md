@@ -1,6 +1,6 @@
 # Bildirishnomalar — mobile / sayt uchun
 
-Bildirishnomalar **umumiy**: admin yaratadi, barcha mijozlar bir xil ro'yxatni ko'radi. O'qilgan / o'qilmagan holati har bir mijoz uchun alohida saqlanadi.
+Bildirishnomalarni admin yaratadi. Ko'pchiligi hammaga ko'rinadi; auditoriyasi tanlangan (masalan faqat PRO mijozlar yoki faqat iOS) bildirishnomani faqat o'sha mijozlar ko'radi — ro'yxat, `unread-count/` va `{id}/` buni o'zi hisobga oladi. O'qilgan / o'qilmagan holati har bir mijoz uchun alohida saqlanadi.
 
 Base URL: `{{host}}/api/v1/base/`
 Token kerak: `Authorization: Bearer <access_token>` (tokensiz → `401`). Til: `Accept-Language: uz | ru | en` (default `ru`; tanlangan tilda matn bo'lmasa — ruscha qaytadi).
@@ -36,7 +36,11 @@ Query: `?page=1&page_size=10` (default 1 / 10), `?is_read=false` — faqat o'qil
         "id": 7,
         "title": "Knauf kuzgi aksiya",
         "description": "Gipsokarton va qorishmalarga 20% gacha chegirma",
-        "deeplink": "buildex://banner/knauf-kuz",
+        "image": "https://api.example.uz/media/notification/knauf.jpg",
+        "deeplink": "buildex://banner/7",
+        "link_type": "banner",
+        "page": "",
+        "content_type_info": {"model": "banner", "id": 7},
         "is_read": false,
         "publish_at": "2026-09-25T11:00:00"
       },
@@ -44,7 +48,11 @@ Query: `?page=1&page_size=10` (default 1 / 10), `?is_read=false` — faqat o'qil
         "id": 6,
         "title": "Sement narxlari tushdi",
         "description": "Qizilqum M400 va M500 — PRO narxlarda.",
-        "deeplink": "buildex://category/sement",
+        "image": null,
+        "deeplink": "buildex://sub-category/sement",
+        "link_type": "category",
+        "page": "",
+        "content_type_info": {"model": "productsubcategory", "id": 12},
         "is_read": true,
         "publish_at": "2026-09-22T18:30:00"
       }
@@ -57,7 +65,11 @@ Query: `?page=1&page_size=10` (default 1 / 10), `?is_read=false` — faqat o'qil
 | Maydon | Izoh |
 | --- | --- |
 | `title`, `description` | so'ralgan tildagi matn (oddiy text, HTML emas) |
-| `deeplink` | bosilganda ochiladigan ekran; bo'sh string bo'lishi mumkin |
+| `image` | rasm (to'liq URL) yoki `null` |
+| `link_type` | bosilganda qayerga o'tiladi: `category`, `product`, `badge`, `page`, `banner`; bo'sh string = havola yo'q |
+| `content_type_info` | `link_type` = `category` / `product` / `badge` / `banner` uchun obyekt — bannerlardagi bilan bir xil shakl: `model` (`productcategory`, `productsubcategory`, `productitemcategory`, `product`, `productbadge`, `banner`) + `id`; aks holda `null` (obyekt o'chirilgan bo'lsa ham) |
+| `page` | `link_type=page` uchun ichki yo'l (`/pro`), aks holda bo'sh |
+| `deeplink` | xuddi shu havola bitta satrda (`buildex://sub-category/sement`, `buildex://product/15`, `buildex://page/pro`); `link_type` bo'sh bo'lsa admin yozgan erkin matn yoki bo'sh string |
 | `is_read` | joriy mijoz ochganmi |
 | `publish_at` | chiqarilgan vaqti — ro'yxatda sana sifatida shu ko'rsatiladi |
 
@@ -93,9 +105,11 @@ Body yuborilmaydi.
 
 ## Push (FCM)
 
-Bildirishnoma chiqarilganda backend **barcha** ro'yxatdan o'tgan qurilmalarga push yuboradi (token: `PATCH auth/fcm/token/`, `order_status_push.md` dagi kabi). Har bir bildirishnoma uchun bir marta.
+Bildirishnoma chiqarilganda backend uning auditoriyasidagi qurilmalarga push yuboradi (token: `PATCH auth/fcm/token/`, `order_status_push.md` dagi kabi). Har bir bildirishnoma uchun bir marta.
 
-`notification` — tizim ko'rsatadigan matn: `title` / `body` = bildirishnomaning **ruscha** sarlavhasi va matni (mijoz tili backendda saqlanmaydi).
+**Token bilan birga `platform` yuboring** (`"ios"` yoki `"android"`): `PATCH auth/fcm/token/ {"device_id": "...", "fcm_token": "...", "platform": "ios"}`. Maydon ixtiyoriy, lekin usiz qurilma "faqat iOS" / "faqat Android" bildirishnomalarini olmaydi (push ham, ro'yxatda ham).
+
+`notification` — tizim ko'rsatadigan matn: `title` / `body` = bildirishnomaning **ruscha** sarlavhasi va matni (mijoz tili backendda saqlanmaydi); rasmi bo'lsa — `image` (to'liq https URL). iOS'da rasm chiqishi uchun Notification Service Extension kerak.
 
 `data` (barcha qiymatlar **string**):
 
@@ -103,11 +117,15 @@ Bildirishnoma chiqarilganda backend **barcha** ro'yxatdan o'tgan qurilmalarga pu
 {
   "type": "notification",
   "notification_id": "7",
-  "deeplink": "buildex://banner/knauf-kuz"
+  "deeplink": "buildex://banner/7",
+  "link_type": "banner",
+  "target_model": "banner",
+  "target_id": "7",
+  "page": ""
 }
 ```
 
 - `type` — push turi; bu bildirishnomalar uchun har doim `notification` (buyurtma statusi — `order_status`).
 - `notification_id` — push bosilganda `GET notifications/{id}/` ni chaqiring: bildirishnoma o'qilgan bo'ladi va matn kerakli tilda qaytadi.
-- `deeplink` — ochiladigan ekran; bo'sh string bo'lishi mumkin (unda bildirishnomaning o'zini oching).
+- `link_type`, `target_model`, `target_id`, `page` — ro'yxatdagi `link_type`, `content_type_info.model`, `content_type_info.id`, `page` ning o'zi (bo'lmasa bo'sh string); `deeplink` — xuddi shu havola bitta satrda. Hammasi bo'sh bo'lsa — bildirishnomaning o'zini oching.
 - Push kelganda `unread-count/` ni yangilang. Push yetib borishi kafolatlanmaydi — ro'yxat va badge har doim API'dan olinadi.

@@ -53,9 +53,18 @@ class CustomerAddresses(BaseModel):
 
 
 class FcmToken(BaseModel):
+    IOS, ANDROID = "ios", "android"
+    PLATFORM_CHOICES = (
+        (IOS, "iOS"),
+        (ANDROID, "Android"),
+    )
+
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, verbose_name="Клиент")
     device_id = models.CharField(max_length=300, verbose_name="ID устройства")
     fcm_token = models.CharField(max_length=300, verbose_name="Фсм Токен")
+    # sent by the app together with the token; "" = unknown (a token saved by an older app version)
+    platform = models.CharField(max_length=10, choices=PLATFORM_CHOICES, blank=True, default="",
+                                verbose_name="Платформа")
 
     def __str__(self):
         return str(self.id)

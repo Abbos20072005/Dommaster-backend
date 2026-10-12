@@ -1,4 +1,4 @@
-"""FCM push of a common notification (`Notification`) to every registered device.
+"""FCM push of a notification (`Notification`) to the devices of its audience (`audience.py`).
 
 A notification is pushed once, at the moment it becomes published: `push_if_published` is called by
 the admin serializer after create / update (the push starts after commit, in the background —
@@ -12,9 +12,12 @@ import logging
 from django.db import transaction
 from django.utils import timezone
 
-from apps.base.models import Notification
+from django.conf import settings
+
+from apps.base import audience
+from apps.base.models import Notification, NotificationRecipient
 from utils.background import run_in_background
-from utils.send_notification import send_push_to_all
+from utils.send_notification import send_push_to_devices
 
 logger = logging.getLogger(__name__)
 
@@ -46,14 +49,47 @@ def push_due_notifications():
     return {pk: send_push(pk) for pk in due.order_by("publish_at", "id").values_list("id", flat=True) if _claim(pk)}
 
 
+def push_data(notification):
+    """FCM `data` of the push: where a tap leads, the same as in the client API. Values must be strings."""
+    target = notification.content_object
+    return {
+        "type": NOTIFICATION_PUSH_TYPE,
+        "notification_id": str(notification.pk),
+        "deeplink": notification.deeplink,
+        "link_type": notification.link_type,
+        "target_model": target._meta.model_name if target else "",
+        "target_id": str(target.pk) if target else "",
+        "page": notification.page,
+    }
+
+
+def push_image(notification):
+    """Absolute URL of the image, or None: FCM downloads it itself, so it needs the public address."""
+    if not notification.image:
+        return None
+    if not settings.BACKEND_URL:
+        logger.warning("Notification push without its image, BACKEND_URL is not set: notification_id=%s",
+                       notification.pk)
+        return None
+    return f"{settings.BACKEND_URL.rstrip('/')}/{notification.image.url.lstrip('/')}"
+
+
 def send_push(notification_id):
     notification = Notification.objects.get(pk=notification_id)
+    if notification.is_targeted:
+        # the audience as it is now: these customers keep the notification in their list
+        customers = audience.audience_customers(notification.segment, notification.platform)
+        NotificationRecipient.objects.bulk_create(
+            [NotificationRecipient(notification=notification, customer_id=customer_id)
+             for customer_id in customers.values_list("id", flat=True)],
+            ignore_conflicts=True, batch_size=2000,
+        )
+    devices = audience.audience_devices(notification.segment, notification.platform)
     # the customer's language is not stored anywhere, so the text is in the project default language (ru)
-    sent = send_push_to_all(
+    sent = send_push_to_devices(
+        devices.values_list("fcm_token", flat=True),
         notification.title_ru or notification.title, notification.description_ru or notification.description,
-        # FCM data values must be strings
-        data={"type": NOTIFICATION_PUSH_TYPE, "notification_id": str(notification.pk),
-              "deeplink": notification.deeplink},
+        data=push_data(notification), image=push_image(notification),
     )
     Notification.objects.filter(pk=notification_id).update(push_devices=sent)
     logger.info("Notification push: notification_id=%s devices=%s", notification_id, sent)

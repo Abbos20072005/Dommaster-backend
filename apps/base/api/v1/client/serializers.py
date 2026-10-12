@@ -130,6 +130,7 @@ class NotificationSerializer(serializers.ModelSerializer):
     description = serializers.SerializerMethodField()
     # annotated by the view
     is_read = serializers.BooleanField(read_only=True)
+    content_type_info = serializers.SerializerMethodField()
 
     class Meta:
         model = Notification
@@ -137,10 +138,23 @@ class NotificationSerializer(serializers.ModelSerializer):
             "id",
             "title",
             "description",
+            "image",
             "deeplink",
+            "link_type",
+            "page",
+            "content_type_info",
             "is_read",
             "publish_at"
         )
+
+    def get_content_type_info(self, obj):
+        # the same shape as in the banners
+        if obj.content_object:
+            return {
+                "model": obj.content_type.model,
+                "id": obj.object_id
+            }
+        return None
 
     def _translated(self, obj, field) -> str:
         request = self.context.get('request')

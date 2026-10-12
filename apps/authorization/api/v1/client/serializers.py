@@ -10,6 +10,8 @@ class FCMTokenDeleteSerializer(serializers.Serializer):
 class FCMTokenRequestSerializer(serializers.Serializer):
     fcm_token = serializers.CharField(max_length=300, required=True)
     device_id = serializers.CharField(max_length=300, required=True)
+    platform = serializers.ChoiceField(choices=FcmToken.PLATFORM_CHOICES, required=False,
+                                       help_text="Needed for notifications sent to one platform only")
 
 class FCMTokenSerializer(serializers.ModelSerializer):
     class Meta:
@@ -19,6 +21,7 @@ class FCMTokenSerializer(serializers.ModelSerializer):
             "customer",
             "device_id",
             "fcm_token",
+            "platform",
         )
 
 class ForgotPasswordSerializer(serializers.Serializer):

@@ -380,7 +380,8 @@ class NotificationViewSet(ViewSet):
     def get_queryset(request):
         # common list + the customer's own read state
         is_read = NotificationRead.objects.filter(notification=OuterRef("pk"), customer_id=request.user.id)
-        return Notification.visible_to(request.user).annotate(is_read=Exists(is_read))
+        return Notification.visible_to(request.user).annotate(is_read=Exists(is_read)) \
+            .prefetch_related("content_object")
 
     @extend_schema(
         summary="Notifications list",

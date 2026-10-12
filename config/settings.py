@@ -312,6 +312,10 @@ USE_I18N = True
 
 USE_TZ = False
 
+# public address of this backend (https://api.example.uz): absolute media links built outside a request
+# (the image of a notification push)
+BACKEND_URL = os.getenv("BACKEND_URL", "")
+
 # Celery: `celery -A config worker` + `celery -A config beat` (config/celery.py, tasks in apps/*/tasks.py)
 # 0 = no worker: background work runs in threads of the web process (see utils/background.py)
 CELERY_ENABLED = int(os.getenv("CELERY_ENABLED", 0))

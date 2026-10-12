@@ -1,9 +1,10 @@
 import uuid
+from datetime import time, timedelta
 
 from django.db import models
 from django.utils import timezone
 from abstract_model.base_model import BaseModel
-from apps.authorization.models import Customer
+from apps.authorization.models import Customer, FcmToken
 from ckeditor_uploader.fields import RichTextUploadingField
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
@@ -169,8 +170,9 @@ class LoyaltyCard(BaseModel):
 
 
 class Notification(BaseModel):
-    """Common notification: every customer sees the same list, the read state is per customer
-    (`NotificationRead`)."""
+    """Notification of the in-app list + its FCM push. Without an audience (`segment` / `platform` =
+    all) every customer sees it; a targeted one is seen by the customers it was sent to
+    (`NotificationRecipient`). The read state is per customer (`NotificationRead`)."""
     # not stored: derived from `is_active` + `publish_at` (see `status`, `status_q`)
     PUBLISHED, SCHEDULED, DRAFT = "published", "scheduled", "draft"
     STATUS_CHOICES = (
@@ -178,11 +180,55 @@ class Notification(BaseModel):
         (SCHEDULED, "Запланировано"),
         (DRAFT, "Черновик"),
     )
+    # where a tap leads: category / product / badge / banner -> `content_object`, page -> `page`;
+    # "" = nowhere, or the free `deeplink`
+    CATEGORY, PRODUCT, BADGE, PAGE, BANNER = "category", "product", "badge", "page", "banner"
+    LINK_TYPE_CHOICES = (
+        (CATEGORY, "Категория"),
+        (PRODUCT, "Товар"),
+        (BADGE, "Тег"),
+        (PAGE, "Страница"),
+        (BANNER, "Баннер"),
+    )
+    # who gets it (see `apps/base/audience.py`)
+    SEGMENT_ALL, PRO, TASHKENT, BUYERS_30D, ABANDONED_CART = "all", "pro", "tashkent", "buyers_30d", "abandoned_cart"
+    SEGMENT_CHOICES = (
+        (SEGMENT_ALL, "Все пользователи"),
+        (PRO, "PRO клиенты"),
+        (TASHKENT, "Город Ташкент"),
+        (BUYERS_30D, "Покупали за последние 30 дней"),
+        (ABANDONED_CART, "Бросили корзину"),
+    )
+    PLATFORM_ALL = "all"
+    PLATFORM_CHOICES = ((PLATFORM_ALL, "iOS и Android"), *FcmToken.PLATFORM_CHOICES)
+    # `quiet_hours`: nothing goes out between these, the publication moves to QUIET_TO
+    QUIET_FROM, QUIET_TO = time(22, 0), time(9, 0)
+    DEEPLINK_SCHEME = "buildex://"
+    # the three category levels have slugs of their own, so each has its own path
+    DEEPLINK_CATEGORY_PATHS = {
+        "productcategory": "category",
+        "productsubcategory": "sub-category",
+        "productitemcategory": "item-category",
+    }
 
     title = models.CharField(max_length=150, verbose_name="Заголовок")
     description = models.TextField(verbose_name="Описание")
+    image = models.ImageField(upload_to="notification/", blank=True, null=True, verbose_name="Изображение")
+    link_type = models.CharField(max_length=10, choices=LINK_TYPE_CHOICES, blank=True, default="",
+                                 verbose_name="Тип ссылки")
+    page = models.CharField(max_length=255, blank=True, default="", verbose_name="Страница",
+                            help_text="Внутренний путь, например /pro")
+    content_type = models.ForeignKey(ContentType, blank=True, null=True, on_delete=models.SET_NULL)
+    object_id = models.PositiveIntegerField(blank=True, null=True)
+    content_object = GenericForeignKey("content_type", "object_id")
+    # built from `link_type` when it is set (see `deeplink_of`), otherwise free text
     deeplink = models.CharField(max_length=255, blank=True, default="", verbose_name="Диплинк",
                                 help_text="Экран приложения, например buildex://category/sement")
+    segment = models.CharField(max_length=20, choices=SEGMENT_CHOICES, default=SEGMENT_ALL,
+                               verbose_name="Сегмент аудитории")
+    platform = models.CharField(max_length=10, choices=PLATFORM_CHOICES, default=PLATFORM_ALL,
+                                verbose_name="Платформа")
+    quiet_hours = models.BooleanField(default=False, verbose_name="Тихие часы (22:00–09:00 не отправлять)")
     # False = draft
     is_active = models.BooleanField(default=True, verbose_name="Активен")
     publish_at = models.DateTimeField(default=timezone.now, db_index=True, verbose_name="Время публикации")
@@ -212,16 +258,64 @@ class Notification(BaseModel):
             return models.Q(is_active=True, publish_at__gt=now)
         return models.Q(is_active=True, publish_at__lte=now)
 
+    @property
+    def is_targeted(self):
+        return self.segment != self.SEGMENT_ALL or self.platform != self.PLATFORM_ALL
+
     @classmethod
     def visible_to(cls, customer):
         """Published notifications of the customer's list: those published before the registration are
-        not shown, so a new customer does not start with a pile of old unread ones."""
-        return cls.objects.filter(cls.status_q(cls.PUBLISHED), publish_at__gte=customer.created_at)
+        not shown, so a new customer does not start with a pile of old unread ones; a targeted one
+        only when the customer was in its audience at the moment it was sent."""
+        return cls.objects.filter(
+            cls.status_q(cls.PUBLISHED), publish_at__gte=customer.created_at,
+        ).filter(
+            models.Q(segment=cls.SEGMENT_ALL, platform=cls.PLATFORM_ALL) | models.Q(recipients__customer=customer),
+        )
+
+    @classmethod
+    def deeplink_of(cls, link_type, target=None, page=""):
+        """`buildex://category/sement`, `buildex://product/15`, `buildex://page/pro`; "" without a link."""
+        if link_type == cls.PAGE:
+            return f"{cls.DEEPLINK_SCHEME}page/{page.lstrip('/')}"
+        if not link_type or target is None:
+            return ""
+        if link_type == cls.CATEGORY:
+            return f"{cls.DEEPLINK_SCHEME}{cls.DEEPLINK_CATEGORY_PATHS[target._meta.model_name]}/{target.slug}"
+        return f"{cls.DEEPLINK_SCHEME}{link_type}/{target.pk}"
+
+    @classmethod
+    def after_quiet_hours(cls, moment):
+        """A moment between 22:00 and 09:00 -> the nearest 09:00 after it."""
+        if moment.time() >= cls.QUIET_FROM:
+            moment += timedelta(days=1)
+        elif moment.time() >= cls.QUIET_TO:
+            return moment
+        return moment.replace(hour=cls.QUIET_TO.hour, minute=cls.QUIET_TO.minute, second=0, microsecond=0)
 
     class Meta:
         verbose_name = "Уведомление"
         verbose_name_plural = "Уведомления"
         ordering = ("-publish_at", "-id")
+
+
+class NotificationRecipient(BaseModel):
+    """The audience of a targeted notification as it was when the push went out: these customers see
+    it in their list (a segment like "bought in the last 30 days" changes every day)."""
+    notification = models.ForeignKey(Notification, on_delete=models.CASCADE, related_name="recipients",
+                                     verbose_name="Уведомление")
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="notifications_received",
+                                 verbose_name="Клиент")
+
+    def __str__(self):
+        return f"{self.customer_id} - {self.notification_id}"
+
+    class Meta:
+        verbose_name = "Получатель уведомления"
+        verbose_name_plural = "Получатели уведомлений"
+        constraints = [
+            models.UniqueConstraint(fields=("notification", "customer"), name="unique_notification_recipient"),
+        ]
 
 
 class NotificationRead(BaseModel):

@@ -3,11 +3,11 @@
 Buyurtma statusi o'zgarganda backend mijozning barcha qurilmalariga FCM push yuboradi. Alohida API yo'q — push olish uchun qurilma tokeni ro'yxatdan o'tgan bo'lishi kifoya:
 
 ```
-PATCH  {{host}}/api/v1/auth/fcm/token/     {"device_id": "...", "fcm_token": "..."}
+PATCH  {{host}}/api/v1/auth/fcm/token/     {"device_id": "...", "fcm_token": "...", "platform": "ios"}
 DELETE {{host}}/api/v1/auth/fcm/token/     {"device_id": "..."}
 ```
 
-Token kerak: `Authorization: Bearer <access_token>`. Swagger: `/swagger/` → **FcmToken**. Logout'da tokenni `DELETE` bilan o'chirish kerak, aks holda push eski akkauntga boraveradi.
+`platform` — `ios` yoki `android` (ixtiyoriy; bitta platformaga yuboriladigan bildirishnomalar uchun kerak, `notifications.md`). Token kerak: `Authorization: Bearer <access_token>`. Swagger: `/swagger/` → **FcmToken**. Logout'da tokenni `DELETE` bilan o'chirish kerak, aks holda push eski akkauntga boraveradi.
 
 ---
 

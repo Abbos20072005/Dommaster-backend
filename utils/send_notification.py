@@ -45,9 +45,10 @@ def real_fcm_tokens():
     return FcmToken.objects.exclude(fcm_token="").exclude(fcm_token=F("device_id"))
 
 
-def send_push_to_all(title: str, body: str, data: dict | None = None) -> int:
-    """Push to every registered device of every customer. Returns how many devices accepted it."""
-    tokens = list(real_fcm_tokens().values_list("fcm_token", flat=True).distinct())
+def send_push_to_devices(fcm_tokens, title: str, body: str, data: dict | None = None,
+                         image: str | None = None) -> int:
+    """Push to the given FCM tokens (`image` = absolute https URL). Returns how many devices accepted it."""
+    tokens = list(dict.fromkeys(fcm_tokens))
     if not tokens:
         return 0
 
@@ -64,7 +65,7 @@ def send_push_to_all(title: str, body: str, data: dict | None = None) -> int:
         """True = accepted, None = the token is dead, False = any other failure."""
         try:
             push_service.notify(fcm_token=fcm_token, notification_title=title, notification_body=body,
-                                data_payload=data)
+                                notification_image=image, data_payload=data)
             return True
         except FCMNotRegisteredError:
             return None
