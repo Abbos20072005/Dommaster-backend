@@ -236,35 +236,37 @@ class MainPageViewSet(ViewSet):
                 data={"result": cached_data, "ok": True}, status=status.HTTP_200_OK
             )
 
-        result = []
         banners = list(Banner.objects.filter(Banner.status_q(Banner.ACTIVE), placement=Banner.HOME_BOTTOM))
-        addsbrands_list = AddsBrands.objects.filter(is_visible=True).prefetch_related(
+        addsbrands_list = list(AddsBrands.objects.filter(is_visible=True).prefetch_related(
             "products"
-        )
+        ))
 
-        banner_index = 0
-
-        for addsbrand in addsbrands_list:
-            result.append(
-                {
-                    "type": "addsbrands",
-                    "data": AddsBrandsSerializer(
-                        addsbrand, context={"request": request}
-                    ).data,
-                }
-            )
-
-            if banner_index < len(banners):
-                banner = banners[banner_index]
+        # the bottom banners follow the ad blocks as lists: split evenly between the blocks, in order
+        # (the first lists take the remainder; fewer banners than blocks = the last blocks go without)
+        size, extra = divmod(len(banners), max(len(addsbrands_list), 1))
+        result = []
+        start = 0
+        for index, addsbrand in enumerate(addsbrands_list or [None]):
+            if addsbrand:
                 result.append(
                     {
-                        "type": "banner",
-                        "data": BannerSerializer(
-                            banner, context={"request": request}
+                        "type": "addsbrands",
+                        "data": AddsBrandsSerializer(
+                            addsbrand, context={"request": request}
                         ).data,
                     }
                 )
-                banner_index += 1
+            end = start + size + (index < extra)
+            if end > start:
+                result.append(
+                    {
+                        "type": "banners",
+                        "data": BannerSerializer(
+                            banners[start:end], many=True, context={"request": request}
+                        ).data,
+                    }
+                )
+            start = end
 
         cache.set(cache_key, result, timeout=1000)
         return Response(data={"result": result, "ok": True}, status=status.HTTP_200_OK)

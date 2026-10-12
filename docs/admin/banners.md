@@ -145,10 +145,10 @@ Bitta tab'dagi bannerlar yangi tartibda yuboriladi, ro'yxatdagi o'rni = `positio
 | Tur | `placement` | Mijoz qayerdan oladi |
 | --- | --- | --- |
 | Bosh sahifa **yuqorisi** (slayder) | `home_top` | `base/banner/` — `placement` **yuborilmasa** aynan shu qaytadi (eski sayt / ilova shunday ishlaydi); yoki `?placement=home_top` (eski `site_home` / `app_home` nomlari ham qabul qilinadi) + `?platform=` |
-| Bosh sahifa **pasti** | `home_bottom` | `GET /api/v1/main/` — reklama bloklari (`addsbrands`) orasidagi `type: "banner"` elementlari; yoki `base/banner/?placement=home_bottom` |
+| Bosh sahifa **pasti** | `home_bottom` | `GET /api/v1/main/` — har bir reklama blokidan (`addsbrands`) keyingi `type: "banners"` elementlari (`data` — bannerlar ro'yxati); yoki `base/banner/?placement=home_bottom` |
 | **Kategoriya sahifasi** | `catalog` | `base/banner/?placement=catalog` |
 
-- `main/` da banner har bir reklama blokidan keyin bittadan qo'yiladi: `home_bottom` bannerlar bloklardan ko'p bo'lsa, ortiqchasi chiqmaydi. `main/` ~17 daqiqa keshlanadi — yangi banner darhol ko'rinmaydi.
+- `main/` da `home_bottom` bannerlar reklama bloklari orasida **teng bo'linadi** va har blokdan keyin ro'yxat bo'lib keladi (tartib — `position`, qoldiq birinchi ro'yxatlarga; masalan 2 ta blok va 5 ta banner → 3 + 2). Banner bloklardan kam bo'lsa, oxirgi bloklar bannersiz qoladi; hech bir banner tushib qolmaydi. `main/` ~17 daqiqa keshlanadi — yangi banner darhol ko'rinmaydi.
 - `catalog` bannerlari aniq bir kategoriyaga bog'lanmaydi: hamma kategoriya sahifalari uchun bitta ro'yxat (`target` — bosilganda qayerga olib borishi, qayerda ko'rinishi emas).
 - Yangi bosh sahifa (`GET /api/v1/home/`) da slayder bloki `banner_placement` bo'yicha ishlaydi — `home_bottom` uchun shu joylashuvli yana bitta `slider` blok qo'shiladi.
 
@@ -171,7 +171,7 @@ Banner obyekti, maydonlar va validatsiya **o'zgarmagan** — faqat `placement` n
 Adminga tushuntirish uchun (qaysi joylashuv qayerda ko'rinadi):
 
 - **Bosh sahifa · yuqori slayder** — bosh sahifaning eng yuqorisidagi slayder (sayt va ilovada; kanallar bo'yicha).
-- **Bosh sahifa · pastda** — bosh sahifadagi reklama bloklari ("Asosiy bo'limlar") orasida, har blokdan keyin bittadan. Reklama bloklari nechta bo'lsa, shuncha banner ko'rinadi — ortiqchasi chiqmaydi. Yangi banner saytda ~17 daqiqagacha kechikib ko'rinishi mumkin (kesh).
+- **Bosh sahifa · pastda** — bosh sahifadagi reklama bloklari ("Asosiy bo'limlar") orasida: bannerlar bloklar soniga teng bo'linib, har blokdan keyin ro'yxat (karusel) bo'lib chiqadi; shu joylashuvdagi hamma faol bannerlar ko'rinadi. Yangi banner saytda ~17 daqiqagacha kechikib ko'rinishi mumkin (kesh).
 - **Katalog ichida** — kategoriya sahifasida; hamma kategoriyalar uchun bitta ro'yxat.
 
 ## Nima o'zgardi — yuqori slayder bitta joylashuv

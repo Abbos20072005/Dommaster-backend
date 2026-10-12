@@ -8,7 +8,7 @@ Bannerlar **3 xil joyda** chiqadi. Qaysi banner qayerda turishini admin panelda 
 | Qayerda | `placement` | Qayerdan olinadi |
 | --- | --- | --- |
 | Bosh sahifa **yuqorisi** (slayder) | `home_top` — sayt va ilova uchun bitta | `GET base/banner/?placement=home_top` |
-| Bosh sahifa **pasti** (reklama bloklari orasida) | `home_bottom` | `GET main/` ichida, yoki `GET base/banner/?placement=home_bottom` |
+| Bosh sahifa **pasti** (reklama bloklari orasida, ro'yxat bo'lib) | `home_bottom` | `GET main/` ichida, yoki `GET base/banner/?placement=home_bottom` |
 | **Kategoriya sahifasi** | `catalog` | `GET base/banner/?placement=catalog` |
 
 Swagger: `/swagger/` → **Base** → "Banner", **Main** → "Main page informations".
@@ -85,23 +85,30 @@ Javob — `200`:
 
 ## `GET main/` — bosh sahifa pasti
 
-Reklama bloklari (mahsulotlar bo'limlari) va ular orasidagi **pastki bannerlar** bitta ro'yxatda, ko'rsatish tartibida:
+Reklama bloklari (mahsulotlar bo'limlari) va ular orasidagi **pastki bannerlar ro'yxatlari**, ko'rsatish tartibida:
 
 ```json
 {
   "result": [
     { "type": "addsbrands", "data": { "id": 1, "name": "Yozgi chegirmalar", "brand": 12, "products": [ ... ] } },
-    { "type": "banner",     "data": { "id": 17, "title": "...", "desktop_image": "...", "mobile_image": null,
-                                      "placement": "home_bottom", "link_type": "url", "link": "https://...",
-                                      "page": "", "content_type_info": null } },
-    { "type": "addsbrands", "data": { "id": 3, "name": "Knauf", "brand": 4, "products": [ ... ] } }
+    { "type": "banners",    "data": [
+        { "id": 17, "title": "...", "desktop_image": "...", "mobile_image": null, "placement": "home_bottom",
+          "link_type": "url", "link": "https://...", "page": "", "content_type_info": null },
+        { "id": 18, "title": "...", "desktop_image": "...", "mobile_image": "...", "placement": "home_bottom",
+          "link_type": "page", "link": "", "page": "/pro", "content_type_info": null }
+    ] },
+    { "type": "addsbrands", "data": { "id": 3, "name": "Knauf", "brand": 4, "products": [ ... ] } },
+    { "type": "banners",    "data": [ { "id": 19, ... } ] }
   ],
   "ok": true
 }
 ```
 
-- `type: "banner"` — `data` yuqoridagi banner obyekti bilan bir xil. Bu yerda **faqat `home_bottom`** bannerlar keladi.
-- Banner har bir reklama blokidan **keyin** bittadan qo'yiladi. Bannerlar bloklardan ko'p bo'lsa, ortiqchasi kelmaydi; kam bo'lsa, oxirgi bloklar bannersiz keladi.
+- Har bir reklama blokidan **keyin** bitta `type: "banners"` elementi keladi: `data` **ro'yxat**. Pastki (`home_bottom`) bannerlar bloklar orasida **teng bo'linadi**, admin paneldagi tartibda; qoldiq birinchi ro'yxatlarga tushadi.
+- Misol: 2 ta blok — 5 ta banner → `[1, 2, 3]` va `[4, 5]`; 3 ta banner → `[1, 2]` va `[3]`; 1 ta banner → faqat birinchi blokdan keyin `[1]`.
+- Banner bloklardan kam bo'lsa, oxirgi bloklardan keyin element **kelmaydi** (bo'sh ro'yxat yuborilmaydi). Hech bir banner tushib qolmaydi.
+- Ro'yxatdagi har bir element — `base/banner/` dagi banner obyekti.
+- Eski `type: "banner"` (`data` — bitta obyekt, har blokdan keyin bittadan) endi **kelmaydi**.
 - `type` bo'yicha render qiling; noma'lum `type` ni o'tkazib yuboring.
 - Javob ~17 daqiqa keshlanadi — admin panelda qo'shilgan banner darhol ko'rinmaydi.
 - `main/` da `platform` parametri yo'q: platforma bo'yicha aniq ro'yxat kerak bo'lsa, `base/banner/?placement=home_bottom&platform=...` dan oling.
@@ -113,14 +120,14 @@ Reklama bloklari (mahsulotlar bo'limlari) va ular orasidagi **pastki bannerlar**
 | Oldin | Hozir |
 | --- | --- |
 | `base/banner/` parametrsiz **hamma** faol bannerlarni qaytarardi | parametrsiz faqat **yuqoridagilar** (`home_top`). Eski ilova o'zgarishsiz ishlayveradi — unga pastki va kategoriya bannerlari tushmaydi |
-| `main/` dagi `type: "banner"` — hamma faol bannerlar (yuqoridagilar takrorlanardi) | faqat `home_bottom` bannerlar. Admin shu turdagi banner qo'shmaguncha `main/` da banner bo'lmaydi |
+| `main/` dagi `type: "banner"` — hamma faol bannerlar (yuqoridagilar takrorlanardi) | `type: "banners"` — har reklama blokidan keyin `home_bottom` bannerlarning **ro'yxati** (bloklar orasida teng bo'lingan). Admin shu turdagi banner qo'shmaguncha `main/` da banner bo'lmaydi |
 | Kategoriya sahifasi uchun alohida banner yo'q edi | `base/banner/?placement=catalog` |
 | Yuqori slayder ikkita joylashuv edi: `site_home` (sayt), `app_home` (ilova) | bitta `home_top`. Javobdagi `placement` ham `home_top` keladi; so'rovda eski nomlar ishlayveradi, lekin ikkalasi ham bir xil ro'yxatni qaytaradi — shuning uchun `platform` yuborish shart |
 
 Yangi versiyada qilish kerak:
 
 1. Bosh ekran yuqorisi: `base/banner/` ga `placement=home_top` va `platform` qo'shish.
-2. Bosh ekran pasti: `main/` dagi `type: "banner"` elementlarini ko'rsatish (oldin ko'rsatilmagan bo'lsa).
+2. Bosh ekran pasti: `main/` dagi `type: "banners"` elementlarini ko'rsatish — har birida `data` ro'yxat (karusel / ro'yxat). `type: "banner"` ni o'qiydigan kod kerak emas.
 3. Kategoriya sahifasi: `base/banner/?placement=catalog&platform=...` — ro'yxat bo'sh bo'lsa hech narsa ko'rsatmaslik.
 
 ---
