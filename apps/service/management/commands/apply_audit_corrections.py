@@ -8,7 +8,7 @@ from django.db import transaction
 from django.db.models import Max, Q
 
 from apps.service.models import (
-    Brand, Product, ProductAttributeValue, ProductItemCategory, ProductSubCategory,
+    Brand, Product, ProductAttributeValue, ProductCategory, ProductItemCategory, ProductSubCategory,
 )
 from apps.service.product_filters import clear_category_filter_cache
 
@@ -28,10 +28,18 @@ COLUMN_BRAND = "Бренд"
 APPLIED_COLUMNS = (COLUMN_NAME, COLUMN_ITEM_CATEGORY, COLUMN_BRAND)
 # the one-sheet workbook ("Все замечания по SKU") calls the item category a group; on the names sheet of the
 # repeated audit ("5_НАЗВАНИЯ") the new name is the suggested one, next to the name the product had at the audit
-COLUMN_ALIASES = {"Группа": COLUMN_ITEM_CATEGORY, "Предлагаемое (авто)": COLUMN_NAME}
+COLUMN_ALIASES = {
+    "Группа": COLUMN_ITEM_CATEGORY, "Предлагаемое (авто)": COLUMN_NAME,
+    "→ Подкатегория": COLUMN_SUB_CATEGORY, "→ Предм. категория": COLUMN_ITEM_CATEGORY,
+}
 COLUMN_AUDITED_NAME = "Наименование сейчас"
 # written there instead of a name when the audit has no ready wording
 MANUAL_FIX_MARK = "(смысловая правка вручную)"
+# the transfer sheet of the repeated audit ("3_ПЕРЕНОС") gives the whole path of the item category the product
+# belongs to, next to the one it had at the audit; a group that is not in the catalog yet carries a mark
+COLUMN_TARGET_CATEGORY = "→ Категория"
+COLUMN_AUDITED_ITEM_CATEGORY = "Сейчас: предм. категория"
+NEW_MARK = "— НОВАЯ"
 
 
 def clean(value):
@@ -84,6 +92,11 @@ class Command(BaseCommand):
             help="Create an item category that doesn't exist yet, in the sub category written on the row.",
         )
         parser.add_argument(
+            "--create-sub-categories",
+            action="store_true",
+            help="Transfer sheet: create a sub category that doesn't exist yet, in the category written on the row.",
+        )
+        parser.add_argument(
             "--dry-run",
             action="store_true",
             help="Do everything in a transaction and roll it back, nothing is saved.",
@@ -109,10 +122,12 @@ class Command(BaseCommand):
             products = {
                 product["id"]: product for product in Product.objects.rewrite(False).filter(pk__in=edits).values(
                     "id", *NAME_FIELDS, "articul_code", "brand_id", "product_model__brand_id",
-                    "product_item_category_id", "product_item_category__product_sub_category__product_category_id",
+                    "product_item_category_id", "product_item_category__name_ru",
+                    "product_item_category__product_sub_category__product_category_id",
                 )
             }
             self.find_new_duplicates(edits, products)
+            self.count_transfers(edits, products)
             for product_id, cells in edits.items():
                 product = products.get(product_id)
                 if not product:
@@ -129,9 +144,12 @@ class Command(BaseCommand):
         self.dry_run = options["dry_run"]
         self.verbose = options["verbose"]
         self.create_item_categories = options["create_item_categories"]
+        self.create_sub_categories = options["create_sub_categories"]
         self.stats = Counter()
         self.brands = {}
         self.item_categories = {}
+        self.moved_item_categories = set()
+        self.missing_sub_categories = set()
         self.touched_item_categories = set()
         if self.dry_run:
             self.stdout.write(self.style.WARNING("DRY RUN - everything below is rolled back at the end"))
@@ -208,6 +226,8 @@ class Command(BaseCommand):
                 # the sub category only helps to tell apart item categories with the same name
                 cells[COLUMN_SUB_CATEGORY] = values.get(COLUMN_SUB_CATEGORY)
                 cells[COLUMN_AUDITED_NAME] = values.get(COLUMN_AUDITED_NAME)
+                cells[COLUMN_TARGET_CATEGORY] = values.get(COLUMN_TARGET_CATEGORY)
+                cells[COLUMN_AUDITED_ITEM_CATEGORY] = values.get(COLUMN_AUDITED_ITEM_CATEGORY)
                 edits[int(values[COLUMN_ID])] = cells
         workbook.close()
         return edits, other_columns
@@ -256,19 +276,31 @@ class Command(BaseCommand):
                 self.log(product, "brand", product["brand_id"], f"{brand.pk} {brand.name}")
 
         if COLUMN_ITEM_CATEGORY in cells:
-            path = (
-                clean(cells[COLUMN_ITEM_CATEGORY]), clean(cells[COLUMN_SUB_CATEGORY]),
-                product["product_item_category__product_sub_category__product_category_id"],
-            )
-            item_category = self.get_item_category(*path)
-            if not item_category and self.create_item_categories:
-                item_category = self.create_item_category(*path)
+            if cells.get(COLUMN_TARGET_CATEGORY):
+                item_category = self.get_target_item_category(product, cells)
+            else:
+                path = (
+                    clean(cells[COLUMN_ITEM_CATEGORY]), clean(cells[COLUMN_SUB_CATEGORY]),
+                    product["product_item_category__product_sub_category__product_category_id"],
+                )
+                item_category = self.get_item_category(*path)
+                if not item_category and self.create_item_categories:
+                    item_category = self.create_item_category(*path)
+            audited = clean(cells.get(COLUMN_AUDITED_ITEM_CATEGORY))
             if not item_category:
                 self.stats["item categories skipped (not found / ambiguous)"] += 1
                 self.warn(f"product {product['id']}: item category {cells[COLUMN_ITEM_CATEGORY]!r} "
                           f"is not found or ambiguous, skipped")
             elif item_category.pk == product["product_item_category_id"]:
-                self.stats["item categories already applied"] += 1
+                if item_category.pk in self.moved_item_categories:
+                    self.stats["products moved together with their item category"] += 1
+                else:
+                    self.stats["item categories already applied"] += 1
+            elif audited and audited != clean(product["product_item_category__name_ru"]):
+                # the transfer was planned from another group: someone has moved the product since the audit
+                self.stats["item categories skipped (changed since the audit)"] += 1
+                self.warn(f"product {product['id']}: the item category has changed since the audit "
+                          f"({clean(product['product_item_category__name_ru'])!r}), skipped")
             else:
                 changes.update(self.item_category_change(product, item_category))
                 self.stats["item categories changed"] += 1
@@ -325,6 +357,84 @@ class Command(BaseCommand):
                 found = [item for item in found if item.product_sub_category.product_category_id == category_id]
             self.item_categories[key] = found[0] if len(found) == 1 else None
         return self.item_categories[key]
+
+    @staticmethod
+    def target_path(cells):
+        """(item category, sub category, category) names of a transfer sheet row, without the "new" mark."""
+        return (
+            clean(clean(cells[COLUMN_ITEM_CATEGORY]).replace(NEW_MARK, "")),
+            clean(cells[COLUMN_SUB_CATEGORY]), clean(cells[COLUMN_TARGET_CATEGORY]),
+        )
+
+    def count_transfers(self, edits, products):
+        # how many products of an item category the transfer sheet sends to each path
+        self.transfers = Counter()
+        for product_id, cells in edits.items():
+            if product_id in products and COLUMN_ITEM_CATEGORY in cells and cells.get(COLUMN_TARGET_CATEGORY):
+                source = products[product_id]["product_item_category_id"]
+                self.transfers[(source, self.target_path(cells))] += 1
+
+    def get_target_item_category(self, product, cells):
+        """The item category at the path of a transfer sheet row. When the sub category has none with that name,
+        it is the product's own item category moved there (see move_item_category) or a new one."""
+        path = self.target_path(cells)
+        if self.item_categories.get(path):
+            return self.item_categories[path]
+
+        name, sub_category_name, category_name = path
+        sub_categories = list(named(ProductSubCategory, sub_category_name).filter(
+            product_category__in=named(ProductCategory, category_name).values("id")))
+        if not sub_categories and self.create_sub_categories:
+            sub_categories = list(filter(None, [self.create_sub_category(sub_category_name, category_name)]))
+        if len(sub_categories) != 1:
+            if path[1:] not in self.missing_sub_categories:
+                self.missing_sub_categories.add(path[1:])
+                self.warn(f"sub category {category_name!r} / {sub_category_name!r} is not found or ambiguous")
+            return None
+
+        found = list(named(ProductItemCategory, name).filter(product_sub_category=sub_categories[0]))
+        if len(found) > 1:
+            return None
+        item_category = found[0] if found else self.move_item_category(product, path, sub_categories[0])
+        if not item_category and self.create_item_categories:
+            item_category = self.create_item_category(name, sub_category_name, sub_categories[0].product_category_id)
+        if item_category:
+            self.item_categories[path] = item_category
+        return item_category
+
+    def move_item_category(self, product, path, sub_category):
+        """The product's item category, moved to the end of the sub category: when it has the wanted name and
+        the sheet sends every product of it there, the group itself goes. None otherwise."""
+        item_category = named(ProductItemCategory, path[0]).filter(pk=product["product_item_category_id"]).first()
+        size = Product.objects.filter(product_item_category=item_category).count() if item_category else 0
+        if not item_category or self.transfers[(item_category.pk, path)] != size:
+            return None
+        position = ProductItemCategory.objects.filter(product_sub_category=sub_category).aggregate(
+            last=Max("position"))["last"] or 0
+        item_category.product_sub_category = sub_category
+        item_category.position = position + 1
+        item_category.save(update_fields=["product_sub_category", "position", "updated_at"])
+        self.moved_item_categories.add(item_category.pk)
+        self.touched_item_categories.add(item_category.pk)
+        self.stats["item categories moved to another sub category"] += 1
+        self.stdout.write(f"  Item category {item_category.pk} {path[0]!r} moved to {path[2]!r} / {path[1]!r}")
+        return item_category
+
+    def create_sub_category(self, name, category_name):
+        """A new sub category at the end of its category; None when the category is not the only one with
+        that name."""
+        categories = list(named(ProductCategory, category_name))
+        if not name or len(categories) != 1:
+            return None
+        position = ProductSubCategory.objects.filter(product_category=categories[0]).aggregate(
+            last=Max("position"))["last"] or 0
+        # save() (not create()): CategoryMixin builds the slug there
+        sub_category = ProductSubCategory(
+            product_category=categories[0], name=name, name_ru=name, position=position + 1)
+        sub_category.save()
+        self.stats["sub categories created"] += 1
+        self.stdout.write(f"  Sub category {sub_category.pk} {name!r} created in {category_name!r}")
+        return sub_category
 
     def create_item_category(self, name, sub_category_name, category_id):
         """A new item category at the end of its sub category; None when the name is taken or the sub category
