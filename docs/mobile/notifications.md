@@ -87,4 +87,27 @@ Body yuborilmaydi.
 
 - Mijoz faqat **ro'yxatdan o'tganidan keyin** chiqarilgan bildirishnomalarni ko'radi — yangi mijozda eski aksiyalar o'qilmagan bo'lib yig'ilib qolmaydi.
 - Qoralama va vaqti hali kelmagan (rejalashtirilgan) bildirishnomalar ro'yxatda ham, `{id}/` da ham chiqmaydi (`404`).
-- Bu bildirishnomalar uchun **push (FCM) yuborilmaydi** — yangi bildirishnoma borligini ilova `unread-count/` orqali biladi. Buyurtma statusi pushlari alohida ishlaydi (`order_status_push.md`) va bu ro'yxatga tushmaydi.
+- Buyurtma statusi pushlari alohida ishlaydi (`order_status_push.md`) va bu ro'yxatga tushmaydi.
+
+---
+
+## Push (FCM)
+
+Bildirishnoma chiqarilganda backend **barcha** ro'yxatdan o'tgan qurilmalarga push yuboradi (token: `PATCH auth/fcm/token/`, `order_status_push.md` dagi kabi). Har bir bildirishnoma uchun bir marta.
+
+`notification` — tizim ko'rsatadigan matn: `title` / `body` = bildirishnomaning **ruscha** sarlavhasi va matni (mijoz tili backendda saqlanmaydi).
+
+`data` (barcha qiymatlar **string**):
+
+```json
+{
+  "type": "notification",
+  "notification_id": "7",
+  "deeplink": "buildex://banner/knauf-kuz"
+}
+```
+
+- `type` — push turi; bu bildirishnomalar uchun har doim `notification` (buyurtma statusi — `order_status`).
+- `notification_id` — push bosilganda `GET notifications/{id}/` ni chaqiring: bildirishnoma o'qilgan bo'ladi va matn kerakli tilda qaytadi.
+- `deeplink` — ochiladigan ekran; bo'sh string bo'lishi mumkin (unda bildirishnomaning o'zini oching).
+- Push kelganda `unread-count/` ni yangilang. Push yetib borishi kafolatlanmaydi — ro'yxat va badge har doim API'dan olinadi.

@@ -36,7 +36,7 @@ class ProductBadgeSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def _sync(badge):
-        # the rule may have changed: apply it right away, don't wait for the cron
+        # the rule may have changed: apply it right away, don't wait for the periodic task
         if badge.kind == ProductBadge.AUTO:
             sync_auto_badge(badge)
         badge.products_count = badge.products.count()

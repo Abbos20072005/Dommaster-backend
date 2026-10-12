@@ -1,6 +1,7 @@
 from django.utils import timezone
 from rest_framework import serializers
 from apps.base.models import Notification
+from apps.base.notification_push import push_if_published
 
 # ru is the default (fallback) language
 REQUIRED = {"required": True, "allow_null": False, "allow_blank": False}
@@ -14,15 +15,23 @@ class NotificationSerializer(serializers.ModelSerializer):
         model = Notification
         fields = ("id", "title", "title_uz", "title_ru", "title_en", "description", "description_uz",
                   "description_ru", "description_en", "deeplink", "publish_at", "is_active", "status",
-                  "reads_count", "created_at", "updated_at")
-        read_only_fields = ("title", "description", "created_at", "updated_at")
+                  "reads_count", "push_sent_at", "push_devices", "created_at", "updated_at")
+        read_only_fields = ("title", "description", "push_sent_at", "push_devices", "created_at", "updated_at")
         extra_kwargs = {"title_ru": REQUIRED, "description_ru": REQUIRED}
+
+    def create(self, validated_data):
+        instance = super().create(validated_data)
+        # a scheduled one is pushed by `manage.py send_notification_pushes` when its time comes
+        push_if_published(instance)
+        return instance
 
     def update(self, instance, validated_data):
         # a draft published without a new time goes out now, not at its old (past) `publish_at`
         if validated_data.get("is_active") and not instance.is_active and "publish_at" not in validated_data:
             validated_data["publish_at"] = max(instance.publish_at, timezone.now())
-        return super().update(instance, validated_data)
+        instance = super().update(instance, validated_data)
+        push_if_published(instance)
+        return instance
 
 
 class NotificationStatsSerializer(serializers.Serializer):

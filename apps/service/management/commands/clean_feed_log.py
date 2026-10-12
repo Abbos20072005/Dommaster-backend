@@ -9,7 +9,7 @@ from apps.service.models import FeedImpression, InterestEvent
 
 class Command(BaseCommand):
     help = ("Deletes old rows of the personal feed log: interest events the profile no longer reads "
-            "and feed impressions. Run it by cron (there is no scheduler in the project).")
+            "and feed impressions. Celery beat runs it every night (apps.service.tasks.clean_feed_log).")
 
     def add_arguments(self, parser):
         parser.add_argument("--event-days", type=int, default=feed.EVENT_DAYS,

@@ -2,6 +2,7 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 from datetime import timedelta
+from celery.schedules import crontab
 from django.urls import reverse_lazy
 from django.utils.translation import gettext_lazy as _
 
@@ -210,6 +211,13 @@ LOGGING = {
         'urllib3': {
             'level': 'WARNING',
         },
+        # their DEBUG is the internals of every task and broker message
+        'celery': {
+            'level': 'INFO',
+        },
+        'kombu': {
+            'level': 'INFO',
+        },
         'django.request': {
             'handlers': [],
             'level': 'ERROR',
@@ -303,6 +311,43 @@ TIME_ZONE = 'Asia/Tashkent'
 USE_I18N = True
 
 USE_TZ = False
+
+# Celery: `celery -A config worker` + `celery -A config beat` (config/celery.py, tasks in apps/*/tasks.py)
+# 0 = no worker: background work runs in threads of the web process (see utils/background.py)
+CELERY_ENABLED = int(os.getenv("CELERY_ENABLED", 0))
+# the Redis of the cache, another db
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://127.0.0.1:6379/2")
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+# a web request must not hang on a dead broker: one quick retry, then the thread fallback
+CELERY_BROKER_TRANSPORT_OPTIONS = {"socket_connect_timeout": 3}
+CELERY_TASK_PUBLISH_RETRY_POLICY = {"max_retries": 1, "interval_start": 0, "interval_step": 0.2}
+CELERY_TASK_IGNORE_RESULT = True
+CELERY_TIMEZONE = TIME_ZONE
+# keep the LOGGING above (logs/app.log, logs/error.log) in the worker and beat
+CELERY_WORKER_HIJACK_ROOT_LOGGER = False
+# the schedule is in TIME_ZONE; the same jobs by hand: the management commands of the same names
+CELERY_BEAT_SCHEDULE = {
+    "retry-order-events": {
+        "task": "apps.service.tasks.retry_order_events",
+        "schedule": crontab(),  # every minute
+    },
+    "push-due-notifications": {
+        "task": "apps.base.tasks.push_due_notifications",
+        "schedule": crontab(),
+    },
+    "recalculate-badges": {
+        "task": "apps.service.tasks.recalculate_badges",
+        "schedule": crontab(minute="*/15"),
+    },
+    "import-characteristics": {
+        "task": "apps.service.tasks.import_characteristics",
+        "schedule": crontab(minute=20),  # every hour
+    },
+    "clean-feed-log": {
+        "task": "apps.service.tasks.clean_feed_log",
+        "schedule": crontab(hour=4, minute=30),
+    },
+}
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/

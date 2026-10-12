@@ -3,7 +3,8 @@ from apps.service.badges import recalculate_auto_badges
 
 
 class Command(BaseCommand):
-    help = "Sync the products of auto badges with their rules. Run it from cron every 15 minutes."
+    help = ("Sync the products of auto badges with their rules. Celery beat runs the same job every "
+            "15 minutes (apps.service.tasks.recalculate_badges).")
 
     def handle(self, *args, **options):
         changed = recalculate_auto_badges()

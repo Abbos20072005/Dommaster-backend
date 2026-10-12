@@ -186,6 +186,10 @@ class Notification(BaseModel):
     # False = draft
     is_active = models.BooleanField(default=True, verbose_name="Активен")
     publish_at = models.DateTimeField(default=timezone.now, db_index=True, verbose_name="Время публикации")
+    # the FCM push goes out once, when the notification becomes published (see `notification_push`)
+    push_sent_at = models.DateTimeField(null=True, blank=True, editable=False, verbose_name="Пуш отправлен")
+    push_devices = models.PositiveIntegerField(default=0, editable=False,
+                                               verbose_name="Устройств, получивших пуш")
 
     def __str__(self):
         return self.title

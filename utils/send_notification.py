@@ -1,5 +1,6 @@
 import os
 import logging
+from concurrent.futures import ThreadPoolExecutor
 
 import requests
 from django.conf import settings
@@ -9,6 +10,8 @@ from pyfcm.errors import FCMNotRegisteredError
 from apps.authorization.models import FcmToken
 
 logger = logging.getLogger(__name__)
+
+PUSH_WORKERS = 8
 
 def send_notification(message: str) -> None:
     try:
@@ -37,11 +40,53 @@ def push_notification(message_title: str, message_body: str, fcm: str) -> bool:
         return False
 
 
+def real_fcm_tokens():
+    # `phone_auth` stores the device id as a placeholder until the app sends the real token
+    return FcmToken.objects.exclude(fcm_token="").exclude(fcm_token=F("device_id"))
+
+
+def send_push_to_all(title: str, body: str, data: dict | None = None) -> int:
+    """Push to every registered device of every customer. Returns how many devices accepted it."""
+    tokens = list(real_fcm_tokens().values_list("fcm_token", flat=True).distinct())
+    if not tokens:
+        return 0
+
+    try:
+        push_service = FCMNotification(
+            service_account_file=os.getcwd() + '/utils/dommaster_service_key.json',
+            project_id="buildexgo"
+        )
+    except Exception as e:
+        logger.error("FCM client init failed: %s", e)
+        return 0
+
+    def send(fcm_token):
+        """True = accepted, None = the token is dead, False = any other failure."""
+        try:
+            push_service.notify(fcm_token=fcm_token, notification_title=title, notification_body=body,
+                                data_payload=data)
+            return True
+        except FCMNotRegisteredError:
+            return None
+        except Exception as e:
+            logger.error("FCM push failed: error=%s", e)
+            return False
+
+    # one request per device: a few threads keep a large audience within minutes
+    # (pyfcm holds a requests session per thread)
+    with ThreadPoolExecutor(max_workers=PUSH_WORKERS) as pool:
+        results = list(pool.map(send, tokens))
+
+    # the workers don't touch the database, so no connections are left open in them
+    dead = [token for token, result in zip(tokens, results) if result is None]
+    if dead:
+        FcmToken.objects.filter(fcm_token__in=dead).delete()
+    return sum(1 for result in results if result)
+
+
 def send_push_to_customer(customer_id, title: str, body: str, data: dict | None = None) -> int:
     """Push to every device of the customer. Returns how many devices accepted it."""
-    # `phone_auth` stores the device id as a placeholder until the app sends the real token
-    tokens = FcmToken.objects.filter(customer_id=customer_id).exclude(fcm_token="") \
-        .exclude(fcm_token=F("device_id"))
+    tokens = real_fcm_tokens().filter(customer_id=customer_id)
     if not tokens:
         return 0
 

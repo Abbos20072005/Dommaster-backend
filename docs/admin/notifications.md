@@ -34,6 +34,8 @@ Swagger: `/swagger/admin/` → **notifications**.
   "is_active": true,
   "status": "scheduled",
   "reads_count": 0,
+  "push_sent_at": null,
+  "push_devices": 0,
   "created_at": "2026-09-28T15:14:26",
   "updated_at": "2026-09-28T15:14:26"
 }
@@ -49,7 +51,7 @@ Swagger: `/swagger/admin/` → **notifications**.
 | `publish_at` | mijozlarga qachondan ko'rinadi; yuborilmasa — hozir. Kelajakdagi vaqt = rejalashtirilgan |
 | `is_active` | default `true`; `false` = qoralama (mijozga chiqmaydi) |
 
-Faqat o'qiladi: `id`, `title`, `description` (joriy tildagi qiymat), `status`, `reads_count`, `created_at`, `updated_at`.
+Faqat o'qiladi: `id`, `title`, `description` (joriy tildagi qiymat), `status`, `reads_count`, `push_sent_at`, `push_devices`, `created_at`, `updated_at`.
 
 ### `status` (saqlanmaydi, hisoblanadi)
 
@@ -62,6 +64,23 @@ Faqat o'qiladi: `id`, `title`, `description` (joriy tildagi qiymat), `status`, `
 Qoralamani chiqarish: `PATCH {"is_active": true}` — `publish_at` yuborilmasa va eskisi o'tib ketgan bo'lsa, u avtomatik **hozirgi vaqtga** suriladi. Rejalashtirish uchun `publish_at` ni birga yuboring.
 
 `reads_count` — bildirishnomani ochgan mijozlar soni ("Ochildi" ustuni).
+
+### Push (FCM)
+
+Bildirishnoma **chiqarilgan** (`published`) bo'lgan paytda barcha mijozlarning qurilmalariga push yuboriladi — alohida endpoint yo'q, `POST` / `PATCH` ning o'zi yetarli.
+
+| Holat | Push |
+| --- | --- |
+| `POST` — `is_active=true`, `publish_at` yuborilmagan yoki o'tgan | darhol |
+| `POST` — qoralama (`is_active=false`) | yuborilmaydi |
+| `PATCH {"is_active": true}` — qoralamani chiqarish | darhol |
+| rejalashtirilgan (`publish_at` kelajakda) | vaqti kelganda (fon vazifasi har daqiqada tekshiradi, 1 daqiqagacha kechikishi mumkin) |
+| push ketgan bildirishnomani tahrirlash / qayta chiqarish | qayta yuborilmaydi |
+
+- Har bir bildirishnoma uchun push **bir marta** ketadi. Matndagi xatoni tuzatsangiz — ro'yxatda yangilanadi, lekin ketgan push o'zgarmaydi.
+- Push matni: `title_ru` + `description_ru` (mijoz tili backendda saqlanmaydi). Bosilganda ilova `deeplink` bo'yicha ochadi.
+- `push_sent_at` — push yuborila boshlagan vaqt (`null` = hali yuborilmagan). `push_devices` — pushni qabul qilgan qurilmalar soni ("Yetkazildi" ustuni); yuborish fonda ketadi, shuning uchun `POST` javobida `0` bo'ladi — bir ozdan keyin `GET` da haqiqiy son chiqadi.
+- Push funksiyasi qo'shilishidan oldin chiqarilgan bildirishnomalarda `push_sent_at = publish_at`, `push_devices = 0` (ularga push ketmagan).
 
 ---
 
@@ -109,7 +128,7 @@ Oddiy DRF formati — maydon nomi bo'yicha:
 
 ## Eslatmalar
 
-- **Push (FCM) yuborilmaydi** — bildirishnoma faqat ilova / sayt ichidagi ro'yxatda chiqadi. Shu sababli dizayndagi "Yetkazildi" (yetkazilgan qurilmalar) ko'rsatkichi yo'q.
+- Push qayta yuborilmaydi (xato bo'lsa ham) va ochilgan pushlar hisobi yo'q — faqat `push_devices` (FCM qabul qilgan qurilmalar).
 - Auditoriya (PRO mijozlar, oxirgi 30 kunda xarid qilganlar) va ikkinchi xodim tasdig'i ("Tasdiq kutmoqda") yo'q — bildirishnoma hammaga ko'rinadi.
 - "Avtomatik (buyurtma holati)" tabi uchun ma'lumot yo'q: buyurtma statusi pushlari kodda qat'iy yozilgan (`docs/mobile/order_status_push.md`), bazada saqlanmaydi.
 - Mijoz faqat ro'yxatdan o'tganidan keyin chiqarilgan bildirishnomalarni ko'radi.

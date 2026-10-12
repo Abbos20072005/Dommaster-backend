@@ -66,7 +66,7 @@ class Command(BaseCommand):
     help = (
         "Turn the raw characteristics (ProductCharacteristics, written by 1C) into attributes: one global "
         "attribute per characteristic name, attached to the item categories it occurs in, and an attribute "
-        "value per product. Takes only the rows it has not processed yet, so it is safe to run again (cron); "
+        "value per product. Takes only the rows it has not processed yet, so it is safe to run again (Celery beat runs it every hour: apps.service.tasks.import_characteristics); "
         "a product's existing attribute value is never overwritten."
     )
 
