@@ -118,7 +118,7 @@ class ProductListSerializer(serializers.ModelSerializer):
         model = Product
         fields = ("id", "name", "images", "product_code", "articul_code", "barcode", "brand", "product_model", "badges",
                   "product_item_category", "price", "discount_price", "discount", "unit", "quantity", "rating", "comments_quantity",
-                  "is_active", "erp_active", "publish_status", "purchasable", "created_at", "updated_at")
+                  "is_active", "erp_active", "publish_status", "purchasable", "on_order", "created_at", "updated_at")
 
 
 class ProductSerializer(serializers.ModelSerializer):
@@ -141,7 +141,7 @@ class ProductSerializer(serializers.ModelSerializer):
                   "description_uz", "description_ru", "description_en",
                   "brand", "product_model", "badges", "product_item_category", "price", "discount_price", "discount",
                   "unit", "quantity",
-                  "is_active", "erp_active", "publish_status", "purchasable", "product_code", "articul_code", "barcode", "weight", "length", "width", "height",
+                  "is_active", "erp_active", "publish_status", "purchasable", "on_order", "product_code", "articul_code", "barcode", "weight", "length", "width", "height",
                   "rating", "comments_quantity", "questions_quantity", "characteristics",
                   "attribute_values", "images", "created_at", "updated_at")
         read_only_fields = ("name", "rating", "comments_quantity", "questions_quantity", "created_at", "updated_at")

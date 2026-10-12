@@ -49,6 +49,7 @@ class Product(BaseModel):
     publish_status = models.CharField(max_length=16, choices=PUBLISH_STATUS, default=PUBLISH_STATUS_DRAFT,
                                       verbose_name="Статус публикации")
     purchasable = models.BooleanField(default=False, verbose_name="Доступен к покупке")
+    on_order = models.BooleanField(default=False, verbose_name="Под заказ")
     filter_data = models.JSONField(default=dict, blank=True)
     articul_code = models.CharField(max_length=100, blank=True, null=True, verbose_name="Артикул")
     barcode = models.CharField(max_length=100, blank=True, null=True, verbose_name="Штрихкод")

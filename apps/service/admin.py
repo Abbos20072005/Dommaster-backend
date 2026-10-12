@@ -246,7 +246,7 @@ class ProductAdmin(ModelAdmin):
     list_display_links = ("id", "name")
     search_fields = ("name", "brand__name", "product_item_category__name")
     list_filter = ("brand", "badges", "product_item_category", "is_active", "erp_active", "publish_status",
-                   "purchasable", "unit", "created_at")
+                   "purchasable", "on_order", "unit", "created_at")
     readonly_fields = ("discount_price",)
     autocomplete_fields = ("brand", "badges", "product_item_category")
     inlines = (ProductImageInline, ProductAttributeValueInline)
@@ -255,7 +255,7 @@ class ProductAdmin(ModelAdmin):
             "fields": ("name_uz", "name_ru", "name_en", "short_description",
                        "description_uz", "description_ru", "description_en", "price", "discount",
                        "discount_price", "quantity", "comments_quantity", "questions_quantity",
-                       "rating", "is_active", "erp_active", "publish_status", "purchasable", "brand", "badges", "product_item_category", "unit")
+                       "rating", "is_active", "erp_active", "publish_status", "purchasable", "on_order", "brand", "badges", "product_item_category", "unit")
         }),
         ("Данные из 1С", {
             "classes": ("collapse",),
