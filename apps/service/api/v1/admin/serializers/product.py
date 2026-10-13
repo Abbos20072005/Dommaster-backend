@@ -1,8 +1,9 @@
 import math
+from typing import Optional
 from django.db import transaction
 from rest_framework import serializers
 from apps.service.models import Product, Brand, ProductModel, ProductBadge, ProductImage, ProductAttribute, \
-    ProductAttributeValue
+    ProductAttributeValue, RelatedProduct, AlternativeProduct, CrossSellProduct
 from apps.service.product_filters import clear_category_filter_cache
 from utils.admin_serializers import RelationSerializer
 from .attribute import AttributeShortSerializer
@@ -107,6 +108,35 @@ class ProductCharacteristicSerializer(serializers.ModelSerializer):
                   "unit_uz", "unit_ru", "unit_en")
 
 
+class LinkedProductListSerializer(serializers.ListSerializer):
+    def to_representation(self, products):
+        return super().to_representation(products.prefetch_related("product_image"))
+
+
+class LinkedProductSerializer(RelationSerializer):
+    """A product linked to another one (related / alternative / cross-sell)."""
+    image = serializers.SerializerMethodField(help_text="The main image")
+
+    class Meta:
+        model = Product
+        fields = ("id", "name", "image", "product_code", "articul_code", "price", "discount_price", "quantity",
+                  "is_active")
+        list_serializer_class = LinkedProductListSerializer
+
+    def get_image(self, product) -> Optional[str]:
+        images = product.product_image.all()
+        return ProductImageSerializer(images[0], context=self.context).data["image"] if images else None
+
+
+# product field -> model of its links
+LINK_FIELDS = {
+    "related_products": RelatedProduct,
+    "alternative_products": AlternativeProduct,
+    "cross_sell_products": CrossSellProduct,
+}
+MAX_LINKED_PRODUCTS = 20
+
+
 class ProductListSerializer(serializers.ModelSerializer):
     brand = ProductBrandSerializer(read_only=True)
     product_model = ProductModelShortSerializer(read_only=True)
@@ -134,6 +164,10 @@ class ProductSerializer(serializers.ModelSerializer):
     # deprecated, read-only (a sent list is ignored): `attribute_values` in the old shape, for the old product form
     characteristics = ProductCharacteristicSerializer(source="attribute_values", many=True, read_only=True)
     images = ProductImageSerializer(source="product_image", many=True, read_only=True)
+    # products linked by hand, one-way; the sent list replaces the links of its kind, list order = position
+    related_products = LinkedProductSerializer(many=True, required=False, max_length=MAX_LINKED_PRODUCTS)
+    alternative_products = LinkedProductSerializer(many=True, required=False, max_length=MAX_LINKED_PRODUCTS)
+    cross_sell_products = LinkedProductSerializer(many=True, required=False, max_length=MAX_LINKED_PRODUCTS)
 
     class Meta:
         model = Product
@@ -143,7 +177,8 @@ class ProductSerializer(serializers.ModelSerializer):
                   "unit", "quantity",
                   "is_active", "erp_active", "publish_status", "purchasable", "on_order", "product_code", "articul_code", "barcode", "weight", "length", "width", "height",
                   "rating", "comments_quantity", "questions_quantity", "characteristics",
-                  "attribute_values", "images", "created_at", "updated_at")
+                  "attribute_values", "images", "related_products", "alternative_products", "cross_sell_products",
+                  "created_at", "updated_at")
         read_only_fields = ("name", "rating", "comments_quantity", "questions_quantity", "created_at", "updated_at")
         extra_kwargs = {
             # ru is the default (fallback) language
@@ -185,6 +220,13 @@ class ProductSerializer(serializers.ModelSerializer):
             if foreign:
                 raise serializers.ValidationError(
                     {"attribute_values": f"Attributes {foreign} are not attached to the product's item category."})
+
+        for field in LINK_FIELDS:
+            ids = [product.pk for product in attrs.get(field) or ()]
+            if len(ids) != len(set(ids)):
+                raise serializers.ValidationError({field: "Products must be unique."})
+            if self.instance and self.instance.pk in ids:
+                raise serializers.ValidationError({field: "A product can't be linked to itself."})
         return attrs
 
     @staticmethod
@@ -203,23 +245,41 @@ class ProductSerializer(serializers.ModelSerializer):
         manual = [badge for badge in badges if badge.kind == ProductBadge.MANUAL]
         product.badges.set([*manual, *product.badges.filter(kind=ProductBadge.AUTO)])
 
+    @staticmethod
+    def _set_links(product, links):
+        # links: {link model: products}, only the sent lists
+        for model, products in links.items():
+            model.objects.filter(product=product).delete()
+            model.objects.bulk_create(
+                model(product=product, linked_product=linked, position=position)
+                for position, linked in enumerate(products, start=1)
+            )
+
+    @staticmethod
+    def _pop_links(validated_data):
+        return {model: validated_data.pop(field) for field, model in LINK_FIELDS.items() if field in validated_data}
+
     @transaction.atomic
     def create(self, validated_data):
         attribute_values = validated_data.pop("attribute_values", [])
         badges = validated_data.pop("badges", [])
+        links = self._pop_links(validated_data)
         product = super().create(validated_data)
         self._set_attribute_values(product, attribute_values)
         self._set_badges(product, badges)
+        self._set_links(product, links)
         return product
 
     @transaction.atomic
     def update(self, instance, validated_data):
         attribute_values = validated_data.pop("attribute_values", None)
         badges = validated_data.pop("badges", None)
+        links = self._pop_links(validated_data)
         old_category_id = instance.product_item_category_id
         product = super().update(instance, validated_data)
         # the product left its old category: the filters of that one change too (the new one is cleared on save)
         clear_category_filter_cache(old_category_id)
+        self._set_links(product, links)
         if badges is not None:
             self._set_badges(product, badges)
         if attribute_values is not None:

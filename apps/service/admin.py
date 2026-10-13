@@ -7,7 +7,7 @@ from .models import Product, ProductCategory, ProductSubCategory, ProductItemCat
     ProductVariantGroup, ProductVariantItem, \
     Announcements, ProductItemCategoryFilterSchema, ProductFilterNumericValue, ProductUnit, ProductRemaining, \
     ProductAttribute, ProductAttributeOption, ProductItemCategoryAttribute, ProductAttributeValue, Manager, \
-    OrderComment
+    OrderComment, RelatedProduct, AlternativeProduct, CrossSellProduct
 from .signals import clear_category_filter_cache
 from unfold.admin import ModelAdmin, TabularInline
 from apps.base.admin_actions import make_visible, make_hidden, activate, deactivate, get_model_fields, \
@@ -237,6 +237,21 @@ class ProductAttributeValueInline(TabularInline):
     autocomplete_fields = ("attribute",)
 
 
+class RelatedProductInline(TabularInline):
+    model = RelatedProduct
+    fk_name = "product"
+    extra = 0
+    autocomplete_fields = ("linked_product",)
+
+
+class AlternativeProductInline(RelatedProductInline):
+    model = AlternativeProduct
+
+
+class CrossSellProductInline(RelatedProductInline):
+    model = CrossSellProduct
+
+
 @admin.register(Product)
 class ProductAdmin(ModelAdmin):
     list_display = get_model_fields(Product, exclude=(
@@ -249,7 +264,8 @@ class ProductAdmin(ModelAdmin):
                    "purchasable", "on_order", "unit", "created_at")
     readonly_fields = ("discount_price",)
     autocomplete_fields = ("brand", "badges", "product_item_category")
-    inlines = (ProductImageInline, ProductAttributeValueInline)
+    inlines = (ProductImageInline, ProductAttributeValueInline, RelatedProductInline, AlternativeProductInline,
+               CrossSellProductInline)
     fieldsets = (
         (None, {
             "fields": ("name_uz", "name_ru", "name_en", "short_description",

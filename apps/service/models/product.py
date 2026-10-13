@@ -84,6 +84,19 @@ class Product(BaseModel):
         self.questions_quantity = agg_data["count_questions"] or 0
         self.save(update_fields=["questions_quantity"])
 
+    # the products linked to this one by hand, in the order set in the admin panel
+    @property
+    def related_products(self):
+        return RelatedProduct.products_of(self)
+
+    @property
+    def alternative_products(self):
+        return AlternativeProduct.products_of(self)
+
+    @property
+    def cross_sell_products(self):
+        return CrossSellProduct.products_of(self)
+
     class Meta:
         verbose_name = "Продукт"
         verbose_name_plural = "Продукты"
@@ -194,6 +207,55 @@ class ProductAttributeValue(BaseModel):
             models.Index(fields=["attribute", "value_ru"], name="idx_attr_value_ru"),
             models.Index(fields=["attribute", "value_number"], name="idx_attr_value_number"),
         ]
+
+
+class ProductLink(BaseModel):
+    # A link made by hand: "with `product` show `linked_product`". One-way — the reverse link is a row of its own.
+    # One model (table) per kind of link: RelatedProduct, AlternativeProduct, CrossSellProduct
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="%(class)s_links",
+                                verbose_name="Продукт")
+    linked_product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="%(class)s_linked_from",
+                                       verbose_name="Связанный продукт")
+    position = models.PositiveIntegerField(default=0, verbose_name="Позиция")
+
+    def __str__(self):
+        return f"{self.product_id} → {self.linked_product_id}"
+
+    @classmethod
+    def products_of(cls, product):
+        # the products linked to `product`, in the order of the links
+        link = f"{cls._meta.model_name}_linked_from"
+        return Product.objects.filter(**{f"{link}__product": product}).order_by(f"{link}__position", f"{link}__id")
+
+    class Meta:
+        abstract = True
+        ordering = ("position", "id")
+        constraints = [
+            models.UniqueConstraint(fields=["product", "linked_product"], name="uniq_%(class)s"),
+            models.CheckConstraint(condition=~models.Q(product=models.F("linked_product")),
+                                   name="%(class)s_not_self"),
+        ]
+
+
+class RelatedProduct(ProductLink):
+    # bought together with the product (product page)
+    class Meta(ProductLink.Meta):
+        verbose_name = "Сопутствующий продукт"
+        verbose_name_plural = "Сопутствующие продукты"
+
+
+class AlternativeProduct(ProductLink):
+    # can be bought instead of the product (product page)
+    class Meta(ProductLink.Meta):
+        verbose_name = "Аналог продукта"
+        verbose_name_plural = "Аналоги продуктов"
+
+
+class CrossSellProduct(ProductLink):
+    # offered when the product is in the cart
+    class Meta(ProductLink.Meta):
+        verbose_name = "Продукт кросс-продажи"
+        verbose_name_plural = "Продукты кросс-продажи"
 
 
 class ProductVariantGroup(BaseModel):

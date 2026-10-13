@@ -2,8 +2,8 @@ from .choices import ORDER_STATUS, PAYMENT_STATUS, DELIVERY_TYPE, PAYMENT_TYPE, 
 from .catalog import Brand, ProductModel, ProductCategory, ProductSubCategory, ProductItemCategory, ProductUnit, \
     ProductAttribute, ProductAttributeOption, ProductItemCategoryAttribute
 from .product import (
-    Product, ProductRemaining, ProductImage, ProductCharacteristics, ProductAttributeValue, ProductVariantGroup,
-    ProductVariantItem,
+    Product, ProductRemaining, ProductImage, ProductCharacteristics, ProductAttributeValue, RelatedProduct,
+    AlternativeProduct, CrossSellProduct, ProductVariantGroup, ProductVariantItem,
 )
 from .filters import ProductItemCategoryFilterSchema, ProductFilterNumericValue
 from .marketing import AddsBrands, PartnerBrand, Tag, ProductBadge, Sale, Announcements, Service
@@ -19,7 +19,7 @@ __all__ = [
     "Brand", "ProductModel", "ProductCategory", "ProductSubCategory", "ProductItemCategory", "ProductUnit",
     "ProductAttribute", "ProductAttributeOption", "ProductItemCategoryAttribute",
     "Product", "ProductRemaining", "ProductImage", "ProductCharacteristics", "ProductAttributeValue",
-    "ProductVariantGroup",
+    "RelatedProduct", "AlternativeProduct", "CrossSellProduct", "ProductVariantGroup",
     "ProductVariantItem",
     "ProductItemCategoryFilterSchema", "ProductFilterNumericValue",
     "AddsBrands", "PartnerBrand", "Tag", "ProductBadge", "Sale", "Announcements", "Service",

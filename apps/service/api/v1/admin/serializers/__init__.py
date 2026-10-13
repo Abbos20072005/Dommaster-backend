@@ -5,7 +5,8 @@ from .order import PENDING, COLLECTING, DELIVERING, COMPLETED, CANCELED, DELIVER
     OrderCommentShortSerializer, OrderCommentSerializer
 from .product import ProductBrandSerializer, ProductModelShortSerializer, ProductBadgeShortSerializer, \
     ProductImageSerializer, ProductImageReorderSerializer, ProductCharacteristicSerializer, \
-    ProductAttributeValueSerializer, ProductListSerializer, ProductSerializer, ProductStatsSerializer
+    ProductAttributeValueSerializer, LinkedProductSerializer, ProductListSerializer, ProductSerializer, \
+    ProductStatsSerializer
 from .category import ProductCategoryShortSerializer, ProductSubCategoryShortSerializer, \
     ProductItemCategorySerializer, CategoryParentSerializer, SubCategoryParentSerializer, CategoryBaseSerializer, \
     ProductCategorySerializer, ProductSubCategoryAdminSerializer, ProductItemCategoryAdminSerializer, \
@@ -50,7 +51,7 @@ __all__ = [
     "OrderSerializer", "OrderStatsSerializer", "OrderManagerSerializer", "ManagerSerializer",
     "OrderCommentOrderSerializer", "OrderCommentAuthorSerializer", "OrderCommentShortSerializer", "OrderCommentSerializer", "ProductBrandSerializer", "ProductBadgeShortSerializer",
     "ProductImageSerializer", "ProductImageReorderSerializer", "ProductCharacteristicSerializer",
-    "ProductListSerializer", "ProductSerializer",
+    "LinkedProductSerializer", "ProductListSerializer", "ProductSerializer",
     "ProductStatsSerializer", "ProductCategoryShortSerializer", "ProductSubCategoryShortSerializer",
     "ProductItemCategorySerializer", "CategoryParentSerializer", "SubCategoryParentSerializer",
     "CategoryBaseSerializer", "ProductCategorySerializer", "ProductSubCategoryAdminSerializer",

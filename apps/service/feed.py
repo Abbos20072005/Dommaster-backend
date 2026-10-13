@@ -21,8 +21,8 @@ logger = logging.getLogger(__name__)
 
 ORDER_CANCELED = 4
 
-# `rec_source` of a product in the response. "cross_sell" is reserved in the contract: there are no
-# hand-linked products to take it from yet
+# `rec_source` of a product in the response. "cross_sell" is reserved in the contract: the feed does not
+# read the hand-linked products (CrossSellProduct) yet
 PERSONAL, POPULAR, FALLBACK = "personal", "popular", "fallback"
 
 # All numbers below are starting values: tune them on the impression log (FeedImpression).
