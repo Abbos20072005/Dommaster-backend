@@ -9,7 +9,7 @@ class MarketBranchViewSet(AdminModelViewSet):
     queryset = MarketBranch.objects.all()
     serializer_class = MarketBranchSerializer
     filterset_class = MarketBranchFilter
-    search_fields = ("name_ru", "name_uz", "name_en", "address", "phone_number", "code")
+    search_fields = ("name_ru", "name_uz", "address", "phone_number", "code")
     ordering_fields = ("id", "name", "position", "created_at", "updated_at")
     ordering = ("position", "id")
 

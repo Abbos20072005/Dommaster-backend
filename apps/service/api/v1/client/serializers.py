@@ -253,11 +253,9 @@ class ProductCharacteristicsCreateSerializer(serializers.ModelSerializer):
             "product",
             "name",
             "name_uz",
-            "name_en",
             "unit",
             "value",
             "value_uz",
-            "value_en"
         )
 
 
@@ -521,10 +519,8 @@ class ProductCreateSerializer(serializers.ModelSerializer):
             "brand",
             "name",
             "name_uz",
-            "name_en",
             "description",
             "description_uz",
-            "description_en",
             "price",
             "unit",
             "quantity"
@@ -1043,7 +1039,6 @@ class ProductItemCategoryCreateSerializer(serializers.ModelSerializer):
             "product_sub_category",
             "name",
             "name_uz",
-            "name_en",
             "image"
         )
 

@@ -24,7 +24,6 @@ Swagger: `/swagger/admin/` → **banners**.
   "title": "Knauf kuzgi aksiya",
   "title_uz": null,
   "title_ru": "Knauf kuzgi aksiya",
-  "title_en": null,
   "desktop_image": "https://.../media/banner/desktop/knauf.png",
   "mobile_image": "https://.../media/banner/mobile/knauf.png",
   "placement": "home_top",
@@ -48,7 +47,7 @@ Swagger: `/swagger/admin/` → **banners**.
 | Maydon | Dizaynda | Izoh |
 | --- | --- | --- |
 | `code` | `BNR-0412` | faqat o'qiladi, `id` dan yasaladi |
-| `title_ru` * | Ichki nom | majburiy; `title_uz`, `title_en` ixtiyoriy |
+| `title_ru` * | Ichki nom | majburiy; `title_uz` ixtiyoriy |
 | `desktop_image` * | Rasm 16:5 | fayl |
 | `mobile_image` | Rasm 1:1 | fayl, ixtiyoriy; bo'sh `mobile_image=` — o'chiradi |
 | `placement` | Joylashuv | `home_top` — Bosh sahifa · yuqori slayder (default; sayt va ilova uchun **bitta** ro'yxat, qayerda ko'rinishini kanallar belgilaydi), `home_bottom` — Bosh sahifa · pastda, `catalog` — Katalog (kategoriya sahifasi) ichida. Pastdagi "Banner turlari" ga qarang |

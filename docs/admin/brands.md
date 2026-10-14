@@ -21,10 +21,8 @@ Swagger: `/swagger/admin/` → **brands**.
   "name": "Bosch",
   "name_uz": "Bosch",
   "name_ru": "Bosch",
-  "name_en": null,
   "description_uz": "Nemis elektr asboblari brendi",
   "description_ru": "Немецкий бренд электроинструмента",
-  "description_en": null,
   "country": "Germaniya",
   "image": "https://.../media/brand/image/bosch.png",
   "is_visible": true,
@@ -39,8 +37,8 @@ Swagger: `/swagger/admin/` → **brands**.
 | Maydon | Izoh |
 | --- | --- |
 | `name_ru` * | majburiy (asosiy til) |
-| `name_uz`, `name_en` | ixtiyoriy |
-| `description_uz`, `description_ru`, `description_en` | tavsif, ixtiyoriy; bo'sh bo'lsa `null` yoki `""` keladi |
+| `name_uz` | ixtiyoriy |
+| `description_uz`, `description_ru` | tavsif, ixtiyoriy; bo'sh bo'lsa `null` yoki `""` keladi |
 | `country` | mamlakat — oddiy matn (bitta maydon, tarjimasiz), ixtiyoriy, 100 belgigacha; bo'sh = `""` |
 | `image` * | logotip, yaratishda majburiy (multipart) |
 | `is_visible` | default `true` |
@@ -65,6 +63,6 @@ O'chirish: mahsuloti bor brend o'chirilmaydi → `400 {"detail": "Brand has prod
 
 `GET brands/?page=&page_size=`
 
-- Qidiruv: `?search=` (nomi uz/ru/en, `code`, `country`)
+- Qidiruv: `?search=` (nomi uz/ru, `code`, `country`)
 - Filtrlar: `is_visible`, `show_on_home`, `country` (aniq mos kelishi kerak), `has_products`
 - Tartib: `?ordering=` `id`, `name`, `country`, `products_count`, `created_at`, `updated_at` (teskari: `-name`)

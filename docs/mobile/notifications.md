@@ -3,7 +3,7 @@
 Bildirishnomalarni admin yaratadi. Ko'pchiligi hammaga ko'rinadi; auditoriyasi tanlangan (masalan faqat PRO mijozlar yoki faqat iOS) bildirishnomani faqat o'sha mijozlar ko'radi — ro'yxat, `unread-count/` va `{id}/` buni o'zi hisobga oladi. O'qilgan / o'qilmagan holati har bir mijoz uchun alohida saqlanadi.
 
 Base URL: `{{host}}/api/v1/base/`
-Token kerak: `Authorization: Bearer <access_token>` (tokensiz → `401`). Til: `Accept-Language: uz | ru | en` (default `ru`; tanlangan tilda matn bo'lmasa — ruscha qaytadi).
+Token kerak: `Authorization: Bearer <access_token>` (tokensiz → `401`). Til: `Accept-Language: uz | ru` (default `ru`, `en` yoki boshqa til → `ru`; tanlangan tilda matn bo'lmasa — ruscha qaytadi).
 
 | Endpoint | Nima uchun |
 | --- | --- |

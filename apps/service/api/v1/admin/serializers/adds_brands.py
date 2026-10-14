@@ -20,7 +20,7 @@ class AddsBrandsListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AddsBrands
-        fields = ("id", "name", "name_uz", "name_ru", "name_en", "title", "title_uz", "title_ru", "title_en", "brand",
+        fields = ("id", "name", "name_uz", "name_ru", "title", "title_uz", "title_ru", "brand",
                   "products_count", "is_visible", "created_at", "updated_at")
 
 
@@ -31,8 +31,8 @@ class AddsBrandsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AddsBrands
-        fields = ("id", "name", "name_uz", "name_ru", "name_en", "title", "title_uz", "title_ru", "title_en",
-                  "description", "description_uz", "description_ru", "description_en", "brand", "products",
+        fields = ("id", "name", "name_uz", "name_ru", "title", "title_uz", "title_ru",
+                  "description", "description_uz", "description_ru", "brand", "products",
                   "is_visible", "created_at", "updated_at")
         read_only_fields = ("name", "title", "description", "created_at", "updated_at")
         extra_kwargs = {"name_ru": REQUIRED, "title_ru": REQUIRED, "description_ru": REQUIRED}

@@ -98,15 +98,13 @@ class ProductCharacteristicSerializer(serializers.ModelSerializer):
     the same attribute values in the shape of the old free-form characteristics."""
     name_uz = serializers.CharField(source="attribute.name_uz")
     name_ru = serializers.CharField(source="attribute.name_ru")
-    name_en = serializers.CharField(source="attribute.name_en", allow_null=True)
     unit_uz = serializers.CharField(source="attribute.unit")
     unit_ru = serializers.CharField(source="attribute.unit")
-    unit_en = serializers.CharField(source="attribute.unit")
 
     class Meta:
         model = ProductAttributeValue
-        fields = ("id", "name_uz", "name_ru", "name_en", "value_uz", "value_ru", "value_en",
-                  "unit_uz", "unit_ru", "unit_en")
+        fields = ("id", "name_uz", "name_ru", "value_uz", "value_ru",
+                  "unit_uz", "unit_ru")
 
 
 class LinkedProductListSerializer(serializers.ListSerializer):
@@ -182,8 +180,8 @@ class ProductSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Product
-        fields = ("id", "name", "name_uz", "name_ru", "name_en", "short_description_uz", "short_description_ru",
-                  "description_uz", "description_ru", "description_en",
+        fields = ("id", "name", "name_uz", "name_ru", "short_description_uz", "short_description_ru",
+                  "description_uz", "description_ru",
                   "brand", "product_model", "badges", "product_item_category", "price", "discount_price", "discount",
                   "unit", "quantity",
                   "is_active", "erp_active", "publish_status", "purchasable", "on_order", "product_code", "articul_code", "barcode", "weight", "length", "width", "height",

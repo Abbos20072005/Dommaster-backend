@@ -12,7 +12,7 @@ class BannerViewSet(AdminModelViewSet):
     queryset = Banner.objects.prefetch_related("content_object")
     serializer_class = BannerSerializer
     filterset_class = BannerFilter
-    search_fields = ("title_ru", "title_uz", "title_en", "link", "page")
+    search_fields = ("title_ru", "title_uz", "link", "page")
     ordering_fields = ("id", "title", "position", "starts_at", "ends_at", "is_visible", "created_at", "updated_at")
     ordering = ("position", "id")
 

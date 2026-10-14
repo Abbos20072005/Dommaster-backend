@@ -17,7 +17,7 @@ from apps.service.product_filters import clear_category_filter_cache
 # cells are applied - the rest of the sheet is an old snapshot of the DB and must not overwrite it.
 # A red fill is the team's own "problem" mark, not a correction.
 
-NAME_FIELDS = ("name", "name_uz", "name_ru", "name_en")
+NAME_FIELDS = ("name", "name_uz", "name_ru")
 EDITED_FILLS = {"FFFFFF00", "FF92D050"}
 
 COLUMN_ID = "ID"

@@ -10,7 +10,7 @@ GET products/{id}/
 ```
 
 - Mahsulotning **barcha** xususiyatlari shu yerda. Eski `characteristics` maydoni ham qolgan, lekin endi u `attributes` ning nusxasi (pastda) — yangi kodda `attributes` ni ishlating.
-- Til `Accept-Language` headeridan olinadi (`uz`, `ru`, `en`; default `ru`).
+- Til `Accept-Language` headeridan olinadi (`uz`, `ru`; default `ru`, `en` yoki boshqa til → `ru`).
 - Filtrlar ham shu atributlardan quriladi — `docs/mobile/product_filters.md`.
 
 ---
@@ -67,5 +67,5 @@ Eski ilova versiyalari uchun qoldirilgan: `attributes` dagi qatorlarning o'zi, o
 - Mahsulotda atribut kiritilmagan bo'lsa — `"attributes": []` (maydon har doim bor, `null` bo'lmaydi).
 - Tartib — admin kategoriyada belgilagan tartib; frontendda saralash kerak emas.
 - Admin o'chirib qo'ygan (nofaol) atributlar kelmaydi.
-- So'ralgan tilda tarjima bo'lmasa, ruscha qiymat qaytadi. 1C dan kelgan xususiyatlar hozircha faqat ruscha — `uz` va `en` da ham ruscha matn keladi.
+- So'ralgan tilda tarjima bo'lmasa, ruscha qiymat qaytadi. 1C dan kelgan xususiyatlar hozircha faqat ruscha — `uz` da ham ruscha matn keladi.
 - `attributes` faqat detalda; ro'yxatlarda faqat `characteristics` bor.

@@ -11,7 +11,7 @@ class ProductBadgeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ProductBadge
-        fields = ("id", "name", "name_uz", "name_ru", "name_en", "kind", *RULE_FIELDS, "color", "position",
+        fields = ("id", "name", "name_uz", "name_ru", "kind", *RULE_FIELDS, "color", "position",
                   "is_active", "products_count", "created_at", "updated_at")
         read_only_fields = ("name", "created_at", "updated_at")
         extra_kwargs = {

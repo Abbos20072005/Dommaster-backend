@@ -8,7 +8,7 @@ The client asks for the published layout and renders the blocks top to bottom.
 | `GET /api/v1/home/` | published blocks, in page order |
 | `GET /api/v1/home/blocks/{id}/products/` | products of a product block, paginated |
 
-No auth required. Language: `Accept-Language: uz | ru | en` (default `ru`; an empty translation falls back to `ru`).
+No auth required. Language: `Accept-Language: uz | ru` (default `ru`; `en` or any other language → `ru`; an empty translation falls back to `ru`).
 
 ## `GET /api/v1/home/`
 

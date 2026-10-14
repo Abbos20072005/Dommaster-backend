@@ -7,7 +7,7 @@ from ..serializers import AddsBrandsListSerializer, AddsBrandsSerializer
 
 class AddsBrandsViewSet(AdminModelViewSet):
     filterset_class = AddsBrandsFilter
-    search_fields = ("name_ru", "name_uz", "name_en", "title_ru", "title_uz", "title_en", "brand__name_ru")
+    search_fields = ("name_ru", "name_uz", "title_ru", "title_uz", "brand__name_ru")
     ordering_fields = ("id", "name", "products_count", "is_visible", "created_at", "updated_at")
     ordering = ("-id",)
 

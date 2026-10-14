@@ -136,8 +136,8 @@ Ro'yxat qatoridagi hamma maydonlar + kengroq `product` (preview uchun) va to'liq
   "price": 54000.0, "discount_price": null, "discount": null, "unit": "pcs", "quantity": 120,
   "images": [{ "id": 1, "image": "https://...", "position": 1, "created_at": "..." }],
   "attribute_values": [
-    { "id": 5, "name_uz": "Qutblar", "name_ru": "Полюса", "name_en": null,
-      "value_uz": "1", "value_ru": "1", "value_en": null, "unit_uz": "", "unit_ru": "", "unit_en": "" }
+    { "id": 5, "name_uz": "Qutblar", "name_ru": "Полюса",
+      "value_uz": "1", "value_ru": "1", "unit_uz": "", "unit_ru": "" }
   ]
 },
 "readiness": {

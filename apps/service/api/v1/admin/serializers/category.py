@@ -42,9 +42,8 @@ class SubCategoryParentSerializer(RelationSerializer):
 # uz + ru are required, ru is the default (fallback) language
 NAME_REQUIRED = {"required": True, "allow_null": False, "allow_blank": False}
 NAME_KWARGS = {"name_uz": NAME_REQUIRED, "name_ru": NAME_REQUIRED}
-NAME_FIELDS = ("name", "name_uz", "name_ru", "name_en")
-SEO_FIELDS = ("meta_title_uz", "meta_title_ru", "meta_title_en", "meta_description_uz", "meta_description_ru",
-              "meta_description_en")
+NAME_FIELDS = ("name", "name_uz", "name_ru")
+SEO_FIELDS = ("meta_title_uz", "meta_title_ru", "meta_description_uz", "meta_description_ru")
 VISIBILITY_FIELDS = ("show_on_site", "show_in_app", "is_active")
 COUNT_FIELDS = ("products_count", "filters_count")
 

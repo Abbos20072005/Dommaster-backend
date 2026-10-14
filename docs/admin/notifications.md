@@ -25,11 +25,9 @@ Swagger: `/swagger/admin/` → **notifications**.
   "title": "Цены на цемент снизились",
   "title_uz": "Sement narxlari tushdi",
   "title_ru": "Цены на цемент снизились",
-  "title_en": null,
   "description": "Кизилкум М400 и М500 — по PRO ценам.",
   "description_uz": "Qizilqum M400 va M500 — PRO narxlarda.",
   "description_ru": "Кизилкум М400 и М500 — по PRO ценам.",
-  "description_en": null,
   "image": "https://api.example.uz/media/notification/sement.jpg",
   "link_type": "category",
   "target": {"model": "productsubcategory", "id": 12, "name": "Цемент"},
@@ -52,9 +50,9 @@ Swagger: `/swagger/admin/` → **notifications**.
 | Maydon | Izoh |
 | --- | --- |
 | `title_ru` * | majburiy (asosiy til), 150 belgigacha |
-| `title_uz`, `title_en` | ixtiyoriy; bo'sh bo'lsa mijozga ruscha ko'rsatiladi |
+| `title_uz` | ixtiyoriy; bo'sh bo'lsa mijozga ruscha ko'rsatiladi |
 | `description_ru` * | majburiy, oddiy matn |
-| `description_uz`, `description_en` | ixtiyoriy |
+| `description_uz` | ixtiyoriy |
 | `image` | ixtiyoriy rasm (pushda va ro'yxatda chiqadi). Fayl yuborilsa so'rov `multipart/form-data` bo'ladi; bo'sh `image=` — rasmni o'chiradi |
 | `link_type` | bosilganda qayerga olib boradi: `category`, `product`, `badge`, `page`, `banner`; bo'sh = havolasiz. Quyida — **Deeplink** |
 | `target` | `link_type` = `category` / `product` / `badge` / `banner` uchun obyekt: `{"model", "id"}` |
@@ -149,7 +147,7 @@ Bildirishnoma **chiqarilgan** (`published`) bo'lgan paytda auditoriyasidagi quri
 
 - Paginatsiya: `?page=&page_size=` (default 20, max 100)
 - Filtrlar: `?status=published|scheduled|draft`, `?is_active=true|false`, `?segment=`, `?platform=`, `?link_type=`, `?from_publish=2026-10-01&to_publish=2026-10-31` (`publish_at` bo'yicha, ikkala chegara ham kiradi)
-- Qidiruv: `?search=` (sarlavha va matn uz/ru/en, `deeplink`)
+- Qidiruv: `?search=` (sarlavha va matn uz/ru, `deeplink`)
 - Tartib: `?ordering=` `id`, `title`, `publish_at`, `is_active`, `reads_count`, `created_at`, `updated_at`; default — `-publish_at`
 
 Tablar: "Kampaniyalar" = `?is_active=true` (yoki `status` bo'yicha), "Qoralamalar" = `?status=draft`.

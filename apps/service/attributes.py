@@ -8,7 +8,6 @@ DEFAULT_LANGUAGE = "ru"
 BOOLEAN_LABELS = {
     "uz": {"true": "Ha", "false": "Yo'q"},
     "ru": {"true": "Да", "false": "Нет"},
-    "en": {"true": "Yes", "false": "No"},
 }
 # Product attribute the prefetched values are stored in (see attribute_values_prefetch)
 VALUES_ATTR = "_attribute_values"

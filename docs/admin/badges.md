@@ -24,7 +24,6 @@ Bitta mahsulotda **bir nechta** badge bo'lishi mumkin (`products/` dagi `badges`
   "name": "Акция",
   "name_uz": "Aksiya",
   "name_ru": "Акция",
-  "name_en": null,
   "kind": "auto",
   "rule_field": "discount",
   "rule_operator": "gt",
@@ -40,7 +39,7 @@ Bitta mahsulotda **bir nechta** badge bo'lishi mumkin (`products/` dagi `badges`
 
 | Maydon | Izoh |
 | --- | --- |
-| `name_ru` * | majburiy (asosiy til); `name_uz`, `name_en` ixtiyoriy |
+| `name_ru` * | majburiy (asosiy til); `name_uz` ixtiyoriy |
 | `kind` | Turi: `manual` (Qo'lda, default) / `auto` (Avtomatik) |
 | `rule_field` | `discount` — Chegirma, %; `created_days` — Qo'shilgan, kun; `quantity` — Qoldiq, dona; `sales_30d` — Sotuvlar (30 kun) |
 | `rule_operator` | `gt` `>`, `gte` `≥`, `lt` `<`, `lte` `≤`, `eq` `=` |

@@ -24,15 +24,12 @@ Swagger: `/swagger/admin/` → **adds-brands**. Fayl yo'q — hammasi JSON.
   "name": "Летняя распродажа",
   "name_uz": "Yozgi chegirmalar",
   "name_ru": "Летняя распродажа",
-  "name_en": null,
   "title": "Лето",
   "title_uz": "Yoz",
   "title_ru": "Лето",
-  "title_en": null,
   "description": "<p>Условия акции...</p>",
   "description_uz": "<p>Aksiya shartlari...</p>",
   "description_ru": "<p>Условия акции...</p>",
-  "description_en": null,
   "brand": { "id": 15, "name": "Knauf" },
   "products": [
     { "id": 102, "name": "Смеситель для ванной", "product_code": "000001234", "price": 80000.0, "discount_price": null, "is_active": true },
@@ -47,11 +44,11 @@ Swagger: `/swagger/admin/` → **adds-brands**. Fayl yo'q — hammasi JSON.
 | Maydon | Izoh |
 | --- | --- |
 | `name_ru` * | blok nomi (bosh sahifadagi bo'lim sarlavhasi), majburiy, 450 belgigacha |
-| `name_uz`, `name_en` | ixtiyoriy |
+| `name_uz` | ixtiyoriy |
 | `title_ru` * | kampaniya sahifasi sarlavhasi, majburiy, 350 belgigacha |
-| `title_uz`, `title_en` | ixtiyoriy |
+| `title_uz` | ixtiyoriy |
 | `description_ru` * | kampaniya sahifasi matni, majburiy, HTML (rich text) |
-| `description_uz`, `description_en` | ixtiyoriy, HTML |
+| `description_uz` | ixtiyoriy, HTML |
 | `brand` | ixtiyoriy; `{"id": 15}` yoki shunchaki `15`; `null` = brendsiz. Bitta brendga faqat **bitta** blok |
 | `products` * | mahsulotlar ro'yxati, kamida bitta; har biri `{"id": 102}` yoki shunchaki `102` |
 | `is_visible` | default `true`; `false` = mijozga ko'rinmaydi |
@@ -111,11 +108,9 @@ Brenddan uzish: `{ "brand": null }`. Yashirish: `{ "is_visible": false }`.
       "name": "Летняя распродажа",
       "name_uz": "Yozgi chegirmalar",
       "name_ru": "Летняя распродажа",
-      "name_en": null,
       "title": "Лето",
       "title_uz": "Yoz",
       "title_ru": "Лето",
-      "title_en": null,
       "brand": { "id": 15, "name": "Knauf" },
       "products_count": 2,
       "is_visible": true,
@@ -126,7 +121,7 @@ Brenddan uzish: `{ "brand": null }`. Yashirish: `{ "is_visible": false }`.
 }
 ```
 
-- Qidiruv: `?search=` (nomi va sarlavhasi uz/ru/en, brend nomi)
+- Qidiruv: `?search=` (nomi va sarlavhasi uz/ru, brend nomi)
 - Filtrlar: `is_visible`, `brand` (brend id), `has_brand` (`true` / `false`)
 - Tartib: `?ordering=` `id`, `name`, `products_count`, `is_visible`, `created_at`, `updated_at` (teskari: `-products_count`); default — yangilari birinchi
 

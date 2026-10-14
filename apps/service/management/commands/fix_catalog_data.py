@@ -18,7 +18,7 @@ from apps.service.product_filters import clear_category_filter_cache
 # need source data). The sheet gives no replacement for row 58 ("андава") and for "VIKO PILOT" of row 14 -
 # the wording here is ours.
 
-NAME_FIELDS = ("name", "name_uz", "name_ru", "name_en")
+NAME_FIELDS = ("name", "name_uz", "name_ru")
 
 STEPS = ("names", "brands", "category", "test-data")
 

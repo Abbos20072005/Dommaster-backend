@@ -1,7 +1,7 @@
 # Bannerlar — mobile / sayt uchun
 
 Base URL: `{{host}}/api/v1/`
-Token kerak emas. Til: `Accept-Language: uz | ru | en` (default `ru`) — faqat `title` ga ta'sir qiladi.
+Token kerak emas. Til: `Accept-Language: uz | ru` (default `ru`; `en` yoki boshqa til → `ru`) — faqat `title` ga ta'sir qiladi.
 
 Bannerlar **3 xil joyda** chiqadi. Qaysi banner qayerda turishini admin panelda `placement` (joylashuv) belgilaydi:
 

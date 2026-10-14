@@ -8,7 +8,7 @@ from ..serializers import ArticlesListSerializer, ArticlesSerializer, NewsListSe
 class NewsViewSet(AdminModelViewSet):
     queryset = News.objects.all()
     filterset_class = CreatedRangeFilter
-    search_fields = ("title_ru", "title_uz", "title_en")
+    search_fields = ("title_ru", "title_uz")
     ordering_fields = ("id", "title", "created_at", "updated_at")
     ordering = ("-id",)
 
@@ -40,6 +40,6 @@ class VideoViewSet(AdminModelViewSet):
     queryset = Video.objects.all()
     serializer_class = VideoSerializer
     filterset_class = CreatedRangeFilter
-    search_fields = ("name_ru", "name_uz", "name_en", "url")
+    search_fields = ("name_ru", "name_uz", "url")
     ordering_fields = ("id", "name", "created_at", "updated_at")
     ordering = ("-id",)

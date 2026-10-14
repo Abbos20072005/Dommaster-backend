@@ -8,14 +8,14 @@ REQUIRED = {"required": True, "allow_null": False, "allow_blank": False}
 class NewsListSerializer(serializers.ModelSerializer):
     class Meta:
         model = News
-        fields = ("id", "title", "title_uz", "title_ru", "title_en", "image", "created_at", "updated_at")
+        fields = ("id", "title", "title_uz", "title_ru", "image", "created_at", "updated_at")
 
 
 class NewsSerializer(serializers.ModelSerializer):
     class Meta:
         model = News
-        fields = ("id", "title", "title_uz", "title_ru", "title_en", "description", "description_uz",
-                  "description_ru", "description_en", "image", "created_at", "updated_at")
+        fields = ("id", "title", "title_uz", "title_ru", "description", "description_uz",
+                  "description_ru", "image", "created_at", "updated_at")
         read_only_fields = ("title", "description", "created_at", "updated_at")
         extra_kwargs = {"title_ru": REQUIRED, "description_ru": REQUIRED}
 
@@ -44,6 +44,6 @@ class ArticlesSerializer(serializers.ModelSerializer):
 class VideoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Video
-        fields = ("id", "name", "name_uz", "name_ru", "name_en", "url", "created_at", "updated_at")
+        fields = ("id", "name", "name_uz", "name_ru", "url", "created_at", "updated_at")
         read_only_fields = ("name", "created_at", "updated_at")
         extra_kwargs = {"name_ru": REQUIRED}

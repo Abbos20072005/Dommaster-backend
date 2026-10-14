@@ -10,7 +10,7 @@ Filtrlar endi mahsulot **atributlaridan** quriladi (admin panelda boshqariladi).
 | `POST product/filter/` | mahsulotlar ro'yxati + shu ro'yxatga mos filtrlar |
 | `GET item-category/{id}/filters/` | kategoriyaning filtrlari (mahsulotlarsiz) |
 
-Til `Accept-Language` headeridan olinadi (`uz`, `ru`, `en`; default `ru`).
+Til `Accept-Language` headeridan olinadi (`uz`, `ru`; default `ru`, `en` yoki boshqa til → `ru`).
 
 ---
 

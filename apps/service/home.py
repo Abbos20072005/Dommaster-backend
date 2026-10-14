@@ -11,7 +11,7 @@ ORDER_CANCELED = 4
 
 RULE_FIELDS = ("hide_out_of_stock", "hide_stale_price", "min_products")
 # what "publish" stores per block; the list order is the page order
-SNAPSHOT_FIELDS = ("id", "type", "title_uz", "title_ru", "title_en", "is_visible", "show_on_site", "show_in_app",
+SNAPSHOT_FIELDS = ("id", "type", "title_uz", "title_ru", "is_visible", "show_on_site", "show_in_app",
                    "banner_placement", "banner_id", "badge_id", "sale_id", "days", "pages")
 
 # client `?platform=` -> (channel flag of a block, channel flag of a banner)
@@ -20,7 +20,7 @@ PLATFORMS = {
     "ios": ("show_in_app", "show_on_ios"),
     "android": ("show_in_app", "show_on_android"),
 }
-LANGUAGES = ("uz", "ru", "en")
+LANGUAGES = ("uz", "ru")
 LAYOUT_CACHE_TIMEOUT = 300
 
 

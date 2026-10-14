@@ -12,7 +12,7 @@ from .models import Product, ProductAttribute, ProductAttributeValue, ProductIte
 
 PRICE_KEY = "price"
 RANGE, CHECKBOX = "range", "checkbox"
-PRICE_LABELS = {"uz": ("Narx", "so'm"), "ru": ("Цена", "сум"), "en": ("Price", "UZS")}
+PRICE_LABELS = {"uz": ("Narx", "so'm"), "ru": ("Цена", "сум")}
 CACHE_TTL = 86400
 
 

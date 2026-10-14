@@ -15,7 +15,7 @@ class NotificationViewSet(AdminModelViewSet):
     queryset = Notification.objects.annotate(reads_count=Count("reads")).prefetch_related("content_object")
     serializer_class = NotificationSerializer
     filterset_class = NotificationFilter
-    search_fields = ("title_ru", "title_uz", "title_en", "description_ru", "description_uz", "description_en",
+    search_fields = ("title_ru", "title_uz", "description_ru", "description_uz",
                      "deeplink")
     ordering_fields = ("id", "title", "publish_at", "is_active", "reads_count", "created_at", "updated_at")
     ordering = ("-publish_at", "-id")

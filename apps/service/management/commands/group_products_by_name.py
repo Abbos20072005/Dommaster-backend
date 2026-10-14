@@ -144,7 +144,7 @@ def make_base_key(name, exclude_unit_label=None, all_labels=None):
     return normalized
 
 
-LANGUAGE_SUFFIXES = ("", "_uz", "_ru", "_en")
+LANGUAGE_SUFFIXES = ("", "_uz", "_ru")
 
 
 def variant_sort_key(value):

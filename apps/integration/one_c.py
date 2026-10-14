@@ -56,7 +56,6 @@ def get_or_create_brand(code):
     brand = Brand.objects.create(
         name=code,
         name_uz=code,
-        name_en=code,
         code=code,
     )
     return brand
@@ -113,17 +112,14 @@ class UnitNestedSerializer(serializers.Serializer):
     unit_code = serializers.CharField(required=False, allow_blank=True)
     unit_name_uz = serializers.CharField(required=False, allow_blank=True)
     unit_name_ru = serializers.CharField(required=False, allow_blank=True)
-    unit_name_en = serializers.CharField(required=False, allow_blank=True)
     unit_namefull_uz = serializers.CharField(required=False, allow_blank=True)
     unit_namefull_ru = serializers.CharField(required=False, allow_blank=True)
-    unit_namefull_en = serializers.CharField(required=False, allow_blank=True)
 
 
 class BrandNestedSerializer(serializers.Serializer):
     brand_code = serializers.CharField(required=False, allow_blank=True)
     brand_name_uz = serializers.CharField(required=False, allow_blank=True)
     brand_name_ru = serializers.CharField(required=False, allow_blank=True)
-    brand_name_en = serializers.CharField(required=False, allow_blank=True)
     image_base64 = serializers.CharField(required=False, allow_blank=True)
 
 
@@ -131,7 +127,6 @@ class CategoryNestedSerializer(serializers.Serializer):
     category_code = serializers.CharField(required=False, allow_blank=True)
     category_name_uz = serializers.CharField(required=False, allow_blank=True)
     category_name_ru = serializers.CharField(required=False, allow_blank=True)
-    category_name_en = serializers.CharField(required=False, allow_blank=True)
     image_base64 = serializers.CharField(required=False, allow_blank=True)
     icon_base64 = serializers.CharField(required=False, allow_blank=True)
 
@@ -141,7 +136,6 @@ class SubCategoryNestedSerializer(serializers.Serializer):
     subcategory_code = serializers.CharField(required=False, allow_blank=True)
     subcategory_name_uz = serializers.CharField(required=False, allow_blank=True)
     subcategory_name_ru = serializers.CharField(required=False, allow_blank=True)
-    subcategory_name_en = serializers.CharField(required=False, allow_blank=True)
     image_base64 = serializers.CharField(required=False, allow_blank=True)
 
 
@@ -150,7 +144,6 @@ class ItemCategoryNestedSerializer(serializers.Serializer):
     itemcategory_code = serializers.CharField(required=False, allow_blank=True)
     itemcategory_name_uz = serializers.CharField(required=False, allow_blank=True)
     itemcategory_name_ru = serializers.CharField(required=False, allow_blank=True)
-    itemcategory_name_en = serializers.CharField(required=False, allow_blank=True)
     image_base64 = serializers.CharField(required=False, allow_blank=True)
 
 
@@ -165,10 +158,8 @@ class OneCProductInputSerializer(serializers.Serializer):
     product_code = serializers.CharField(required=False, allow_blank=True)
     product_name_uz = serializers.CharField(required=False, allow_blank=True)
     product_name_ru = serializers.CharField(required=False, allow_blank=True)
-    product_name_en = serializers.CharField(required=False, allow_blank=True)
     description_uz = serializers.CharField(required=False, allow_blank=True)
     description_ru = serializers.CharField(required=False, allow_blank=True)
-    description_en = serializers.CharField(required=False, allow_blank=True)
     unit = UnitNestedSerializer(required=False)
     brand = BrandNestedSerializer(required=False)
     category = CategoryNestedSerializer(required=False)
@@ -187,7 +178,6 @@ class OneCBrandInputSerializer(serializers.Serializer):
     brand_code = serializers.CharField(required=False, allow_blank=True)
     brand_name_uz = serializers.CharField(required=False, allow_blank=True)
     brand_name_ru = serializers.CharField(required=False, allow_blank=True)
-    brand_name_en = serializers.CharField(required=False, allow_blank=True)
     image_base64 = serializers.CharField(required=True)
 
 
@@ -196,7 +186,6 @@ class OneCCategoryInputSerializer(serializers.Serializer):
     category_code = serializers.CharField(required=False, allow_blank=True)
     category_name_uz = serializers.CharField(required=False, allow_blank=True)
     category_name_ru = serializers.CharField(required=False, allow_blank=True)
-    category_name_en = serializers.CharField(required=False, allow_blank=True)
     image_base64 = serializers.CharField(required=True)
     icon_base64 = serializers.CharField(required=False, allow_blank=True)
 
@@ -207,7 +196,6 @@ class OneCSubCategoryInputSerializer(serializers.Serializer):
     subcategory_code = serializers.CharField(required=False, allow_blank=True)
     subcategory_name_uz = serializers.CharField(required=False, allow_blank=True)
     subcategory_name_ru = serializers.CharField(required=False, allow_blank=True)
-    subcategory_name_en = serializers.CharField(required=False, allow_blank=True)
     image_base64 = serializers.CharField(required=True)
 
 
@@ -217,7 +205,6 @@ class OneCItemCategoryInputSerializer(serializers.Serializer):
     itemcategory_code = serializers.CharField(required=False, allow_blank=True)
     itemcategory_name_uz = serializers.CharField(required=False, allow_blank=True)
     itemcategory_name_ru = serializers.CharField(required=False, allow_blank=True)
-    itemcategory_name_en = serializers.CharField(required=False, allow_blank=True)
     image_base64 = serializers.CharField(required=True)
 
 
@@ -226,10 +213,8 @@ class OneCUnitInputSerializer(serializers.Serializer):
     unit_code = serializers.CharField(required=True)
     unit_name_uz = serializers.CharField(required=False, allow_blank=True)
     unit_name_ru = serializers.CharField(required=False, allow_blank=True)
-    unit_name_en = serializers.CharField(required=False, allow_blank=True)
     unit_namefull_uz = serializers.CharField(required=False, allow_blank=True)
     unit_namefull_ru = serializers.CharField(required=False, allow_blank=True)
-    unit_namefull_en = serializers.CharField(required=False, allow_blank=True)
 
 
 class PriceListItemNestedSerializer(serializers.Serializer):
@@ -302,17 +287,14 @@ class OneCIntegrationViewSet(ViewSet):
             return None
         name_uz = unit_data.get("unit_name_uz", "")
         name_ru = unit_data.get("unit_name_ru") or name_uz
-        name_en = unit_data.get("unit_name_en") or name_uz
         unit, _ = ProductUnit.objects.update_or_create(
             unit_code=code,
             defaults={
                 "name": name_uz,
                 "name_uz": name_uz,
                 "name_ru": name_ru,
-                "name_en": name_en,
                 "name_full_uz": unit_data.get("unit_namefull_uz", ""),
                 "name_full_ru": unit_data.get("unit_namefull_ru", ""),
-                "name_full_en": unit_data.get("unit_namefull_en", ""),
             }
         )
         return unit
@@ -325,14 +307,12 @@ class OneCIntegrationViewSet(ViewSet):
             return None
         name_uz = brand_data.get("brand_name_uz", "")
         name_ru = brand_data.get("brand_name_ru") or name_uz
-        name_en = brand_data.get("brand_name_en") or name_uz
         brand, _ = Brand.objects.update_or_create(
             code=code,
             defaults={
                 "name": name_uz,
                 "name_uz": name_uz,
                 "name_ru": name_ru,
-                "name_en": name_en,
             }
         )
         img = brand_data.get("image_base64")
@@ -349,14 +329,12 @@ class OneCIntegrationViewSet(ViewSet):
             return None
         name_uz = cat_data.get("category_name_uz", "")
         name_ru = cat_data.get("category_name_ru") or name_uz
-        name_en = cat_data.get("category_name_en") or name_uz
         cat, _ = ProductCategory.objects.update_or_create(
             code=code,
             defaults={
                 "name": name_uz,
                 "name_uz": name_uz,
                 "name_ru": name_ru,
-                "name_en": name_en,
             }
         )
         for field, key in [("image", "image_base64"), ("icon", "icon_base64")]:
@@ -381,7 +359,6 @@ class OneCIntegrationViewSet(ViewSet):
                     "name": category_code,
                     "name_uz": category_code,
                     "name_ru": category_code,
-                    "name_en": category_code,
                 }
             )
 
@@ -390,7 +367,6 @@ class OneCIntegrationViewSet(ViewSet):
 
         name_uz = sub_data.get("subcategory_name_uz", "")
         name_ru = sub_data.get("subcategory_name_ru") or name_uz
-        name_en = sub_data.get("subcategory_name_en") or name_uz
         sub, _ = ProductSubCategory.objects.update_or_create(
             code=code,
             defaults={
@@ -398,7 +374,6 @@ class OneCIntegrationViewSet(ViewSet):
                 "name": name_uz,
                 "name_uz": name_uz,
                 "name_ru": name_ru,
-                "name_en": name_en,
             }
         )
         img = sub_data.get("image_base64")
@@ -422,7 +397,6 @@ class OneCIntegrationViewSet(ViewSet):
                     "name": subcategory_code,
                     "name_uz": subcategory_code,
                     "name_ru": subcategory_code,
-                    "name_en": subcategory_code,
                 }
             )
 
@@ -431,7 +405,6 @@ class OneCIntegrationViewSet(ViewSet):
 
         name_uz = item_data.get("itemcategory_name_uz", "")
         name_ru = item_data.get("itemcategory_name_ru") or name_uz
-        name_en = item_data.get("itemcategory_name_en") or name_uz
         item, _ = ProductItemCategory.objects.update_or_create(
             code=code,
             defaults={
@@ -439,7 +412,6 @@ class OneCIntegrationViewSet(ViewSet):
                 "name": name_uz,
                 "name_uz": name_uz,
                 "name_ru": name_ru,
-                "name_en": name_en,
             }
         )
         img = item_data.get("image_base64")
@@ -477,12 +449,10 @@ class OneCIntegrationViewSet(ViewSet):
 
             name_uz = data.get("product_name_uz", "")
             name_ru = data.get("product_name_ru") or name_uz
-            name_en = data.get("product_name_en") or name_uz
             name = name_uz
 
             description_uz = data.get("description_uz", "")
             description_ru = data.get("description_ru") or description_uz
-            description_en = data.get("description_en") or description_uz
             description = description_uz
 
             unit_label = unit.name if unit else "pcs"
@@ -502,11 +472,9 @@ class OneCIntegrationViewSet(ViewSet):
                 "name": name,
                 "name_uz": name_uz,
                 "name_ru": name_ru,
-                "name_en": name_en,
                 "description": description,
                 "description_uz": description_uz,
                 "description_ru": description_ru,
-                "description_en": description_en,
             }
 
             created = True
@@ -564,10 +532,8 @@ class OneCIntegrationViewSet(ViewSet):
                     product=product,
                     name=char_name,
                     name_uz=char_name,
-                    name_en=char_name,
                     value=char_value,
                     value_uz=char_value,
-                    value_en=char_value,
                     unit=char_unit,
                 ))
 
@@ -589,7 +555,6 @@ class OneCIntegrationViewSet(ViewSet):
                     "product_code": product.product_code or product_code,
                     "product_name_uz": product.name_uz,
                     "product_name_ru": product.name_ru,
-                    "product_name_en": product.name_en,
                 },
                 "ok": True,
             },
@@ -618,7 +583,6 @@ class OneCIntegrationViewSet(ViewSet):
 
         name_uz = data.get("brand_name_uz", "")
         name_ru = data.get("brand_name_ru") or name_uz
-        name_en = data.get("brand_name_en") or name_uz
         brand_code = data.get("brand_code")
 
         with transaction.atomic():
@@ -626,7 +590,6 @@ class OneCIntegrationViewSet(ViewSet):
                 "name": name_uz,
                 "name_uz": name_uz,
                 "name_ru": name_ru,
-                "name_en": name_en,
             }
 
             if brand_code:
@@ -649,7 +612,6 @@ class OneCIntegrationViewSet(ViewSet):
                     "brand_code": brand.code or brand_code,
                     "name_uz": brand.name_uz,
                     "name_ru": brand.name_ru,
-                    "name_en": brand.name_en,
                 },
                 "ok": True,
             },
@@ -678,7 +640,6 @@ class OneCIntegrationViewSet(ViewSet):
 
         name_uz = data.get("category_name_uz", "")
         name_ru = data.get("category_name_ru") or name_uz
-        name_en = data.get("category_name_en") or name_uz
         category_code = data.get("category_code")
 
         with transaction.atomic():
@@ -686,7 +647,6 @@ class OneCIntegrationViewSet(ViewSet):
                 "name": name_uz,
                 "name_uz": name_uz,
                 "name_ru": name_ru,
-                "name_en": name_en,
             }
 
             if category_code:
@@ -710,7 +670,6 @@ class OneCIntegrationViewSet(ViewSet):
                     "category_code": category.code or category_code,
                     "name_uz": category.name_uz,
                     "name_ru": category.name_ru,
-                    "name_en": category.name_en,
                 },
                 "ok": True,
             },
@@ -739,7 +698,6 @@ class OneCIntegrationViewSet(ViewSet):
 
         name_uz = data.get("subcategory_name_uz", "")
         name_ru = data.get("subcategory_name_ru") or name_uz
-        name_en = data.get("subcategory_name_en") or name_uz
         subcategory_code = data.get("subcategory_code")
 
         category_code = data.get("category_code")
@@ -753,7 +711,6 @@ class OneCIntegrationViewSet(ViewSet):
                 "name": name_uz,
                 "name_uz": name_uz,
                 "name_ru": name_ru,
-                "name_en": name_en,
             }
 
             if subcategory_code:
@@ -776,7 +733,6 @@ class OneCIntegrationViewSet(ViewSet):
                     "subcategory_code": sub_category.code or subcategory_code,
                     "name_uz": sub_category.name_uz,
                     "name_ru": sub_category.name_ru,
-                    "name_en": sub_category.name_en,
                 },
                 "ok": True,
             },
@@ -805,7 +761,6 @@ class OneCIntegrationViewSet(ViewSet):
 
         name_uz = data.get("itemcategory_name_uz", "")
         name_ru = data.get("itemcategory_name_ru") or name_uz
-        name_en = data.get("itemcategory_name_en") or name_uz
         itemcategory_code = data.get("itemcategory_code")
 
         subcategory_code = data.get("subcategory_code")
@@ -819,7 +774,6 @@ class OneCIntegrationViewSet(ViewSet):
                 "name": name_uz,
                 "name_uz": name_uz,
                 "name_ru": name_ru,
-                "name_en": name_en,
             }
 
             if itemcategory_code:
@@ -842,7 +796,6 @@ class OneCIntegrationViewSet(ViewSet):
                     "itemcategory_code": item_category.code or itemcategory_code,
                     "name_uz": item_category.name_uz,
                     "name_ru": item_category.name_ru,
-                    "name_en": item_category.name_en,
                 },
                 "ok": True,
             },
@@ -871,7 +824,6 @@ class OneCIntegrationViewSet(ViewSet):
 
         name_uz = data.get("unit_name_uz", "")
         name_ru = data.get("unit_name_ru") or name_uz
-        name_en = data.get("unit_name_en") or name_uz
 
         with transaction.atomic():
             unit, created = ProductUnit.objects.update_or_create(
@@ -880,10 +832,8 @@ class OneCIntegrationViewSet(ViewSet):
                     "name": name_uz,
                     "name_uz": name_uz,
                     "name_ru": name_ru,
-                    "name_en": name_en,
                     "name_full_uz": data.get("unit_namefull_uz", ""),
                     "name_full_ru": data.get("unit_namefull_ru", ""),
-                    "name_full_en": data.get("unit_namefull_en", ""),
                 }
             )
 
@@ -893,10 +843,8 @@ class OneCIntegrationViewSet(ViewSet):
                     "unit_code": unit.unit_code,
                     "unit_name_uz": unit.name_uz,
                     "unit_name_ru": unit.name_ru,
-                    "unit_name_en": unit.name_en,
                     "unit_namefull_uz": unit.name_full_uz,
                     "unit_namefull_ru": unit.name_full_ru,
-                    "unit_namefull_en": unit.name_full_en,
                 },
                 "ok": True,
             },
@@ -1010,7 +958,6 @@ class OneCIntegrationViewSet(ViewSet):
             "name": warehouse_name,
             "name_uz": warehouse_name,
             "name_ru": warehouse_name,
-            "name_en": warehouse_name,
             "branch_type": data.get("type"),
         }
         optional_fields = (

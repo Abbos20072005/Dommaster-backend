@@ -36,12 +36,11 @@ Swagger: `/swagger/admin/` → **attributes**, **item-categories**, **products**
   "name": "Тип управления",
   "name_uz": "Boshqaruv turi",
   "name_ru": "Тип управления",
-  "name_en": null,
   "value_type": "list",
   "unit": "",
   "options": [
-    { "id": 1, "value_uz": "Pult (simli)", "value_ru": "Пульт (проводной)", "value_en": null },
-    { "id": 2, "value_uz": "Radio pult", "value_ru": "Радиопульт", "value_en": null }
+    { "id": 1, "value_uz": "Pult (simli)", "value_ru": "Пульт (проводной)" },
+    { "id": 2, "value_uz": "Radio pult", "value_ru": "Радиопульт" }
   ],
   "is_filterable": false,
   "is_active": true,
@@ -63,7 +62,6 @@ Swagger: `/swagger/admin/` → **attributes**, **item-categories**, **products**
 | --- | --- | --- | --- |
 | `name_uz` | Nomi (UZ) | string, majburiy | maks. 150 belgi |
 | `name_ru` | Nomi (RU) | string, majburiy | maks. 150 belgi |
-| `name_en` | — | string | ixtiyoriy |
 | `name` | — | faqat o'qish | joriy tildagi nom (default — ruscha) |
 | `value_type` | Qiymat turi | string | `number` (Son), `list` (Ro'yxat), `text` (Matn), `boolean` (Ha / yo'q); default `list` |
 | `unit` | Birlik | string | faqat `number` uchun, o'shanda majburiy; maks. 50 belgi |
@@ -87,7 +85,7 @@ Swagger: `/swagger/admin/` → **attributes**, **item-categories**, **products**
 | `in_use` | `?in_use=false` | `true` — kamida bitta kategoriyaga biriktirilgan |
 | `item_category` | `?item_category=33` | shu kategoriyaga biriktirilganlar |
 | `sub_category`, `category` | `?category=9` | yuqori darajadagi kategoriya bo'yicha |
-| `search` | `?search=quvvat` | `name_uz`, `name_ru`, `name_en` bo'yicha |
+| `search` | `?search=quvvat` | `name_uz`, `name_ru` bo'yicha |
 | `ordering` | `?ordering=-products_count` | `id`, `name`, `value_type`, `item_categories_count`, `products_count`, `created_at`, `updated_at`; default `-created_at` |
 | `page`, `page_size` | `?page=1&page_size=100` | default 20, maksimum 100 |
 
@@ -190,8 +188,8 @@ Atribut formasidagi "Ishlatiladigan kategoriyalar" faqat ko'rsatiladi. Biriktiri
       "value_type": "list",
       "unit": "",
       "options": [
-        { "id": 1, "value_uz": "Pult (simli)", "value_ru": "Пульт (проводной)", "value_en": null },
-        { "id": 2, "value_uz": "Radio pult", "value_ru": "Радиопульт", "value_en": null }
+        { "id": 1, "value_uz": "Pult (simli)", "value_ru": "Пульт (проводной)" },
+        { "id": 2, "value_uz": "Radio pult", "value_ru": "Радиопульт" }
       ],
       "is_filterable": true,
       "is_active": true,
@@ -262,7 +260,7 @@ Mahsulot detalida (`GET products/{id}/`) `attribute_values` massivi keladi. Ro'y
 
 Bitta mahsulotda bitta atributga bitta qiymat. Birlik mahsulotda saqlanmaydi — `attribute.unit` dan olinadi.
 
-> **`characteristics` eskirgan.** Maydon javobda vaqtincha qoldirilgan (eski forma buzilmasligi uchun), lekin endi u `attribute_values` ning eski ko'rinishdagi nusxasi (`id`, `name_uz/ru/en`, `value_uz/ru/en`, `unit_uz/ru/en`) va **faqat o'qiladi**: so'rovda yuborilgan `characteristics` xatosiz e'tiborga olinmaydi, hech narsa saqlanmaydi. Xususiyatlarni `attribute_values` orqali yozing; forma shunga o'tgach maydon olib tashlanadi. `filter_data` maydoni olib tashlangan.
+> **`characteristics` eskirgan.** Maydon javobda vaqtincha qoldirilgan (eski forma buzilmasligi uchun), lekin endi u `attribute_values` ning eski ko'rinishdagi nusxasi (`id`, `name_uz/ru`, `value_uz/ru`, `unit_uz/ru`) va **faqat o'qiladi**: so'rovda yuborilgan `characteristics` xatosiz e'tiborga olinmaydi, hech narsa saqlanmaydi. Xususiyatlarni `attribute_values` orqali yozing; forma shunga o'tgach maydon olib tashlanadi. `filter_data` maydoni olib tashlangan.
 
 ### Yozish — `POST products/`, `PATCH products/{id}/`
 

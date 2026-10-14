@@ -30,7 +30,7 @@ Base URL: `{{host}}/api/v1/admin/`
 | `short_description_ru` | qisqa tavsif, ruscha; HTML (rich text), majburiy emas, `null` / `""` bo'lishi mumkin |
 
 - **Eski `short_description` kaliti endi kelmaydi va yuborilsa e'tiborga olinmaydi** — formani shu ikki maydonga o'tkazing.
-- Inglizcha (`short_description_en`) yo'q.
+- Ingliz tili loyihada umuman yo'q (`en` so'ralsa — ruscha).
 - Mahsulotlar ro'yxatida (`GET products/`) qisqa tavsif avvalgidek yo'q.
 
 ---
@@ -43,6 +43,6 @@ O'zgarish **yo'q**: `short_description` kaliti joyida, endi `Accept-Language` bo
 | --- | --- |
 | `uz` | o'zbekcha matn; bo'sh bo'lsa — ruscha |
 | `ru` | ruscha matn |
-| `en` | ruscha matn (inglizchasi yo'q) |
+| `en` yoki boshqa til | ruscha matn (ingliz tili qo'llanmaydi) |
 
 Ikkala til ham bo'sh bo'lsa — `null` yoki `""`.

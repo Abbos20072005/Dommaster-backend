@@ -7,7 +7,7 @@ class BrandSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Brand
-        fields = ("id", "name", "name_uz", "name_ru", "name_en", "description_uz", "description_ru", "description_en",
+        fields = ("id", "name", "name_uz", "name_ru", "description_uz", "description_ru",
                   "country", "image", "is_visible", "show_on_home", "code", "products_count", "created_at",
                   "updated_at")
         read_only_fields = ("name", "created_at", "updated_at")

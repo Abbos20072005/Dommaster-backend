@@ -64,7 +64,7 @@ class HomeBlock(BaseModel):
     sale = models.ForeignKey("Sale", on_delete=models.CASCADE, null=True, blank=True, related_name="home_blocks",
                              verbose_name="Распродажа")
     days = models.PositiveIntegerField(null=True, blank=True, verbose_name="Новые товары: за сколько дней")
-    # pages: [{"title_uz", "title_ru", "title_en", "path"}]
+    # pages: [{"title_uz", "title_ru", "path"}]
     pages = models.JSONField(default=list, blank=True, verbose_name="Страницы")
 
     def __str__(self):

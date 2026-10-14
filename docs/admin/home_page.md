@@ -27,7 +27,6 @@ Bloklar ro'yxati — bu **qoralama**: har bir o'zgarish darhol saqlanadi, lekin 
   "title": "Подборка Хит",
   "title_uz": "Podborka \"Hit\"",
   "title_ru": "Подборка Хит",
-  "title_en": null,
   "position": 3,
   "is_visible": true,
   "show_on_site": true,
@@ -49,7 +48,7 @@ Bloklar ro'yxati — bu **qoralama**: har bir o'zgarish darhol saqlanadi, lekin 
 | Maydon | Izoh |
 | --- | --- |
 | `type` * | blok turi (pastdagi jadval). Faqat yaratishda beriladi, `PATCH` da e'tiborga olinmaydi |
-| `title_ru` * | sarlavha, majburiy (asosiy til); `title_uz`, `title_en` ixtiyoriy |
+| `title_ru` * | sarlavha, majburiy (asosiy til); `title_uz` ixtiyoriy |
 | `position` | tartib; yuborilmasa yangi blok oxiriga qo'shiladi. O'zgartirish uchun `reorder/` |
 | `is_visible` | `false` — blok qo'lda yashirilgan |
 | `show_on_site`, `show_in_app` | "Sayt" / "Ilova" belgilari. Kamida bittasi `true` bo'lishi kerak |
@@ -70,7 +69,7 @@ Faqat o'qiladi: `id`, `title` (joriy tildagi sarlavha), `items_count`, `items_to
 | `new_products` | Yangi mahsulotlar | `days` *: oxirgi necha kunda qo'shilgan (`>= 1`) | mahsulotlar |
 | `bestsellers` | Eng ko'p sotilganlar | — | mahsulotlar (bekor qilinmagan buyurtmalarda sotilganlar) |
 | `all_products` | Barcha mahsulotlar | — | mahsulotlar |
-| `pages` | Sahifalar ("Xizmatlar va shartlar") | `pages` *: `[{"title_ru", "title_uz", "title_en", "path"}]` | sahifalar soni |
+| `pages` | Sahifalar ("Xizmatlar va shartlar") | `pages` *: `[{"title_ru", "title_uz", "path"}]` | sahifalar soni |
 | `content` | Maqola / Videolar | — | maqolalar + videolar |
 | `adds_brands` | Asosiy bo'limlar (reklama bloklari) | — | ko'rinadigan `adds-brands` |
 

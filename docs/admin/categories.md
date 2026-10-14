@@ -46,7 +46,6 @@ Ochish strelkasi: `children_count > 0` (L1 da L2 lar soni, L2 da L3 lar soni; L3
       "name": "Автоматы",
       "name_uz": "Avtomatlar",
       "name_ru": "Автоматы",
-      "name_en": null,
       "slug": "avtomatlar",
       "code": "000000012",
       "product_category": { "id": 6, "name": "Электрика" },
@@ -54,10 +53,8 @@ Ochish strelkasi: `children_count > 0` (L1 da L2 lar soni, L2 da L3 lar soni; L3
       "position": 1,
       "meta_title_uz": null,
       "meta_title_ru": null,
-      "meta_title_en": null,
       "meta_description_uz": null,
       "meta_description_ru": null,
-      "meta_description_en": null,
       "show_on_site": true,
       "show_in_app": true,
       "is_active": true,
@@ -87,7 +84,7 @@ L1 da `product_category` o'rniga `icon` bor; L3 da ota `product_sub_category` (`
 
 Qo'shimcha parametrlar (uchala ro'yxatda):
 
-- Qidiruv: `?search=` (nomi uz/ru/en, `code`, `slug`)
+- Qidiruv: `?search=` (nomi uz/ru, `code`, `slug`)
 - Filtrlar: `is_active`, `show_on_site`, `show_in_app`, `has_products`, `has_children` (L1, L2), `product_category` (L2), `product_sub_category` (L3), `category` (L3 — L1 `id` si bo'yicha)
 - Tartib: `?ordering=` `position`, `id`, `name`, `products_count`, `children_count` (L1, L2), `created_at`, `updated_at` (teskari: `-created_at`)
 
@@ -101,10 +98,9 @@ Uchala darajada maydonlar bir xil, farqi faqat ota kategoriya va rasmlarda.
 | --- | --- |
 | `name_uz` * | Nomi (UZ) — majburiy |
 | `name_ru` * | Nomi (RU) — majburiy |
-| `name_en` | ixtiyoriy |
 | `slug` | faqat `a-z 0-9 - _`, shu daraja ichida unikal. Yuborilmasa yoki bo'sh (`""`) bo'lsa `name_uz` dan avtomatik yasaladi (`Rozetka va o'chirgichlar` → `rozetka-va-ochirgichlar`, band bo'lsa `-2`, `-3`) |
-| `meta_title_uz`, `meta_title_ru`, `meta_title_en` | SEO sarlavha (tavsiya ≤ 60 belgi, backend 255 gacha qabul qiladi) |
-| `meta_description_uz`, `meta_description_ru`, `meta_description_en` | SEO tavsif (tavsiya ≤ 160 belgi) |
+| `meta_title_uz`, `meta_title_ru` | SEO sarlavha (tavsiya ≤ 60 belgi, backend 255 gacha qabul qiladi) |
+| `meta_description_uz`, `meta_description_ru` | SEO tavsif (tavsiya ≤ 160 belgi) |
 | `show_on_site` | "Sayt" toggle, default `true` |
 | `show_in_app` | "Buildex Go ilovasi" toggle, default `true` |
 | `is_active` | Holat: `true` = Faol, `false` = Qoralama |

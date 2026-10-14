@@ -55,7 +55,7 @@ class BannerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Banner
-        fields = ("id", "code", "title", "title_uz", "title_ru", "title_en", "desktop_image", "mobile_image",
+        fields = ("id", "code", "title", "title_uz", "title_ru", "desktop_image", "mobile_image",
                   "placement", "show_on_site", "show_on_ios", "show_on_android", "link_type", "target", "page", "link",
                   "starts_at", "ends_at", "position", "is_visible", "status", "created_at", "updated_at")
         read_only_fields = ("title", "created_at", "updated_at")

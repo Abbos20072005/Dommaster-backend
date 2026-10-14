@@ -35,11 +35,9 @@ Uchala ro'yxatda umumiy:
   "title": "Открытие нового филиала",
   "title_uz": "Yangi filial ochildi",
   "title_ru": "Открытие нового филиала",
-  "title_en": null,
   "description": "<p>Подробности внутри.</p>",
   "description_uz": "<p>Tafsilotlar ichida.</p>",
   "description_ru": "<p>Подробности внутри.</p>",
-  "description_en": null,
   "image": "https://.../media/news/filial.png",
   "created_at": "2026-10-02T15:14:26",
   "updated_at": "2026-10-02T15:14:26"
@@ -49,9 +47,9 @@ Uchala ro'yxatda umumiy:
 | Maydon | Izoh |
 | --- | --- |
 | `title_ru` * | majburiy (asosiy til), 450 belgigacha |
-| `title_uz`, `title_en` | ixtiyoriy |
+| `title_uz` | ixtiyoriy |
 | `description_ru` * | majburiy, HTML (rich text) |
-| `description_uz`, `description_en` | ixtiyoriy, HTML |
+| `description_uz` | ixtiyoriy, HTML |
 | `image` * | rasm, yaratishda majburiy (multipart); keyin o'chirib bo'lmaydi, faqat almashtiriladi |
 
 Faqat o'qiladi: `id`, `title`, `description` (joriy tildagi qiymat), `created_at`, `updated_at`.
@@ -61,7 +59,7 @@ Rasm almashtirilsa yoki yangilik o'chirilsa — eski fayl diskdan ham o'chirilad
 Rasm o'zgarmasa `PATCH` ni JSON bilan yuborish mumkin:
 
 ```json
-{ "title_en": "New branch opened" }
+{ "title_uz": "Yangi filial ochildi" }
 ```
 
 ### Ro'yxat
@@ -81,7 +79,6 @@ Rasm o'zgarmasa `PATCH` ni JSON bilan yuborish mumkin:
       "title": "Открытие нового филиала",
       "title_uz": "Yangi filial ochildi",
       "title_ru": "Открытие нового филиала",
-      "title_en": null,
       "image": "https://.../media/news/filial.png",
       "created_at": "2026-10-02T15:14:26",
       "updated_at": "2026-10-02T15:14:26"
@@ -90,7 +87,7 @@ Rasm o'zgarmasa `PATCH` ni JSON bilan yuborish mumkin:
 }
 ```
 
-- Qidiruv: `?search=` (sarlavha uz/ru/en)
+- Qidiruv: `?search=` (sarlavha uz/ru)
 - Tartib: `?ordering=` `id`, `title`, `created_at`, `updated_at`
 
 ---
@@ -139,7 +136,6 @@ Faqat o'qiladi: `id`, `created_at`, `updated_at`. Rasm yo'q — JSON yuboriladi.
   "name": "Как пользоваться Dommaster",
   "name_uz": "Dommaster'dan qanday foydalanish",
   "name_ru": "Как пользоваться Dommaster",
-  "name_en": null,
   "url": "https://youtube.com/watch?v=demo",
   "created_at": "2026-10-02T15:14:27",
   "updated_at": "2026-10-02T15:14:27"
@@ -149,12 +145,12 @@ Faqat o'qiladi: `id`, `created_at`, `updated_at`. Rasm yo'q — JSON yuboriladi.
 | Maydon | Izoh |
 | --- | --- |
 | `name_ru` * | majburiy (asosiy til), 150 belgigacha |
-| `name_uz`, `name_en` | ixtiyoriy |
+| `name_uz` | ixtiyoriy |
 | `url` * | majburiy, to'liq havola (`https://...`); noto'g'ri bo'lsa `400` |
 
 Faqat o'qiladi: `id`, `name` (joriy tildagi nom), `created_at`, `updated_at`. Fayl yuklanmaydi — faqat havola, JSON yuboriladi.
 
-- Qidiruv: `?search=` (nomi uz/ru/en, `url`)
+- Qidiruv: `?search=` (nomi uz/ru, `url`)
 - Tartib: `?ordering=` `id`, `name`, `created_at`, `updated_at`
 
 ---

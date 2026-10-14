@@ -12,7 +12,7 @@ class ProductAttributeOptionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ProductAttributeOption
-        fields = ("id", "value_uz", "value_ru", "value_en")
+        fields = ("id", "value_uz", "value_ru")
         extra_kwargs = {
             "value_uz": {"required": True, "allow_null": False, "allow_blank": False},
             "value_ru": {"required": True, "allow_null": False, "allow_blank": False},
@@ -29,7 +29,7 @@ class ProductAttributeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ProductAttribute
-        fields = ("id", "name", "name_uz", "name_ru", "name_en", "value_type", "unit", "options", "is_filterable",
+        fields = ("id", "name", "name_uz", "name_ru", "value_type", "unit", "options", "is_filterable",
                   "is_active", "item_categories", "item_categories_count", "products_count", "created_at",
                   "updated_at")
         read_only_fields = ("name", "created_at", "updated_at")

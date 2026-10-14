@@ -13,7 +13,7 @@ class HomeBlockViewSet(AdminModelViewSet):
     queryset = HomeBlock.objects.select_related("banner", "badge", "sale")
     serializer_class = HomeBlockSerializer
     filterset_class = HomeBlockFilter
-    search_fields = ("title_ru", "title_uz", "title_en")
+    search_fields = ("title_ru", "title_uz")
     ordering_fields = ("id", "position", "created_at", "updated_at")
     ordering = ("position", "id")
     # the whole page is one drag & drop list

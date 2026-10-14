@@ -70,7 +70,7 @@ class CategoryActionsMixin:
 class ProductCategoryViewSet(CategoryActionsMixin, AdminModelViewSet):
     serializer_class = ProductCategorySerializer
     filterset_class = ProductCategoryFilter
-    search_fields = ("name_ru", "name_uz", "name_en", "code", "slug")
+    search_fields = ("name_ru", "name_uz", "code", "slug")
     ordering_fields = ("id", "name", "position", "children_count", "products_count", "created_at", "updated_at")
     ordering = ("position", "id")
 
@@ -81,7 +81,7 @@ class ProductCategoryViewSet(CategoryActionsMixin, AdminModelViewSet):
 class ProductSubCategoryViewSet(CategoryActionsMixin, AdminModelViewSet):
     serializer_class = ProductSubCategoryAdminSerializer
     filterset_class = ProductSubCategoryFilter
-    search_fields = ("name_ru", "name_uz", "name_en", "code", "slug")
+    search_fields = ("name_ru", "name_uz", "code", "slug")
     ordering_fields = ("id", "name", "position", "children_count", "products_count", "created_at", "updated_at")
     ordering = ("position", "id")
 
@@ -92,7 +92,7 @@ class ProductSubCategoryViewSet(CategoryActionsMixin, AdminModelViewSet):
 class ProductItemCategoryViewSet(CategoryActionsMixin, AdminModelViewSet):
     serializer_class = ProductItemCategoryAdminSerializer
     filterset_class = ProductItemCategoryFilter
-    search_fields = ("name_ru", "name_uz", "name_en", "code", "slug")
+    search_fields = ("name_ru", "name_uz", "code", "slug")
     ordering_fields = ("id", "name", "position", "products_count", "created_at", "updated_at")
     ordering = ("position", "id")
 

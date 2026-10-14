@@ -37,8 +37,8 @@ class NotificationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Notification
-        fields = ("id", "title", "title_uz", "title_ru", "title_en", "description", "description_uz",
-                  "description_ru", "description_en", "image", "link_type", "target", "page", "deeplink",
+        fields = ("id", "title", "title_uz", "title_ru", "description", "description_uz",
+                  "description_ru", "image", "link_type", "target", "page", "deeplink",
                   "segment", "platform", "publish_at", "quiet_hours", "is_active", "status", "reads_count",
                   "push_sent_at", "push_devices", "created_at", "updated_at")
         read_only_fields = ("title", "description", "push_sent_at", "push_devices", "created_at", "updated_at")

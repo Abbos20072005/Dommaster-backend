@@ -41,7 +41,6 @@ class HomeBlockSaleSerializer(RelationSerializer):
 class HomeBlockPageSerializer(serializers.Serializer):
     title_uz = serializers.CharField(max_length=255, required=False, allow_blank=True, default="")
     title_ru = serializers.CharField(max_length=255)
-    title_en = serializers.CharField(max_length=255, required=False, allow_blank=True, default="")
     path = serializers.RegexField(r"^/", max_length=255, help_text="Internal path, e.g. /delivery")
 
 
@@ -68,7 +67,7 @@ class HomeBlockSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = HomeBlock
-        fields = ("id", "type", "title", "title_uz", "title_ru", "title_en", "position", "is_visible", "show_on_site",
+        fields = ("id", "type", "title", "title_uz", "title_ru", "position", "is_visible", "show_on_site",
                   "show_in_app", "banner_placement", "banner", "badge", "sale", "days", "pages", "items_count",
                   "items_total", "status", "created_at", "updated_at")
         read_only_fields = ("title", "created_at", "updated_at")

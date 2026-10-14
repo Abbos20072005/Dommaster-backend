@@ -5,9 +5,9 @@ from apps.base.models import MarketBranch
 class MarketBranchSerializer(serializers.ModelSerializer):
     class Meta:
         model = MarketBranch
-        fields = ("id", "name", "name_uz", "name_ru", "name_en", "location_name", "location_name_uz",
-                  "location_name_ru", "location_name_en", "address", "branch_type", "latitude", "longitude",
-                  "working_hours", "description_uz", "description_ru", "description_en", "phone_number", "image",
+        fields = ("id", "name", "name_uz", "name_ru", "location_name", "location_name_uz",
+                  "location_name_ru", "address", "branch_type", "latitude", "longitude",
+                  "working_hours", "description_uz", "description_ru", "phone_number", "image",
                   "is_active", "position", "code", "created_at", "updated_at")
         read_only_fields = ("name", "location_name", "created_at", "updated_at")
         extra_kwargs = {
