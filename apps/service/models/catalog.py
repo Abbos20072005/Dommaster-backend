@@ -207,6 +207,8 @@ class ProductItemCategoryAttribute(BaseModel):
     # quick filter chips of the category: the most used values of the attribute (0 = all of them)
     is_quick_filter = models.BooleanField(default=False, verbose_name="Быстрый фильтр (чип)")
     max_quick_filters = models.PositiveIntegerField(default=0, verbose_name="Макс. кол-во быстрых фильтров")
+    # a product of the category can't pass moderation without a value of it
+    is_required = models.BooleanField(default=False, verbose_name="Обязательный")
 
     def __str__(self):
         return f"{self.item_category} — {self.attribute}"

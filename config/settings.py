@@ -423,6 +423,8 @@ SPECTACULAR_SETTINGS = {
         "BannerStatusEnum": "apps.base.models.Banner.STATUS_CHOICES",
         "HomeBlockStatusEnum": "apps.service.models.HomeBlock.STATUS_CHOICES",
         "HomeBlockTypeEnum": "apps.service.models.HomeBlock.TYPE_CHOICES",
+        "ProductModerationStatusEnum": "apps.service.models.ProductModeration.STATUS_CHOICES",
+        "ModerationCheckEnum": "apps.service.moderation.CHECKS",
     },
 }
 

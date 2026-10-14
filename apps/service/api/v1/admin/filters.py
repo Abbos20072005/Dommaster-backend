@@ -2,7 +2,7 @@ import django_filters
 from django.db.models import Exists, OuterRef
 from apps.service.models import AddsBrands, Brand, PartnerBrand, ProductModel, ProductBadge, ProductCategory, \
     ProductSubCategory, ProductItemCategory, ProductAttribute, Order, Product, Comment, CommentReply, Questions, \
-    QuestionsReply, ORDER_STATUS, Sale, HomeBlock
+    QuestionsReply, ORDER_STATUS, Sale, HomeBlock, ProductModeration
 
 
 class OrderFilter(django_filters.FilterSet):
@@ -191,3 +191,12 @@ class HomeBlockFilter(django_filters.FilterSet):
 
     def filter_channel(self, queryset, name, value):
         return queryset.filter(**{"show_on_site" if value == "site" else "show_in_app": True})
+
+
+class ProductModerationFilter(django_filters.FilterSet):
+    reviewed_from = django_filters.DateFilter(field_name="reviewed_at", lookup_expr="date__gte")
+    reviewed_to = django_filters.DateFilter(field_name="reviewed_at", lookup_expr="date__lte")
+
+    class Meta:
+        model = ProductModeration
+        fields = ("status", "product", "submitted_by", "reviewed_by")

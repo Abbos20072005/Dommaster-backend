@@ -4,7 +4,7 @@ from .views import BrandViewSet, PartnerBrandViewSet, ProductBadgeViewSet, Produ
     ProductSubCategoryViewSet, ProductItemCategoryViewSet, ProductAttributeViewSet, OrderViewSet, ProductViewSet, \
     CommentViewSet, QuestionViewSet, CommentReplyViewSet, QuestionReplyViewSet, DashboardAPIView, ManagerViewSet, \
     OrderCommentViewSet, ProductModelViewSet, AddsBrandsViewSet, TodayAPIView, SaleViewSet, SalesAnalyticsAPIView, \
-    HomeBlockViewSet, HomePageAPIView, HomePagePublishAPIView
+    HomeBlockViewSet, HomePageAPIView, HomePagePublishAPIView, ProductModerationViewSet
 
 # SimpleRouter: mounted at the admin root, DefaultRouter's API-root view would take `api/v1/admin/`
 router = SimpleRouter()
@@ -15,6 +15,7 @@ router.register("products", ProductViewSet, basename="admin_product")
 router.register("brands", BrandViewSet, basename="admin_brand")
 router.register("partner-brands", PartnerBrandViewSet, basename="admin_partner_brand")
 router.register("adds-brands", AddsBrandsViewSet, basename="admin_adds_brands")
+router.register("moderation", ProductModerationViewSet, basename="admin_moderation")
 router.register("product-models", ProductModelViewSet, basename="admin_product_model")
 router.register("product-badges",ProductBadgeViewSet, basename="admin_product_badge")
 router.register("categories", ProductCategoryViewSet, basename="admin_category")

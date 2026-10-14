@@ -209,12 +209,13 @@ Pagination yo'q. Atributlar kategoriyadagi tartibda keladi.
 | `id` ... `is_active` | atributning o'zi (faqat o'qish; ma'lumotnomada tahrirlanadi) |
 | `is_quick_filter` | shu kategoriyada tezkor filtr (ro'yxat ustidagi chiplar) sifatida chiqsinmi; default `false` |
 | `max_quick_filters` | nechta qiymat chip bo'lib chiqadi (eng ko'p ishlatilganlari); `0` — hammasi |
+| `is_required` | majburiy xususiyat: shu kategoriyadagi mahsulot qiymatisiz moderatsiyadan o'tmaydi (`moderation.md`); default `false` |
 
 `is_quick_filter` va `max_quick_filters` — atributning emas, **shu kategoriyadagi** sozlamasi. Faqat `is_filterable: true` va `number` bo'lmagan atributlarda ta'sir qiladi.
 
 ### Saqlash — `PUT item-categories/{id}/attributes/`
 
-Butun ro'yxat yuboriladi; massivdagi tartib = kategoriyadagi tartib. Har bir element `4`, `{"id": 4}` yoki tezkor filtr sozlamasi bilan `{"id": 4, "is_quick_filter": true, "max_quick_filters": 3}` ko'rinishida.
+Butun ro'yxat yuboriladi; massivdagi tartib = kategoriyadagi tartib. Har bir element `4`, `{"id": 4}` yoki sozlamalari bilan `{"id": 4, "is_quick_filter": true, "max_quick_filters": 3, "is_required": true}` ko'rinishida (yuborilmagan sozlama o'zgarmaydi).
 
 ```bash
 curl -X PUT {{host}}/api/v1/admin/item-categories/33/attributes/ \

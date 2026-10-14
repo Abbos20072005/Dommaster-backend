@@ -7,7 +7,7 @@ from .models import Product, ProductCategory, ProductSubCategory, ProductItemCat
     ProductVariantGroup, ProductVariantItem, \
     Announcements, ProductItemCategoryFilterSchema, ProductFilterNumericValue, ProductUnit, ProductRemaining, \
     ProductAttribute, ProductAttributeOption, ProductItemCategoryAttribute, ProductAttributeValue, Manager, \
-    OrderComment, RelatedProduct, AlternativeProduct, CrossSellProduct
+    OrderComment, RelatedProduct, AlternativeProduct, CrossSellProduct, ProductModeration
 from .signals import clear_category_filter_cache
 from unfold.admin import ModelAdmin, TabularInline
 from apps.base.admin_actions import make_visible, make_hidden, activate, deactivate, get_model_fields, \
@@ -375,6 +375,16 @@ class OrderCommentAdmin(ModelAdmin):
     list_filter = ("is_system", "created_at")
     autocomplete_fields = ("order", "author")
     date_hierarchy = "created_at"
+
+
+@admin.register(ProductModeration)
+class ProductModerationAdmin(ModelAdmin):
+    list_display = ("id", "product", "status", "submitted_by", "submitted_at", "reviewed_by", "reviewed_at")
+    list_display_links = ("id", "product")
+    search_fields = ("product__name", "product__product_code", "product__articul_code", "reason")
+    list_filter = ("status", "submitted_at", "reviewed_at")
+    autocomplete_fields = ("product", "submitted_by", "reviewed_by")
+    date_hierarchy = "submitted_at"
 
 
 @admin.register(OrderItem)

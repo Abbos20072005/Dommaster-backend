@@ -121,7 +121,8 @@ class AttributeShortSerializer(RelationSerializer):
 
 class CategoryAttributeSerializer(serializers.ModelSerializer):
     """An attribute of an item category: the attribute itself (picked by `id`, the rest is read-only: everything
-    the product form needs to render its input) + its settings in this category (the quick filter)."""
+    the product form needs to render its input) + its settings in this category (the quick filter; `is_required` =
+    a product can't pass moderation without a value of it)."""
     id = serializers.IntegerField(source="attribute_id")
     name = serializers.CharField(source="attribute.name", read_only=True)
     value_type = serializers.CharField(source="attribute.value_type", read_only=True)
@@ -133,7 +134,7 @@ class CategoryAttributeSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductItemCategoryAttribute
         fields = ("id", "name", "value_type", "unit", "options", "is_filterable", "is_active",
-                  "is_quick_filter", "max_quick_filters")
+                  "is_quick_filter", "max_quick_filters", "is_required")
 
     def to_internal_value(self, data):
         # a bare attribute id is accepted besides {"id": ...}
@@ -178,7 +179,7 @@ class ItemCategoryAttributesSerializer(serializers.ModelSerializer):
         attributes = validated_data["attributes"]
         instance.attribute_links.exclude(attribute_id__in=[item["attribute_id"] for item in attributes]).delete()
         for position, item in enumerate(attributes):
-            # the quick filter settings stay as they are unless sent
+            # the quick filter / required settings stay as they are unless sent
             attribute_id = item.pop("attribute_id")
             ProductItemCategoryAttribute.objects.update_or_create(
                 item_category=instance, attribute_id=attribute_id, defaults={**item, "position": position})

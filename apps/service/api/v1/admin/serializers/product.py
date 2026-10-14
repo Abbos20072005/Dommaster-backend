@@ -3,7 +3,8 @@ from typing import Optional
 from django.db import transaction
 from rest_framework import serializers
 from apps.service.models import Product, Brand, ProductModel, ProductBadge, ProductImage, ProductAttribute, \
-    ProductAttributeValue, RelatedProduct, AlternativeProduct, CrossSellProduct
+    ProductAttributeValue, RelatedProduct, AlternativeProduct, CrossSellProduct, ProductModeration
+from apps.service.moderation import on_publish_status_change
 from apps.service.product_filters import clear_category_filter_cache
 from utils.admin_serializers import RelationSerializer
 from .attribute import AttributeShortSerializer
@@ -151,6 +152,14 @@ class ProductListSerializer(serializers.ModelSerializer):
                   "is_active", "erp_active", "publish_status", "purchasable", "on_order", "created_at", "updated_at")
 
 
+class ProductLastModerationSerializer(serializers.ModelSerializer):
+    reviewed_by = serializers.CharField(source="reviewed_by.staff_profile.full_name", read_only=True, allow_null=True)
+
+    class Meta:
+        model = ProductModeration
+        fields = ("id", "status", "submitted_at", "reviewed_by", "reviewed_at", "reason")
+
+
 class ProductSerializer(serializers.ModelSerializer):
     brand = ProductBrandSerializer(required=False, allow_null=True)
     # a model of the product's brand (product-models/?brand=); changing the brand without it drops the model
@@ -168,6 +177,8 @@ class ProductSerializer(serializers.ModelSerializer):
     related_products = LinkedProductSerializer(many=True, required=False, max_length=MAX_LINKED_PRODUCTS)
     alternative_products = LinkedProductSerializer(many=True, required=False, max_length=MAX_LINKED_PRODUCTS)
     cross_sell_products = LinkedProductSerializer(many=True, required=False, max_length=MAX_LINKED_PRODUCTS)
+    # publish_status=review puts the product into the moderation queue (moderation/); the latest submission
+    last_moderation = serializers.SerializerMethodField(allow_null=True)
 
     class Meta:
         model = Product
@@ -178,7 +189,7 @@ class ProductSerializer(serializers.ModelSerializer):
                   "is_active", "erp_active", "publish_status", "purchasable", "on_order", "product_code", "articul_code", "barcode", "weight", "length", "width", "height",
                   "rating", "comments_quantity", "questions_quantity", "characteristics",
                   "attribute_values", "images", "related_products", "alternative_products", "cross_sell_products",
-                  "created_at", "updated_at")
+                  "last_moderation", "created_at", "updated_at")
         read_only_fields = ("name", "rating", "comments_quantity", "questions_quantity", "created_at", "updated_at")
         extra_kwargs = {
             # ru is the default (fallback) language
@@ -189,6 +200,14 @@ class ProductSerializer(serializers.ModelSerializer):
             "discount": {"min_value": 0, "max_value": 100},
             "quantity": {"min_value": 0},
         }
+
+    def get_last_moderation(self, product) -> ProductLastModerationSerializer:
+        row = product.moderations.select_related("reviewed_by__staff_profile").first()
+        return ProductLastModerationSerializer(row).data if row else None
+
+    def _user(self):
+        request = self.context.get("request")
+        return request.user if request and request.user.is_authenticated else None
 
     def validate_product_code(self, value):
         # unique column: store empty codes as NULL
@@ -265,6 +284,7 @@ class ProductSerializer(serializers.ModelSerializer):
         badges = validated_data.pop("badges", [])
         links = self._pop_links(validated_data)
         product = super().create(validated_data)
+        on_publish_status_change(product, None, self._user())
         self._set_attribute_values(product, attribute_values)
         self._set_badges(product, badges)
         self._set_links(product, links)
@@ -276,7 +296,9 @@ class ProductSerializer(serializers.ModelSerializer):
         badges = validated_data.pop("badges", None)
         links = self._pop_links(validated_data)
         old_category_id = instance.product_item_category_id
+        old_publish_status = instance.publish_status
         product = super().update(instance, validated_data)
+        on_publish_status_change(product, old_publish_status, self._user())
         # the product left its old category: the filters of that one change too (the new one is cleared on save)
         clear_category_filter_cache(old_category_id)
         self._set_links(product, links)
