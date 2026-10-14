@@ -255,7 +255,8 @@ class CrossSellProductInline(RelatedProductInline):
 @admin.register(Product)
 class ProductAdmin(ModelAdmin):
     list_display = get_model_fields(Product, exclude=(
-        "short_description", "description", "description_uz", "description_ru", "description_en",
+        "short_description", "short_description_uz", "short_description_ru", "short_description_en",
+        "description", "description_uz", "description_ru", "description_en",
         "filter_data",
     ))
     list_display_links = ("id", "name")
@@ -268,7 +269,7 @@ class ProductAdmin(ModelAdmin):
                CrossSellProductInline)
     fieldsets = (
         (None, {
-            "fields": ("name_uz", "name_ru", "name_en", "short_description",
+            "fields": ("name_uz", "name_ru", "name_en", "short_description_uz", "short_description_ru",
                        "description_uz", "description_ru", "description_en", "price", "discount",
                        "discount_price", "quantity", "comments_quantity", "questions_quantity",
                        "rating", "is_active", "erp_active", "publish_status", "purchasable", "on_order", "brand", "badges", "product_item_category", "unit")

@@ -182,7 +182,7 @@ class ProductSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Product
-        fields = ("id", "name", "name_uz", "name_ru", "name_en", "short_description",
+        fields = ("id", "name", "name_uz", "name_ru", "name_en", "short_description_uz", "short_description_ru",
                   "description_uz", "description_ru", "description_en",
                   "brand", "product_model", "badges", "product_item_category", "price", "discount_price", "discount",
                   "unit", "quantity",

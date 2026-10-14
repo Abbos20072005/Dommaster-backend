@@ -662,12 +662,17 @@ class ProductSerializer(ProductAnnotationMixin, ProductAttributesMixin, Translat
         self.fields["description"] = serializers.CharField(source=f'description_{language}')
 
     images = ProductImageSerializer(source="product_image", many=True, read_only=True)
+    short_description = serializers.SerializerMethodField(allow_null=True)
     in_cart = serializers.SerializerMethodField()
     is_favourite = serializers.SerializerMethodField()
     in_cart_quantity = serializers.SerializerMethodField()
     breadcrumbs = serializers.SerializerMethodField()
     characteristics = serializers.SerializerMethodField()
     brand = BrandSerializer(read_only=True)
+
+    def get_short_description(self, obj):
+        # filled in uz / ru only: en and an empty uz fall back to ru
+        return translated(obj, "short_description", self.get_language())
 
     class Meta:
         model = Product

@@ -18,7 +18,7 @@ class ProductCategoryOption(TranslationOptions):
 
 
 class ProductTranslationOption(TranslationOptions):
-    fields = ("name", "description")
+    fields = ("name", "short_description", "description")
 
 
 class ServiceTranslationOption(TranslationOptions):
