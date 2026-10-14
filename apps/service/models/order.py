@@ -33,6 +33,12 @@ class Order(BaseModel):
     payment_status = models.IntegerField(choices=PAYMENT_STATUS, default=0, verbose_name="Статус оплаты")
     order_location = models.ForeignKey(CustomerAddresses, on_delete=models.SET_NULL, blank=True, null=True,
                                        verbose_name="Локация доставки")
+    # copy of the address details at the time of the order (CustomerAddresses.details()) - the address may change later
+    apartment = models.CharField(max_length=50, blank=True, default="", verbose_name="Квартира / офис")
+    intercom = models.CharField(max_length=50, blank=True, default="", verbose_name="Домофон")
+    entrance = models.CharField(max_length=20, blank=True, default="", verbose_name="Подъезд")
+    floor = models.CharField(max_length=20, blank=True, default="", verbose_name="Этаж")
+    courier_comment = models.CharField(max_length=500, blank=True, default="", verbose_name="Комментарий для курьера")
     delivery_type = models.IntegerField(choices=DELIVERY_TYPE, default=0, verbose_name="Тип доставки")
     pickup_branch = models.ForeignKey(MarketBranch, on_delete=models.SET_NULL, blank=True, null=True,
                                       verbose_name="Филиал самовывоза")

@@ -28,7 +28,7 @@ class OrderCustomerSerializer(RelationSerializer):
 class OrderAddressSerializer(RelationSerializer):
     class Meta:
         model = CustomerAddresses
-        fields = ("id", "name", "location_name", "latitude", "longitude")
+        fields = ("id", "name", "location_name", "latitude", "longitude", *CustomerAddresses.DETAIL_FIELDS)
 
 
 class OrderBranchSerializer(RelationSerializer):
@@ -102,7 +102,8 @@ class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = ("id", "customer", "manager", "status", "channel", "payment_status", "payment_type", "payment_method",
-                  "delivery_type", "order_location", "pickup_branch", "promocode", "items", "comments",
+                  "delivery_type", "order_location", *CustomerAddresses.DETAIL_FIELDS,
+                  "pickup_branch", "promocode", "items", "comments",
                   "total_price", "products_total_price", "saved_price", "delivery_price",
                   "receiver_name", "receiver_phone", "hold_id", "ofd_url", "yandex_claim_id", "yandex_claim_status",
                   "created_at", "updated_at")
@@ -137,6 +138,12 @@ class OrderSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"order_location": "Required for delivery."})
         if delivery_type == PICKUP and not self._get(attrs, "pickup_branch"):
             raise serializers.ValidationError({"pickup_branch": "Required for pickup."})
+
+        # a new address brings its delivery details along unless they are sent with it
+        new_location = attrs.get("order_location")
+        if (new_location and new_location != getattr(self.instance, "order_location", None)
+                and not any(field in attrs for field in CustomerAddresses.DETAIL_FIELDS)):
+            attrs.update(new_location.details())
 
         if self._get(attrs, "payment_method") and self._get(attrs, "payment_type") != PAYMENT_ON_DELIVERY:
             raise serializers.ValidationError({"payment_method": "Only for payment on delivery."})

@@ -45,6 +45,7 @@ POST order/
 Muhim qoidalar:
 
 - **`payment_type`** — faqat `1`–`4` yuboring. Boshqa qiymat validatsiyadan o'tib ketadi, lekin to'lov havolasi `null` bo'ladi.
+- **Manzil tafsilotlari** (kvartira, domofon, podyezd, qavat, kuryerga izoh) request'da yuborilmaydi — tanlangan manzildan buyurtmaga nusxa qilinadi (`docs/mobile/customer_addresses.md`). Buyurtmadan oldin ularni `PATCH auth/customer/addresses/<id>/` bilan saqlang.
 - **`address_id`** yuborilsa, shu manzil mijozning **default** manzili bo'lib qoladi. Yuborilmasa va default manzil ham bo'lmasa → `404`. Manzil **pickup'da ham kerak** (`delivery_type = 1` bo'lsa ham default manzil yoki `address_id` bo'lishi shart).
 - **`delivery_price`** — `"25000"`, `"25 000"`, `"25000.50"`, `"25,5"` yoki son (`25000`) qabul qilinadi. Bo'sh string (`""`) → validatsiya xatosi; narx yo'q bo'lsa maydonni umuman yubormang. Pickup'da yubormang.
 - **`promocode`** — `promocode/checker/` dan o'tgan kodni **kichik harflarda** yuboring. Kod topilmasa xato qaytmaydi — buyurtma promokodsiz, to'liq narxda yaratiladi.

@@ -3,6 +3,7 @@ from drf_spectacular.utils import extend_schema_field
 from decimal import Decimal, InvalidOperation
 import re
 from apps.authorization.api.v1.client.serializers import CustomerSerializer, CustomerAddressesSerializer
+from apps.authorization.models import CustomerAddresses
 from apps.service.models import Product, ProductCategory, ProductItemCategory, ProductSubCategory, ProductImage, Comment, \
     Order, OrderItem, Brand, Sale, AddsBrands, Favourites, Cart, CartItem, ProductCharacteristics, Questions, \
     RecentlyViewedProducts, Service, CommentReply, CommentImages, QuestionsReply, \
@@ -1075,6 +1076,7 @@ class OrderSerializer(serializers.ModelSerializer):
             "payment_type",
             "payment_method",
             "order_location",
+            *CustomerAddresses.DETAIL_FIELDS,
             "pickup_branch",
             "receiver_name",
             "receiver_phone",
@@ -1115,6 +1117,7 @@ class OrderDetailSerializer(serializers.ModelSerializer):
             "payment_type",
             "payment_method",
             "order_location",
+            *CustomerAddresses.DETAIL_FIELDS,
             "pickup_branch",
             "ofd_url",
             "receiver_name",

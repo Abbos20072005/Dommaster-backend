@@ -34,6 +34,7 @@ def build_breadcrumbs(obj):
 
 
 TELEGRAM_CAPTION_LIMIT = 1024
+COURIER_COMMENT_CAPTION_LIMIT = 200
 
 
 def _format_price(value):
@@ -132,6 +133,12 @@ def build_order_caption(order_data):
         header.append(f"🚚 Доставка: <b>{addr}</b>")
         if order_data.get("map_url"):
             header.append(f"🗺 Локация: <a href=\"{order_data['map_url']}\">Открыть на карте</a>")
+        comment = order_data.get("courier_comment")
+        if comment:
+            # the header is not shortened by the items loop below, keep it within the caption limit
+            if len(comment) > COURIER_COMMENT_CAPTION_LIMIT:
+                comment = comment[:COURIER_COMMENT_CAPTION_LIMIT].rstrip() + "…"
+            header.append(f"💬 Курьеру: {escape(comment)}")
 
     # Payment & Order Status info
     payment_type = order_data.get("payment_type") or "—"
@@ -441,7 +448,12 @@ def build_order_data(order):
     delivery_address = None
     map_url = None
     if address:
-        parts = [p for p in (address.name, address.location_name) if p]
+        # the details are the order's own copy, not the address's current ones
+        details = [f"{label} {value}" for label, value in (
+            ("кв./офис", order.apartment), ("подъезд", order.entrance),
+            ("этаж", order.floor), ("домофон", order.intercom),
+        ) if value]
+        parts = [p for p in (address.name, address.location_name, *details) if p]
         delivery_address = ", ".join(parts) if parts else None
         if address.latitude and address.longitude:
             map_url = f"https://maps.google.com/?q={address.latitude},{address.longitude}"
@@ -476,6 +488,7 @@ def build_order_data(order):
         'customer_role': customer_role,
         'delivery_address': delivery_address,
         'map_url': map_url,
+        'courier_comment': order.courier_comment or None,
         'delivery_type': "Самовывоз" if order.delivery_type == 1 else "Доставка",
         'pickup_branch': order.pickup_branch.name if order.pickup_branch else None,
         'payment_type': order.get_payment_type_display() if order.payment_type else None,

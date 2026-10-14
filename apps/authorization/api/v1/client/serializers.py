@@ -109,7 +109,8 @@ class CustomerAddressesSerializer(serializers.ModelSerializer):
             "location_name",
             "latitude",
             "longitude",
-            "is_default"
+            "is_default",
+            *CustomerAddresses.DETAIL_FIELDS,
         )
 
 class CustomerAddressesCreateSerializer(serializers.ModelSerializer):
@@ -121,7 +122,8 @@ class CustomerAddressesCreateSerializer(serializers.ModelSerializer):
             "name",
             "location_name",
             "latitude",
-            "longitude"
+            "longitude",
+            *CustomerAddresses.DETAIL_FIELDS,
         )
 
 class TokenRefreshSerializer(serializers.Serializer):
@@ -137,5 +139,6 @@ class CustomerAddressesUpdateSerializer(serializers.ModelSerializer):
             "location_name",
             "latitude",
             "longitude",
-            "is_default"
+            "is_default",
+            *CustomerAddresses.DETAIL_FIELDS,
         )

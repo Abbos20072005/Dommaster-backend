@@ -5,7 +5,8 @@ from apps.authorization.models import Customer, CustomerAddresses
 class CustomerAddressSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomerAddresses
-        fields = ("id", "name", "location_name", "latitude", "longitude", "is_default", "created_at")
+        fields = ("id", "name", "location_name", "latitude", "longitude", "is_default",
+                  *CustomerAddresses.DETAIL_FIELDS, "created_at")
 
 
 class CustomerSerializer(serializers.ModelSerializer):

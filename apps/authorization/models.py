@@ -43,6 +43,18 @@ class CustomerAddresses(BaseModel):
     latitude = models.FloatField(default=0.0, verbose_name='Широта')
     longitude = models.FloatField(default=0.0, verbose_name='Долгота')
     is_default = models.BooleanField(default=False, verbose_name="Основной")
+    # delivery details; copied to the order when it is placed (DETAIL_FIELDS -> Order fields of the same names)
+    apartment = models.CharField(max_length=50, blank=True, default="", verbose_name="Квартира / офис")
+    intercom = models.CharField(max_length=50, blank=True, default="", verbose_name="Домофон")
+    entrance = models.CharField(max_length=20, blank=True, default="", verbose_name="Подъезд")
+    floor = models.CharField(max_length=20, blank=True, default="", verbose_name="Этаж")
+    courier_comment = models.CharField(max_length=500, blank=True, default="", verbose_name="Комментарий для курьера")
+
+    DETAIL_FIELDS = ("apartment", "intercom", "entrance", "floor", "courier_comment")
+
+    def details(self):
+        """Delivery details for an order snapshot."""
+        return {field: getattr(self, field) for field in self.DETAIL_FIELDS}
 
     def __str__(self):
         return self.name
