@@ -1070,6 +1070,10 @@ class ProductViewSet(ViewSet):
                 Q(name__icontains=q) | Q(name_uz__icontains=q) | Q(name_ru__icontains=q) |
                 Q(brand__name__icontains=q) | Q(brand__name_uz__icontains=q) | Q(brand__name_ru__icontains=q)
             ).order_by("-similarity", sort)
+        elif sale_id and not sort_by:
+            # products of a sale: in the order set in the admin panel
+            products = products.annotate(_sale_position=SaleProduct.position_of(sale_id)).order_by(
+                "_sale_position", "-id")
         else:
             products = products.order_by(sort)
 
@@ -1104,10 +1108,6 @@ class ProductViewSet(ViewSet):
                 "ok": True,
             },
             status=status.HTTP_200_OK,
-        elif sale_id and not sort_by:
-            # products of a sale: in the order set in the admin panel
-            products = products.annotate(_sale_position=SaleProduct.position_of(sale_id)).order_by(
-                "_sale_position", "-id")
         )
 
     @extend_schema(
