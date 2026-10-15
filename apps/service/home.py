@@ -5,7 +5,7 @@ from django.db.models import Q, Sum
 from django.utils import timezone
 from apps.base.models import Articles, Banner, Video
 from apps.service.models import AddsBrands, Brand, HomeBlock, HomePage, OrderItem, Product, ProductBadge, \
-    ProductCategory, Sale
+    ProductCategory, Sale, SaleProduct
 
 ORDER_CANCELED = 4
 
@@ -145,6 +145,10 @@ def block_products(block, rules):
         return products.order_by("-created_at", "-id")
     if block.type == HomeBlock.ALL_PRODUCTS:
         return products
+    if block.type == HomeBlock.SALE_PRODUCTS:
+        sale = block_sale(block)
+        position = SaleProduct.position_of(sale.pk if sale else None)
+        return products.annotate(_position=position).order_by("_position", "-id")
     return products.order_by("-id")
 
 

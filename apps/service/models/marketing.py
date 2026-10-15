@@ -98,7 +98,8 @@ class ProductBadge(BaseModel):
 
 
 class Sale(BaseModel):
-    products = models.ManyToManyField("Product", related_name="sale_products", verbose_name="Продукты")
+    products = models.ManyToManyField("Product", through="SaleProduct", related_name="sale_products",
+                                      verbose_name="Продукты")
     name = models.CharField(max_length=150, verbose_name="Название")
     image = models.ImageField(upload_to="sale/image/")
     bg_image = models.ImageField(upload_to="sale/bg_image/", verbose_name="Изображение фона")
@@ -110,9 +111,43 @@ class Sale(BaseModel):
     def __str__(self):
         return self.name
 
+    @property
+    def ordered_products(self):
+        # the sale's products in the order set in the admin panel
+        return SaleProduct.products_of(self)
+
     class Meta:
         verbose_name = "Распродажа"
         verbose_name_plural = "Распродажи"
+
+
+class SaleProduct(models.Model):
+    # a product of a sale with its place in the sale (the table of the former auto M2M `Sale.products`)
+    sale = models.ForeignKey(Sale, on_delete=models.CASCADE, related_name="product_links", verbose_name="Распродажа")
+    product = models.ForeignKey("Product", on_delete=models.CASCADE, related_name="sale_links",
+                                verbose_name="Продукт")
+    position = models.PositiveIntegerField(default=0, verbose_name="Позиция")
+
+    def __str__(self):
+        return f"{self.sale_id} → {self.product_id}"
+
+    @staticmethod
+    def products_of(sale):
+        from .product import Product
+        return Product.objects.filter(sale_links__sale=sale).order_by("sale_links__position", "sale_links__id")
+
+    @staticmethod
+    def position_of(sale_id):
+        # annotation for a product queryset: the product's position in the sale (None = not in it)
+        return models.Subquery(SaleProduct.objects.filter(sale_id=sale_id, product=models.OuterRef("pk"))
+                               .values("position")[:1])
+
+    class Meta:
+        db_table = "service_sale_products"
+        ordering = ("position", "id")
+        unique_together = (("sale", "product"),)
+        verbose_name = "Продукт распродажи"
+        verbose_name_plural = "Продукты распродажи"
 
 
 class Announcements(BaseModel):

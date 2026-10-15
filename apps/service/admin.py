@@ -2,7 +2,7 @@ from django.contrib import admin, messages
 from django.db.models import Count
 from django.shortcuts import render
 from .models import Product, ProductCategory, ProductSubCategory, ProductItemCategory, Comment, Order, \
-    OrderItem, Tag, Brand, Sale, AddsBrands, PartnerBrand, ProductModel, ProductBadge, ProductImage, Favourites, Cart, CartItem, Questions, \
+    OrderItem, Tag, Brand, Sale, SaleProduct, AddsBrands, PartnerBrand, ProductModel, ProductBadge, ProductImage, Favourites, Cart, CartItem, Questions, \
     ProductCharacteristics, RecentlyViewedProducts, Service, CommentImages, CommentReply, QuestionsReply, \
     ProductVariantGroup, ProductVariantItem, \
     Announcements, ProductItemCategoryFilterSchema, ProductFilterNumericValue, ProductUnit, ProductRemaining, \
@@ -186,13 +186,19 @@ class ProductBadgeAdmin(ModelAdmin):
     actions = [activate, deactivate]
 
 
+class SaleProductInline(TabularInline):
+    model = SaleProduct
+    extra = 0
+    autocomplete_fields = ("product",)
+
+
 @admin.register(Sale)
 class SaleAdmin(ModelAdmin):
     list_display = get_model_fields(Sale)
     list_display_links = ("id", "name")
     search_fields = ("name",)
     list_filter = ("is_main", "is_visible", "discount_from", "discount_to")
-    autocomplete_fields = ("products",)
+    inlines = (SaleProductInline,)
     date_hierarchy = "created_at"
     actions = [make_visible, make_hidden, mark_as_main, mark_as_not_main]
 

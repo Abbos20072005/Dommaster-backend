@@ -6,7 +6,7 @@ from .product import (
     AlternativeProduct, CrossSellProduct, ProductVariantGroup, ProductVariantItem,
 )
 from .filters import ProductItemCategoryFilterSchema, ProductFilterNumericValue
-from .marketing import AddsBrands, PartnerBrand, Tag, ProductBadge, Sale, Announcements, Service
+from .marketing import AddsBrands, PartnerBrand, Tag, ProductBadge, Sale, SaleProduct, Announcements, Service
 from .cart import Cart, CartItem, Favourites, RecentlyViewedProducts
 from .order import Manager, Order, OrderItem, OrderComment
 from .outbox import OrderOutboxEvent
@@ -23,7 +23,7 @@ __all__ = [
     "RelatedProduct", "AlternativeProduct", "CrossSellProduct", "ProductVariantGroup",
     "ProductVariantItem",
     "ProductItemCategoryFilterSchema", "ProductFilterNumericValue",
-    "AddsBrands", "PartnerBrand", "Tag", "ProductBadge", "Sale", "Announcements", "Service",
+    "AddsBrands", "PartnerBrand", "Tag", "ProductBadge", "Sale", "SaleProduct", "Announcements", "Service",
     "Cart", "CartItem", "Favourites", "RecentlyViewedProducts",
     "Manager", "Order", "OrderItem", "OrderComment", "OrderOutboxEvent",
     "Comment", "CommentReply", "CommentImages", "Questions", "QuestionsReply",

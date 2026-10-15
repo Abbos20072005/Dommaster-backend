@@ -17,7 +17,7 @@ from .product_model import ProductModelSerializer
 from .badge import ProductBadgeSerializer
 from .attribute import ProductAttributeOptionSerializer, ProductAttributeSerializer, AttributeShortSerializer, \
     CategoryAttributeSerializer, ItemCategoryAttributesSerializer
-from .sale import SaleProductSerializer, SaleListSerializer, SaleSerializer
+from .sale import SaleProductSerializer, SaleListSerializer, SaleSerializer, SaleProductReorderSerializer
 from .home import (
     HomeBlockBannerSerializer, HomeBlockSaleSerializer, HomeBlockPageSerializer, HomeBlockSerializer,
     HomeBlockReorderSerializer, HomePageSerializer, HomePagePublishSerializer,
@@ -49,7 +49,7 @@ from .moderation import ModerationStaffSerializer, ModerationProductSerializer, 
     ModerationStatsSerializer
 
 __all__ = [
-    "SaleProductSerializer", "SaleListSerializer", "SaleSerializer",
+    "SaleProductSerializer", "SaleListSerializer", "SaleSerializer", "SaleProductReorderSerializer",
     "PENDING", "COLLECTING", "DELIVERING", "COMPLETED", "CANCELED", "DELIVERY", "PICKUP", "PAYMENT_ON_DELIVERY", "PAID",
     "PRICE_FIELDS", "OrderCustomerSerializer", "OrderAddressSerializer", "OrderBranchSerializer",
     "OrderPromocodeSerializer", "OrderProductSerializer", "OrderItemSerializer", "OrderListSerializer",

@@ -44,6 +44,7 @@ from apps.service.models import (
     Comment,
     Brand,
     Sale,
+    SaleProduct,
     AddsBrands,
     Favourites,
     Cart,
@@ -1103,6 +1104,10 @@ class ProductViewSet(ViewSet):
                 "ok": True,
             },
             status=status.HTTP_200_OK,
+        elif sale_id and not sort_by:
+            # products of a sale: in the order set in the admin panel
+            products = products.annotate(_sale_position=SaleProduct.position_of(sale_id)).order_by(
+                "_sale_position", "-id")
         )
 
     @extend_schema(

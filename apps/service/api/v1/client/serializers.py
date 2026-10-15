@@ -838,7 +838,7 @@ class SaleMainSerializer(serializers.ModelSerializer):
     products = serializers.SerializerMethodField()
 
     def get_products(self, obj):
-        qs = obj.products.filter(is_active=True)
+        qs = obj.ordered_products.filter(is_active=True)
         return ProductSerializer(qs, many=True, context=self.context).data
 
     class Meta:
