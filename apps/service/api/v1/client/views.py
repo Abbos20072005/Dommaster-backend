@@ -33,7 +33,7 @@ from apps.base.api.v1.client.serializers import BannerSerializer
 from apps.base.telegram import send_comment_to_telegram, send_question_to_telegram
 from utils.pyment_link import generate_link
 from apps.payment.services_pay.auth_services import AtmosAuthService, AtmosHoldService
-from apps.service import feed, home
+from apps.service import feed, home, product_links
 from apps.service.models import (
     HomeBlock,
     HomePage,
@@ -68,6 +68,7 @@ from .serializers import (
     ProductSubCategorySerializer,
     ProductItemCategorySerializer,
     ProductSerializer,
+    ProductLinksSerializer,
     RecommendedProductSerializer,
     CommentSerializer,
     BrandSerializer,
@@ -127,6 +128,14 @@ from .serializers import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def linked_products_data(ids, request):
+    """`ProductSerializer` data of the products `ids`, in that order."""
+    products = {product.pk: product
+                for product in get_optimized_product_qs(Product.objects.filter(pk__in=ids), request)}
+    return ProductSerializer([products[pk] for pk in ids if pk in products], many=True,
+                             context={"request": request}).data
 
 
 def get_optimized_product_qs(base_qs, request):
@@ -961,6 +970,31 @@ class ProductViewSet(ViewSet):
         return Response(data={"result": result, "ok": True}, status=status.HTTP_200_OK)
 
     @extend_schema(
+        summary="Product page blocks: related products and alternatives",
+        description=(
+            "`related` = bought together with the product, `alternatives` = can be bought instead of it; at most "
+            "10 each, only products that can be bought now (active, with a price, an image and stock). "
+            "Related products are picked in the admin panel only (empty list = hide the block). Alternatives are "
+            "the picked ones, or — none picked — popular products of the same item category "
+            "(`alternatives_source`)."
+        ),
+        responses={200: ProductLinksSerializer()},
+        tags=["Product"],
+    )
+    def product_links(self, request, pk):
+        product = Product.objects.filter(id=pk, is_active=True).first()
+        if not product:
+            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
+
+        alternatives, source = product_links.alternative_ids(product)
+        result = {
+            "related": linked_products_data(product_links.related_ids(product), request),
+            "alternatives": linked_products_data(alternatives, request),
+            "alternatives_source": source,
+        }
+        return Response(data={"result": result, "ok": True}, status=status.HTTP_200_OK)
+
+    @extend_schema(
         summary="Product detail",
         description="Product detail",
         responses={200: ProductSerializer()},
@@ -1761,6 +1795,32 @@ class FavouriteViewSet(ViewSet):
 
 
 class CartViewSet(ViewSet):
+    @extend_schema(
+        summary="Cart cross-sell",
+        description=(
+            "Products offered for the ones in the cart (picked in the admin panel): at most 10, the first pick of "
+            "every cart product, then the second ones; products already in the cart and the ones that can't be "
+            "bought now are left out. Empty list = hide the block. Cart = the customer's one, else the "
+            "`cart_token` cookie."
+        ),
+        responses={200: ProductSerializer(many=True)},
+        tags=["Cart"],
+    )
+    def cart_cross_sell(self, request):
+        customer = request.user.id
+        token = request.COOKIES.get("cart_token")
+        if customer:
+            items = CartItem.objects.filter(cart__customer_id=customer)
+        elif token:
+            items = CartItem.objects.filter(cart__cart_token=token, cart__customer__isnull=True)
+        else:
+            items = CartItem.objects.none()
+        cart_product_ids = list(items.exclude(product=None).order_by("-created_at", "-id")
+                                .values_list("product_id", flat=True))
+
+        result = linked_products_data(product_links.cart_cross_sell_ids(cart_product_ids), request)
+        return Response(data={"result": result, "ok": True}, status=status.HTTP_200_OK)
+
     @extend_schema(
         summary="Get cart",
         description="Get cart",

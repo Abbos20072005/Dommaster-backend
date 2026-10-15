@@ -8,7 +8,7 @@ from apps.service.models import Product, ProductCategory, ProductItemCategory, P
     Order, OrderItem, Brand, Sale, AddsBrands, Favourites, Cart, CartItem, ProductCharacteristics, Questions, \
     RecentlyViewedProducts, Service, CommentReply, CommentImages, QuestionsReply, \
     ProductVariantGroup, ProductVariantItem, ProductItemCategoryFilterSchema, HomeBlock, ORDER_CHANNEL
-from apps.service import feed
+from apps.service import feed, product_links
 from apps.service.attributes import display_value, product_attribute_values, request_language, translated
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
@@ -712,6 +712,16 @@ class RecommendedProductSerializer(ProductSerializer):
 
     class Meta(ProductSerializer.Meta):
         fields = (*ProductSerializer.Meta.fields, "rec_source")
+
+
+class ProductLinksSerializer(serializers.Serializer):
+    """`products/<id>/links/`: blocks of the product page."""
+    related = ProductSerializer(many=True, help_text="Bought together with the product (picked in the admin panel)")
+    alternatives = ProductSerializer(many=True, help_text="Can be bought instead of the product")
+    alternatives_source = serializers.ChoiceField(
+        choices=(product_links.ALTERNATIVES_MANUAL, product_links.ALTERNATIVES_CATEGORY), allow_null=True,
+        help_text="manual = picked in the admin panel, category = popular products of the same item category "
+                  "(none picked), null = no alternatives")
 
 
 class ProductShortSerializer(ProductAnnotationMixin, serializers.Serializer):

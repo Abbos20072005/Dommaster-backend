@@ -95,4 +95,4 @@ Xatolar (`400`):
 - Mahsulot o'chirilsa, uning bog'lanishlari ham (ikkala tomondan) o'chadi.
 - 1C sinxronlash bog'lanishlarga tegmaydi.
 
-> Bog'lanishlar hozircha faqat admin API'da — mijoz (sayt / ilova) API'lariga chiqarilmagan, ya'ni kiritilgan ro'yxatlar hali hech qayerda ko'rinmaydi.
+> Mijoz (sayt / ilova) tomoni: `GET products/{id}/links/` (bog'liq + muqobil) va `GET cart/cross-sell/` — [docs/mobile/product_links.md](../mobile/product_links.md). Mijozga faqat hozir sotib olinadigan mahsulotlar chiqadi (faol, narxi, rasmi va qoldig'i bor), har ro'yxatda 10 tagacha; muqobil tanlanmagan mahsulotda o'sha kategoriyaning ommabop mahsulotlari ko'rsatiladi.

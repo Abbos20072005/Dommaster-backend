@@ -55,6 +55,11 @@ urlpatterns = [
         ProductViewSet.as_view({"get": "product_detail"}),
         name="products_detail",
     ),
+    path(
+        "products/<int:pk>/links/",
+        ProductViewSet.as_view({"get": "product_links"}),
+        name="product_links",
+    ),
     path("brands/", BrandViewSet.as_view({"get": "brand_list"}), name="brand_list"),
     path(
         "brands/<int:pk>/",
@@ -115,6 +120,7 @@ urlpatterns = [
         name="favourite_action",
     ),
     path("cart/", CartViewSet.as_view({"get": "get_cart"}), name="get_cart"),
+    path("cart/cross-sell/", CartViewSet.as_view({"get": "cart_cross_sell"}), name="cart_cross_sell"),
     path(
         "cart/item/",
         CartViewSet.as_view({"post": "create_cart_item", "patch": "update_cart_item"}),
