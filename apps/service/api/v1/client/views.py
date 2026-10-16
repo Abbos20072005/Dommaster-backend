@@ -33,7 +33,7 @@ from apps.base.api.v1.client.serializers import BannerSerializer
 from apps.base.telegram import send_comment_to_telegram, send_question_to_telegram
 from utils.pyment_link import generate_link
 from apps.payment.services_pay.auth_services import AtmosAuthService, AtmosHoldService
-from apps.service import feed, home, product_links
+from apps.service import feed, filter_pages, home, product_links
 from apps.service.models import (
     HomeBlock,
     HomePage,
@@ -63,6 +63,10 @@ from apps.service.models import (
 from apps.service.attributes import attribute_values_prefetch, request_language
 from apps.service.product_filters import apply_attribute_filters, build_available_filters, category_filters
 from .serializers import (
+    FilterPageListItemSerializer,
+    FilterPageDetailSerializer,
+    FilterPageResolveSerializer,
+    FilterPageResolveResultSerializer,
     ProductCategorySerializer,
     ProductCategoryListSerializer,
     ProductSubCategorySerializer,
@@ -2740,3 +2744,67 @@ class OrderViewSet(ViewSet):
             },
             status=status.HTTP_200_OK,
         )
+
+
+class FilterPageViewSet(ViewSet):
+    @extend_schema(
+        summary="Filter landing pages",
+        description=(
+            "Open SEO pages of filter combinations (brand + item category, a size, a pack...) for the sitemap and "
+            "for links on the item category page. Not paginated, most searched first."
+        ),
+        parameters=[OpenApiParameter(name="item_category", location=OpenApiParameter.QUERY, type=OpenApiTypes.INT,
+                                     description="Only the pages of this item category")],
+        responses={200: FilterPageListItemSerializer(many=True)},
+        tags=["Filter page"],
+    )
+    def filter_page_list(self, request):
+        pages = filter_pages.open_pages().select_related("item_category")
+        item_category = request.query_params.get("item_category")
+        if item_category:
+            if not item_category.isdigit():
+                raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED,
+                                         message={"item_category": "A valid integer is required."})
+            pages = pages.filter(item_category_id=item_category)
+        language = request_language(request)
+        result = [filter_pages.page_list_data(page, language) for page in pages]
+        return Response(data={"result": result, "ok": True}, status=status.HTTP_200_OK)
+
+    @extend_schema(
+        summary="Filter landing page",
+        description=(
+            "Texts of the page (H1, meta, 300-500 characters of text) in the request language. Products: "
+            "`POST product/filter/` with `product_filter` (+ `page`, `sort_by`). 404 = no such page or it is "
+            "closed (inactive, fewer than 3 products)."
+        ),
+        responses={200: FilterPageDetailSerializer()},
+        tags=["Filter page"],
+    )
+    def filter_page_detail(self, request, slug):
+        page = filter_pages.open_pages().select_related(
+            "item_category__product_sub_category__product_category", "brand").filter(slug=slug).first()
+        if not page:
+            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
+        result = filter_pages.page_detail_data(page, request_language(request))
+        return Response(data={"result": result, "ok": True}, status=status.HTTP_200_OK)
+
+    @extend_schema(
+        summary="Filter landing page of a filter combination",
+        description=(
+            "The open page of exactly this item category + brand + `filters` (same shape as `product/filter/`), "
+            "or `slug: null`. A filtered listing with a page links to it (canonical); one without a page stays "
+            "closed to search engines (noindex)."
+        ),
+        request=FilterPageResolveSerializer(),
+        responses={200: FilterPageResolveResultSerializer()},
+        tags=["Filter page"],
+    )
+    def filter_page_resolve(self, request):
+        serializer = FilterPageResolveSerializer(data=request.data)
+        if not serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
+        data = serializer.validated_data
+        filters = data["filters"] if isinstance(data["filters"], dict) else {}
+        page = filter_pages.find_page(data["item_category"], data.get("brand"), filters)
+        return Response(data={"result": {"slug": page.slug if page else None}, "ok": True},
+                        status=status.HTTP_200_OK)

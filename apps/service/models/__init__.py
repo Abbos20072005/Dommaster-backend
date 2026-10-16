@@ -14,6 +14,7 @@ from .feedback import Comment, CommentReply, CommentImages, Questions, Questions
 from .home import HomeBlock, HomePage
 from .feed import InterestEvent, FeedImpression
 from .moderation import ProductModeration
+from .seo import FilterPage
 
 __all__ = [
     "ORDER_STATUS", "PAYMENT_STATUS", "DELIVERY_TYPE", "PAYMENT_TYPE", "CASH_PAYMENT_METHOD", "ORDER_CHANNEL",
@@ -30,4 +31,5 @@ __all__ = [
     "HomeBlock", "HomePage",
     "InterestEvent", "FeedImpression",
     "ProductModeration",
+    "FilterPage",
 ]

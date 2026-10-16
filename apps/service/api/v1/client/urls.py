@@ -12,6 +12,7 @@ from .views import (
     ServiceViewSet,
     MainPageViewSet,
     HomeViewSet,
+    FilterPageViewSet,
 )
 
 urlpatterns = [
@@ -186,6 +187,17 @@ urlpatterns = [
     ),
     path(
         "main/", MainPageViewSet.as_view({"get": "homepage_data"}), name="homepage_data"
+    ),
+    path("filter-pages/", FilterPageViewSet.as_view({"get": "filter_page_list"}), name="filter_page_list"),
+    path(
+        "filter-pages/resolve/",
+        FilterPageViewSet.as_view({"post": "filter_page_resolve"}),
+        name="filter_page_resolve",
+    ),
+    path(
+        "filter-pages/<slug:slug>/",
+        FilterPageViewSet.as_view({"get": "filter_page_detail"}),
+        name="filter_page_detail",
     ),
     path("home/", HomeViewSet.as_view({"get": "blocks"}), name="home_blocks"),
     path(

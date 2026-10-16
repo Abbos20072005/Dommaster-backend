@@ -346,6 +346,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "apps.service.tasks.import_characteristics",
         "schedule": crontab(minute=20),  # every hour
     },
+    "refresh-filter-pages": {
+        "task": "apps.service.tasks.refresh_filter_pages",
+        "schedule": crontab(minute=40),  # every hour, after import_characteristics
+    },
     "clean-feed-log": {
         "task": "apps.service.tasks.clean_feed_log",
         "schedule": crontab(hour=4, minute=30),

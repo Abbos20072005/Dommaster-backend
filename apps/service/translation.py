@@ -2,7 +2,7 @@ from modeltranslation.translator import translator, TranslationOptions
 from .models import Product, Service, ProductCharacteristics, AddsBrands, Brand, ProductCategory, ProductSubCategory, \
     ProductItemCategory, ProductVariantGroup, ProductVariantItem, \
     ProductItemCategoryFilterSchema, ProductUnit, ProductBadge, ProductAttribute, ProductAttributeOption, \
-    ProductAttributeValue, HomeBlock
+    ProductAttributeValue, HomeBlock, FilterPage
 
 
 class ProductItemCategoryOption(TranslationOptions):
@@ -96,3 +96,10 @@ class HomeBlockOption(TranslationOptions):
 
 
 translator.register(HomeBlock, HomeBlockOption)
+
+
+class FilterPageOption(TranslationOptions):
+    fields = ("keyword", "title", "meta_title", "meta_description", "text")
+
+
+translator.register(FilterPage, FilterPageOption)

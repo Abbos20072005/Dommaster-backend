@@ -2,7 +2,8 @@ import django_filters
 from django.db.models import Exists, OuterRef
 from apps.service.models import AddsBrands, Brand, PartnerBrand, ProductModel, ProductBadge, ProductCategory, \
     ProductSubCategory, ProductItemCategory, ProductAttribute, Order, Product, Comment, CommentReply, Questions, \
-    QuestionsReply, ORDER_STATUS, Sale, HomeBlock, ProductModeration
+    QuestionsReply, ORDER_STATUS, Sale, HomeBlock, ProductModeration, FilterPage
+from apps.service.filter_pages import open_pages
 
 
 class OrderFilter(django_filters.FilterSet):
@@ -200,3 +201,17 @@ class ProductModerationFilter(django_filters.FilterSet):
     class Meta:
         model = ProductModeration
         fields = ("status", "product", "submitted_by", "reviewed_by")
+
+
+class FilterPageFilter(django_filters.FilterSet):
+    # open = shown to clients and in the sitemap (filter_pages.open_pages)
+    is_open = django_filters.BooleanFilter(method="filter_is_open")
+    has_brand = django_filters.BooleanFilter(field_name="brand", lookup_expr="isnull", exclude=True)
+
+    class Meta:
+        model = FilterPage
+        fields = ("is_active", "item_category", "brand")
+
+    def filter_is_open(self, queryset, name, value):
+        ids = open_pages().values("id")
+        return queryset.filter(id__in=ids) if value else queryset.exclude(id__in=ids)

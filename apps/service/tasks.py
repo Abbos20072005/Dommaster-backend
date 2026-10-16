@@ -4,7 +4,7 @@ from celery import shared_task
 from django.core.management import call_command
 
 from utils.background import exclusive
-from . import badges, order_push, outbox
+from . import badges, filter_pages, order_push, outbox
 
 
 @shared_task
@@ -26,6 +26,12 @@ def push_order_status(order_id, customer_id, status):
 @exclusive(30 * 60)
 def recalculate_badges():
     return badges.recalculate_auto_badges()
+
+
+@shared_task
+@exclusive(30 * 60)
+def refresh_filter_pages():
+    return filter_pages.refresh_counts()
 
 
 @shared_task

@@ -1264,3 +1264,63 @@ class HomeLayoutBlockSerializer(TranslatedSerializerMixin, serializers.Serialize
     @extend_schema_field(serializers.IntegerField(allow_null=True))
     def get_products_count(self, block):
         return block.content.get("products_count")
+
+
+class FilterPageCategoryLinkSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    slug = serializers.CharField()
+
+
+class FilterPageListItemSerializer(serializers.Serializer):
+    """`filter-pages/`: an open filter landing page (sitemap, links on the item category page)."""
+    slug = serializers.CharField()
+    title = serializers.CharField(help_text="H1, in the request language")
+    item_category = FilterPageCategoryLinkSerializer()
+    brand = serializers.IntegerField(allow_null=True, help_text="Brand id or null")
+    products_count = serializers.IntegerField()
+    updated_at = serializers.DateTimeField(help_text="lastmod of the sitemap")
+
+
+class FilterPageNamedSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+
+
+class FilterPageItemCategorySerializer(FilterPageNamedSerializer):
+    slug = serializers.CharField()
+
+
+class FilterPageBreadcrumbSerializer(FilterPageItemCategorySerializer):
+    level = serializers.ChoiceField(choices=("product_category", "product_sub_category", "product_item_category"))
+
+
+class FilterPageProductFilterSerializer(serializers.Serializer):
+    item_category = serializers.IntegerField()
+    brand = serializers.IntegerField(required=False, help_text="Only when the page has a brand")
+    filters = serializers.JSONField(help_text="Same shape as `product/filter/` `filters`")
+
+
+class FilterPageDetailSerializer(serializers.Serializer):
+    """`filter-pages/<slug>/`: texts of the page; its products come from `POST product/filter/` + `product_filter`."""
+    id = serializers.IntegerField()
+    slug = serializers.CharField()
+    title = serializers.CharField(help_text="H1")
+    meta_title = serializers.CharField(help_text="Empty in the admin panel -> the H1")
+    meta_description = serializers.CharField(help_text="Empty in the admin panel -> start of `text`")
+    text = serializers.CharField(help_text="300-500 characters of plain text, may be empty")
+    item_category = FilterPageItemCategorySerializer()
+    brand = FilterPageNamedSerializer(allow_null=True)
+    breadcrumbs = FilterPageBreadcrumbSerializer(many=True, help_text="category -> sub category -> item category")
+    product_filter = FilterPageProductFilterSerializer(help_text="Body of `POST product/filter/` (+ page, sort_by)")
+    products_count = serializers.IntegerField()
+    updated_at = serializers.DateTimeField()
+
+
+class FilterPageResolveSerializer(serializers.Serializer):
+    item_category = serializers.IntegerField()
+    brand = serializers.IntegerField(required=False, allow_null=True)
+    filters = serializers.JSONField(required=False, default=dict)
+
+
+class FilterPageResolveResultSerializer(serializers.Serializer):
+    slug = serializers.CharField(allow_null=True, help_text="Open page of exactly this combination, else null")
