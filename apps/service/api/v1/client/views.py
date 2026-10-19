@@ -24,7 +24,9 @@ from django.contrib.postgres.search import TrigramSimilarity
 from django.db.models.functions import Greatest
 
 import logging
+import os
 import secrets
+from django.http import FileResponse
 from django.db import transaction
 from apps.base.models import Promocodes
 from datetime import date
@@ -33,7 +35,7 @@ from apps.base.api.v1.client.serializers import BannerSerializer
 from apps.base.telegram import send_comment_to_telegram, send_question_to_telegram
 from utils.pyment_link import generate_link
 from apps.payment.services_pay.auth_services import AtmosAuthService, AtmosHoldService
-from apps.service import feed, filter_pages, home, product_links
+from apps.service import feed, filter_pages, home, merchant_feed, product_links
 from apps.service.models import (
     HomeBlock,
     HomePage,
@@ -2808,3 +2810,35 @@ class FilterPageViewSet(ViewSet):
         page = filter_pages.find_page(data["item_category"], data.get("brand"), filters)
         return Response(data={"result": {"slug": page.slug if page else None}, "ok": True},
                         status=status.HTTP_200_OK)
+
+
+class MerchantFeedViewSet(ViewSet):
+    """The files `merchant_feed` builds 4 times a day; the first request builds a missing one."""
+
+    def _feed(self, name, content_type):
+        path = merchant_feed.feed_path(name)
+        if not os.path.exists(path):
+            try:
+                merchant_feed.build_feeds()
+            except merchant_feed.FeedConfigError as e:
+                logger.error("Merchant feed is not built: %s", e)
+                raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
+        return FileResponse(open(path, "rb"), content_type=content_type)
+
+    @extend_schema(
+        summary="Google Merchant Center product feed",
+        description="RSS 2.0 with `g:` fields, ru, prices in UZS. Rebuilt 4 times a day.",
+        responses={200: OpenApiResponse(description="XML file")},
+        tags=["Merchant feed"],
+    )
+    def google_feed(self, request):
+        return self._feed(merchant_feed.GOOGLE_FILE, "application/xml; charset=utf-8")
+
+    @extend_schema(
+        summary="Yandex product feed (YML)",
+        description="YML catalog, ru, prices in UZS. Rebuilt 4 times a day.",
+        responses={200: OpenApiResponse(description="XML file")},
+        tags=["Merchant feed"],
+    )
+    def yandex_feed(self, request):
+        return self._feed(merchant_feed.YANDEX_FILE, "application/xml; charset=utf-8")

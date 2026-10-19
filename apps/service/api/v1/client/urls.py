@@ -13,6 +13,7 @@ from .views import (
     MainPageViewSet,
     HomeViewSet,
     FilterPageViewSet,
+    MerchantFeedViewSet,
 )
 
 urlpatterns = [
@@ -199,6 +200,8 @@ urlpatterns = [
         FilterPageViewSet.as_view({"get": "filter_page_detail"}),
         name="filter_page_detail",
     ),
+    path("feeds/google.xml", MerchantFeedViewSet.as_view({"get": "google_feed"}), name="merchant_feed_google"),
+    path("feeds/yandex.yml", MerchantFeedViewSet.as_view({"get": "yandex_feed"}), name="merchant_feed_yandex"),
     path("home/", HomeViewSet.as_view({"get": "blocks"}), name="home_blocks"),
     path(
         "home/blocks/<int:pk>/products/",

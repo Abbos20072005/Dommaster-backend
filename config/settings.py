@@ -314,6 +314,8 @@ USE_TZ = False
 # public address of this backend (https://api.example.uz): absolute media links built outside a request
 # (the image of a notification push)
 BACKEND_URL = os.getenv("BACKEND_URL", "")
+# public address of the site: product links of the Google / Yandex feeds (merchant_feed.py)
+SITE_URL = os.getenv("SITE_URL", "https://buildex.uz")
 
 # Celery: `celery -A config worker` + `celery -A config beat` (config/celery.py, tasks in apps/*/tasks.py)
 # 0 = no worker: background work runs in threads of the web process (see utils/background.py)
@@ -349,6 +351,10 @@ CELERY_BEAT_SCHEDULE = {
     "refresh-filter-pages": {
         "task": "apps.service.tasks.refresh_filter_pages",
         "schedule": crontab(minute=40),  # every hour, after import_characteristics
+    },
+    "build-merchant-feeds": {
+        "task": "apps.service.tasks.build_merchant_feeds",
+        "schedule": crontab(hour="*/6", minute=50),  # 4 times a day, after the hourly jobs
     },
     "clean-feed-log": {
         "task": "apps.service.tasks.clean_feed_log",
