@@ -1,4 +1,5 @@
 from .models import ProductItemCategory, ProductSubCategory, ProductCategory, Product
+from .attributes import DEFAULT_LANGUAGE, translated
 import requests
 import json
 import logging
@@ -12,23 +13,23 @@ from openpyxl.utils import get_column_letter
 logger = logging.getLogger(__name__)
 
 
-def build_breadcrumbs(obj):
+def build_breadcrumbs(obj, language=DEFAULT_LANGUAGE):
     breadcrumbs = []
 
     if isinstance(obj, Product):
-        breadcrumbs.insert(0, {"id": obj.id, "name": obj.name, "level": "product"})
+        breadcrumbs.insert(0, {"id": obj.id, "name": translated(obj, "name", language), "level": "product"})
         obj = obj.product_item_category
 
     if isinstance(obj, ProductItemCategory):
-        breadcrumbs.insert(0, {"id": obj.id, "name": obj.name, "level": "product_item_category"})
+        breadcrumbs.insert(0, {"id": obj.id, "name": translated(obj, "name", language), "level": "product_item_category"})
         obj = obj.product_sub_category
 
     if isinstance(obj, ProductSubCategory):
-        breadcrumbs.insert(0, {"id": obj.id, "name": obj.name, "level": "product_sub_category"})
+        breadcrumbs.insert(0, {"id": obj.id, "name": translated(obj, "name", language), "level": "product_sub_category"})
         obj = obj.product_category
 
     if isinstance(obj, ProductCategory):
-        breadcrumbs.insert(0, {"id": obj.id, "name": obj.name, "level": "product_category"})
+        breadcrumbs.insert(0, {"id": obj.id, "name": translated(obj, "name", language), "level": "product_category"})
 
     return breadcrumbs
 

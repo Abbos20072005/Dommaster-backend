@@ -607,10 +607,25 @@ class ProductAttributesMixin:
         return ProductDetailAttributeSerializer(product_attribute_values(obj), many=True, context=self.context).data
 
 
-class ProductDetailSerializer(ProductAnnotationMixin, ProductAttributesMixin, serializers.Serializer):
+class ProductTextsMixin:
+    """`name`, `short_description`, `description` in the request language; an empty uz falls back to ru."""
+
+    def get_name(self, obj) -> str:
+        return translated(obj, "name", self.get_language())
+
+    def get_short_description(self, obj) -> str:
+        return translated(obj, "short_description", self.get_language())
+
+    def get_description(self, obj) -> str:
+        return translated(obj, "description", self.get_language())
+
+
+class ProductDetailSerializer(ProductAnnotationMixin, ProductAttributesMixin, ProductTextsMixin,
+                              TranslatedSerializerMixin, serializers.Serializer):
     id = serializers.IntegerField()
-    name = serializers.CharField()
-    description = serializers.CharField()
+    name = serializers.SerializerMethodField()
+    short_description = serializers.SerializerMethodField(allow_null=True)
+    description = serializers.SerializerMethodField()
     is_favourite = serializers.SerializerMethodField()
     rating = serializers.FloatField()
     price = serializers.FloatField()
@@ -634,7 +649,7 @@ class ProductDetailSerializer(ProductAnnotationMixin, ProductAttributesMixin, se
     height = serializers.DecimalField(max_digits=10, decimal_places=3)
 
     def get_breadcrumbs(self, obj):
-        return obj.get_breadcrumbs()
+        return obj.get_breadcrumbs(self.get_language())
 
     def get_variant_groups(self, obj):
         group_ids = obj.variant_items.values_list('group_id', flat=True)
@@ -649,14 +664,10 @@ class ProductDetailSerializer(ProductAnnotationMixin, ProductAttributesMixin, se
         ).data
 
 
-class ProductSerializer(ProductAnnotationMixin, ProductAttributesMixin, TranslatedSerializerMixin,
+class ProductSerializer(ProductAnnotationMixin, ProductAttributesMixin, ProductTextsMixin, TranslatedSerializerMixin,
                         serializers.ModelSerializer):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        language = self.get_language()
-        self.fields["name"] = serializers.CharField(source=f'name_{language}')
-        self.fields["description"] = serializers.CharField(source=f'description_{language}')
-
+    name = serializers.SerializerMethodField()
+    description = serializers.SerializerMethodField()
     images = ProductImageSerializer(source="product_image", many=True, read_only=True)
     short_description = serializers.SerializerMethodField(allow_null=True)
     in_cart = serializers.SerializerMethodField()
@@ -665,10 +676,6 @@ class ProductSerializer(ProductAnnotationMixin, ProductAttributesMixin, Translat
     breadcrumbs = serializers.SerializerMethodField()
     characteristics = serializers.SerializerMethodField()
     brand = BrandSerializer(read_only=True)
-
-    def get_short_description(self, obj):
-        # filled in uz / ru only: en and an empty uz fall back to ru
-        return translated(obj, "short_description", self.get_language())
 
     class Meta:
         model = Product
@@ -700,7 +707,7 @@ class ProductSerializer(ProductAnnotationMixin, ProductAttributesMixin, Translat
         )
 
     def get_breadcrumbs(self, obj):
-        return obj.get_breadcrumbs()
+        return obj.get_breadcrumbs(self.get_language())
 
 
 class RecommendedProductSerializer(ProductSerializer):
@@ -931,7 +938,7 @@ class ProductItemCategorySerializer(TranslatedSerializerMixin, serializers.Model
         return obj.product_item_category.count()
 
     def get_breadcrumbs(self, obj):
-        return obj.get_breadcrumbs()
+        return obj.get_breadcrumbs(self.get_language())
 
 
 class ProductSubCategorySerializer(TranslatedSerializerMixin, serializers.ModelSerializer):
@@ -954,7 +961,7 @@ class ProductSubCategorySerializer(TranslatedSerializerMixin, serializers.ModelS
         )
 
     def get_breadcrumbs(self, obj):
-        return obj.get_breadcrumbs()
+        return obj.get_breadcrumbs(self.get_language())
 
 class ProductCategorySearchSerializer(TranslatedSerializerMixin, serializers.ModelSerializer):
     def __init__(self, *args, **kwargs):
@@ -993,7 +1000,7 @@ class ProductCategorySerializer(TranslatedSerializerMixin, serializers.ModelSeri
         )
 
     def get_breadcrumbs(self, obj):
-        return obj.get_breadcrumbs()
+        return obj.get_breadcrumbs(self.get_language())
     
 class ProductItemCategoryTreeSerializer(serializers.Serializer):
     id = serializers.IntegerField()

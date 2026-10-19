@@ -74,9 +74,9 @@ class ProductCategory(CategoryMixin, BaseModel):
     def __str__(self):
         return self.name
 
-    def get_breadcrumbs(self):
+    def get_breadcrumbs(self, language="ru"):
         from apps.service.utils import build_breadcrumbs
-        return build_breadcrumbs(self)
+        return build_breadcrumbs(self, language)
 
     class Meta:
         verbose_name = "Категория продуктов"
@@ -101,9 +101,9 @@ class ProductSubCategory(CategoryMixin, BaseModel):
     def __str__(self):
         return self.name
 
-    def get_breadcrumbs(self):
+    def get_breadcrumbs(self, language="ru"):
         from apps.service.utils import build_breadcrumbs
-        return build_breadcrumbs(self)
+        return build_breadcrumbs(self, language)
 
     class Meta:
         verbose_name = "Подкатегория продуктов"
@@ -124,9 +124,9 @@ class ProductItemCategory(CategoryMixin, BaseModel):
     def __str__(self):
         return self.name
 
-    def get_breadcrumbs(self):
+    def get_breadcrumbs(self, language="ru"):
         from apps.service.utils import build_breadcrumbs
-        return build_breadcrumbs(self)
+        return build_breadcrumbs(self, language)
 
     class Meta:
         verbose_name = "Предметная категория продуктов"

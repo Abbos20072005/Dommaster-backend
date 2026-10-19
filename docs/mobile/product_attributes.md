@@ -10,7 +10,7 @@ GET products/{id}/
 ```
 
 - Mahsulotning **barcha** xususiyatlari shu yerda. Eski `characteristics` maydoni ham qolgan, lekin endi u `attributes` ning nusxasi (pastda) — yangi kodda `attributes` ni ishlating.
-- Til `Accept-Language` headeridan olinadi (`uz`, `ru`; default `ru`, `en` yoki boshqa til → `ru`).
+- Til `Accept-Language` headeridan olinadi (`uz`, `ru`; `uz-UZ` va brauzerning to'liq headeri `uz-UZ,uz;q=0.9,ru;q=0.8` ham `uz`; default `ru`, `en` yoki boshqa til → `ru`). Shu tilda keladi: `name`, `short_description`, `description`, `breadcrumbs`, atribut nomlari va qiymatlari; o'zbekcha matni yo'q bo'lsa — ruscha. Atribut nomi admin panelda tarjima qilinmagan bo'lsa (1C dan kelganlar — uz = ru nusxasi), `uz` da ham ruscha chiqadi.
 - Filtrlar ham shu atributlardan quriladi — `docs/mobile/product_filters.md`.
 
 ---

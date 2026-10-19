@@ -62,9 +62,9 @@ class Product(BaseModel):
     def __str__(self):
         return self.name
 
-    def get_breadcrumbs(self):
+    def get_breadcrumbs(self, language="ru"):
         from apps.service.utils import build_breadcrumbs
-        return build_breadcrumbs(self)
+        return build_breadcrumbs(self, language)
 
     def update_rating(self):
         from django.db.models import Avg, Count

@@ -1,6 +1,7 @@
 """Product attribute values as customers see them (product cards, filters)."""
 from django.conf import settings
 from django.db.models import OuterRef, Prefetch, Subquery
+from django.utils.translation.trans_real import parse_accept_lang_header
 
 from .models import ProductAttribute, ProductAttributeValue, ProductItemCategoryAttribute
 
@@ -14,8 +15,13 @@ VALUES_ATTR = "_attribute_values"
 
 
 def request_language(request):
-    language = request.META.get("HTTP_ACCEPT_LANGUAGE", DEFAULT_LANGUAGE) if request else DEFAULT_LANGUAGE
-    return language if language in settings.MODELTRANSLATION_LANGUAGES else DEFAULT_LANGUAGE
+    """The first of our languages in Accept-Language ("uz", "uz-UZ", "uz-UZ,uz;q=0.9,ru;q=0.8"), else ru."""
+    header = request.META.get("HTTP_ACCEPT_LANGUAGE", "") if request else ""
+    for language, _ in parse_accept_lang_header(header):
+        language = language.split("-")[0]
+        if language in settings.MODELTRANSLATION_LANGUAGES:
+            return language
+    return DEFAULT_LANGUAGE
 
 
 def translated(obj, field, language):
