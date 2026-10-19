@@ -40,6 +40,11 @@ MANUAL_FIX_MARK = "(смысловая правка вручную)"
 COLUMN_TARGET_CATEGORY = "→ Категория"
 COLUMN_AUDITED_ITEM_CATEGORY = "Сейчас: предм. категория"
 NEW_MARK = "— НОВАЯ"
+# the duplicates sheet of the repeated audit ("2_ДУБЛИ") lists the products that share a name and paints red the
+# rows of the copies that have to go ("УДАЛИТЬ" in the decision column); a copy is hidden, not deleted
+COLUMN_DUPLICATE_KIND = "Тип дубля"
+COLUMN_DECISION = "Решение"
+REMOVED_FILL = "FFFF0000"
 
 
 def clean(value):
@@ -72,7 +77,8 @@ def without_articul(name, articul):
 class Command(BaseCommand):
     help = (
         "Apply the cells the content team corrected (yellow / green fill) on one sheet of the audit workbook: "
-        "product name, item category, brand. Run with --dry-run first."
+        "product name, item category, brand; on the duplicates sheet - hide the copies marked red. "
+        "Run with --dry-run first."
     )
 
     def add_arguments(self, parser):
@@ -121,7 +127,7 @@ class Command(BaseCommand):
         with transaction.atomic():
             products = {
                 product["id"]: product for product in Product.objects.rewrite(False).filter(pk__in=edits).values(
-                    "id", *NAME_FIELDS, "articul_code", "brand_id", "product_model__brand_id",
+                    "id", *NAME_FIELDS, "articul_code", "is_active", "brand_id", "product_model__brand_id",
                     "product_item_category_id", "product_item_category__name_ru",
                     "product_item_category__product_sub_category__product_category_id",
                 )
@@ -170,8 +176,11 @@ class Command(BaseCommand):
         self.stdout.write(self.style.WARNING(f"  ! {message}"))
 
     @staticmethod
-    def is_corrected(cell):
-        return bool(cell.fill and cell.fill.fill_type == "solid" and cell.fill.fgColor.rgb in EDITED_FILLS)
+    def has_fill(cell, colors):
+        return bool(cell.fill and cell.fill.fill_type == "solid" and cell.fill.fgColor.rgb in colors)
+
+    def is_corrected(self, cell):
+        return self.has_fill(cell, EDITED_FILLS)
 
     @staticmethod
     def corrected_name(product, cells):
@@ -217,6 +226,11 @@ class Command(BaseCommand):
         other_columns = Counter()
         for row in rows:
             values = {header: cell.value for header, cell in zip(headers, row)}
+            if COLUMN_DUPLICATE_KIND in headers:
+                if isinstance(values[COLUMN_ID], (int, float)) and self.has_fill(row[headers.index(COLUMN_ID)],
+                                                                                 {REMOVED_FILL}):
+                    edits[int(values[COLUMN_ID])] = {COLUMN_DECISION: values.get(COLUMN_DECISION)}
+                continue
             edited = [header for header, cell in zip(headers, row) if self.is_corrected(cell)]
             if not edited or not isinstance(values[COLUMN_ID], (int, float)):
                 continue
@@ -234,6 +248,15 @@ class Command(BaseCommand):
 
     def apply(self, product, cells):
         changes = {}
+
+        if COLUMN_DECISION in cells:
+            if product["is_active"]:
+                changes["is_active"] = False
+                self.touched_item_categories.add(product["product_item_category_id"])
+                self.stats["duplicates hidden"] += 1
+                self.log(product, "is_active", True, False)
+            else:
+                self.stats["duplicates already hidden"] += 1
 
         if COLUMN_NAME in cells:
             name = self.corrected_name(product, cells)
