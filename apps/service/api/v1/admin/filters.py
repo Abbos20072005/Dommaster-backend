@@ -1,9 +1,50 @@
+import re
 import django_filters
-from django.db.models import Exists, OuterRef
+from django.db.models import Exists, OuterRef, Q
+from rest_framework.filters import SearchFilter
 from apps.service.models import AddsBrands, Brand, PartnerBrand, ProductModel, ProductBadge, ProductCategory, \
-    ProductSubCategory, ProductItemCategory, ProductAttribute, Order, Product, Comment, CommentReply, Questions, \
-    QuestionsReply, ORDER_STATUS, Sale, HomeBlock, ProductModeration, FilterPage
+    ProductSubCategory, ProductItemCategory, ProductAttribute, Order, OrderItem, Product, Comment, CommentReply, \
+    Questions, QuestionsReply, ORDER_STATUS, Sale, HomeBlock, ProductModeration, FilterPage
 from apps.service.filter_pages import open_pages
+
+
+def all_words(words, *lookups):
+    """Every word is found in at least one of the lookups."""
+    query = Q()
+    for word in words:
+        word_query = Q()
+        for lookup in lookups:
+            word_query |= Q(**{f"{lookup}__icontains": word})
+        query &= word_query
+    return query
+
+
+class OrderSearchFilter(SearchFilter):
+    """`?search=` of the orders list: order number, customer / receiver name, any part of the phone,
+    product name or SKU. A query of digits only (spaces, `+`, `-`, brackets, `#`, `№` are ignored) is a number:
+    the order id, a part of a phone, a part of a product code. Anything else is text: every word must be in
+    the name of the customer / receiver, or in the name / codes of one product of the order."""
+    search_description = "Order number, customer name, part of the phone, product name or SKU"
+    NUMBER_NOISE = re.compile(r"[\s+\-()#№]")
+    PRODUCT_CODES = ("product__articul_code", "product__product_code", "product__barcode")
+    PRODUCT_NAMES = ("product__name_uz", "product__name_ru")
+
+    def filter_queryset(self, request, queryset, view):
+        search = (request.query_params.get(self.search_param) or "").replace("\x00", "").strip()
+        if not search:
+            return queryset
+        items = OrderItem.objects.filter(order=OuterRef("pk"))
+        number = self.NUMBER_NOISE.sub("", search)
+        if number.isdigit():
+            return queryset.filter(
+                Q(id=number) | Q(receiver_phone__contains=number) | Q(customer__phone_number__contains=number)
+                | Exists(items.filter(all_words([number], *self.PRODUCT_CODES)))
+            )
+        words = search.split()
+        return queryset.filter(
+            all_words(words, "receiver_name", "customer__full_name")
+            | Exists(items.filter(all_words(words, *self.PRODUCT_NAMES, *self.PRODUCT_CODES)))
+        )
 
 
 class OrderFilter(django_filters.FilterSet):

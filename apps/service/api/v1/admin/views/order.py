@@ -1,11 +1,13 @@
 from django.db.models import Avg, Count, Q, Sum
 from django.db.models.functions import Coalesce
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
+from rest_framework.filters import OrderingFilter
 from rest_framework.response import Response
 from apps.service.models import Manager, Order, OrderComment
 from utils.admin_views import AdminModelViewSet
-from ..filters import OrderFilter
+from ..filters import OrderFilter, OrderSearchFilter
 from ..serializers import OrderListSerializer, OrderSerializer, OrderStatsSerializer, ManagerSerializer, \
     OrderCommentSerializer, PENDING, COLLECTING, DELIVERING, COMPLETED, CANCELED, PAID
 
@@ -32,7 +34,7 @@ class OrderCommentViewSet(AdminModelViewSet):
 
 class OrderViewSet(AdminModelViewSet):
     filterset_class = OrderFilter
-    search_fields = ("receiver_name", "receiver_phone", "customer__full_name", "customer__phone_number")
+    filter_backends = [DjangoFilterBackend, OrderSearchFilter, OrderingFilter]
     ordering_fields = ("id", "created_at", "total_price", "status")
     ordering = ("-created_at",)
 
