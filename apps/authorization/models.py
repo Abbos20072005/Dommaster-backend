@@ -12,6 +12,10 @@ class Customer(BaseModel):
         USER = 'user', 'User'
         PRORAB = 'prorab', 'Prorab'
 
+    class AccountType(models.TextChoices):
+        CUSTOMER = 'customer', 'Покупатель'
+        PRO = 'pro', 'PRO'
+
     full_name = models.CharField(max_length=150, blank=True, default="", verbose_name="Полное имя")
     phone_number = models.CharField(max_length=14, validators=[validate_number],
                                     verbose_name="Номер телефона")
@@ -19,6 +23,9 @@ class Customer(BaseModel):
     password = models.CharField(blank=True, null=True, verbose_name="Пароль")
     verified = models.BooleanField(default=False, verbose_name="Подтвержден")
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.USER, verbose_name="Роль")
+    # PRO status (projects, expenses); not related to `role`. Changed only by staff, history in CustomerAccountTypeChange
+    account_type = models.CharField(max_length=10, choices=AccountType.choices, default=AccountType.CUSTOMER,
+                                    db_index=True, verbose_name="Тип аккаунта")
     is_blocked = models.BooleanField(default=False, db_index=True, verbose_name="Заблокирован")
     last_login = models.DateTimeField(blank=True, null=True, db_index=True, verbose_name="Последний вход")
     avatar = models.ImageField(upload_to="customer/avatar/", blank=True, null=True, verbose_name="Фото профиля")
@@ -31,9 +38,32 @@ class Customer(BaseModel):
         """Required by DRF throttling to distinguish authenticated vs anonymous users."""
         return True
 
+    @property
+    def is_pro(self):
+        return self.account_type == self.AccountType.PRO
+
     class Meta:
         verbose_name = "Клиент"
         verbose_name_plural = "Клиенты"
+
+
+class CustomerAccountTypeChange(BaseModel):
+    """One change of `Customer.account_type` by staff (grant / revoke PRO); revoking needs a reason."""
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="account_type_changes",
+                                 verbose_name="Клиент")
+    old_value = models.CharField(max_length=10, choices=Customer.AccountType.choices, verbose_name="Было")
+    new_value = models.CharField(max_length=10, choices=Customer.AccountType.choices, verbose_name="Стало")
+    changed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, blank=True, null=True,
+                                   related_name="customer_account_type_changes", verbose_name="Изменил")
+    reason = models.TextField(blank=True, default="", verbose_name="Причина")
+
+    def __str__(self):
+        return f"{self.customer_id}: {self.old_value} -> {self.new_value}"
+
+    class Meta:
+        verbose_name = "Изменение типа аккаунта"
+        verbose_name_plural = "Изменения типа аккаунта"
+        ordering = ("-created_at", "-id")
 
 
 class CustomerAddresses(BaseModel):

@@ -14,6 +14,7 @@ from .analytics import SalesAnalyticsAPIView
 from .home import HomeBlockViewSet, HomePageAPIView, HomePagePublishAPIView
 from .moderation import ProductModerationViewSet
 from .filter_page import FilterPageViewSet
+from .pro import ProjectViewSet
 
 __all__ = [
     "OrderViewSet", "ManagerViewSet", "OrderCommentViewSet", "ProductViewSet", "ProductCategoryViewSet", "ProductSubCategoryViewSet",
@@ -22,4 +23,5 @@ __all__ = [
     "DashboardAPIView", "AddsBrandsViewSet", "TodayAPIView", "SaleViewSet",
     "SalesAnalyticsAPIView", "HomeBlockViewSet", "HomePageAPIView", "HomePagePublishAPIView",
     "ProductModerationViewSet", "FilterPageViewSet",
+    "ProjectViewSet",
 ]

@@ -1098,16 +1098,29 @@ class OrderSerializer(serializers.ModelSerializer):
         )
 
 
+class OrderItemProjectSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+
+
 class OrderItemSerializer(serializers.ModelSerializer):
     product = ProductSerializer(read_only=True)
+    project = serializers.SerializerMethodField(help_text="PRO project the item is linked to; null = not linked "
+                                                          "or the customer is not PRO")
 
     class Meta:
         model = OrderItem
         fields = (
             "id",
             "quantity",
-            "product"
+            "product",
+            "project",
         )
+
+    def get_project(self, obj) -> OrderItemProjectSerializer(allow_null=True):
+        if not self.context.get("show_projects") or obj.project is None:
+            return None
+        return {"id": obj.project.id, "name": obj.project.name}
 
 
 class OrderDetailSerializer(serializers.ModelSerializer):

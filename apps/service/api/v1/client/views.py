@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
 
-from apps.authorization.models import CustomerAddresses
+from apps.authorization.models import Customer, CustomerAddresses
 from apps.service.paginations.get_comments_me import get_comments_me_paginator
 from apps.service.paginations.get_question_replies import get_question_replies_paginator
 from exceptions.error_exception import CustomApiException
@@ -64,6 +64,7 @@ from apps.service.models import (
 )
 from apps.service.attributes import attribute_values_prefetch, request_language
 from apps.service.product_filters import apply_attribute_filters, build_available_filters, category_filters
+from apps.service.pro import money
 from .serializers import (
     FilterPageListItemSerializer,
     FilterPageDetailSerializer,
@@ -2568,6 +2569,7 @@ class OrderViewSet(ViewSet):
                     channel=channel,
                     promocode_id=promocode.id,
                     total_price=promocode_discount_price + delivery_cost,
+                    promocode_discount=max(money(cart.total_price) - money(promocode_discount_price), 0),
                     saved_price=cart.saved_price,
                     products_total_price=cart.products_total_price,
                     order_location=customer_location,
@@ -2585,6 +2587,7 @@ class OrderViewSet(ViewSet):
                     customer_id=request.user.id,
                     channel=channel,
                     total_price=cart.total_price + delivery_cost,
+                    promocode_discount=0,
                     saved_price=cart.saved_price,
                     products_total_price=cart.products_total_price,
                     order_location=customer_location,
@@ -2599,7 +2602,8 @@ class OrderViewSet(ViewSet):
                 cart_id=cart.id, is_checked=True
             ).select_related('product')
             order_items = [
-                OrderItem(order=order, product=item.product, quantity=item.quantity)
+                OrderItem(order=order, product=item.product, quantity=item.quantity,
+                          unit_price=OrderItem.unit_price_of(item.product))
                 for item in cart_items
             ]
             OrderItem.objects.bulk_create(order_items)
@@ -2635,11 +2639,15 @@ class OrderViewSet(ViewSet):
         tags=["Order"],
     )
     def order_detail(self, request, pk):
-        order = Order.objects.filter(id=pk, customer_id=request.user.id).first()
+        order = Order.objects.filter(id=pk, customer_id=request.user.id).prefetch_related(
+            Prefetch("order_items", queryset=OrderItem.objects.select_related("product", "project"))
+        ).first()
         if not order:
             raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
 
-        serializer = OrderDetailSerializer(order, context={"request": request})
+        # projects of a customer who is no longer PRO are hidden
+        show_projects = Customer.objects.filter(id=request.user.id, account_type=Customer.AccountType.PRO).exists()
+        serializer = OrderDetailSerializer(order, context={"request": request, "show_projects": show_projects})
         return Response(
             data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK
         )

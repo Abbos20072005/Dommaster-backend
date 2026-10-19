@@ -5,7 +5,7 @@ from .views import BrandViewSet, PartnerBrandViewSet, ProductBadgeViewSet, Produ
     CommentViewSet, QuestionViewSet, CommentReplyViewSet, QuestionReplyViewSet, DashboardAPIView, ManagerViewSet, \
     OrderCommentViewSet, ProductModelViewSet, AddsBrandsViewSet, TodayAPIView, SaleViewSet, SalesAnalyticsAPIView, \
     HomeBlockViewSet, HomePageAPIView, HomePagePublishAPIView, ProductModerationViewSet, \
-    FilterPageViewSet
+    FilterPageViewSet, ProjectViewSet
 
 # SimpleRouter: mounted at the admin root, DefaultRouter's API-root view would take `api/v1/admin/`
 router = SimpleRouter()
@@ -31,6 +31,7 @@ router.register("question-replies", QuestionReplyViewSet, basename="admin_questi
 router.register("sales", SaleViewSet, basename="admin_sale")
 router.register("home-blocks", HomeBlockViewSet, basename="admin_home_block")
 router.register("filter-pages", FilterPageViewSet, basename="admin_filter_page")
+router.register("pro-projects", ProjectViewSet, basename="admin_pro_project")
 
 urlpatterns = router.urls + [
     path("dashboard/", DashboardAPIView.as_view(), name="admin_dashboard"),

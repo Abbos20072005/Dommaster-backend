@@ -99,6 +99,14 @@ class CustomerSerializer(serializers.ModelSerializer):
         )
 
 
+class CustomerMeSerializer(CustomerSerializer):
+    """Own profile (`auth/me/`, profile update): adds `account_type`, read-only - only staff changes it."""
+
+    class Meta(CustomerSerializer.Meta):
+        fields = CustomerSerializer.Meta.fields + ("account_type",)
+        read_only_fields = ("account_type",)
+
+
 class CustomerAddressesSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomerAddresses

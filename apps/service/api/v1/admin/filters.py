@@ -4,7 +4,7 @@ from django.db.models import Exists, OuterRef, Q
 from rest_framework.filters import SearchFilter
 from apps.service.models import AddsBrands, Brand, PartnerBrand, ProductModel, ProductBadge, ProductCategory, \
     ProductSubCategory, ProductItemCategory, ProductAttribute, Order, OrderItem, Product, Comment, CommentReply, \
-    Questions, QuestionsReply, ORDER_STATUS, Sale, HomeBlock, ProductModeration, FilterPage
+    Questions, QuestionsReply, ORDER_STATUS, Sale, HomeBlock, ProductModeration, FilterPage, Project
 from apps.service.filter_pages import open_pages
 
 
@@ -256,3 +256,15 @@ class FilterPageFilter(django_filters.FilterSet):
     def filter_is_open(self, queryset, name, value):
         ids = open_pages().values("id")
         return queryset.filter(id__in=ids) if value else queryset.exclude(id__in=ids)
+
+
+class ProjectFilter(django_filters.FilterSet):
+    has_items = django_filters.BooleanFilter(method="filter_has_items")
+
+    class Meta:
+        model = Project
+        fields = ("customer", "status")
+
+    def filter_has_items(self, queryset, name, value):
+        # `items_count` is annotated in ProjectViewSet.get_queryset
+        return queryset.filter(items_count__gt=0) if value else queryset.filter(items_count=0)

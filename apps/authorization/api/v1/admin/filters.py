@@ -13,6 +13,7 @@ def active_since():
 
 class CustomerFilter(django_filters.FilterSet):
     role = django_filters.ChoiceFilter(choices=Customer.Role.choices)
+    account_type = django_filters.ChoiceFilter(choices=Customer.AccountType.choices)
     is_active = django_filters.BooleanFilter(method="filter_is_active", label=f"Logged in within {ACTIVE_DAYS} days")
     from_created = django_filters.DateFilter(field_name="created_at", lookup_expr="date__gte")
     to_created = django_filters.DateFilter(field_name="created_at", lookup_expr="date__lte")

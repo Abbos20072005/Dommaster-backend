@@ -1,6 +1,6 @@
 from django.contrib import admin
 from .models import Customer, OTP, FcmToken, CustomerAddresses, PasswordResetToken, StaffProfile, TelegramLink, \
-    TelegramLinkToken
+    TelegramLinkToken, CustomerAccountTypeChange
 from django.contrib.auth.hashers import make_password
 from unfold.admin import ModelAdmin
 from apps.base.admin_actions import mark_verified, mark_unverified, mark_default, get_model_fields
@@ -11,7 +11,9 @@ class CustomerAdmin(ModelAdmin):
     list_display = get_model_fields(Customer, exclude=("password",))
     list_display_links = ('id', 'full_name')
     search_fields = ('full_name', 'phone_number', 'email')
-    list_filter = ('verified', 'role', 'created_at')
+    list_filter = ('verified', 'role', 'account_type', 'created_at')
+    # PRO is granted / revoked only through the admin API, which keeps the history
+    readonly_fields = ('account_type',)
     date_hierarchy = "created_at"
     actions = [mark_verified, mark_unverified]
 
@@ -88,3 +90,20 @@ class StaffProfileAdmin(ModelAdmin):
     search_fields = ("full_name", "position", "user__username")
     list_filter = ("must_change_password", "created_at")
     autocomplete_fields = ("user", "created_by")
+
+
+@admin.register(CustomerAccountTypeChange)
+class CustomerAccountTypeChangeAdmin(ModelAdmin):
+    list_display = get_model_fields(CustomerAccountTypeChange)
+    list_display_links = ("id", "customer")
+    search_fields = ("customer__full_name", "customer__phone_number", "reason")
+    list_filter = ("new_value", "created_at")
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

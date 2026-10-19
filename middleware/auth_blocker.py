@@ -44,6 +44,16 @@ class IsAuthenticatedMiddleware(MiddlewareMixin):
             "notification_detail",
             "notification_unread_count",
             "notification_read_all",
+            "pro_projects",
+            "pro_project",
+            "pro_project_archive",
+            "pro_project_restore",
+            "pro_project_summary",
+            "pro_project_items",
+            "pro_dashboard",
+            "pro_unlinked_orders",
+            "pro_order_link",
+            "pro_order_unlink",
         }
 
         match = request.resolver_match

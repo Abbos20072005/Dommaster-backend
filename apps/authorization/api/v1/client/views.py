@@ -17,7 +17,7 @@ from .serializers import CustomerSerializer, LoginSerializer, RegisterSerializer
     OTPResendSerializer, ChangePasswordSerializer, ForgotPasswordSerializer, CustomerAddressesSerializer, \
     CustomerAddressesUpdateSerializer, CustomerAddressesCreateSerializer, ResetPasswordSerializer, FCMTokenSerializer, \
     FCMTokenRequestSerializer, FCMTokenDeleteSerializer, TokenRefreshSerializer, PhoneAuthSerializer, \
-    TelegramOTPSerializer
+    TelegramOTPSerializer, CustomerMeSerializer
 from django.utils import timezone
 from apps.integration.eskiz import EskizOTP
 from utils.send_notification import send_notification_to_customer
@@ -216,7 +216,7 @@ class AuthViewSet(ViewSet):
     @extend_schema(
         summary="Auth me",
         description="Auth me",
-        responses={200: CustomerSerializer()},
+        responses={200: CustomerMeSerializer()},
         tags=["Auth"]
     )
     def auth_me(self, request):
@@ -224,7 +224,7 @@ class AuthViewSet(ViewSet):
         if not customer:
             raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
 
-        serializer = CustomerSerializer(customer, context={'request': request})
+        serializer = CustomerMeSerializer(customer, context={'request': request})
         return Response(data={'result': serializer.data, 'ok': True}, status=status.HTTP_200_OK)
 
     @extend_schema(
@@ -233,8 +233,8 @@ class AuthViewSet(ViewSet):
                     "multipart/form-data with the `avatar` file (jpg/jpeg, png, webp, max 5 MB); "
                     "to remove it send `avatar: null` (JSON) or an empty `avatar` (multipart). "
                     "The old image file is deleted from storage.",
-        request={"application/json": CustomerSerializer, "multipart/form-data": CustomerSerializer},
-        responses={202: CustomerSerializer()},
+        request={"application/json": CustomerMeSerializer, "multipart/form-data": CustomerMeSerializer},
+        responses={202: CustomerMeSerializer()},
         tags=["Auth"]
     )
     def update_customer_info(self, request):
@@ -243,7 +243,7 @@ class AuthViewSet(ViewSet):
         if not customer:
             raise CustomApiException(error_code=ErrorCodes.FORBIDDEN)
 
-        serializer = CustomerSerializer(customer, data=data, partial=True, context={"request": request})
+        serializer = CustomerMeSerializer(customer, data=data, partial=True, context={"request": request})
         if not serializer.is_valid():
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
 

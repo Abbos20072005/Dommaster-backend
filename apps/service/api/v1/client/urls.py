@@ -15,6 +15,7 @@ from .views import (
     FilterPageViewSet,
     MerchantFeedViewSet,
 )
+from .pro_views import ProViewSet
 
 urlpatterns = [
     path(
@@ -281,4 +282,21 @@ urlpatterns = [
         "products/create/",
         ProductViewSet.as_view({"post": "product_create"}, name="product_create"),
     ),
+    # PRO projects (apps/service/pro.py); every name is in auth_blocker.blocked_view_names
+    path("pro/projects/", ProViewSet.as_view({"get": "project_list", "post": "project_create"}),
+         name="pro_projects"),
+    path("pro/projects/<int:pk>/",
+         ProViewSet.as_view({"get": "project_detail", "patch": "project_update", "delete": "project_delete"}),
+         name="pro_project"),
+    path("pro/projects/<int:pk>/archive/", ProViewSet.as_view({"post": "project_archive"}),
+         name="pro_project_archive"),
+    path("pro/projects/<int:pk>/restore/", ProViewSet.as_view({"post": "project_restore"}),
+         name="pro_project_restore"),
+    path("pro/projects/<int:pk>/summary/", ProViewSet.as_view({"get": "project_summary"}),
+         name="pro_project_summary"),
+    path("pro/projects/<int:pk>/items/", ProViewSet.as_view({"get": "project_items"}), name="pro_project_items"),
+    path("pro/dashboard/", ProViewSet.as_view({"get": "dashboard"}), name="pro_dashboard"),
+    path("pro/orders/unlinked/", ProViewSet.as_view({"get": "unlinked_orders"}), name="pro_unlinked_orders"),
+    path("pro/orders/<int:pk>/link/", ProViewSet.as_view({"post": "order_link"}), name="pro_order_link"),
+    path("pro/orders/<int:pk>/unlink/", ProViewSet.as_view({"post": "order_unlink"}), name="pro_order_unlink"),
 ]

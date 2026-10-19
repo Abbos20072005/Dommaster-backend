@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.db import models
 
 from abstract_model.base_model import BaseModel
@@ -5,6 +7,7 @@ from apps.authorization.models import Customer, CustomerAddresses
 from apps.base.models import Promocodes, MarketBranch
 from django.conf import settings
 from .choices import ORDER_STATUS, PAYMENT_STATUS, DELIVERY_TYPE, PAYMENT_TYPE, CASH_PAYMENT_METHOD, ORDER_CHANNEL
+from .catalog import ProductCategory
 from .product import Product
 
 
@@ -53,9 +56,21 @@ class Order(BaseModel):
                                          verbose_name="Стоимость доставки")
     yandex_claim_id = models.CharField(max_length=64, blank=True, null=True, verbose_name="ID заявки Яндекс Доставки")
     yandex_claim_status = models.CharField(max_length=50, blank=True, null=True, verbose_name="Статус заявки Яндекс Доставки")
+    # customer's account type when the order was placed (set in save()); null = order older than the field
+    account_type_at_order = models.CharField(max_length=10, choices=Customer.AccountType.choices, blank=True,
+                                             null=True, verbose_name="Тип аккаунта при заказе")
+    # promocode discount taken off the goods; null = order older than the field (derived from the totals)
+    promocode_discount = models.DecimalField(max_digits=18, decimal_places=2, blank=True, null=True,
+                                             verbose_name="Скидка по промокоду")
 
     def __str__(self):
         return str(self.id)
+
+    def save(self, *args, **kwargs):
+        if self._state.adding and self.account_type_at_order is None and self.customer_id:
+            self.account_type_at_order = Customer.objects.filter(pk=self.customer_id).values_list(
+                "account_type", flat=True).first()
+        super().save(*args, **kwargs)
 
     class Meta:
         verbose_name = "Заказ"
@@ -70,9 +85,23 @@ class OrderItem(BaseModel):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="product_order_item",
                                 verbose_name="Продукт")
     quantity = models.IntegerField(default=0, verbose_name="Количество")
+    # price of one unit at the time of the order, after the product discount; null = item older than the field
+    unit_price = models.DecimalField(max_digits=18, decimal_places=2, blank=True, null=True,
+                                     verbose_name="Цена за единицу")
+    # PRO project the item is linked to (apps/service/pro.py) + the product's root category at linking time
+    project = models.ForeignKey("service.Project", on_delete=models.SET_NULL, blank=True, null=True,
+                                related_name="order_items", verbose_name="Проект")
+    category_root = models.ForeignKey(ProductCategory, on_delete=models.SET_NULL, blank=True, null=True,
+                                      related_name="+", verbose_name="Категория при привязке")
 
     def __str__(self):
         return str(self.id)
+
+    @staticmethod
+    def unit_price_of(product):
+        """What the cart charges for one unit: the discount price when set."""
+        price = product.discount_price if product.discount_price is not None else product.price
+        return Decimal(str(price or 0)).quantize(Decimal("0.01"))
 
     class Meta:
         verbose_name = "Заказ продукта"

@@ -36,6 +36,12 @@ class ErrorCodes(Enum):
     TELEGRAM_OTP_LIMIT = 31
     TELEGRAM_UNAVAILABLE = 32
     TELEGRAM_LINK_NOT_FOUND = 33
+    PRO_REQUIRED = 34
+    PROJECT_NAME_TAKEN = 35
+    PROJECT_HAS_ITEMS = 36
+    PROJECT_ITEMS_CONFLICT = 37
+    PROJECT_ARCHIVED = 38
+    ORDER_CANCELED = 39
 
 
 error_messages = {
@@ -74,6 +80,12 @@ error_messages = {
     31: {"result": "Telegram OTP limit reached, try again later", "http_status": status.HTTP_400_BAD_REQUEST},
     32: {"result": "Telegram bot is unavailable", "http_status": status.HTTP_503_SERVICE_UNAVAILABLE},
     33: {"result": "Telegram is not linked", "http_status": status.HTTP_404_NOT_FOUND},
+    34: {"result": "Available to PRO accounts only", "http_status": status.HTTP_403_FORBIDDEN},
+    35: {"result": "An active project with this name already exists", "http_status": status.HTTP_400_BAD_REQUEST},
+    36: {"result": "Project has linked order items, archive it instead", "http_status": status.HTTP_409_CONFLICT},
+    37: {"result": "Some items are linked to another project", "http_status": status.HTTP_409_CONFLICT},
+    38: {"result": "Project is archived", "http_status": status.HTTP_400_BAD_REQUEST},
+    39: {"result": "Order is canceled", "http_status": status.HTTP_400_BAD_REQUEST},
 }
 
 

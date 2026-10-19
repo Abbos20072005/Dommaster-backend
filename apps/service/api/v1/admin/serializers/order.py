@@ -5,6 +5,7 @@ from rest_framework import serializers
 from apps.authorization.models import Customer, CustomerAddresses
 from apps.base.models import MarketBranch, Promocodes
 from apps.service.models import Manager, Order, OrderComment, OrderItem, Product
+from apps.service.pro import money
 from utils.admin_serializers import RelationSerializer
 
 # ORDER_STATUS
@@ -169,9 +170,16 @@ class OrderSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def _set_items(order, items):
+        # a product that stays in the order keeps its PRO project link
+        links = {item.product_id: (item.project_id, item.category_root_id)
+                 for item in order.order_items.filter(project__isnull=False)}
         order.order_items.all().delete()
         OrderItem.objects.bulk_create(
-            OrderItem(order=order, product=item["product"], quantity=item["quantity"]) for item in items
+            OrderItem(order=order, product=item["product"], quantity=item["quantity"],
+                      unit_price=OrderItem.unit_price_of(item["product"]),
+                      project_id=links.get(item["product"].id, (None, None))[0],
+                      category_root_id=links.get(item["product"].id, (None, None))[1])
+            for item in items
         )
 
     @staticmethod
@@ -187,12 +195,14 @@ class OrderSerializer(serializers.ModelSerializer):
         order.products_total_price = products_total
         order.saved_price = products_total - total
 
+        goods_total = total
         promocode = order.promocode
         if promocode:
             if promocode.discount_price and not promocode.discount_precent:
                 total -= promocode.discount_price
             elif promocode.discount_precent and not promocode.discount_price:
                 total *= 1 - promocode.discount_precent / 100
+        order.promocode_discount = money(goods_total) - money(max(total, 0.0))
         delivery_cost = float(order.delivery_price or 0) if order.delivery_type == DELIVERY else 0.0
         order.total_price = max(total, 0.0) + delivery_cost
 

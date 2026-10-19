@@ -48,6 +48,7 @@ from .moderation import ModerationStaffSerializer, ModerationProductSerializer, 
     ModerationBulkApproveSerializer, ModerationSkippedSerializer, ModerationBulkApproveResultSerializer, \
     ModerationStatsSerializer
 from .filter_page import FilterPageSerializer
+from .pro import ProjectSerializer, ProjectDetailSerializer
 
 __all__ = [
     "SaleProductSerializer", "SaleListSerializer", "SaleSerializer", "SaleProductReorderSerializer",
@@ -93,4 +94,5 @@ __all__ = [
     "ModerationStaffSerializer", "ModerationProductSerializer", "ModerationProductPreviewSerializer", "ReadinessCheckSerializer", "ReadinessAttributeSerializer", "ReadinessShortSerializer", "ReadinessSerializer",
     "ProductModerationListSerializer", "ProductModerationSerializer", "ModerationRejectSerializer", "ModerationBulkApproveSerializer", "ModerationSkippedSerializer", "ModerationBulkApproveResultSerializer", "ModerationStatsSerializer",
     "FilterPageSerializer",
+    "ProjectSerializer", "ProjectDetailSerializer",
 ]

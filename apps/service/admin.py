@@ -8,6 +8,7 @@ from .models import Product, ProductCategory, ProductSubCategory, ProductItemCat
     Announcements, ProductItemCategoryFilterSchema, ProductFilterNumericValue, ProductUnit, ProductRemaining, \
     ProductAttribute, ProductAttributeOption, ProductItemCategoryAttribute, ProductAttributeValue, Manager, \
     OrderComment, RelatedProduct, AlternativeProduct, CrossSellProduct, ProductModeration
+from .models import Project, OrderItemProjectChange
 from .signals import clear_category_filter_cache
 from unfold.admin import ModelAdmin, TabularInline
 from apps.base.admin_actions import make_visible, make_hidden, activate, deactivate, get_model_fields, \
@@ -557,3 +558,30 @@ class ProductRemainingAdmin(ModelAdmin):
     autocomplete_fields = ("branch", "product")
     date_hierarchy = "created_at"
     list_per_page = 25
+
+
+class ReadOnlyAdmin(ModelAdmin):
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(Project)
+class ProjectAdmin(ReadOnlyAdmin):
+    list_display = get_model_fields(Project)
+    list_display_links = ("id", "name")
+    search_fields = ("name", "customer__full_name", "customer__phone_number")
+    list_filter = ("status", "created_at")
+
+
+@admin.register(OrderItemProjectChange)
+class OrderItemProjectChangeAdmin(ReadOnlyAdmin):
+    list_display = get_model_fields(OrderItemProjectChange)
+    list_display_links = ("id", "order_item")
+    search_fields = ("order__id", "customer__phone_number")
+    list_filter = ("action", "created_at")
