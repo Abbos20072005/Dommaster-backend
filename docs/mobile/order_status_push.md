@@ -44,12 +44,14 @@ DELETE {{host}}/api/v1/auth/fcm/token/     {"device_id": "..."}
 {
   "type": "order_status",
   "order_id": "125",
-  "status": "3"
+  "status": "3",
+  "deeplink": "buildex://order/125"
 }
 ```
 
 - `type` — push turini ajratish uchun, buyurtma statusi uchun har doim `order_status`.
 - `order_id` — push bosilganda shu buyurtma sahifasini ochish uchun.
+- `deeplink` — `buildex://order/<order_id>`, bildirishnomalar deeplink'lari bilan bir xil sxema (`notifications.md`); push bosilganda buyurtma sahifasini ochadi. `order_id` bilan bir xil ma'lumot — eski ilova versiyalari `order_id` ni o'qishda davom etishi mumkin.
 - `status` — yangi status; ilova ochiq bo'lsa buyurtma ekranini shu qiymat bilan yangilash yoki matnni o'zi lokalizatsiya qilish mumkin.
 
 ---

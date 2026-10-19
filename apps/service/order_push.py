@@ -8,6 +8,7 @@ import logging
 
 from django.db import transaction
 
+from apps.base.models import Notification
 from utils.background import run_in_background
 from utils.send_notification import send_push_to_customer
 
@@ -36,12 +37,18 @@ def _send_in_background(order_id, customer_id, status):
     run_in_background(tasks.push_order_status, order_id, customer_id, status)
 
 
+def order_deeplink(order_id):
+    """`buildex://order/125` — the same scheme as the notification deeplinks."""
+    return f"{Notification.DEEPLINK_SCHEME}order/{order_id}"
+
+
 def send_order_status_push(order_id, customer_id, status):
     title, body = ORDER_STATUS_PUSH[status]
     sent = send_push_to_customer(
         customer_id, title, body.format(order_id=order_id),
         # FCM data values must be strings
-        data={"type": ORDER_STATUS_PUSH_TYPE, "order_id": str(order_id), "status": str(status)},
+        data={"type": ORDER_STATUS_PUSH_TYPE, "order_id": str(order_id), "status": str(status),
+              "deeplink": order_deeplink(order_id)},
     )
     logger.info("Order status push: order_id=%s status=%s devices=%s", order_id, status, sent)
     return sent
