@@ -8,9 +8,9 @@ All endpoints need `Authorization: Bearer <access token>` (no token → 401). A 
 
 ## Is the customer PRO?
 
-`GET /api/v1/auth/auth/me/` → `result.account_type`: `customer` or `pro`. Read-only: sending it to
-`PATCH /api/v1/auth/customer/update/` changes nothing. `role` (`user` / `prorab`) is a separate old field, it does
-not give PRO.
+PRO = the old prorab: `GET /api/v1/auth/auth/me/` → `result.role` = `prorab` (`user` = not PRO), the same field as
+before. It is read-only now: sending `role` to `PATCH /api/v1/auth/customer/update/` changes nothing — only the staff
+set it.
 
 When PRO is taken away the projects are kept, just hidden (403); when it is given back they come back as they were.
 
@@ -58,7 +58,7 @@ When PRO is taken away the projects are kept, just hidden (403); when it is give
 `POST /api/v1/pro/orders/<order_id>/unlink/` with `{ "item_ids": [...] }` (or `{}` for the whole order) removes
 the project — same answer.
 
-Orders placed before the customer became PRO can be linked as well (temporary rule).
+Orders placed before the customer became PRO (prorab) can be linked as well (temporary rule).
 
 **Order detail** `GET /api/v1/order/<id>/`: every `order_items[]` has `project` — `{"id", "name"}` or `null`
 (not linked, or the customer is not PRO).

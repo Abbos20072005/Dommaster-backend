@@ -9,7 +9,7 @@ MONEY = {"max_digits": 18, "decimal_places": 2}
 class ProjectCustomerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Customer
-        fields = ("id", "full_name", "phone_number", "account_type")
+        fields = ("id", "full_name", "phone_number", "role")
 
 
 class ProjectSerializer(serializers.ModelSerializer):

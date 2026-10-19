@@ -9,7 +9,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from rest_framework.test import APIClient
 
-from apps.authorization.account_type import change_account_type
+from apps.authorization.roles import change_role
 from apps.authorization.api.v1.client.views import issue_customer_tokens
 from apps.authorization.models import Customer, CustomerAddresses, OTP
 from apps.base.models import Promocodes
@@ -20,11 +20,11 @@ from apps.service.models import (
 from apps.service.pro import allocate
 
 D = Decimal
-PRO = Customer.AccountType.PRO
+PRO = Customer.Role.PRORAB
 
 
-def make_customer(phone, account_type=Customer.AccountType.CUSTOMER):
-    return Customer.objects.create(phone_number=phone, full_name=phone, account_type=account_type)
+def make_customer(phone, role=Customer.Role.USER):
+    return Customer.objects.create(phone_number=phone, full_name=phone, role=role)
 
 
 def make_item_category(name):
@@ -65,7 +65,7 @@ class AllocateTests(TestCase):
         self.assertEqual(allocate(D("0"), [D(5)]), [D("0.00")])
 
 
-class AccountTypeTests(ApiTestCase):
+class RoleTests(ApiTestCase):
     def setUp(self):
         self.customer = make_customer("+998900000001")
         self.staff = get_user_model().objects.create_user("admin", password="x", is_staff=True)
@@ -73,37 +73,43 @@ class AccountTypeTests(ApiTestCase):
         self.admin.force_authenticate(self.staff)
 
     def test_grant_and_revoke_keep_history(self):
-        url = f"/api/v1/admin/customers/{self.customer.id}/account-type/"
-        response = self.admin.post(url, {"account_type": "pro"}, format="json")
+        url = f"/api/v1/admin/customers/{self.customer.id}/role/"
+        response = self.admin.post(url, {"role": "prorab"}, format="json")
         self.assertEqual(response.status_code, 200, response.data)
-        self.assertEqual(response.data["account_type"], "pro")
+        self.assertEqual(response.data["role"], "prorab")
+        self.assertEqual(self.admin.post(url, {"role": "prorab"}, format="json").status_code, 400)
 
         # revoking needs a reason
-        self.assertEqual(self.admin.post(url, {"account_type": "customer"}, format="json").status_code, 400)
-        response = self.admin.post(url, {"account_type": "customer", "reason": "Shartnoma tugadi"}, format="json")
+        self.assertEqual(self.admin.post(url, {"role": "user"}, format="json").status_code, 400)
+        response = self.admin.post(url, {"role": "user", "reason": "Shartnoma tugadi"}, format="json")
         self.assertEqual(response.status_code, 200, response.data)
 
-        history = self.admin.get(f"/api/v1/admin/customers/{self.customer.id}/account-type-history/").data
+        history = self.admin.get(f"/api/v1/admin/customers/{self.customer.id}/role-history/").data
         self.assertEqual(history["count"], 2)
         latest = history["results"][0]
         self.assertEqual((latest["old_value"], latest["new_value"], latest["reason"]),
-                         ("pro", "customer", "Shartnoma tugadi"))
+                         ("prorab", "user", "Shartnoma tugadi"))
         self.assertEqual(latest["changed_by"]["id"], self.staff.id)
 
-    def test_customer_cannot_change_own_type(self):
+        # the customers CRUD can't change the role (no history there)
+        self.admin.patch(f"/api/v1/admin/customers/{self.customer.id}/", {"role": "prorab"}, format="json")
+        self.customer.refresh_from_db()
+        self.assertEqual(self.customer.role, "user")
+
+    def test_customer_cannot_change_own_role(self):
         client = self.client_for(self.customer)
         me = client.get("/api/v1/auth/auth/me/").data["result"]
-        self.assertEqual(me["account_type"], "customer")
-        client.patch("/api/v1/auth/customer/update/", {"account_type": "pro", "full_name": "Ali"}, format="json")
+        self.assertEqual(me["role"], "user")
+        client.patch("/api/v1/auth/customer/update/", {"role": "prorab", "full_name": "Ali"}, format="json")
         self.customer.refresh_from_db()
-        self.assertEqual((self.customer.account_type, self.customer.full_name), ("customer", "Ali"))
+        self.assertEqual((self.customer.role, self.customer.full_name), ("user", "Ali"))
 
-    def test_order_keeps_account_type(self):
+    def test_order_keeps_role(self):
         order = Order.objects.create(customer=self.customer)
-        change_account_type(self.customer.id, PRO, self.staff)
+        change_role(self.customer.id, PRO, self.staff)
         pro_order = Order.objects.create(customer=self.customer)
         order.refresh_from_db()
-        self.assertEqual((order.account_type_at_order, pro_order.account_type_at_order), ("customer", "pro"))
+        self.assertEqual((order.role_at_order, pro_order.role_at_order), ("user", "prorab"))
 
 
 class ProjectApiTests(ApiTestCase):
@@ -156,12 +162,12 @@ class ProjectApiTests(ApiTestCase):
         detail = self.client_pro.get(f"/api/v1/order/{order.id}/").data["result"]
         self.assertEqual(detail["order_items"][0]["project"], {"id": project, "name": "Dacha"})
 
-        change_account_type(self.customer.id, Customer.AccountType.CUSTOMER, None, "test")
+        change_role(self.customer.id, Customer.Role.USER, None, "test")
         self.assertEqual(self.client_pro.get("/api/v1/pro/projects/").status_code, 403)
         self.assertIsNone(self.client_pro.get(f"/api/v1/order/{order.id}/").data["result"]["order_items"][0]["project"])
         self.assertTrue(Project.objects.filter(id=project).exists())
 
-        change_account_type(self.customer.id, PRO, None)
+        change_role(self.customer.id, PRO, None)
         self.assertEqual(len(self.client_pro.get("/api/v1/pro/projects/").data["result"]), 1)
 
 
@@ -333,7 +339,7 @@ class UnchangedFlowsTests(ApiTestCase):
                                format="json")
         self.assertEqual(response.status_code, 200, response.data)
         client.credentials(HTTP_AUTHORIZATION=f"Bearer {response.data['result']['access_token']}")
-        self.assertEqual(client.get("/api/v1/auth/auth/me/").data["result"]["account_type"], "pro")
+        self.assertEqual(client.get("/api/v1/auth/auth/me/").data["result"]["role"], "prorab")
 
     def test_checkout(self):
         cart = Cart.objects.create(customer=self.customer)
@@ -355,7 +361,7 @@ class UnchangedFlowsTests(ApiTestCase):
         self.assertEqual((order.total_price, order.products_total_price, order.saved_price),
                          (227000.0, 250000.0, 20000.0))
         self.assertIn("amount=227000.0", response.data["result"])
-        self.assertEqual((order.promocode_discount, order.account_type_at_order), (D("23000.00"), "pro"))
+        self.assertEqual((order.promocode_discount, order.role_at_order), (D("23000.00"), "prorab"))
         self.assertEqual(sorted(order.order_items.values_list("unit_price", "quantity")),
                          [(D("50000.00"), 1), (D("90000.00"), 2)])
         self.assertFalse(CartItem.objects.filter(cart=cart).exists())

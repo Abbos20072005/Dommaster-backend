@@ -23,7 +23,7 @@ PAID = 2
 DELIVERY = 0
 
 # Temporary rule (BLD-292): orders placed before the customer got PRO can be linked too.
-# False = only orders placed as PRO (`Order.account_type_at_order`).
+# False = only orders placed as PRO (`Order.role_at_order` prorab).
 LINK_PRE_PRO_ORDERS = True
 
 CENT = Decimal("0.01")
@@ -37,7 +37,7 @@ def money(value):
 # --- access ---------------------------------------------------------------------------------------------------------
 
 def pro_customer(request):
-    """The request's customer when it is PRO, else 403 (projects of a former PRO stay in the db, hidden)."""
+    """The request's customer when it is PRO (role prorab), else 403 (projects of a former PRO stay in the db, hidden)."""
     customer = Customer.objects.filter(id=request.user.id).first()
     if not customer or not customer.is_pro:
         raise CustomApiException(error_code=ErrorCodes.PRO_REQUIRED)
@@ -147,7 +147,7 @@ def link_items(customer, order_id, project_id, item_ids=None, force=False):
     order = _lock_order(customer, order_id)
     if order.status == CANCELED:
         raise CustomApiException(error_code=ErrorCodes.ORDER_CANCELED)
-    if not LINK_PRE_PRO_ORDERS and order.account_type_at_order != Customer.AccountType.PRO:
+    if not LINK_PRE_PRO_ORDERS and order.role_at_order != Customer.Role.PRORAB:
         raise CustomApiException(error_code=ErrorCodes.FORBIDDEN, message="Order was placed before PRO")
 
     items = _order_items(order, item_ids)
@@ -194,7 +194,7 @@ def orders_with_unlinked_items(customer):
     orders = Order.objects.filter(customer=customer).exclude(status=CANCELED).filter(
         Exists(OrderItem.objects.filter(order=OuterRef("pk"), project__isnull=True)))
     if not LINK_PRE_PRO_ORDERS:
-        orders = orders.filter(account_type_at_order=Customer.AccountType.PRO)
+        orders = orders.filter(role_at_order=Customer.Role.PRORAB)
     return orders.annotate(
         items_count=Count("order_items"),
         unlinked_items_count=Count("order_items", filter=Q(order_items__project__isnull=True)),

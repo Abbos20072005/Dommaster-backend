@@ -2646,7 +2646,7 @@ class OrderViewSet(ViewSet):
             raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
 
         # projects of a customer who is no longer PRO are hidden
-        show_projects = Customer.objects.filter(id=request.user.id, account_type=Customer.AccountType.PRO).exists()
+        show_projects = Customer.objects.filter(id=request.user.id, role=Customer.Role.PRORAB).exists()
         serializer = OrderDetailSerializer(order, context={"request": request, "show_projects": show_projects})
         return Response(
             data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK

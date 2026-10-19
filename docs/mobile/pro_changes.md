@@ -10,19 +10,20 @@ tovarlarni loyihalarga bog'laydi va har bir loyiha qancha turganini ko'radi. To'
 
 | Endpoint | Oldin | Hozir | Eski front buziladimi |
 | --- | --- | --- | --- |
-| `GET auth/auth/me/` | `id, full_name, phone_number, email, role, avatar` | `+ account_type`: `customer` / `pro` | yo'q |
-| `PATCH auth/customer/update/` | — | javobda `account_type`; yuborilsa **e'tiborga olinmaydi** | yo'q |
+| `GET auth/auth/me/` | `role`: `user` / `prorab` | o'zgarmagan; `prorab` = PRO | yo'q |
+| `PATCH auth/customer/update/` → `role` | mijoz o'zi o'zgartira olardi | **faqat o'qiladi** (yuborilsa e'tiborga olinmaydi) | rol tanlash ekrani bo'lsa — u ishlamay qoladi |
 | `GET order/<id>/` → `order_items[]` | `id, quantity, product` | `+ project`: `{"id", "name"}` yoki `null` | yo'q |
 | `POST order/` (checkout) | — | o'zgarmagan: so'rov, javob, narxlar avvalgidek | yo'q |
 
-`role` (`user` / `prorab`) eski maydon, PRO bilan bog'liq emas. PRO ni faqat `account_type` bildiradi.
+PRO = eski **prorab** (`role` = `prorab`). Yangi maydon yo'q. Rolni endi faqat admin o'zgartiradi (eski parolli
+`auth/register/` hali `role` ni qabul qiladi — eski ilova versiyasi uchun tegilmagan).
 
 `project` = `null` ikki holatda: qator bog'lanmagan, yoki mijoz hozir PRO emas.
 
 ## Yangi endpointlar (hammasi token bilan)
 
 Mijoz PRO bo'lmasa, har bir `/pro/` endpoint **403** qaytaradi (`error_code` 34). PRO bo'limini shu bo'yicha
-yashirish mumkin, lekin `auth/me/` dagi `account_type` bo'yicha yashirish yaxshiroq.
+yashirish mumkin, lekin `auth/me/` dagi `role == "prorab"` bo'yicha yashirish yaxshiroq.
 
 | Endpoint | Nima qiladi |
 | --- | --- |

@@ -56,9 +56,9 @@ class Order(BaseModel):
                                          verbose_name="Стоимость доставки")
     yandex_claim_id = models.CharField(max_length=64, blank=True, null=True, verbose_name="ID заявки Яндекс Доставки")
     yandex_claim_status = models.CharField(max_length=50, blank=True, null=True, verbose_name="Статус заявки Яндекс Доставки")
-    # customer's account type when the order was placed (set in save()); null = order older than the field
-    account_type_at_order = models.CharField(max_length=10, choices=Customer.AccountType.choices, blank=True,
-                                             null=True, verbose_name="Тип аккаунта при заказе")
+    # customer's role when the order was placed (set in save(); prorab = PRO); null = order older than the field
+    role_at_order = models.CharField(max_length=20, choices=Customer.Role.choices, blank=True, null=True,
+                                     verbose_name="Роль клиента при заказе")
     # promocode discount taken off the goods; null = order older than the field (derived from the totals)
     promocode_discount = models.DecimalField(max_digits=18, decimal_places=2, blank=True, null=True,
                                              verbose_name="Скидка по промокоду")
@@ -67,9 +67,8 @@ class Order(BaseModel):
         return str(self.id)
 
     def save(self, *args, **kwargs):
-        if self._state.adding and self.account_type_at_order is None and self.customer_id:
-            self.account_type_at_order = Customer.objects.filter(pk=self.customer_id).values_list(
-                "account_type", flat=True).first()
+        if self._state.adding and self.role_at_order is None and self.customer_id:
+            self.role_at_order = Customer.objects.filter(pk=self.customer_id).values_list("role", flat=True).first()
         super().save(*args, **kwargs)
 
     class Meta:
