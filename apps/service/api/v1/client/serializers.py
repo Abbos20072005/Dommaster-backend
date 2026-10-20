@@ -455,10 +455,12 @@ class BrandSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     name = serializers.CharField()
     image = serializers.ImageField()
+    updated_at = serializers.DateTimeField(read_only=True)
 
 class BrandByItemCategoriesSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     name = serializers.CharField()
+    updated_at = serializers.DateTimeField(read_only=True)
 
 class CommentSerializer(serializers.ModelSerializer):
     customer = CustomerSerializer(read_only=True)
@@ -647,6 +649,7 @@ class ProductDetailSerializer(ProductAnnotationMixin, ProductAttributesMixin, Pr
     length = serializers.DecimalField(max_digits=10, decimal_places=3)
     width = serializers.DecimalField(max_digits=10, decimal_places=3)
     height = serializers.DecimalField(max_digits=10, decimal_places=3)
+    updated_at = serializers.DateTimeField(read_only=True)
 
     def get_breadcrumbs(self, obj):
         return obj.get_breadcrumbs(self.get_language())
@@ -676,6 +679,7 @@ class ProductSerializer(ProductAnnotationMixin, ProductAttributesMixin, ProductT
     breadcrumbs = serializers.SerializerMethodField()
     characteristics = serializers.SerializerMethodField()
     brand = BrandSerializer(read_only=True)
+    updated_at = serializers.DateTimeField(read_only=True)
 
     class Meta:
         model = Product
@@ -704,6 +708,7 @@ class ProductSerializer(ProductAnnotationMixin, ProductAttributesMixin, ProductT
             "length",
             "width",
             "height",
+            "updated_at",
         )
 
     def get_breadcrumbs(self, obj):
@@ -877,6 +882,7 @@ class BrandDetailSerializer(TranslatedSerializerMixin, serializers.ModelSerializ
         self.fields["name"] = serializers.CharField(source=f'name_{language}')
 
     products_count = serializers.IntegerField(read_only=True)
+    updated_at = serializers.DateTimeField(read_only=True)
 
     class Meta:
         model = Brand
@@ -884,7 +890,8 @@ class BrandDetailSerializer(TranslatedSerializerMixin, serializers.ModelSerializ
             "id",
             "name",
             "image",
-            "products_count"
+            "products_count",
+            "updated_at"
         )
 
 
@@ -923,6 +930,7 @@ class ProductItemCategorySerializer(TranslatedSerializerMixin, serializers.Model
 
     breadcrumbs = serializers.SerializerMethodField()
     product_amount = serializers.SerializerMethodField()
+    updated_at = serializers.DateTimeField(read_only=True)
 
     class Meta:
         model = ProductItemCategory
@@ -931,7 +939,8 @@ class ProductItemCategorySerializer(TranslatedSerializerMixin, serializers.Model
             "name",
             "image",
             "product_amount",
-            "breadcrumbs"
+            "breadcrumbs",
+            "updated_at"
         )
 
     def get_product_amount(self, obj):
@@ -949,6 +958,7 @@ class ProductSubCategorySerializer(TranslatedSerializerMixin, serializers.ModelS
 
     product_item_categories = ProductItemCategorySerializer(source="product_sub_category", many=True, read_only=True)
     breadcrumbs = serializers.SerializerMethodField()
+    updated_at = serializers.DateTimeField(read_only=True)
 
     class Meta:
         model = ProductSubCategory
@@ -957,7 +967,8 @@ class ProductSubCategorySerializer(TranslatedSerializerMixin, serializers.ModelS
             "name",
             "image",
             "breadcrumbs",
-            "product_item_categories"
+            "product_item_categories",
+            "updated_at"
         )
 
     def get_breadcrumbs(self, obj):
@@ -986,6 +997,7 @@ class ProductCategorySerializer(TranslatedSerializerMixin, serializers.ModelSeri
 
     sub_categories = ProductSubCategorySerializer(source="product_category", many=True, read_only=True)
     breadcrumbs = serializers.SerializerMethodField()
+    updated_at = serializers.DateTimeField(read_only=True)
 
     class Meta:
         model = ProductCategory
@@ -996,7 +1008,8 @@ class ProductCategorySerializer(TranslatedSerializerMixin, serializers.ModelSeri
             "icon",
             "position",
             "breadcrumbs",
-            "sub_categories"
+            "sub_categories",
+            "updated_at"
         )
 
     def get_breadcrumbs(self, obj):
@@ -1023,6 +1036,7 @@ class ProducgtCategoryTreeSerializer(serializers.Serializer):
     image = serializers.ImageField()
     icon = serializers.ImageField()
     position = serializers.IntegerField()
+    updated_at = serializers.DateTimeField(read_only=True)
     sub_categories = serializers.SerializerMethodField()
 
     def get_sub_categories(self, obj):
@@ -1037,6 +1051,7 @@ class ProductCategoryListSerializer(serializers.Serializer):
     icon = serializers.ImageField()
     image = serializers.ImageField()
     position = serializers.IntegerField()
+    updated_at = serializers.DateTimeField(read_only=True)
 
 class ProductSubCategoryCreateSerializer(serializers.ModelSerializer):
     class Meta:
