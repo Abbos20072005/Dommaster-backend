@@ -14,6 +14,7 @@ from .views import (
     HomeViewSet,
     FilterPageViewSet,
     MerchantFeedViewSet,
+    SeoRedirectViewSet,
 )
 from .pro_views import ProViewSet
 
@@ -201,6 +202,7 @@ urlpatterns = [
         FilterPageViewSet.as_view({"get": "filter_page_detail"}),
         name="filter_page_detail",
     ),
+    path("seo/resolve/", SeoRedirectViewSet.as_view({"get": "resolve"}), name="seo_resolve"),
     path("feeds/google.xml", MerchantFeedViewSet.as_view({"get": "google_feed"}), name="merchant_feed_google"),
     path("feeds/yandex.yml", MerchantFeedViewSet.as_view({"get": "yandex_feed"}), name="merchant_feed_yandex"),
     path("home/", HomeViewSet.as_view({"get": "blocks"}), name="home_blocks"),

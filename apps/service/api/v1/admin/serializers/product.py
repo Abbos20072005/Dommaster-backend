@@ -32,7 +32,7 @@ class ProductBadgeShortSerializer(RelationSerializer):
 class ProductImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductImage
-        fields = ("id", "image", "position", "created_at")
+        fields = ("id", "image", "alt_uz", "alt_ru", "position", "created_at")
         read_only_fields = ("position",)
 
 
@@ -182,6 +182,8 @@ class ProductSerializer(serializers.ModelSerializer):
         model = Product
         fields = ("id", "name", "name_uz", "name_ru", "short_description_uz", "short_description_ru",
                   "description_uz", "description_ru",
+                  "slug_uz", "slug_ru", "meta_title_uz", "meta_title_ru",
+                  "meta_description_uz", "meta_description_ru",
                   "brand", "product_model", "badges", "product_item_category", "price", "discount_price", "discount",
                   "unit", "quantity",
                   "is_active", "erp_active", "publish_status", "purchasable", "on_order", "product_code", "articul_code", "barcode", "weight", "length", "width", "height",

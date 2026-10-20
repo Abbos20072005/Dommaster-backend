@@ -1,24 +1,28 @@
 from modeltranslation.translator import translator, TranslationOptions
-from .models import Product, Service, ProductCharacteristics, AddsBrands, Brand, ProductCategory, ProductSubCategory, \
-    ProductItemCategory, ProductVariantGroup, ProductVariantItem, \
+from .models import Product, ProductImage, Service, ProductCharacteristics, AddsBrands, Brand, ProductCategory, \
+    ProductSubCategory, ProductItemCategory, ProductVariantGroup, ProductVariantItem, \
     ProductItemCategoryFilterSchema, ProductUnit, ProductBadge, ProductAttribute, ProductAttributeOption, \
     ProductAttributeValue, HomeBlock, FilterPage
 
 
 class ProductItemCategoryOption(TranslationOptions):
-    fields = ("name", "meta_title", "meta_description")
+    fields = ("name", "slug", "meta_title", "meta_description", "image_alt")
 
 
 class ProductSubCategoryOption(TranslationOptions):
-    fields = ("name", "meta_title", "meta_description")
+    fields = ("name", "slug", "meta_title", "meta_description", "image_alt")
 
 
 class ProductCategoryOption(TranslationOptions):
-    fields = ("name", "meta_title", "meta_description")
+    fields = ("name", "slug", "meta_title", "meta_description", "image_alt")
 
 
 class ProductTranslationOption(TranslationOptions):
-    fields = ("name", "short_description", "description")
+    fields = ("name", "slug", "short_description", "description", "meta_title", "meta_description")
+
+
+class ProductImageOption(TranslationOptions):
+    fields = ("alt",)
 
 
 class ServiceTranslationOption(TranslationOptions):
@@ -34,7 +38,7 @@ class AddsBrandsOption(TranslationOptions):
 
 
 class BrandOption(TranslationOptions):
-    fields = ("name", "description")
+    fields = ("name", "description", "slug", "meta_title", "meta_description", "image_alt")
 
 
 class ProductBadgeOption(TranslationOptions):
@@ -64,6 +68,7 @@ translator.register(ProductAttributeValue, ProductAttributeValueTranslationOptio
 translator.register(AddsBrands, AddsBrandsOption)
 translator.register(ProductCharacteristics, ProductCharacteristicsOption)
 translator.register(Product, ProductTranslationOption)
+translator.register(ProductImage, ProductImageOption)
 translator.register(Service, ServiceTranslationOption)
 
 

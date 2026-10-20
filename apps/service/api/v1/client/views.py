@@ -35,7 +35,7 @@ from apps.base.api.v1.client.serializers import BannerSerializer
 from apps.base.telegram import send_comment_to_telegram, send_question_to_telegram
 from utils.pyment_link import generate_link
 from apps.payment.services_pay.auth_services import AtmosAuthService, AtmosHoldService
-from apps.service import feed, filter_pages, home, merchant_feed, product_links
+from apps.service import feed, filter_pages, home, merchant_feed, product_links, seo_redirects
 from apps.service.models import (
     HomeBlock,
     HomePage,
@@ -2818,6 +2818,35 @@ class FilterPageViewSet(ViewSet):
         page = filter_pages.find_page(data["item_category"], data.get("brand"), filters)
         return Response(data={"result": {"slug": page.slug if page else None}, "ok": True},
                         status=status.HTTP_200_OK)
+
+
+class SeoRedirectViewSet(ViewSet):
+    @extend_schema(
+        summary="Resolve a slug (301 redirects)",
+        description=(
+            "Given an entity type and a slug (in the request language), tell the site whether the slug is live "
+            "or an old one. `status`: `current` = serve the page; `moved` = 301 to `slug` (the current one); "
+            "`not_found` = 404. Lets the site honour renamed / old URLs (blocks BLD-243)."
+        ),
+        parameters=[
+            OpenApiParameter(name="type", location=OpenApiParameter.QUERY, type=OpenApiTypes.STR, required=True,
+                             description="product | category | sub_category | item_category | brand"),
+            OpenApiParameter(name="slug", location=OpenApiParameter.QUERY, type=OpenApiTypes.STR, required=True),
+        ],
+        responses={200: OpenApiResponse(description="{status, type, id, slug}")},
+        tags=["SEO"],
+    )
+    def resolve(self, request):
+        entity_type = (request.query_params.get("type") or "").strip()
+        slug = (request.query_params.get("slug") or "").strip()
+        if entity_type not in seo_redirects.ENTITY_TYPES or not slug:
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED,
+                                     message={"type": "product|category|sub_category|item_category|brand",
+                                              "slug": "required"})
+        result = seo_redirects.resolve(entity_type, slug, request_language(request))
+        if result is None:
+            result = {"status": "not_found", "type": entity_type, "id": None, "slug": None}
+        return Response(data={"result": result, "ok": True}, status=status.HTTP_200_OK)
 
 
 class MerchantFeedViewSet(ViewSet):

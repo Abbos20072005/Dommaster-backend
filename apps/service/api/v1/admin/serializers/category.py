@@ -43,7 +43,9 @@ class SubCategoryParentSerializer(RelationSerializer):
 NAME_REQUIRED = {"required": True, "allow_null": False, "allow_blank": False}
 NAME_KWARGS = {"name_uz": NAME_REQUIRED, "name_ru": NAME_REQUIRED}
 NAME_FIELDS = ("name", "name_uz", "name_ru")
-SEO_FIELDS = ("meta_title_uz", "meta_title_ru", "meta_description_uz", "meta_description_ru")
+SLUG_FIELDS = ("slug_uz", "slug_ru")
+SEO_FIELDS = ("meta_title_uz", "meta_title_ru", "meta_description_uz", "meta_description_ru",
+              "image_alt_uz", "image_alt_ru")
 VISIBILITY_FIELDS = ("show_on_site", "show_in_app", "is_active")
 COUNT_FIELDS = ("products_count", "filters_count")
 
@@ -63,8 +65,8 @@ class ProductCategorySerializer(CategoryBaseSerializer):
 
     class Meta:
         model = ProductCategory
-        fields = ("id", *NAME_FIELDS, "slug", "code", "icon", "image", "position", *SEO_FIELDS, *VISIBILITY_FIELDS,
-                  "children_count", *COUNT_FIELDS, "created_at", "updated_at")
+        fields = ("id", *NAME_FIELDS, *SLUG_FIELDS, "code", "icon", "image", "position", *SEO_FIELDS,
+                  *VISIBILITY_FIELDS, "children_count", *COUNT_FIELDS, "created_at", "updated_at")
         read_only_fields = ("name", "created_at", "updated_at")
         extra_kwargs = NAME_KWARGS
 
@@ -75,7 +77,7 @@ class ProductSubCategoryAdminSerializer(CategoryBaseSerializer):
 
     class Meta:
         model = ProductSubCategory
-        fields = ("id", *NAME_FIELDS, "slug", "code", "product_category", "image", "position", *SEO_FIELDS,
+        fields = ("id", *NAME_FIELDS, *SLUG_FIELDS, "code", "product_category", "image", "position", *SEO_FIELDS,
                   *VISIBILITY_FIELDS, "children_count", *COUNT_FIELDS, "created_at", "updated_at")
         read_only_fields = ("name", "created_at", "updated_at")
         extra_kwargs = NAME_KWARGS
@@ -86,7 +88,7 @@ class ProductItemCategoryAdminSerializer(CategoryBaseSerializer):
 
     class Meta:
         model = ProductItemCategory
-        fields = ("id", *NAME_FIELDS, "slug", "code", "product_sub_category", "image", "position", *SEO_FIELDS,
+        fields = ("id", *NAME_FIELDS, *SLUG_FIELDS, "code", "product_sub_category", "image", "position", *SEO_FIELDS,
                   *VISIBILITY_FIELDS, *COUNT_FIELDS, "created_at", "updated_at")
         read_only_fields = ("name", "created_at", "updated_at")
         extra_kwargs = NAME_KWARGS

@@ -1,15 +1,60 @@
+from django.conf import settings
 from django.contrib.postgres.indexes import GinIndex
 from django.db import models
 
 from abstract_model.base_model import BaseModel
-from utils.slug import unique_slug
+from utils.slug import unique_slug_for
 
 
-class Brand(BaseModel):
+class SeoFieldsMixin(models.Model):
+    """Per-language SEO fields (digital channel only; 1C never sends them).
+
+    `slug` / `meta_title` / `meta_description` are translated (modeltranslation adds the `*_uz` / `*_ru`
+    columns). Each `slug_<lang>` is unique within its own column (the base `slug` tracks the default `ru`).
+    An empty `slug_<lang>` is generated from `name_<lang>` on save (stable — a later name change does NOT
+    move the slug); a changed slug keeps the old one in `SlugHistory` for 301 redirects.
+    """
+    SLUG_FALLBACK = "item"
+
+    slug = models.SlugField(max_length=255, unique=True, null=True, blank=True, verbose_name="Slug")
+    meta_title = models.CharField(max_length=255, blank=True, verbose_name="Meta title")
+    meta_description = models.TextField(blank=True, verbose_name="Meta description")
+
+    class Meta:
+        abstract = True
+
+    def _slug_source(self, language):
+        # the name in `language`, else ru, else the untranslated name
+        return (getattr(self, f"name_{language}", None) or getattr(self, "name_ru", None)
+                or getattr(self, "name", None))
+
+    def save(self, *args, **kwargs):
+        languages = settings.MODELTRANSLATION_LANGUAGES
+        old_slugs = {}
+        if self.pk:
+            old_slugs = type(self)._default_manager.filter(pk=self.pk).values(
+                *(f"slug_{language}" for language in languages)).first() or {}
+        for language in languages:
+            field = f"slug_{language}"
+            if not getattr(self, field, None):
+                setattr(self, field, unique_slug_for(type(self), self._slug_source(language), field=field,
+                                                     exclude_pk=self.pk, fallback=self.SLUG_FALLBACK))
+        super().save(*args, **kwargs)
+        if old_slugs:
+            from apps.service.seo_redirects import record_change
+            for language in languages:
+                previous = old_slugs.get(f"slug_{language}")
+                current = getattr(self, f"slug_{language}", None)
+                if previous and current and previous != current:
+                    record_change(self, language, previous)
+
+
+class Brand(SeoFieldsMixin, BaseModel):
     name = models.CharField(max_length=150, verbose_name="Название")
     description = models.TextField(blank=True, verbose_name="Описание")
     country = models.CharField(max_length=100, blank=True, verbose_name="Страна")
     image = models.ImageField(upload_to="brand/image/", verbose_name="Изображение")
+    image_alt = models.CharField(max_length=255, blank=True, verbose_name="Alt текст изображения")
     is_visible = models.BooleanField(default=True, verbose_name="Виден")
     # picked for the "brands" block of the home page (HomeBlock); the client brand list does not use it yet
     show_on_home = models.BooleanField(default=False, verbose_name="На главной странице")
@@ -44,23 +89,17 @@ class ProductModel(BaseModel):
         unique_together = ("brand", "name")
 
 
-class CategoryMixin(models.Model):
+class CategoryMixin(SeoFieldsMixin):
     # shared by the three category levels; `show_on_site` / `show_in_app` are plain flags, no client logic uses them yet
-    slug = models.SlugField(max_length=255, unique=True, blank=True, verbose_name="Slug")
-    meta_title = models.CharField(max_length=255, blank=True, verbose_name="Meta title")
-    meta_description = models.TextField(blank=True, verbose_name="Meta description")
+    # slug / meta_title / meta_description / the per-language slug generation come from SeoFieldsMixin
+    SLUG_FALLBACK = "category"
+
+    image_alt = models.CharField(max_length=255, blank=True, verbose_name="Alt текст изображения")
     show_on_site = models.BooleanField(default=True, verbose_name="Показывать на сайте")
     show_in_app = models.BooleanField(default=True, verbose_name="Показывать в приложении")
 
     class Meta:
         abstract = True
-
-    def save(self, *args, **kwargs):
-        # empty slug (1C sync, admin form left blank) -> generated from the name
-        if not self.slug:
-            self.slug = unique_slug(type(self), self.name_uz or self.name_ru or self.name, exclude_pk=self.pk,
-                                    fallback="category")
-        super().save(*args, **kwargs)
 
 
 class ProductCategory(CategoryMixin, BaseModel):

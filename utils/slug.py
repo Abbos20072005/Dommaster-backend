@@ -16,12 +16,20 @@ def slugify_latin(text):
 
 def unique_slug(model, text, exclude_pk=None, fallback="item"):
     """Slug from `text`, unique within `model` (`-2`, `-3`, ... suffix on collision)."""
-    max_length = model._meta.get_field("slug").max_length
+    return unique_slug_for(model, text, field="slug", exclude_pk=exclude_pk, fallback=fallback)
+
+
+def unique_slug_for(model, text, field="slug", exclude_pk=None, fallback="item"):
+    """Slug from `text`, unique within `model` on the given column (`-2`, `-3`, ... on collision).
+
+    `field` lets a per-language slug (`slug_uz` / `slug_ru`) be made unique within its own column.
+    """
+    max_length = model._meta.get_field(field).max_length
     # leave room for the "-N" suffix
     base = slugify_latin(text)[:max_length - 8].strip("-") or fallback
     queryset = model._default_manager.exclude(pk=exclude_pk)
     slug, n = base, 1
-    while queryset.filter(slug=slug).exists():
+    while queryset.filter(**{field: slug}).exists():
         n += 1
         slug = f"{base}-{n}"
     return slug

@@ -7,11 +7,12 @@ from django.db import models
 
 from abstract_model.base_model import BaseModel
 from apps.base.models import MarketBranch
-from .catalog import Brand, ProductModel, ProductItemCategory, ProductAttribute
+from .catalog import Brand, ProductModel, ProductItemCategory, ProductAttribute, SeoFieldsMixin
 from .choices import PUBLISH_STATUS, PUBLISH_STATUS_DRAFT
 
 
-class Product(BaseModel):
+class Product(SeoFieldsMixin, BaseModel):
+    SLUG_FALLBACK = "product"
     PRODUCT_UNIT_CHOICES = (
         ("kg", "KG"),
         ("l", "L"),
@@ -131,6 +132,8 @@ class ProductRemaining(BaseModel):
 class ProductImage(BaseModel):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="product_image", verbose_name="Продукт")
     image = models.ImageField(upload_to="product_image", verbose_name="Изображение")
+    # SEO alt text, translated (alt_uz / alt_ru); empty = front falls back to the product name
+    alt = models.CharField(max_length=255, blank=True, verbose_name="Alt текст")
     # order within the product, the first image is the main one
     position = models.PositiveIntegerField(default=0, verbose_name="Позиция")
 

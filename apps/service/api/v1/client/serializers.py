@@ -42,6 +42,24 @@ class TranslatedSerializerMixin:
         return request_language(self.context.get('request'))
 
 
+class SeoFieldsSerializerMixin(TranslatedSerializerMixin):
+    """SEO fields (slug / meta / image alt) in the request language; empty uz falls back to ru.
+
+    Declare the matching `serializers.SerializerMethodField()`s on the serializer to expose them.
+    """
+    def get_slug(self, obj) -> str:
+        return translated(obj, "slug", self.get_language())
+
+    def get_meta_title(self, obj) -> str:
+        return translated(obj, "meta_title", self.get_language())
+
+    def get_meta_description(self, obj) -> str:
+        return translated(obj, "meta_description", self.get_language())
+
+    def get_image_alt(self, obj) -> str:
+        return translated(obj, "image_alt", self.get_language())
+
+
 class ProductAnnotationMixin:
     """
     Mixin for product serializers that reads annotation-based fields
@@ -451,11 +469,19 @@ class QuickFilterSerializer(serializers.Serializer):
     count = serializers.IntegerField()
 
 
-class BrandSerializer(serializers.Serializer):
+class BrandSerializer(TranslatedSerializerMixin, serializers.Serializer):
     id = serializers.IntegerField()
     name = serializers.CharField()
+    slug = serializers.SerializerMethodField()
     image = serializers.ImageField()
+    image_alt = serializers.SerializerMethodField()
     updated_at = serializers.DateTimeField(read_only=True)
+
+    def get_slug(self, obj) -> str:
+        return translated(obj, "slug", self.get_language())
+
+    def get_image_alt(self, obj) -> str:
+        return translated(obj, "image_alt", self.get_language())
 
 class BrandByItemCategoriesSerializer(serializers.Serializer):
     id = serializers.IntegerField()
@@ -507,10 +533,15 @@ class CommentUpdateSerializer(serializers.ModelSerializer):
         )
 
 
-class ProductImageSerializer(serializers.ModelSerializer):
+class ProductImageSerializer(TranslatedSerializerMixin, serializers.ModelSerializer):
+    alt = serializers.SerializerMethodField()
+
+    def get_alt(self, obj) -> str:
+        return translated(obj, "alt", self.get_language())
+
     class Meta:
         model = ProductImage
-        fields = ("id", "product", "image")
+        fields = ("id", "product", "image", "alt")
 
 class ProductCreateSerializer(serializers.ModelSerializer):
     class Meta:
@@ -610,7 +641,7 @@ class ProductAttributesMixin:
 
 
 class ProductTextsMixin:
-    """`name`, `short_description`, `description` in the request language; an empty uz falls back to ru."""
+    """`name`, `short_description`, `description` and the SEO fields in the request language (empty uz -> ru)."""
 
     def get_name(self, obj) -> str:
         return translated(obj, "name", self.get_language())
@@ -621,11 +652,23 @@ class ProductTextsMixin:
     def get_description(self, obj) -> str:
         return translated(obj, "description", self.get_language())
 
+    def get_slug(self, obj) -> str:
+        return translated(obj, "slug", self.get_language())
+
+    def get_meta_title(self, obj) -> str:
+        return translated(obj, "meta_title", self.get_language())
+
+    def get_meta_description(self, obj) -> str:
+        return translated(obj, "meta_description", self.get_language())
+
 
 class ProductDetailSerializer(ProductAnnotationMixin, ProductAttributesMixin, ProductTextsMixin,
                               TranslatedSerializerMixin, serializers.Serializer):
     id = serializers.IntegerField()
     name = serializers.SerializerMethodField()
+    slug = serializers.SerializerMethodField()
+    meta_title = serializers.SerializerMethodField()
+    meta_description = serializers.SerializerMethodField()
     short_description = serializers.SerializerMethodField(allow_null=True)
     description = serializers.SerializerMethodField()
     is_favourite = serializers.SerializerMethodField()
@@ -670,6 +713,9 @@ class ProductDetailSerializer(ProductAnnotationMixin, ProductAttributesMixin, Pr
 class ProductSerializer(ProductAnnotationMixin, ProductAttributesMixin, ProductTextsMixin, TranslatedSerializerMixin,
                         serializers.ModelSerializer):
     name = serializers.SerializerMethodField()
+    slug = serializers.SerializerMethodField()
+    meta_title = serializers.SerializerMethodField()
+    meta_description = serializers.SerializerMethodField()
     description = serializers.SerializerMethodField()
     images = ProductImageSerializer(source="product_image", many=True, read_only=True)
     short_description = serializers.SerializerMethodField(allow_null=True)
@@ -688,6 +734,9 @@ class ProductSerializer(ProductAnnotationMixin, ProductAttributesMixin, ProductT
             "product_item_category",
             "brand",
             "name",
+            "slug",
+            "meta_title",
+            "meta_description",
             "is_favourite",
             "in_cart",
             "in_cart_quantity",
@@ -881,37 +930,60 @@ class BrandDetailSerializer(TranslatedSerializerMixin, serializers.ModelSerializ
         language = self.get_language()
         self.fields["name"] = serializers.CharField(source=f'name_{language}')
 
+    slug = serializers.SerializerMethodField()
+    meta_title = serializers.SerializerMethodField()
+    meta_description = serializers.SerializerMethodField()
+    image_alt = serializers.SerializerMethodField()
     products_count = serializers.IntegerField(read_only=True)
     updated_at = serializers.DateTimeField(read_only=True)
+
+    def get_slug(self, obj) -> str:
+        return translated(obj, "slug", self.get_language())
+
+    def get_meta_title(self, obj) -> str:
+        return translated(obj, "meta_title", self.get_language())
+
+    def get_meta_description(self, obj) -> str:
+        return translated(obj, "meta_description", self.get_language())
+
+    def get_image_alt(self, obj) -> str:
+        return translated(obj, "image_alt", self.get_language())
 
     class Meta:
         model = Brand
         fields = (
             "id",
             "name",
+            "slug",
+            "meta_title",
+            "meta_description",
             "image",
+            "image_alt",
             "products_count",
             "updated_at"
         )
 
 
-class ProductItemCategoryFilterSerializer(serializers.Serializer):
+class ProductItemCategoryFilterSerializer(SeoFieldsSerializerMixin, serializers.Serializer):
     id = serializers.IntegerField()
     name = serializers.CharField()
+    slug = serializers.SerializerMethodField()
     image = serializers.ImageField()
 
-class ProductSubCategoryFilterSerializer(serializers.Serializer):
+class ProductSubCategoryFilterSerializer(SeoFieldsSerializerMixin, serializers.Serializer):
     id = serializers.IntegerField()
     name = serializers.CharField()
+    slug = serializers.SerializerMethodField()
     product_item_categories = serializers.SerializerMethodField()
 
     def get_product_item_categories(self, obj):
         qs = obj.product_sub_category.filter(is_active=True, product_item_category__id__isnull=False).distinct()
         return ProductItemCategoryFilterSerializer(qs, many=True, context=self.context).data
 
-class ProductCategoryFilterSerializer(serializers.Serializer):
+class ProductCategoryFilterSerializer(SeoFieldsSerializerMixin, serializers.Serializer):
     id = serializers.IntegerField()
     name = serializers.CharField()
+    slug = serializers.SerializerMethodField()
     position = serializers.IntegerField()
     sub_categories = serializers.SerializerMethodField()
 
@@ -922,12 +994,16 @@ class ProductCategoryFilterSerializer(serializers.Serializer):
         ).distinct()
         return ProductSubCategoryFilterSerializer(qs, many=True, context=self.context).data
 
-class ProductItemCategorySerializer(TranslatedSerializerMixin, serializers.ModelSerializer):
+class ProductItemCategorySerializer(SeoFieldsSerializerMixin, serializers.ModelSerializer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         language = self.get_language()
         self.fields["name"] = serializers.CharField(source=f'name_{language}')
 
+    slug = serializers.SerializerMethodField()
+    meta_title = serializers.SerializerMethodField()
+    meta_description = serializers.SerializerMethodField()
+    image_alt = serializers.SerializerMethodField()
     breadcrumbs = serializers.SerializerMethodField()
     product_amount = serializers.SerializerMethodField()
     updated_at = serializers.DateTimeField(read_only=True)
@@ -937,7 +1013,11 @@ class ProductItemCategorySerializer(TranslatedSerializerMixin, serializers.Model
         fields = (
             "id",
             "name",
+            "slug",
+            "meta_title",
+            "meta_description",
             "image",
+            "image_alt",
             "product_amount",
             "breadcrumbs",
             "updated_at"
@@ -950,12 +1030,16 @@ class ProductItemCategorySerializer(TranslatedSerializerMixin, serializers.Model
         return obj.get_breadcrumbs(self.get_language())
 
 
-class ProductSubCategorySerializer(TranslatedSerializerMixin, serializers.ModelSerializer):
+class ProductSubCategorySerializer(SeoFieldsSerializerMixin, serializers.ModelSerializer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         language = self.get_language()
         self.fields["name"] = serializers.CharField(source=f'name_{language}')
 
+    slug = serializers.SerializerMethodField()
+    meta_title = serializers.SerializerMethodField()
+    meta_description = serializers.SerializerMethodField()
+    image_alt = serializers.SerializerMethodField()
     product_item_categories = ProductItemCategorySerializer(source="product_sub_category", many=True, read_only=True)
     breadcrumbs = serializers.SerializerMethodField()
     updated_at = serializers.DateTimeField(read_only=True)
@@ -965,7 +1049,11 @@ class ProductSubCategorySerializer(TranslatedSerializerMixin, serializers.ModelS
         fields = (
             "id",
             "name",
+            "slug",
+            "meta_title",
+            "meta_description",
             "image",
+            "image_alt",
             "breadcrumbs",
             "product_item_categories",
             "updated_at"
@@ -974,27 +1062,34 @@ class ProductSubCategorySerializer(TranslatedSerializerMixin, serializers.ModelS
     def get_breadcrumbs(self, obj):
         return obj.get_breadcrumbs(self.get_language())
 
-class ProductCategorySearchSerializer(TranslatedSerializerMixin, serializers.ModelSerializer):
+class ProductCategorySearchSerializer(SeoFieldsSerializerMixin, serializers.ModelSerializer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         language = self.get_language()
         self.fields["name"] = serializers.CharField(source=f'name_{language}')
+
+    slug = serializers.SerializerMethodField()
 
     class Meta:
         model = ProductCategory
         fields = (
             "id",
             "name",
+            "slug",
             "image",
             "position"
         )
 
-class ProductCategorySerializer(TranslatedSerializerMixin, serializers.ModelSerializer):
+class ProductCategorySerializer(SeoFieldsSerializerMixin, serializers.ModelSerializer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         language = self.get_language()
         self.fields["name"] = serializers.CharField(source=f'name_{language}')
 
+    slug = serializers.SerializerMethodField()
+    meta_title = serializers.SerializerMethodField()
+    meta_description = serializers.SerializerMethodField()
+    image_alt = serializers.SerializerMethodField()
     sub_categories = ProductSubCategorySerializer(source="product_category", many=True, read_only=True)
     breadcrumbs = serializers.SerializerMethodField()
     updated_at = serializers.DateTimeField(read_only=True)
@@ -1004,7 +1099,11 @@ class ProductCategorySerializer(TranslatedSerializerMixin, serializers.ModelSeri
         fields = (
             "id",
             "name",
+            "slug",
+            "meta_title",
+            "meta_description",
             "image",
+            "image_alt",
             "icon",
             "position",
             "breadcrumbs",
@@ -1015,24 +1114,27 @@ class ProductCategorySerializer(TranslatedSerializerMixin, serializers.ModelSeri
     def get_breadcrumbs(self, obj):
         return obj.get_breadcrumbs(self.get_language())
     
-class ProductItemCategoryTreeSerializer(serializers.Serializer):
+class ProductItemCategoryTreeSerializer(SeoFieldsSerializerMixin, serializers.Serializer):
     id = serializers.IntegerField()
     name = serializers.CharField()
-    
-class ProductSubCategoryTreeSerializer(serializers.Serializer):
+    slug = serializers.SerializerMethodField()
+
+class ProductSubCategoryTreeSerializer(SeoFieldsSerializerMixin, serializers.Serializer):
     id = serializers.IntegerField()
     name = serializers.CharField()
+    slug = serializers.SerializerMethodField()
     image = serializers.ImageField()
     product_item_categories = serializers.SerializerMethodField()
 
     def get_product_item_categories(self, obj):
         qs = obj.product_sub_category.all()
         return ProductItemCategoryFilterSerializer(qs, many=True, context=self.context).data
-    
 
-class ProducgtCategoryTreeSerializer(serializers.Serializer):
+
+class ProducgtCategoryTreeSerializer(SeoFieldsSerializerMixin, serializers.Serializer):
     id = serializers.IntegerField()
     name = serializers.CharField()
+    slug = serializers.SerializerMethodField()
     image = serializers.ImageField()
     icon = serializers.ImageField()
     position = serializers.IntegerField()
@@ -1045,9 +1147,10 @@ class ProducgtCategoryTreeSerializer(serializers.Serializer):
 
 
 
-class ProductCategoryListSerializer(serializers.Serializer):
+class ProductCategoryListSerializer(SeoFieldsSerializerMixin, serializers.Serializer):
     id = serializers.IntegerField()
     name = serializers.CharField()
+    slug = serializers.SerializerMethodField()
     icon = serializers.ImageField()
     image = serializers.ImageField()
     position = serializers.IntegerField()

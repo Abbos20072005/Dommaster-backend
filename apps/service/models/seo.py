@@ -1,3 +1,5 @@
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 from django.db import models
 
 from abstract_model.base_model import BaseModel
@@ -55,3 +57,29 @@ class FilterPage(BaseModel):
         verbose_name = "Страница фильтра"
         verbose_name_plural = "Страницы фильтров"
         ordering = ("-search_volume", "id")
+
+
+class SlugHistory(BaseModel):
+    # An old slug of a product / brand / category, kept so the site can 301 it to the current slug.
+    # One row per (object, language, old slug); written by SeoFieldsMixin.save() when a slug changes.
+    # Logic (writing / resolving) lives in apps/service/seo_redirects.py.
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, verbose_name="Тип объекта")
+    object_id = models.PositiveIntegerField(verbose_name="ID объекта")
+    content_object = GenericForeignKey("content_type", "object_id")
+    language = models.CharField(max_length=5, verbose_name="Язык")
+    old_slug = models.SlugField(max_length=255, db_index=True, verbose_name="Старый slug")
+
+    def __str__(self):
+        return f"{self.old_slug} ({self.language})"
+
+    class Meta:
+        verbose_name = "История slug"
+        verbose_name_plural = "История slug"
+        ordering = ("-id",)
+        constraints = [
+            models.UniqueConstraint(fields=("content_type", "language", "old_slug"),
+                                    name="uniq_slug_history_ct_lang_slug"),
+        ]
+        indexes = [
+            models.Index(fields=("content_type", "language", "old_slug"), name="idx_slug_history_lookup"),
+        ]
