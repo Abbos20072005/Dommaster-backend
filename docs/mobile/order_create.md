@@ -47,7 +47,7 @@ Muhim qoidalar:
 - **`payment_type`** — faqat `1`–`4` yuboring. Boshqa qiymat validatsiyadan o'tib ketadi, lekin to'lov havolasi `null` bo'ladi.
 - **Manzil tafsilotlari** (kvartira, domofon, podyezd, qavat, kuryerga izoh) request'da yuborilmaydi — tanlangan manzildan buyurtmaga nusxa qilinadi (`docs/mobile/customer_addresses.md`). Buyurtmadan oldin ularni `PATCH auth/customer/addresses/<id>/` bilan saqlang.
 - **`address_id`** yuborilsa, shu manzil mijozning **default** manzili bo'lib qoladi. Yuborilmasa va default manzil ham bo'lmasa → `404`. **Pickup'da manzil kerak emas** — yuborilsa ham e'tiborga olinmaydi.
-- **Pickup (`delivery_type = 1` + `branch_id`)**: yetkazish narxi `0` (yuborilgan `delivery_price` e'tiborga olinmaydi), to'lov **faqat onlayn** — `payment_type` `1` / `2` / `3`; `4` (qabul qilganda) → validatsiya xatosi. Do'konning nomi, manzili, telefoni va koordinatasi buyurtmaga shu paytdagi holatida saqlanadi.
+- **Pickup (`delivery_type = 1` + `branch_id`)**: yetkazish narxi `0` (yuborilgan `delivery_price` e'tiborga olinmaydi), to'lovning **hamma usuli** ishlaydi — `4` da do'konda to'lanadi. Do'konning nomi, manzili, telefoni va koordinatasi buyurtmaga shu paytdagi holatida saqlanadi.
 - **`delivery_price`** — `"25000"`, `"25 000"`, `"25000.50"`, `"25,5"` yoki son (`25000`) qabul qilinadi. Bo'sh string (`""`) → validatsiya xatosi; narx yo'q bo'lsa maydonni umuman yubormang. Pickup'da yubormang.
 - **`promocode`** — `promocode/checker/` dan o'tgan kodni **kichik harflarda** yuboring. Kod topilmasa xato qaytmaydi — buyurtma promokodsiz, to'liq narxda yaratiladi.
 - **`branch_id`** ni faqat pickup'da yuboring (`delivery_type = 0` da e'tiborga olinmaydi, buyurtmaga yozilmaydi). Faqat do'kon va showroom turidagi filiallar qabul qilinadi — ombor rad etiladi.
@@ -168,7 +168,6 @@ Validatsiya (`error_code: 5`) — `detail` maydonlar bo'yicha obyekt:
 | `payment_type` yuborilmagan | `{"payment_type": ["Обязательное поле."]}` |
 | `delivery_type = 1`, `branch_id` yo'q | `{"branch_id": ["branch_id is required for pickup delivery"]}` |
 | Do'kon topilmadi, aktiv emas yoki ombor | `{"branch_id": ["Store not found or inactive"]}` |
-| Pickup'da `payment_type = 4` | `{"payment_type": ["Pickup orders are paid online only (1 Click, 2 Payme, 3 Uzum)"]}` |
 | (eski `branch_id`) filial topilmadi yoki aktiv emas | `{"non_field_errors": ["Market branch not found"]}` |
 | `delivery_price` noto'g'ri yoki bo'sh string | `{"delivery_price": ["Некорректная цена доставки"]}` |
 | `channel` ro'yxatda yo'q qiymat | `{"channel": ["Значения web нет среди допустимых вариантов."]}` |

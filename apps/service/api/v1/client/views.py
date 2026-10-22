@@ -2496,8 +2496,8 @@ class OrderViewSet(ViewSet):
     @extend_schema(
         summary="Create order",
         description="Create order. Pickup: `delivery_type=1` + `branch_id` (an active store of "
-                    "`base/stores/`) - no address needed, delivery price 0, online payment only "
-                    "(`payment_type` 1 / 2 / 3).",
+                    "`base/stores/`) - no address needed, delivery price 0, every payment type is "
+                    "taken (4 = paid at the store).",
         request=OrderCreateSerializer(),
         responses={201: OrderSerializer()},
         tags=["Order"],

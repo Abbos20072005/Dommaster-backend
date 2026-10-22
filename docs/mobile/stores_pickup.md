@@ -75,7 +75,7 @@ Token kerak emas. Matnlar `Accept-Language` tilida (`uz` / `ru`, boshqasi → `r
 ```
 
 - Manzil (`address_id`) **kerak emas**, yetkazish narxi `0`.
-- To'lov **faqat onlayn**: `payment_type` `1` Click, `2` Payme, `3` Uzum. `4` (qabul qilganda to'lash) → `400`, `error_code: 5`, `{"payment_type": [...]}` (D39, do'konda to'lash v2).
+- To'lovning **hamma usuli** qabul qilinadi: `1` Click, `2` Payme, `3` Uzum va `4` (do'konda to'lash, `payment_method` `cash` / `card`). `4` da to'lov havolasi `null` qaytadi, buyurtma darhol `1` Collecting bo'ladi, `payment_status` esa do'konda to'lov qabul qilinmaguncha `0` Pending turadi.
 - Nofaol, mavjud bo'lmagan yoki ombor turidagi `branch_id` → `400`, `error_code: 5`, `{"branch_id": ["Store not found or inactive"]}`.
 - Do'kon nomi, manzili, telefoni va koordinatasi buyurtmaga **shu paytdagi holatida** saqlanadi — do'kon keyin tahrirlansa yoki nofaol qilinsa ham buyurtmada eski ma'lumot qoladi.
 

@@ -178,11 +178,16 @@ class PickupCheckoutTests(ApiTestCase):
         self.assertEqual((detail["pickup_store"]["name"], detail["pickup_store"]["phone"]),
                          ("Chilonzor", "+998901234567"))
 
-    def test_rules(self):
+    def test_paid_at_the_store(self):
+        # payment_type 4 is taken for pickup too: the order goes to Collecting at once, still unpaid
         response = self.checkout(payment_type=4, payment_method="cash")
-        self.assertEqual(response.status_code, 400)
-        self.assertIn("payment_type", str(response.data))
+        self.assertEqual(response.status_code, 201, response.data)
+        order = Order.objects.get(id=response.data["order_id"])
+        self.assertEqual((order.payment_type, order.payment_method, order.status, order.payment_status),
+                         (4, "cash", Order.COLLECTING, 0))
+        self.assertEqual(order.pickup_branch, self.store)
 
+    def test_rules(self):
         self.assertEqual(self.checkout(branch_id=999999).status_code, 400)
         # a warehouse is not a store
         self.assertEqual(self.checkout(branch_id=make_store("Warehouse", branch_type=2).id).status_code, 400)

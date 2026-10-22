@@ -7,7 +7,7 @@ from apps.authorization.models import CustomerAddresses
 from apps.service.models import Product, ProductCategory, ProductItemCategory, ProductSubCategory, ProductImage, Comment, \
     Order, OrderItem, Brand, Sale, AddsBrands, Favourites, Cart, CartItem, ProductCharacteristics, Questions, \
     RecentlyViewedProducts, Service, CommentReply, CommentImages, QuestionsReply, \
-    ProductVariantGroup, ProductVariantItem, ProductItemCategoryFilterSchema, HomeBlock, ORDER_CHANNEL, ONLINE_PAYMENT_TYPES
+    ProductVariantGroup, ProductVariantItem, ProductItemCategoryFilterSchema, HomeBlock, ORDER_CHANNEL
 from apps.service import feed, product_links
 from apps.service.attributes import display_value, product_attribute_values, request_language, translated
 from exceptions.error_exception import CustomApiException
@@ -152,10 +152,6 @@ class OrderCreateSerializer(serializers.Serializer):
                                             branch_type__in=PICKUP_BRANCH_TYPES).first()
         if not store:
             raise serializers.ValidationError({"branch_id": "Store not found or inactive"})
-        # D39: no payment at the store yet - online payment only
-        if attrs.get("payment_type") not in ONLINE_PAYMENT_TYPES:
-            raise serializers.ValidationError(
-                {"payment_type": "Pickup orders are paid online only (1 Click, 2 Payme, 3 Uzum)"})
         attrs["store"] = store
         return attrs
 

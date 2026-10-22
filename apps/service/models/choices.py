@@ -25,7 +25,6 @@ PAYMENT_TYPE = (
     (3, "Uzum Bank"),
     (4, "При получении"),
 )
-ONLINE_PAYMENT_TYPES = (1, 2, 3)
 
 CASH_PAYMENT_METHOD = (
     ("cash", "Наличные"),
