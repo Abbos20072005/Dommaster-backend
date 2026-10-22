@@ -5,7 +5,7 @@ import logging
 import math
 import random
 import uuid
-from collections import defaultdict
+from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import timedelta
 
@@ -53,6 +53,9 @@ CATEGORY_POOL = 40
 NEIGHBOUR_POOL = 10
 # no more than this many products of one item category in a row
 MAX_RUN = 2
+# products of one brand in one item category (sizes of one series that no variant group joins, e.g. clamps
+# 45-52 / 60-66 / 74-80): at most this many within BLOCK places in a row
+MAX_SAME_SERIES = 1
 # the mixed part of the feed; after it the rest of the catalog goes in the seeded random order
 HEAD_SIZE = 300
 
@@ -74,6 +77,10 @@ POPULAR_CACHE_TIMEOUT = 3600
 # a bought product is not shown for this long, and its item category gives its personal places to the sibling
 # categories: someone who has just bought an axe needs a saw, not three more axes
 RECENT_PURCHASE_DAYS = 14
+# ... and such a category ranks lower: what was bought is done, what the customer still looks at (favourites,
+# views) is the live interest and must not be pushed out of the top by the categories of one fresh order
+BOUGHT_CATEGORY_WEIGHT = 0.5
+SIBLING_POOL = 20
 SNAPSHOT_CACHE_TIMEOUT = 3600
 
 
@@ -357,9 +364,10 @@ def build_snapshot(viewer, seed, now=None):
     popularity = product_popularity()
     bought_categories = {category_id for _, category_id in recently_bought(viewer, now) if category_id}
 
+    ranked = {pk: score * (BOUGHT_CATEGORY_WEIGHT if pk in bought_categories else 1) for pk, score in profile.items()}
     # equal scores (the categories of one order) take turns from seed to seed instead of losing to a smaller id.
     # Scores are rounded: they fade every second, and a feed rebuilt for the same seed must come out the same
-    top = sorted(profile, key=lambda pk: (-round(profile[pk], 3), _seed_rank(pk, seed)))[:TOP_CATEGORIES]
+    top = sorted(ranked, key=lambda pk: (-round(ranked[pk], 3), _seed_rank(pk, seed)))[:TOP_CATEGORIES]
     sub_category_of, siblings_of = {}, defaultdict(list)
     if top:
         sub_categories = ProductItemCategory.objects.filter(id__in=top).values("product_sub_category_id")
@@ -371,9 +379,11 @@ def build_snapshot(viewer, seed, now=None):
     neighbours = [pk for pk in sub_category_of if pk not in top and pk not in bought_categories]
     popular_ids = sorted(popularity, key=lambda pk: (-popularity[pk], pk))[:POPULAR_LIMIT]
 
-    category_of = dict(eligible_products().filter(
-        Q(product_item_category_id__in=[*top, *neighbours]) | Q(id__in=popular_ids),
-    ).exclude(id__in=excluded).values_list("id", "product_item_category_id"))
+    category_of, brand_of = {}, {}
+    for product_id, category_id, brand_id in eligible_products().filter(
+            Q(product_item_category_id__in=[*top, *neighbours]) | Q(id__in=popular_ids),
+    ).exclude(id__in=excluded).values_list("id", "product_item_category_id", "brand_id"):
+        category_of[product_id], brand_of[product_id] = category_id, brand_id
     # variants of one product (sizes, colours, amperage...): the feed shows one product of a family
     family_of = variant_families()
     by_category = defaultdict(list)
@@ -394,7 +404,7 @@ def build_snapshot(viewer, seed, now=None):
         if category_id not in bought_categories:
             return category_pool(category_id, CATEGORY_POOL)
         pool = [pk for sibling in siblings_of.get(sub_category_of.get(category_id), ())
-                if sibling not in bought_categories for pk in category_pool(sibling, NEIGHBOUR_POOL)]
+                if sibling not in bought_categories for pk in category_pool(sibling, SIBLING_POOL)]
         rng.shuffle(pool)
         return pool[:CATEGORY_POOL]
 
@@ -408,7 +418,7 @@ def build_snapshot(viewer, seed, now=None):
         rng.shuffle(chunk)
         popular_pool[start:start + POPULAR_SHUFFLE] = chunk
 
-    signal = sum(profile[pk] for pk in top)
+    signal = sum(ranked[pk] for pk in top)
     personal = 0
     if top:
         personal = min(PERSONAL_PER_BLOCK,
@@ -417,17 +427,21 @@ def build_snapshot(viewer, seed, now=None):
 
     head, used, used_families = [], set(), set()
     credit = dict.fromkeys(top, 0.0)
-    share = {pk: round(profile[pk] / signal, 3) for pk in top}
+    share = {pk: round(ranked[pk] / signal, 3) for pk in top}
 
-    def take(pool, blocked):
-        """Pops the first product of the pool that may go next; products already shown are dropped on the way."""
+    def series(product_id):
+        return (brand_of[product_id], category_of[product_id]) if brand_of[product_id] else None
+
+    def take(pool, blocked, crowded):
+        """Pops the first product of the pool that may go next (not of the `blocked` category, not of a `crowded`
+        series); products already shown are dropped on the way."""
         index = 0
         while index < len(pool):
             product_id = pool[index]
             family = family_of.get(product_id)
             if product_id in used or family in used_families:
                 del pool[index]
-            elif blocked is not None and category_of[product_id] == blocked:
+            elif (blocked is not None and category_of[product_id] == blocked) or series(product_id) in crowded:
                 index += 1
             else:
                 del pool[index]
@@ -437,23 +451,23 @@ def build_snapshot(viewer, seed, now=None):
                 return product_id
         return None
 
-    def take_top(blocked):
+    def take_top(blocked, crowded):
         # the top categories take turns in proportion to their scores
         for category_id in top:
             credit[category_id] += share[category_id]
         for category_id in sorted(top, key=lambda pk: -round(credit[pk], 9)):
-            product_id = take(top_pools[category_id], blocked)
+            product_id = take(top_pools[category_id], blocked, crowded)
             if product_id:
                 credit[category_id] -= 1
                 return product_id, PERSONAL
         return None
 
-    def take_neighbour(blocked):
-        product_id = take(neighbour_pool, blocked)
+    def take_neighbour(blocked, crowded):
+        product_id = take(neighbour_pool, blocked, crowded)
         return (product_id, PERSONAL) if product_id else None
 
-    def take_popular(blocked):
-        product_id = take(popular_pool, blocked)
+    def take_popular(blocked, crowded):
+        product_id = take(popular_pool, blocked, crowded)
         return (product_id, POPULAR) if product_id else None
 
     # a kind that has run out gives its place to the next one
@@ -463,9 +477,9 @@ def build_snapshot(viewer, seed, now=None):
         "popular": (take_popular, take_top, take_neighbour),
     }
 
-    def pick(kind, blocked):
+    def pick(kind, blocked, crowded=frozenset()):
         for taker in takers[kind]:
-            item = taker(blocked)
+            item = taker(blocked, crowded)
             if item:
                 return item
         return None
@@ -474,8 +488,11 @@ def build_snapshot(viewer, seed, now=None):
         kind = pattern[len(head) % BLOCK]
         run = [category_of[pk] for pk, _ in head[-MAX_RUN:]]
         blocked = run[0] if len(run) == MAX_RUN and len(set(run)) == 1 else None
-        # only products of the blocked category are left: better a longer run than an empty place
-        item = pick(kind, blocked) or (blocked is not None and pick(kind, None))
+        recent = Counter(series(pk) for pk, _ in head[-(BLOCK - 1):])
+        crowded = {key for key, n in recent.items() if key is not None and n >= MAX_SAME_SERIES}
+        # nothing else is left: better a repeated series than an empty place. Only the blocked category left: the
+        # mixed part ends here and the random rest of the catalog goes on, rather than one category in a row
+        item = pick(kind, blocked, crowded) or pick(kind, blocked)
         if not item:
             break
         head.append(item)
