@@ -8,10 +8,10 @@ from apps.service.models import Manager, Order, OrderComment, OrderItem, Product
 from apps.service.pro import money
 from utils.admin_serializers import RelationSerializer
 
-# ORDER_STATUS
-PENDING, COLLECTING, DELIVERING, COMPLETED, CANCELED, READY_FOR_PICKUP = 0, 1, 2, 3, 4, 5
-# DELIVERY_TYPE
-DELIVERY, PICKUP = 0, 1
+# ORDER_STATUS / DELIVERY_TYPE - the values live on the model, these are the short names the admin modules use
+PENDING, COLLECTING, DELIVERING = Order.PENDING, Order.COLLECTING, Order.DELIVERING
+COMPLETED, CANCELED, READY_FOR_PICKUP = Order.COMPLETED, Order.CANCELED, Order.READY_FOR_PICKUP
+DELIVERY, PICKUP = Order.DELIVERY, Order.PICKUP
 # PAYMENT_TYPE / PAYMENT_STATUS
 PAYMENT_ON_DELIVERY = 4
 PAID = 2

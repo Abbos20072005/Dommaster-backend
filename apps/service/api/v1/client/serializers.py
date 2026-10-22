@@ -132,10 +132,8 @@ class OrderCreateSerializer(serializers.Serializer):
     delivery_price = serializers.CharField(required=False, allow_blank=True)
     receiver_name = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
     receiver_phone = serializers.CharField(max_length=14, required=False, allow_null=True, allow_blank=True)
-    store_id = serializers.IntegerField(required=False, help_text="Pickup store (`base/stores/`), "
-                                                                  "required for delivery_type=1")
-    branch_id = serializers.IntegerField(required=False, help_text="Deprecated: pickup branch of old app versions, "
-                                                                   "use store_id")
+    branch_id = serializers.IntegerField(required=False, help_text="Pickup store (`base/stores/`), "
+                                                                   "required for delivery_type=1")
 
     def validate_delivery_price(self, value):
         normalized = normalize_delivery_price(value)
@@ -144,25 +142,21 @@ class OrderCreateSerializer(serializers.Serializer):
         return normalized
 
     def validate(self, attrs):
-        delivery_type = attrs.get("delivery_type", 0)
-        store_id = attrs.get("store_id")
-        branch_id = attrs.get("branch_id")
-        if delivery_type == 1 and store_id is not None:
-            store = MarketBranch.objects.filter(id=store_id, is_active=True,
-                                                branch_type__in=PICKUP_BRANCH_TYPES).first()
-            if not store:
-                raise serializers.ValidationError({"store_id": "Store not found or inactive"})
-            if attrs.get("payment_type") not in ONLINE_PAYMENT_TYPES:
-                raise serializers.ValidationError(
-                    {"payment_type": "Pickup orders are paid online only (1 Click, 2 Payme, 3 Uzum)"})
-            attrs["store"] = store
+        # a store is a MarketBranch of a pickup type, so pickup has one parameter: branch_id
+        if attrs.get("delivery_type", 0) != 1:
             return attrs
-        if delivery_type == 1 and not branch_id:
-            raise serializers.ValidationError({"store_id": "store_id is required for pickup delivery"})
-        if branch_id:
-            branch = MarketBranch.objects.filter(id=branch_id, is_active=True).first()
-            if not branch:
-                raise serializers.ValidationError("Market branch not found")
+        branch_id = attrs.get("branch_id")
+        if not branch_id:
+            raise serializers.ValidationError({"branch_id": "branch_id is required for pickup delivery"})
+        store = MarketBranch.objects.filter(id=branch_id, is_active=True,
+                                            branch_type__in=PICKUP_BRANCH_TYPES).first()
+        if not store:
+            raise serializers.ValidationError({"branch_id": "Store not found or inactive"})
+        # D39: no payment at the store yet - online payment only
+        if attrs.get("payment_type") not in ONLINE_PAYMENT_TYPES:
+            raise serializers.ValidationError(
+                {"payment_type": "Pickup orders are paid online only (1 Click, 2 Payme, 3 Uzum)"})
+        attrs["store"] = store
         return attrs
 
 class OrderCancelSerializer(serializers.Serializer):

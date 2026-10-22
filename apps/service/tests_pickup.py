@@ -5,6 +5,7 @@ from unittest import mock
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.db import connection
+from django.utils import timezone
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 from rest_framework.test import APIClient
@@ -12,7 +13,7 @@ from rest_framework.test import APIClient
 from apps.authorization.api.v1.client.views import issue_customer_tokens
 from apps.authorization.models import CustomerAddresses
 from apps.base.models import MarketBranch
-from apps.base.stores import clean_schedule, localized_snapshot, open_state, tashkent_now
+from apps.base.stores import clean_schedule, localized_snapshot, open_state
 from apps.service.models import Cart, CartItem, Order, OrderOutboxEvent
 from apps.service.models.choices import (
     ORDER_EVENT_CANCELED, ORDER_EVENT_PICKUP_DONE, ORDER_EVENT_PICKUP_EXPIRED, ORDER_EVENT_PICKUP_READY,
@@ -131,7 +132,7 @@ class StorePublicTests(TestCase):
         first = make_store("A", position=1, name_uz="", address_uz="")
         make_store("Off", is_active=False)
         make_store("Warehouse", branch_type=2)
-        with mock.patch("apps.base.stores.tashkent_now", return_value=MONDAY.replace(hour=10)):
+        with mock.patch("django.utils.timezone.now", return_value=MONDAY.replace(hour=10)):
             response = APIClient().get("/api/v1/base/stores/", HTTP_ACCEPT_LANGUAGE="uz")
         self.assertEqual(response.status_code, 200)
         result = response.data["result"]
@@ -158,7 +159,7 @@ class PickupCheckoutTests(ApiTestCase):
 
     def checkout(self, **data):
         return self.client_for(self.customer).post("/api/v1/order/", {
-            "payment_type": 1, "delivery_type": 1, "store_id": self.store.id, "delivery_price": "30000", **data,
+            "payment_type": 1, "delivery_type": 1, "branch_id": self.store.id, "delivery_price": "30000", **data,
         }, format="json")
 
     def test_pickup_without_address(self):
@@ -182,8 +183,9 @@ class PickupCheckoutTests(ApiTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("payment_type", str(response.data))
 
-        self.assertEqual(self.checkout(store_id=999999).status_code, 400)
-        self.assertEqual(self.checkout(store_id=make_store("Warehouse", branch_type=2).id).status_code, 400)
+        self.assertEqual(self.checkout(branch_id=999999).status_code, 400)
+        # a warehouse is not a store
+        self.assertEqual(self.checkout(branch_id=make_store("Warehouse", branch_type=2).id).status_code, 400)
         MarketBranch.objects.filter(id=self.store.id).update(is_active=False)
         self.assertEqual(self.checkout().status_code, 400)
         self.assertFalse(Order.objects.exists())
@@ -237,7 +239,7 @@ class PickupStatusTests(TestCase):
         self.assertTrue(OrderOutboxEvent.objects.filter(order=self.order, event_type=ORDER_EVENT_PICKUP_DONE).exists())
 
     def test_expired(self):
-        past = tashkent_now() - timedelta(days=3)
+        past = timezone.now() - timedelta(days=3)
         Order.objects.filter(id=self.order.id).update(status=Order.READY_FOR_PICKUP, ready_for_pickup_at=past,
                                                       pickup_deadline=past + timedelta(days=2))
         with mock.patch("apps.service.outbox._deliver_in_background"):

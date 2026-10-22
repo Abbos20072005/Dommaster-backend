@@ -2,6 +2,7 @@ from datetime import timedelta
 from decimal import Decimal
 
 from django.db import models
+from django.utils import timezone
 
 from abstract_model.base_model import BaseModel
 from apps.authorization.models import Customer, CustomerAddresses
@@ -82,9 +83,8 @@ class Order(BaseModel):
     @property
     def pickup_expired(self):
         """Ready for pickup and the deadline has passed (nobody came)."""
-        from apps.base.stores import tashkent_now
         return (self.status == self.READY_FOR_PICKUP and self.pickup_deadline is not None
-                and self.pickup_deadline < tashkent_now())
+                and self.pickup_deadline < timezone.now())
 
     @classmethod
     def deadline_from(cls, ready_at):

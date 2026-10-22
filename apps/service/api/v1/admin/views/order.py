@@ -1,11 +1,11 @@
 from django.db.models import Avg, Count, Q, Sum
 from django.db.models.functions import Coalesce
+from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.filters import OrderingFilter
 from rest_framework.response import Response
-from apps.base.stores import tashkent_now
 from apps.service.models import Manager, Order, OrderComment
 from utils.admin_views import AdminModelViewSet
 from ..filters import OrderFilter, OrderSearchFilter
@@ -72,7 +72,7 @@ class OrderViewSet(AdminModelViewSet):
             completed=Count("id", filter=Q(status=COMPLETED)),
             canceled=Count("id", filter=Q(status=CANCELED)),
             ready_for_pickup=Count("id", filter=Q(status=READY_FOR_PICKUP)),
-            pickup_expired=Count("id", filter=Q(status=READY_FOR_PICKUP, pickup_deadline__lt=tashkent_now())),
+            pickup_expired=Count("id", filter=Q(status=READY_FOR_PICKUP, pickup_deadline__lt=timezone.now())),
             paid=Count("id", filter=Q(payment_status=PAID)),
             revenue=Coalesce(Sum("total_price", filter=Q(status=COMPLETED)), 0.0),
             average_check=Coalesce(Avg("total_price", filter=Q(status=COMPLETED)), 0.0),

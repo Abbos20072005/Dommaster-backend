@@ -5,22 +5,16 @@ Schedule = 7 rows, Monday (0) .. Sunday (6): `{"day", "is_open", "open_time", "c
 null on a closed day. A store open past midnight is not supported (close must be after open).
 """
 import re
-from datetime import datetime, time, timedelta
-from zoneinfo import ZoneInfo
+from datetime import time, timedelta
 
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 
-TASHKENT = ZoneInfo("Asia/Tashkent")
 DAYS = range(7)
 TIME_RE = re.compile(r"^([01]\d|2[0-3]):([0-5]\d)(:[0-5]\d)?$")
 
 UZ_LATITUDE = (37.1, 45.6)
 UZ_LONGITUDE = (55.9, 73.2)
-
-
-def tashkent_now():
-    """Naive Tashkent time, whatever the server clock zone is (the project runs with USE_TZ=False)."""
-    return datetime.now(TASHKENT).replace(tzinfo=None)
 
 
 def check_coordinates(latitude, longitude):
@@ -70,9 +64,10 @@ def clean_schedule(value):
 
 
 def open_state(schedule, now=None):
-    """{"is_open_now", "closes_at", "next_open"} at `now` (default: Tashkent time now).
+    """{"is_open_now", "closes_at", "next_open"} at `now` (default: now - naive Tashkent time, the
+    project's TIME_ZONE).
     `closes_at` = "HH:MM" today while open; `next_open` = {"day", "time"} while closed (null = never opens)."""
-    now = now or tashkent_now()
+    now = now or timezone.now()
     days = {row["day"]: row for row in schedule or [] if isinstance(row, dict)}
     current = now.strftime("%H:%M")
     today = days.get(now.weekday())

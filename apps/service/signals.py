@@ -4,7 +4,8 @@ from .models import Comment, CartItem, Questions, Order, Product, ProductAttribu
     ProductAttributeValue, ProductItemCategoryAttribute
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
-from apps.base.stores import store_snapshot, tashkent_now
+from django.utils import timezone
+from apps.base.stores import store_snapshot
 from .models.choices import (
     ORDER_EVENT_CANCELED, ORDER_EVENT_REFUNDED, ORDER_EVENT_PICKUP_SELECTED, ORDER_EVENT_PICKUP_READY,
     ORDER_EVENT_PICKUP_DONE,
@@ -80,7 +81,7 @@ def decrease_product_quantity_on_collecting(sender, instance, update_fields=None
 def _on_pickup_status(order):
     """Ready for pickup starts the PICKUP_DAYS wait; completing a pickup order = it was picked up."""
     if order.status == Order.READY_FOR_PICKUP:
-        order.ready_for_pickup_at = tashkent_now().replace(microsecond=0)
+        order.ready_for_pickup_at = timezone.now().replace(microsecond=0)
         order.pickup_deadline = Order.deadline_from(order.ready_for_pickup_at)
         order.pickup_expired_at = None
         emit_order_event(order, ORDER_EVENT_PICKUP_READY, payload={

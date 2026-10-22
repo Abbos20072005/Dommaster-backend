@@ -7,8 +7,8 @@ happens automatically - the order stays ready until staff complete or cancel it.
 import logging
 
 from django.db import transaction
+from django.utils import timezone
 
-from apps.base.stores import tashkent_now
 from .models import Order
 from .models.choices import ORDER_EVENT_PICKUP_EXPIRED
 from .outbox import emit_order_event
@@ -23,7 +23,7 @@ def overdue(now):
 
 def expire_overdue_pickups():
     """Returns how many orders were marked expired."""
-    now = tashkent_now().replace(microsecond=0)
+    now = timezone.now().replace(microsecond=0)
     count = 0
     for pk in list(overdue(now).values_list("id", flat=True)):
         with transaction.atomic():

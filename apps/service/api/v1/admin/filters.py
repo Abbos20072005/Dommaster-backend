@@ -1,8 +1,8 @@
 import re
 import django_filters
 from django.db.models import Exists, OuterRef, Q
+from django.utils import timezone
 from rest_framework.filters import SearchFilter
-from apps.base.stores import tashkent_now
 from apps.service.models import AddsBrands, Brand, PartnerBrand, ProductModel, ProductBadge, ProductCategory, \
     ProductSubCategory, ProductItemCategory, ProductAttribute, Order, OrderItem, Product, Comment, CommentReply, \
     Questions, QuestionsReply, ORDER_STATUS, Sale, HomeBlock, ProductModeration, FilterPage, Project
@@ -63,7 +63,7 @@ class OrderFilter(django_filters.FilterSet):
                   "pickup_branch", "manager")
 
     def filter_pickup_expired(self, queryset, name, value):
-        expired = Q(status=Order.READY_FOR_PICKUP, pickup_deadline__lt=tashkent_now())
+        expired = Q(status=Order.READY_FOR_PICKUP, pickup_deadline__lt=timezone.now())
         return queryset.filter(expired) if value else queryset.exclude(expired)
 
 

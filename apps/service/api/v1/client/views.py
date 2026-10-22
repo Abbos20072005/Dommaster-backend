@@ -2495,9 +2495,9 @@ class OrderViewSet(ViewSet):
 
     @extend_schema(
         summary="Create order",
-        description="Create order. Pickup: `delivery_type=1` + `store_id` (an active store of `base/stores/`) - "
-                    "no address needed, delivery price 0, online payment only (`payment_type` 1 / 2 / 3). "
-                    "`branch_id` = pickup of old app versions (deprecated).",
+        description="Create order. Pickup: `delivery_type=1` + `branch_id` (an active store of "
+                    "`base/stores/`) - no address needed, delivery price 0, online payment only "
+                    "(`payment_type` 1 / 2 / 3).",
         request=OrderCreateSerializer(),
         responses={201: OrderSerializer()},
         tags=["Order"],
@@ -2585,7 +2585,7 @@ class OrderViewSet(ViewSet):
                     order_location=customer_location,
                     **(customer_location.details() if customer_location else {}),
                     delivery_type=delivery_type,
-                    pickup_branch_id=store.id if store else serializer.validated_data.get("branch_id"),
+                    pickup_branch=store,
                     delivery_price=delivery_price,
                 )
             else:
@@ -2603,7 +2603,7 @@ class OrderViewSet(ViewSet):
                     order_location=customer_location,
                     **(customer_location.details() if customer_location else {}),
                     delivery_type=delivery_type,
-                    pickup_branch_id=store.id if store else serializer.validated_data.get("branch_id"),
+                    pickup_branch=store,
                     delivery_price=delivery_price,
                 )
 

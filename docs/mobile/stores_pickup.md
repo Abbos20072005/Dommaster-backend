@@ -68,15 +68,15 @@ Token kerak emas. Matnlar `Accept-Language` tilida (`uz` / `ru`, boshqasi → `r
 
 ## Checkout: olib ketish
 
-`POST order/` — `delivery_type: 1` + `store_id` (to'liq tavsif: `order_create.md`).
+`POST order/` — `delivery_type: 1` + `branch_id` (do'kon ID'si; to'liq tavsif: `order_create.md`).
 
 ```json
-{ "payment_type": 1, "channel": "ios", "delivery_type": 1, "store_id": 3 }
+{ "payment_type": 1, "channel": "ios", "delivery_type": 1, "branch_id": 3 }
 ```
 
 - Manzil (`address_id`) **kerak emas**, yetkazish narxi `0`.
 - To'lov **faqat onlayn**: `payment_type` `1` Click, `2` Payme, `3` Uzum. `4` (qabul qilganda to'lash) → `400`, `error_code: 5`, `{"payment_type": [...]}` (D39, do'konda to'lash v2).
-- Nofaol yoki mavjud bo'lmagan `store_id` → `400`, `error_code: 5`, `{"store_id": ["Store not found or inactive"]}`.
+- Nofaol, mavjud bo'lmagan yoki ombor turidagi `branch_id` → `400`, `error_code: 5`, `{"branch_id": ["Store not found or inactive"]}`.
 - Do'kon nomi, manzili, telefoni va koordinatasi buyurtmaga **shu paytdagi holatida** saqlanadi — do'kon keyin tahrirlansa yoki nofaol qilinsa ham buyurtmada eski ma'lumot qoladi.
 
 ---
