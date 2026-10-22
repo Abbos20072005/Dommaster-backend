@@ -3,7 +3,7 @@ from django.contrib.postgres.indexes import GinIndex
 from django.db import models
 
 from abstract_model.base_model import BaseModel
-from utils.slug import unique_slug_for
+from utils.slug import slug_with_id, unique_slug_for
 
 
 class SeoFieldsMixin(models.Model):
@@ -12,9 +12,14 @@ class SeoFieldsMixin(models.Model):
     `slug` / `meta_title` / `meta_description` are translated (modeltranslation adds the `*_uz` / `*_ru`
     columns). Each `slug_<lang>` is unique within its own column (the base `slug` tracks the default `ru`).
     An empty `slug_<lang>` is generated from `name_<lang>` on save (stable — a later name change does NOT
-    move the slug); a changed slug keeps the old one in `SlugHistory` for 301 redirects.
+    move the slug); a changed slug keeps the old one in `SlugHistory` for 301 redirects — categories and
+    brands only (`SLUG_HISTORY`), a product's slug carries its id (`SLUG_WITH_ID`) and is not redirected.
     """
     SLUG_FALLBACK = "item"
+    # the slug ends with `-<id>` (Product): unique by construction, so no collision query per row
+    SLUG_WITH_ID = False
+    # keep a changed slug in SlugHistory for the 301 (decision 22.10: categories and brands only)
+    SLUG_HISTORY = True
 
     slug = models.SlugField(max_length=255, unique=True, null=True, blank=True, verbose_name="Slug")
     meta_title = models.CharField(max_length=255, blank=True, verbose_name="Meta title")
@@ -28,18 +33,41 @@ class SeoFieldsMixin(models.Model):
         return (getattr(self, f"name_{language}", None) or getattr(self, "name_ru", None)
                 or getattr(self, "name", None))
 
+    def fill_slugs(self):
+        """Generate the empty `slug_<lang>` columns; returns the fields it filled."""
+        filled = []
+        for language in settings.MODELTRANSLATION_LANGUAGES:
+            field = f"slug_{language}"
+            if getattr(self, field, None):
+                continue
+            source = self._slug_source(language)
+            if self.SLUG_WITH_ID:
+                value = slug_with_id(type(self), source, self.pk, field=field, fallback=self.SLUG_FALLBACK)
+            else:
+                value = unique_slug_for(type(self), source, field=field, exclude_pk=self.pk,
+                                        fallback=self.SLUG_FALLBACK)
+            setattr(self, field, value)
+            filled.append(field)
+        return filled
+
     def save(self, *args, **kwargs):
         languages = settings.MODELTRANSLATION_LANGUAGES
+        creating = self.pk is None
         old_slugs = {}
-        if self.pk:
+        if not creating and self.SLUG_HISTORY:
             old_slugs = type(self)._default_manager.filter(pk=self.pk).values(
                 *(f"slug_{language}" for language in languages)).first() or {}
-        for language in languages:
-            field = f"slug_{language}"
-            if not getattr(self, field, None):
-                setattr(self, field, unique_slug_for(type(self), self._slug_source(language), field=field,
-                                                     exclude_pk=self.pk, fallback=self.SLUG_FALLBACK))
+        # a `-<id>` slug needs the id, so it is generated right after the insert
+        if not (creating and self.SLUG_WITH_ID):
+            filled = self.fill_slugs()
+            update_fields = kwargs.get("update_fields")
+            if filled and update_fields is not None:
+                kwargs["update_fields"] = list(update_fields) + filled
         super().save(*args, **kwargs)
+        if creating and self.SLUG_WITH_ID:
+            filled = self.fill_slugs()
+            if filled:
+                super().save(update_fields=filled)
         if old_slugs:
             from apps.service.seo_redirects import record_change
             for language in languages:

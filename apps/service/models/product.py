@@ -13,6 +13,10 @@ from .choices import PUBLISH_STATUS, PUBLISH_STATUS_DRAFT
 
 class Product(SeoFieldsMixin, BaseModel):
     SLUG_FALLBACK = "product"
+    # `<name>-<id>`: products repeat names, so the id keeps the slug unique without a collision query
+    SLUG_WITH_ID = True
+    # no 301 history for products (decision 22.10) — names change often and the slug keeps the id anyway
+    SLUG_HISTORY = False
     PRODUCT_UNIT_CHOICES = (
         ("kg", "KG"),
         ("l", "L"),

@@ -31,13 +31,30 @@ Hamma matn maydoni **til bo'yicha** (`*_uz` / `*_ru`), nom kabi. ru — asosiy (
 - **Qo'lda**: istalgan `slug_<til>` ni yuborib o'zgartirish mumkin.
 - **Barqaror**: slug bir marta yaratilgach, nom o'zgarsa **o'zgarmaydi** (eski manzillar buzilmasin).
 - **Unikal**: har `slug_<til>` o'z tili ustunida model bo'yicha unikal. Takrorlangan slug yuborilsa
-  serializer xato beradi (`unique` validatsiya). Avtomatik yasashda takror bo'lsa `-2`, `-3` qo'shiladi.
+  serializer xato beradi (`unique` validatsiya).
+- **Tovarda id qo'shimchasi**: tovar slug'i `<nom>-<id>` (`kley-ventum-571`) — nomlar takrorlanadi,
+  id esa unikallikni kafolatlaydi. Kategoriya va brendda qo'shimcha yo'q, takror bo'lsa `-2`, `-3`.
+
+### Transliteratsiya jadvali
+
+Kelishilgan jadval (BLD-243 URL rejasi), kod: `utils/slug.py` → `CYRILLIC_TO_LATIN`:
+
+| ж | ы | х | ц | щ | ч | ш | ё | ю | я | ъ / ь |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `zh` | `y` | `h` | `ts` | `sch` | `ch` | `sh` | `yo` | `yu` | `ya` | tashlanadi |
+
+Misol: `Крепеж` → `krepezh`, `Сантехника` → `santehnika`, `Строительные материалы` →
+`stroitelnye-materialy`. Jadvalni o'zgartirish = barcha manzil o'zgarishi, SEO rejasidan tashqari
+tegmaslik kerak; o'zgartirilsa `backfill_seo_slugs --rebuild` ishga tushadi.
 
 ## Slug tarixi va 301
 
 `slug_uz` yoki `slug_ru` **o'zgartirilsa**, eski qiymat `SlugHistory` ga yoziladi (obyekt + til + eski slug).
 Buni model o'zi qiladi (admin tomondan qo'shimcha ish yo'q). Sayt eski/yangi manzilni client'dagi
 `GET /api/v1/seo/resolve/` orqali hal qiladi (301 uchun) — qarang `docs/mobile/seo_fields.md`.
+
+Tarix **faqat kategoriya va brend** uchun yuritiladi (22.10 qarori). Tovarning slug'i o'zgarsa tarixga
+yozilmaydi — tovar nomi tez o'zgaradi, slug'da esa id turadi.
 
 Eski slug yana bo'shagan bo'lsa va boshqa obyekt uni olsa, tarixda eng oxirgi obyekt yozib qoladi.
 
@@ -46,12 +63,19 @@ Eski slug yana bo'shagan bo'lsa va boshqa obyekt uni olsa, tarixda eng oxirgi ob
 Migratsiya 0121 faqat ustunlarni qo'shadi (bo'sh). Mavjud ma'lumotni to'ldirish buyrug'i:
 
 ```
-python manage.py backfill_seo_slugs            # haqiqiy
-python manage.py backfill_seo_slugs --dry-run  # nechta qator to'lishini ko'rsatadi
+python manage.py backfill_seo_slugs                      # bo'sh slug'larni to'ldiradi
+python manage.py backfill_seo_slugs --dry-run            # nechta qator to'lishini ko'rsatadi
+python manage.py backfill_seo_slugs --rebuild            # hamma slug'ni jadval bo'yicha qayta yasaydi
+python manage.py backfill_seo_slugs --rebuild --dry-run
 ```
 
-Har tovar/brend/kategoriya uchun bo'sh `slug_uz`/`slug_ru` ni nomdan yasaydi; kategoriyalarning eski bitta
-`slug` qiymati `slug_ru` ga ko'chiriladi. Qayta ishga tushirish xavfsiz (faqat bo'shlarni to'ldiradi).
+Oddiy rejim har tovar/brend/kategoriya uchun **bo'sh** `slug_uz`/`slug_ru` ni nomdan yasaydi, mavjudiga
+tegmaydi. Qayta ishga tushirish xavfsiz.
+
+`--rebuild` — transliteratsiya jadvali o'zgarganda: db'dagi hamma slug tashlanadi (qo'lda kiritilganlari
+ham) va nomdan qaytadan yasaladi. Kategoriya/brendning eski slug'i `SlugHistory` ga tushadi, ya'ni
+`seo/resolve/` eski manzilga `moved` beradi va sayt 301 qiladi. Eski bitta `slug` ustuni ham tozalanadi
+(uni hech kim o'qimaydi, slug'lar — til bo'yicha ustunlar).
 
 ## 1C
 
