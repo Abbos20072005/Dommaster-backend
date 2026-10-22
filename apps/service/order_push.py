@@ -52,7 +52,7 @@ def _pickup_details(order_id):
     deadline = order.pickup_deadline if order else None
     return {
         "store": snapshot.get("name_ru") or "",
-        "store_id": snapshot.get("id"),
+        "branch_id": snapshot.get("id"),
         "deadline": deadline.strftime("%d.%m.%Y %H:%M") if deadline else "",
         "pickup_deadline": deadline.isoformat() if deadline else "",
     }
@@ -67,7 +67,7 @@ def send_order_status_push(order_id, customer_id, status):
     if status == READY_FOR_PICKUP:
         pickup = _pickup_details(order_id)
         text.update(store=pickup["store"], deadline=pickup["deadline"])
-        data.update(store_id=str(pickup["store_id"] or ""), pickup_deadline=pickup["pickup_deadline"])
+        data.update(branch_id=str(pickup["branch_id"] or ""), pickup_deadline=pickup["pickup_deadline"])
     sent = send_push_to_customer(customer_id, title, body.format(**text), data=data)
     logger.info("Order status push: order_id=%s status=%s devices=%s", order_id, status, sent)
     return sent

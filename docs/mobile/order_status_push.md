@@ -40,7 +40,7 @@ DELETE {{host}}/api/v1/auth/fcm/token/     {"device_id": "..."}
 | 4 | Заказ отменён | Ваш заказ №125 отменён. |
 | 5 | Заказ готов к выдаче | Ваш заказ №125 ждёт вас в магазине «Chilonzor». Заберите его до 24.10.2026 15:30. |
 
-Status `5` push'ida `data` ga yana ikki kalit qo'shiladi: `store_id` (do'kon ID) va `pickup_deadline` (ISO, Toshkent vaqti, masalan `"2026-10-24T15:30:00"`). Matnda shaxsiy ma'lumot (ism, telefon, manzil) yo'q — faqat buyurtma raqami, do'kon nomi va muddat.
+Status `5` push'ida `data` ga yana ikki kalit qo'shiladi: `branch_id` (do'kon ID'si — checkout'ga yuborilgan qiymat) va `pickup_deadline` (ISO, Toshkent vaqti, masalan `"2026-10-24T15:30:00"`). Matnda shaxsiy ma'lumot (ism, telefon, manzil) yo'q — faqat buyurtma raqami, do'kon nomi va muddat.
 
 `data` (barcha qiymatlar **string**):
 

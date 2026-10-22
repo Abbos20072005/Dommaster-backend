@@ -33,7 +33,7 @@ def expire_overdue_pickups():
             Order.objects.filter(pk=pk).update(pickup_expired_at=now)
             order.pickup_expired_at = now
             emit_order_event(order, ORDER_EVENT_PICKUP_EXPIRED, payload={
-                "store_id": order.pickup_branch_id, "pickup_deadline": order.pickup_deadline.isoformat(),
+                "branch_id": order.pickup_branch_id, "pickup_deadline": order.pickup_deadline.isoformat(),
             })
             count += 1
     if count:

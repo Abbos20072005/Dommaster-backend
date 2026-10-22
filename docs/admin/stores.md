@@ -113,7 +113,7 @@ Yangi buyurtma xabarida (caption + Excel) olib ketishda do'kon nomi, manzili (mo
 | Event | Qachon | Telegram |
 | --- | --- | --- |
 | `order.pickup_selected` | buyurtma do'kon bilan yaratilganda / kartada do'kon o'zgarganda | yo'q (`status = recorded`) |
-| `order.pickup_ready` | status → `5` (`payload`: `store_id`, `pickup_deadline`) | yo'q (`recorded`) |
+| `order.pickup_ready` | status → `5` (`payload`: `branch_id`, `pickup_deadline`) | yo'q (`recorded`) |
 | `order.pickup_done` | pickup buyurtma → `3` Completed | yo'q (`recorded`) |
 | `order.pickup_expired` | `pickup_deadline` o'tgan, hali `5` (fon vazifasi, har 10 daqiqada) | ha |
 

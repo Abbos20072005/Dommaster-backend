@@ -85,17 +85,17 @@ def _on_pickup_status(order):
         order.pickup_deadline = Order.deadline_from(order.ready_for_pickup_at)
         order.pickup_expired_at = None
         emit_order_event(order, ORDER_EVENT_PICKUP_READY, payload={
-            "store_id": order.pickup_branch_id, "pickup_deadline": order.pickup_deadline.isoformat(),
+            "branch_id": order.pickup_branch_id, "pickup_deadline": order.pickup_deadline.isoformat(),
         })
     elif order.status == Order.COMPLETED and order.delivery_type == Order.PICKUP:
-        emit_order_event(order, ORDER_EVENT_PICKUP_DONE, payload={"store_id": order.pickup_branch_id})
+        emit_order_event(order, ORDER_EVENT_PICKUP_DONE, payload={"branch_id": order.pickup_branch_id})
 
 
 @receiver(post_save, sender=Order)
 def emit_pickup_selected(sender, instance, **kwargs):
     if getattr(instance, "_pickup_selected", False):
         instance._pickup_selected = False
-        emit_order_event(instance, ORDER_EVENT_PICKUP_SELECTED, payload={"store_id": instance.pickup_branch_id})
+        emit_order_event(instance, ORDER_EVENT_PICKUP_SELECTED, payload={"branch_id": instance.pickup_branch_id})
 
 
 @receiver(post_save, sender=Order)

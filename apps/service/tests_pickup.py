@@ -231,7 +231,7 @@ class PickupStatusTests(TestCase):
         self.assertIn(self.order.pickup_deadline.strftime("%d.%m.%Y %H:%M"), body)
         self.assertNotIn(self.customer.phone_number, body)
         data = push.call_args.kwargs["data"]
-        self.assertEqual((data["status"], data["store_id"]), ("5", str(self.store.id)))
+        self.assertEqual((data["status"], data["branch_id"]), ("5", str(self.store.id)))
 
         # back to Collecting would take the stock twice
         self.assertEqual(self.set_status(Order.COLLECTING).status_code, 400)
