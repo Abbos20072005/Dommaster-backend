@@ -2,6 +2,7 @@ import re
 from collections import Counter
 
 import openpyxl
+from django.conf import settings
 from django.core.cache import cache
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
@@ -165,7 +166,8 @@ class Command(BaseCommand):
             # update() sends no signals; the brand list of an item category is cached too
             clear_category_filter_cache(*self.touched_item_categories)
             for item_category_id in self.touched_item_categories:
-                cache.delete(f"categories:list:item:category={item_category_id}")
+                for language in settings.MODELTRANSLATION_LANGUAGES:
+                    cache.delete(f"categories:list:item:category={item_category_id}:{language}")
 
         self.stdout.write("")
         for label, count in self.stats.items():

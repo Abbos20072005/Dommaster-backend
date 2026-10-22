@@ -245,7 +245,7 @@ class MainPageViewSet(ViewSet):
         tags=["Main"],
     )
     def homepage_data(self, request):
-        cache_key = f"home:main:data"
+        cache_key = f"home:main:data:{request_language(request)}"
 
         cached_data = cache.get(cache_key)
         if cached_data:
@@ -510,19 +510,21 @@ class ProductViewSet(ViewSet):
         tags=["Product"],
     )
     def most_search(self, request):
-        cache_key = "products:most_search"
+        language = request_language(request)
+        cache_key = f"products:most_search:{language}"
         cached = cache.get(cache_key)
         if cached:
             return Response(
                 data={"result": cached, "ok": True}, status=status.HTTP_200_OK
             )
 
-        products = list(
+        names = (
             Product.objects.filter(is_active=True).annotate(most_solds=Sum("product_order_item__quantity"))
             .exclude(most_solds=0)
             .order_by("-most_solds")
-            .values_list("name", flat=True)[:7]
+            .values_list(f"name_{language}", "name_ru")[:7]
         )
+        products = [name or fallback for name, fallback in names]
         cache.set(cache_key, products, timeout=600)
         return Response(
             data={"result": products, "ok": True}, status=status.HTTP_200_OK
@@ -595,7 +597,8 @@ class ProductViewSet(ViewSet):
             return Response(data={"result": [], "ok": True}, status=status.HTTP_200_OK)
 
         param_data = param.strip()
-        cache_key = f"search:v2:{param_data.lower()}"
+        language = request_language(request)
+        cache_key = f"search:v2:{param_data.lower()}:{language}"
 
         query = cache.get(cache_key)
         if not query:
@@ -612,8 +615,9 @@ class ProductViewSet(ViewSet):
                     Q(name__icontains=param_data) | Q(name_uz__icontains=param_data) | Q(name_ru__icontains=param_data)
                 )
                 .order_by("-similarity")
-                .values_list("name", flat=True)[:5]
+                .values_list(f"name_{language}", "name_ru")[:5]
             )
+            product = [name or fallback for name, fallback in product]
 
             category = (
                 ProductCategory.objects.filter(is_active=True).annotate(
@@ -666,7 +670,7 @@ class ProductViewSet(ViewSet):
         tags=["Product"],
     )
     def most_sold(self, request):
-        cache_key = "products:most_sold"
+        cache_key = f"products:most_sold:{request_language(request)}"
         cached = cache.get(cache_key)
         if cached:
             return Response(
@@ -712,9 +716,10 @@ class ProductViewSet(ViewSet):
     def categories_list(self, request):
         brand_id = request.query_params.get("brand_id")
         is_main = request.query_params.get("is_main", False)
+        language = request_language(request)
 
         if is_main == "true" or is_main == "True" or brand_id:
-            cache_key = f"categories:list:brand={brand_id or 'all'}"
+            cache_key = f"categories:list:brand={brand_id or 'all'}:{language}"
 
             cached_data = cache.get(cache_key)
             if cached_data:
@@ -744,7 +749,7 @@ class ProductViewSet(ViewSet):
                 data={"result": data, "ok": True}, status=status.HTTP_200_OK
             )
 
-        cache_key_main = f"categories:lists"
+        cache_key_main = f"categories:lists:{language}"
         cached_data = cache.get(cache_key_main)
         if cached_data:
             return Response(
@@ -1516,7 +1521,7 @@ class BrandViewSet(ViewSet):
     )
     def brand_list(self, request):
         category_id = request.query_params.get("item_category_id")
-        cache_key = f"categories:list:item:category={category_id or 'all'}"
+        cache_key = f"categories:list:item:category={category_id or 'all'}:{request_language(request)}"
 
         cached_data = cache.get(cache_key)
         if cached_data:
