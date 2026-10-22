@@ -13,23 +13,29 @@ from openpyxl.utils import get_column_letter
 logger = logging.getLogger(__name__)
 
 
+def _crumb(obj, level, language):
+    # `slug` so the site can build the URL of every level from the breadcrumbs alone (SEO, BLD-243)
+    return {"id": obj.id, "slug": translated(obj, "slug", language), "name": translated(obj, "name", language),
+            "level": level}
+
+
 def build_breadcrumbs(obj, language=DEFAULT_LANGUAGE):
     breadcrumbs = []
 
     if isinstance(obj, Product):
-        breadcrumbs.insert(0, {"id": obj.id, "name": translated(obj, "name", language), "level": "product"})
+        breadcrumbs.insert(0, _crumb(obj, "product", language))
         obj = obj.product_item_category
 
     if isinstance(obj, ProductItemCategory):
-        breadcrumbs.insert(0, {"id": obj.id, "name": translated(obj, "name", language), "level": "product_item_category"})
+        breadcrumbs.insert(0, _crumb(obj, "product_item_category", language))
         obj = obj.product_sub_category
 
     if isinstance(obj, ProductSubCategory):
-        breadcrumbs.insert(0, {"id": obj.id, "name": translated(obj, "name", language), "level": "product_sub_category"})
+        breadcrumbs.insert(0, _crumb(obj, "product_sub_category", language))
         obj = obj.product_category
 
     if isinstance(obj, ProductCategory):
-        breadcrumbs.insert(0, {"id": obj.id, "name": translated(obj, "name", language), "level": "product_category"})
+        breadcrumbs.insert(0, _crumb(obj, "product_category", language))
 
     return breadcrumbs
 
@@ -48,11 +54,13 @@ ORDER_STATUS_RU = {
     2: "В процессе доставки",
     3: "Выполнен",
     4: "Отменен",
+    5: "Готов к выдаче",
     "0": "В ожидании",
     "1": "В процессе сборки",
     "2": "В процессе доставки",
     "3": "Выполнен",
     "4": "Отменен",
+    "5": "Готов к выдаче",
     "pending": "В ожидании",
     "collecting": "В процессе сборки",
     "delivering": "В процессе доставки",
@@ -129,6 +137,8 @@ def build_order_caption(order_data):
     if order_data.get("delivery_type") == "Самовывоз":
         branch = escape(order_data.get("pickup_branch") or "—")
         header.append(f"🏬 Самовывоз: <b>{branch}</b>")
+        if order_data.get("pickup_address"):
+            header.append(f"📍 {escape(order_data['pickup_address'])}")
     else:
         addr = escape(order_data.get("delivery_address") or "—")
         header.append(f"🚚 Доставка: <b>{addr}</b>")
@@ -459,6 +469,21 @@ def build_order_data(order):
         if address.latitude and address.longitude:
             map_url = f"https://maps.google.com/?q={address.latitude},{address.longitude}"
 
+    store = order.pickup_store_snapshot or None
+    pickup_name = pickup_address = None
+    if store:
+        pickup_name = store.get("name_ru") or None
+        pickup_address = ", ".join(part for part in (
+            store.get("address_ru") or store.get("address"),
+            f"ориентир: {store['landmark_ru']}" if store.get("landmark_ru") else None,
+            store.get("phone"),
+        ) if part) or None
+        delivery_address = f"Магазин «{pickup_name}»: {pickup_address or '—'}"
+        if store.get("latitude") and store.get("longitude"):
+            map_url = f"https://maps.google.com/?q={store['latitude']},{store['longitude']}"
+    elif order.pickup_branch:
+        pickup_name = order.pickup_branch.name
+
     order_items = order.order_items.select_related('product', 'product__brand').all()
     items_info = []
     total_order_weight = 0.0
@@ -491,7 +516,8 @@ def build_order_data(order):
         'map_url': map_url,
         'courier_comment': order.courier_comment or None,
         'delivery_type': "Самовывоз" if order.delivery_type == 1 else "Доставка",
-        'pickup_branch': order.pickup_branch.name if order.pickup_branch else None,
+        'pickup_branch': pickup_name,
+        'pickup_address': pickup_address,
         'payment_type': order.get_payment_type_display() if order.payment_type else None,
         'payment_method': order.get_payment_method_display() if order.payment_method else None,
         'payment_status': _get_russian_payment_status(order.payment_status),
@@ -542,6 +568,16 @@ def build_sync_failed_text(order, payload):
     return "\n".join(lines)
 
 
+def build_pickup_expired_text(order, payload):
+    store = order.pickup_store_snapshot or {}
+    lines = [f"<b>⏰ Заказ № {order.id} не забрали вовремя</b>", *_status_lines(order, payload)]
+    if store.get("name_ru"):
+        lines.append(f"🏬 Магазин: <b>{escape(store['name_ru'])}</b>")
+    if order.pickup_deadline:
+        lines.append(f"📅 Срок хранения: до {order.pickup_deadline.strftime('%d.%m.%Y %H:%M')}")
+    return "\n".join(lines)
+
+
 def telegram_call(method, data, files=None):
     if not settings.TELEGRAM_BOT_TOKEN or not settings.TELEGRAM_CHANNEL_ID:
         raise TelegramSendError("TELEGRAM_BOT_TOKEN / TELEGRAM_CHANNEL_ID not configured")
@@ -585,6 +621,7 @@ def send_order_event_to_telegram(event_type, order, payload=None):
     """Deliver one order event to the orders Telegram group. Raises TelegramSendError on failure."""
     from .models.choices import (
         ORDER_EVENT_CREATED, ORDER_EVENT_CANCELED, ORDER_EVENT_REFUNDED, ORDER_EVENT_SYNC_FAILED,
+        ORDER_EVENT_PICKUP_EXPIRED,
     )
 
     # only a new order goes with the full caption + Excel; the rest are short status updates
@@ -596,6 +633,7 @@ def send_order_event_to_telegram(event_type, order, payload=None):
         ORDER_EVENT_CANCELED: build_canceled_text,
         ORDER_EVENT_REFUNDED: build_refunded_text,
         ORDER_EVENT_SYNC_FAILED: build_sync_failed_text,
+        ORDER_EVENT_PICKUP_EXPIRED: build_pickup_expired_text,
     }
     if event_type not in text_builders:
         raise TelegramSendError(f"unknown event type: {event_type}")

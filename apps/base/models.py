@@ -1,6 +1,7 @@
 import uuid
 from datetime import time, timedelta
 
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 from abstract_model.base_model import BaseModel
@@ -14,6 +15,11 @@ BRANCH_TYPE_CHOICES = (
     (1, "Market"),
     (2, "Warehouse"),
 )
+PICKUP_BRANCH_TYPES = (0, 1)
+
+
+def default_schedule():
+    return [{"day": day, "is_open": True, "open_time": "09:00", "close_time": "18:00"} for day in range(7)]
 
 
 class MarketBranch(BaseModel):
@@ -25,6 +31,8 @@ class MarketBranch(BaseModel):
     latitude = models.FloatField(blank=True, null=True, verbose_name="Широта")
     longitude = models.FloatField(blank=True, null=True, verbose_name="Долгота")
     working_hours = models.CharField(max_length=255, blank=True, null=True, verbose_name="Рабочее время")
+    schedule = models.JSONField(default=default_schedule, verbose_name="График работы")
+    landmark = models.CharField(max_length=255, blank=True, default="", verbose_name="Ориентир")
     description = RichTextUploadingField(blank=True, null=True, verbose_name="Описание")
     phone_number = models.CharField(max_length=20, blank=True, null=True, verbose_name="Номер телефона")
     image = models.ImageField(upload_to="branch/image/", blank=True, null=True, verbose_name="Изображение")
@@ -33,6 +41,16 @@ class MarketBranch(BaseModel):
 
     def __str__(self):
         return self.name
+
+    def clean(self):
+        from .stores import check_coordinates, clean_schedule
+        errors = check_coordinates(self.latitude, self.longitude)
+        try:
+            self.schedule = clean_schedule(self.schedule)
+        except ValidationError as e:
+            errors["schedule"] = e.messages
+        if errors:
+            raise ValidationError(errors)
 
     class Meta:
         verbose_name = "Филиал"

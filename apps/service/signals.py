@@ -4,29 +4,46 @@ from .models import Comment, CartItem, Questions, Order, Product, ProductAttribu
     ProductAttributeValue, ProductItemCategoryAttribute
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
-from .models.choices import ORDER_EVENT_CANCELED, ORDER_EVENT_REFUNDED
+from apps.base.stores import store_snapshot, tashkent_now
+from .models.choices import (
+    ORDER_EVENT_CANCELED, ORDER_EVENT_REFUNDED, ORDER_EVENT_PICKUP_SELECTED, ORDER_EVENT_PICKUP_READY,
+    ORDER_EVENT_PICKUP_DONE,
+)
 from .outbox import emit_order_event
 from .order_push import notify_order_status
 from .product_filters import clear_category_filter_cache
+
+# ORDER_STATUS of an order whose items are already taken off `Product.quantity` (taken on -> 1 Collecting,
+# given back on -> 4 Canceled): 0 Pending has not taken it, 4 Canceled has given it back
+STOCK_TAKEN_STATUSES = (1, 2, 3, 5)
 
 
 # Order.save() is atomic, so stock changes and outbox events here commit together with the order
 @receiver(pre_save, sender=Order)
 def decrease_product_quantity_on_collecting(sender, instance, update_fields=None, **kwargs):
     instance._status_changed_to = None
-    if not instance.pk:
-        return
+    instance._pickup_selected = False
+    previous = sender.objects.filter(pk=instance.pk).first() if instance.pk else None
 
-    try:
-        previous = sender.objects.get(pk=instance.pk)
-    except sender.DoesNotExist:
+    if update_fields is None or "pickup_branch" in update_fields:
+        if previous is None or previous.pickup_branch_id != instance.pickup_branch_id:
+            instance.pickup_store_snapshot = (store_snapshot(instance.pickup_branch) if instance.pickup_branch_id
+                                              else None)
+            instance._pickup_selected = instance.pickup_branch_id is not None
+
+    if previous is None:
         return
 
     # picked up by push_order_status_to_customer once the order is saved
     if previous.status != instance.status and (update_fields is None or "status" in update_fields):
         instance._status_changed_to = instance.status
+        _on_pickup_status(instance)
 
-    if previous.status != 1 and instance.status == 1:
+    # whether the stock is already taken is decided by the status the order comes FROM, not only by the new
+    # one: -> 1 from a status that holds the stock (1C re-sending "collecting" for an order that is being
+    # delivered or waiting in a store) must not take it twice, and cancelling an order that never took it
+    # (0 Pending, unpaid) must not give the stock back
+    if instance.status == 1 and previous.status not in STOCK_TAKEN_STATUSES:
         items = instance.order_items.select_related('product').all()
         products_to_update = []
         for item in items:
@@ -38,15 +55,17 @@ def decrease_product_quantity_on_collecting(sender, instance, update_fields=None
         if products_to_update:
             Product.objects.bulk_update(products_to_update, ['quantity'])
 
-    elif previous.status != 4 and instance.status == 4:
-        items = instance.order_items.select_related('product').all()
-        products_to_update = []
-        for item in items:
-            product = item.product
-            product.quantity += item.quantity
-            products_to_update.append(product)
-        if products_to_update:
-            Product.objects.bulk_update(products_to_update, ['quantity'])
+    elif instance.status == 4 and previous.status != 4:
+        if previous.status in STOCK_TAKEN_STATUSES:
+            items = instance.order_items.select_related('product').all()
+            products_to_update = []
+            for item in items:
+                product = item.product
+                product.quantity += item.quantity
+                products_to_update.append(product)
+            if products_to_update:
+                Product.objects.bulk_update(products_to_update, ['quantity'])
+        # the staff group hears about every cancellation, stock or no stock
         emit_order_event(instance, ORDER_EVENT_CANCELED)
 
     # payment_status -> 3 is set only after Atmos confirmed cancel_hold, i.e. the money went back to the customer
@@ -56,6 +75,26 @@ def decrease_product_quantity_on_collecting(sender, instance, update_fields=None
             "transaction_id": instance.hold_id,
             "amount": instance.total_price,
         })
+
+
+def _on_pickup_status(order):
+    """Ready for pickup starts the PICKUP_DAYS wait; completing a pickup order = it was picked up."""
+    if order.status == Order.READY_FOR_PICKUP:
+        order.ready_for_pickup_at = tashkent_now().replace(microsecond=0)
+        order.pickup_deadline = Order.deadline_from(order.ready_for_pickup_at)
+        order.pickup_expired_at = None
+        emit_order_event(order, ORDER_EVENT_PICKUP_READY, payload={
+            "store_id": order.pickup_branch_id, "pickup_deadline": order.pickup_deadline.isoformat(),
+        })
+    elif order.status == Order.COMPLETED and order.delivery_type == Order.PICKUP:
+        emit_order_event(order, ORDER_EVENT_PICKUP_DONE, payload={"store_id": order.pickup_branch_id})
+
+
+@receiver(post_save, sender=Order)
+def emit_pickup_selected(sender, instance, **kwargs):
+    if getattr(instance, "_pickup_selected", False):
+        instance._pickup_selected = False
+        emit_order_event(instance, ORDER_EVENT_PICKUP_SELECTED, payload={"store_id": instance.pickup_branch_id})
 
 
 @receiver(post_save, sender=Order)

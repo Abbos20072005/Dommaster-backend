@@ -23,7 +23,7 @@ class VideoOption(TranslationOptions):
 
 
 class MarketBranchOption(TranslationOptions):
-    fields = ("name", "location_name", "description")
+    fields = ("name", "location_name", "description", "landmark", "address")
 
 
 class NotificationOption(TranslationOptions):

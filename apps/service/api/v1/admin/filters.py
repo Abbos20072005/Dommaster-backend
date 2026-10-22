@@ -2,6 +2,7 @@ import re
 import django_filters
 from django.db.models import Exists, OuterRef, Q
 from rest_framework.filters import SearchFilter
+from apps.base.stores import tashkent_now
 from apps.service.models import AddsBrands, Brand, PartnerBrand, ProductModel, ProductBadge, ProductCategory, \
     ProductSubCategory, ProductItemCategory, ProductAttribute, Order, OrderItem, Product, Comment, CommentReply, \
     Questions, QuestionsReply, ORDER_STATUS, Sale, HomeBlock, ProductModeration, FilterPage, Project
@@ -54,11 +55,16 @@ class OrderFilter(django_filters.FilterSet):
     min_total = django_filters.NumberFilter(field_name="total_price", lookup_expr="gte")
     max_total = django_filters.NumberFilter(field_name="total_price", lookup_expr="lte")
     has_manager = django_filters.BooleanFilter(field_name="manager", lookup_expr="isnull", exclude=True)
+    pickup_expired = django_filters.BooleanFilter(method="filter_pickup_expired")
 
     class Meta:
         model = Order
         fields = ("id", "channel", "payment_status", "payment_type", "payment_method", "delivery_type", "customer",
                   "pickup_branch", "manager")
+
+    def filter_pickup_expired(self, queryset, name, value):
+        expired = Q(status=Order.READY_FOR_PICKUP, pickup_deadline__lt=tashkent_now())
+        return queryset.filter(expired) if value else queryset.exclude(expired)
 
 
 class ProductFilter(django_filters.FilterSet):

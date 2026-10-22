@@ -1,4 +1,5 @@
-from .choices import ORDER_STATUS, PAYMENT_STATUS, DELIVERY_TYPE, PAYMENT_TYPE, CASH_PAYMENT_METHOD, ORDER_CHANNEL
+from .choices import ORDER_STATUS, PAYMENT_STATUS, DELIVERY_TYPE, PAYMENT_TYPE, CASH_PAYMENT_METHOD, ORDER_CHANNEL, \
+    ONLINE_PAYMENT_TYPES
 from .catalog import Brand, ProductModel, ProductCategory, ProductSubCategory, ProductItemCategory, ProductUnit, \
     ProductAttribute, ProductAttributeOption, ProductItemCategoryAttribute
 from .product import (

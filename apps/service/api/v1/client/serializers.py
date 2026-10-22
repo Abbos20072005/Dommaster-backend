@@ -7,13 +7,14 @@ from apps.authorization.models import CustomerAddresses
 from apps.service.models import Product, ProductCategory, ProductItemCategory, ProductSubCategory, ProductImage, Comment, \
     Order, OrderItem, Brand, Sale, AddsBrands, Favourites, Cart, CartItem, ProductCharacteristics, Questions, \
     RecentlyViewedProducts, Service, CommentReply, CommentImages, QuestionsReply, \
-    ProductVariantGroup, ProductVariantItem, ProductItemCategoryFilterSchema, HomeBlock, ORDER_CHANNEL
+    ProductVariantGroup, ProductVariantItem, ProductItemCategoryFilterSchema, HomeBlock, ORDER_CHANNEL, ONLINE_PAYMENT_TYPES
 from apps.service import feed, product_links
 from apps.service.attributes import display_value, product_attribute_values, request_language, translated
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
-from apps.base.api.v1.client.serializers import PromocodeSerializer, MarketBranchSerializer, BannerSerializer
-from apps.base.models import MarketBranch
+from apps.base.api.v1.client.serializers import PromocodeSerializer, MarketBranchSerializer, BannerSerializer, \
+    OrderPickupStoreSerializer
+from apps.base.models import MarketBranch, PICKUP_BRANCH_TYPES
 
 
 def normalize_delivery_price(raw):
@@ -124,7 +125,10 @@ class OrderCreateSerializer(serializers.Serializer):
     delivery_price = serializers.CharField(required=False, allow_blank=True)
     receiver_name = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
     receiver_phone = serializers.CharField(max_length=14, required=False, allow_null=True, allow_blank=True)
-    branch_id = serializers.IntegerField(required=False)
+    store_id = serializers.IntegerField(required=False, help_text="Pickup store (`base/stores/`), "
+                                                                  "required for delivery_type=1")
+    branch_id = serializers.IntegerField(required=False, help_text="Deprecated: pickup branch of old app versions, "
+                                                                   "use store_id")
 
     def validate_delivery_price(self, value):
         normalized = normalize_delivery_price(value)
@@ -134,9 +138,20 @@ class OrderCreateSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         delivery_type = attrs.get("delivery_type", 0)
+        store_id = attrs.get("store_id")
         branch_id = attrs.get("branch_id")
+        if delivery_type == 1 and store_id is not None:
+            store = MarketBranch.objects.filter(id=store_id, is_active=True,
+                                                branch_type__in=PICKUP_BRANCH_TYPES).first()
+            if not store:
+                raise serializers.ValidationError({"store_id": "Store not found or inactive"})
+            if attrs.get("payment_type") not in ONLINE_PAYMENT_TYPES:
+                raise serializers.ValidationError(
+                    {"payment_type": "Pickup orders are paid online only (1 Click, 2 Payme, 3 Uzum)"})
+            attrs["store"] = store
+            return attrs
         if delivery_type == 1 and not branch_id:
-            raise serializers.ValidationError("branch_id is required for pickup delivery")
+            raise serializers.ValidationError({"store_id": "store_id is required for pickup delivery"})
         if branch_id:
             branch = MarketBranch.objects.filter(id=branch_id, is_active=True).first()
             if not branch:
@@ -1199,6 +1214,9 @@ class OrderSerializer(serializers.ModelSerializer):
     order_items = OrderItemImageSerializer(many=True, read_only=True)
     order_location = CustomerAddressesSerializer(read_only=True)
     pickup_branch = MarketBranchSerializer(read_only=True)
+    pickup_store = OrderPickupStoreSerializer(source="pickup_store_snapshot", read_only=True, allow_null=True,
+                                        help_text="Pickup store as it was when the order was placed")
+    pickup_expired = serializers.BooleanField(read_only=True, help_text="Ready for pickup and the deadline passed")
 
     class Meta:
         model = Order
@@ -1213,6 +1231,10 @@ class OrderSerializer(serializers.ModelSerializer):
             "order_location",
             *CustomerAddresses.DETAIL_FIELDS,
             "pickup_branch",
+            "pickup_store",
+            "ready_for_pickup_at",
+            "pickup_deadline",
+            "pickup_expired",
             "receiver_name",
             "receiver_phone",
             "saved_price",
@@ -1253,6 +1275,9 @@ class OrderDetailSerializer(serializers.ModelSerializer):
     order_location = CustomerAddressesSerializer(read_only=True)
     promocode = PromocodeSerializer(read_only=True)
     pickup_branch = MarketBranchSerializer(read_only=True)
+    pickup_store = OrderPickupStoreSerializer(source="pickup_store_snapshot", read_only=True, allow_null=True,
+                                        help_text="Pickup store as it was when the order was placed")
+    pickup_expired = serializers.BooleanField(read_only=True, help_text="Ready for pickup and the deadline passed")
 
     class Meta:
         model = Order
@@ -1267,6 +1292,10 @@ class OrderDetailSerializer(serializers.ModelSerializer):
             "order_location",
             *CustomerAddresses.DETAIL_FIELDS,
             "pickup_branch",
+            "pickup_store",
+            "ready_for_pickup_at",
+            "pickup_deadline",
+            "pickup_expired",
             "ofd_url",
             "receiver_name",
             "receiver_phone",

@@ -9,7 +9,7 @@ from apps.service.pro import money
 from utils.admin_serializers import RelationSerializer
 
 # ORDER_STATUS
-PENDING, COLLECTING, DELIVERING, COMPLETED, CANCELED = 0, 1, 2, 3, 4
+PENDING, COLLECTING, DELIVERING, COMPLETED, CANCELED, READY_FOR_PICKUP = 0, 1, 2, 3, 4, 5
 # DELIVERY_TYPE
 DELIVERY, PICKUP = 0, 1
 # PAYMENT_TYPE / PAYMENT_STATUS
@@ -36,6 +36,20 @@ class OrderBranchSerializer(RelationSerializer):
     class Meta:
         model = MarketBranch
         fields = ("id", "name", "address", "phone_number")
+
+
+class OrderStoreSnapshotSerializer(serializers.Serializer):
+    """Read-only: `Order.pickup_store_snapshot` - the pickup branch as it was when it was chosen."""
+    id = serializers.IntegerField()
+    name_uz = serializers.CharField()
+    name_ru = serializers.CharField()
+    address_uz = serializers.CharField()
+    address_ru = serializers.CharField()
+    landmark_uz = serializers.CharField()
+    landmark_ru = serializers.CharField()
+    phone = serializers.CharField()
+    latitude = serializers.FloatField()
+    longitude = serializers.FloatField()
 
 
 class OrderPromocodeSerializer(RelationSerializer):
@@ -83,11 +97,15 @@ class OrderListSerializer(serializers.ModelSerializer):
     customer = OrderCustomerSerializer(read_only=True)
     manager = OrderManagerSerializer(read_only=True)
     items_count = serializers.IntegerField(read_only=True, default=0)
+    pickup_store = OrderStoreSnapshotSerializer(source="pickup_store_snapshot", read_only=True, allow_null=True,
+                                                help_text="Pickup store as it was when chosen; null = delivery")
+    pickup_expired = serializers.BooleanField(read_only=True, help_text="Ready for pickup and the deadline passed")
 
     class Meta:
         model = Order
         fields = ("id", "customer", "manager", "status", "channel", "payment_status", "payment_type", "payment_method",
-                  "delivery_type", "total_price", "products_total_price", "saved_price", "delivery_price",
+                  "delivery_type", "pickup_store", "pickup_deadline", "pickup_expired",
+                  "total_price", "products_total_price", "saved_price", "delivery_price",
                   "receiver_name", "receiver_phone", "items_count", "created_at", "updated_at")
 
 
@@ -95,7 +113,11 @@ class OrderSerializer(serializers.ModelSerializer):
     customer = OrderCustomerSerializer()
     manager = OrderManagerSerializer(required=False, allow_null=True)
     order_location = OrderAddressSerializer(required=False, allow_null=True)
-    pickup_branch = OrderBranchSerializer(required=False, allow_null=True)
+    pickup_branch = OrderBranchSerializer(required=False, allow_null=True,
+                                          help_text="Pickup store (a branch): write `{\"id\"}`, read = the branch now")
+    pickup_store = OrderStoreSnapshotSerializer(source="pickup_store_snapshot", read_only=True, allow_null=True,
+                                                help_text="The pickup branch as it was when chosen")
+    pickup_expired = serializers.BooleanField(read_only=True, help_text="Ready for pickup and the deadline passed")
     promocode = OrderPromocodeSerializer(required=False, allow_null=True)
     items = OrderItemSerializer(source="order_items", many=True, required=False)
     comments = OrderCommentShortSerializer(many=True, read_only=True)
@@ -104,12 +126,14 @@ class OrderSerializer(serializers.ModelSerializer):
         model = Order
         fields = ("id", "customer", "manager", "status", "channel", "payment_status", "payment_type", "payment_method",
                   "delivery_type", "order_location", *CustomerAddresses.DETAIL_FIELDS,
-                  "pickup_branch", "promocode", "items", "comments",
+                  "pickup_branch", "pickup_store", "ready_for_pickup_at", "pickup_deadline", "pickup_expired",
+                  "pickup_expired_at", "promocode", "items", "comments",
                   "total_price", "products_total_price", "saved_price", "delivery_price",
                   "receiver_name", "receiver_phone", "hold_id", "ofd_url", "yandex_claim_id", "yandex_claim_status",
                   "created_at", "updated_at")
         read_only_fields = ("total_price", "products_total_price", "saved_price", "hold_id",
-                            "yandex_claim_id", "yandex_claim_status", "created_at", "updated_at")
+                            "yandex_claim_id", "yandex_claim_status", "ready_for_pickup_at", "pickup_deadline",
+                            "pickup_expired_at", "created_at", "updated_at")
 
     def _get(self, attrs, name, default=None):
         if name in attrs:
@@ -137,8 +161,14 @@ class OrderSerializer(serializers.ModelSerializer):
         delivery_type = self._get(attrs, "delivery_type", DELIVERY)
         if delivery_type == DELIVERY and not location:
             raise serializers.ValidationError({"order_location": "Required for delivery."})
-        if delivery_type == PICKUP and not self._get(attrs, "pickup_branch"):
-            raise serializers.ValidationError({"pickup_branch": "Required for pickup."})
+        branch = attrs.get("pickup_branch")
+        if delivery_type == DELIVERY and self._get(attrs, "pickup_branch"):
+            attrs["pickup_branch"] = None
+        elif delivery_type == PICKUP:
+            if not self._get(attrs, "pickup_branch"):
+                raise serializers.ValidationError({"pickup_branch": "Required for pickup."})
+            if branch and not branch.is_active and branch.pk != getattr(self.instance, "pickup_branch_id", None):
+                raise serializers.ValidationError({"pickup_branch": "The branch is inactive."})
 
         # a new address brings its delivery details along unless they are sent with it
         new_location = attrs.get("order_location")
@@ -154,6 +184,15 @@ class OrderSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"promocode": "Promocode expired."})
 
         old_status = self.instance.status if self.instance else PENDING
+        new_status = attrs.get("status", old_status)
+        if new_status == READY_FOR_PICKUP and old_status != READY_FOR_PICKUP:
+            if delivery_type != PICKUP:
+                raise serializers.ValidationError({"status": "Ready for pickup is for pickup orders only."})
+            if old_status != COLLECTING:
+                raise serializers.ValidationError({"status": "Only a collecting order can become ready for pickup."})
+        # a collected order waiting in the store only leaves by being handed over or cancelled
+        if old_status == READY_FOR_PICKUP and new_status not in (READY_FOR_PICKUP, COMPLETED, CANCELED):
+            raise serializers.ValidationError({"status": "A ready order can only be completed or canceled."})
         if attrs.get("status") == COLLECTING and old_status != COLLECTING:
             # the Order pre_save signal decrements stock on -> Collecting; fail here with a proper 400 instead
             self._check_stock(items)
@@ -269,6 +308,8 @@ class OrderStatsSerializer(serializers.Serializer):
     delivering = serializers.IntegerField()
     completed = serializers.IntegerField()
     canceled = serializers.IntegerField()
+    ready_for_pickup = serializers.IntegerField()
+    pickup_expired = serializers.IntegerField(help_text="Ready for pickup and the deadline passed")
     paid = serializers.IntegerField(help_text="Payment status Paid")
     revenue = serializers.FloatField(help_text="Sum of completed orders")
     average_check = serializers.FloatField(help_text="Average total of completed orders")

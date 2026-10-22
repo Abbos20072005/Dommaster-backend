@@ -1,6 +1,9 @@
 from rest_framework import serializers
 from apps.base.models import Banner, Chat, LoyaltyCard, AboutUs, Messages, Promocodes, News, Articles, Reviews, Video, DeleteButton, \
     BaseInformation, MarketBranch, Notification, BRANCH_TYPE_CHOICES
+from apps.base.api.v1.admin.serializers.branch import ScheduleDaySerializer
+from apps.base.stores import localized_snapshot, open_state
+from apps.service.attributes import request_language, translated
 from config import settings
 
 
@@ -336,3 +339,69 @@ class MarketBranchSerializer(serializers.ModelSerializer):
             "name": dict(BRANCH_TYPE_CHOICES).get(instance.branch_type)
         }
         return data
+
+
+class StoreNextOpenSerializer(serializers.Serializer):
+    day = serializers.IntegerField(help_text="0 = Monday .. 6 = Sunday")
+    time = serializers.CharField(help_text="HH:MM")
+    date = serializers.DateField()
+
+
+class StoreSerializer(serializers.ModelSerializer):
+    """A store (`MarketBranch` of a pickup type) in the request language (an empty uz text falls back to ru);
+    open state in Tashkent time."""
+    name = serializers.SerializerMethodField()
+    address = serializers.SerializerMethodField()
+    landmark = serializers.SerializerMethodField()
+    phone = serializers.CharField(source="phone_number", allow_null=True)
+    photo = serializers.ImageField(source="image", allow_null=True)
+    sort_order = serializers.IntegerField(source="position")
+    schedule = ScheduleDaySerializer(many=True, read_only=True, help_text="7 days, 0 = Monday .. 6 = Sunday")
+    is_open_now = serializers.SerializerMethodField()
+    closes_at = serializers.SerializerMethodField(help_text="HH:MM today while open, else null")
+    next_open = serializers.SerializerMethodField(help_text="When it opens next while closed, else null")
+
+    class Meta:
+        model = MarketBranch
+        fields = ("id", "name", "address", "landmark", "phone", "photo", "latitude", "longitude", "schedule",
+                  "is_open_now", "closes_at", "next_open", "sort_order")
+
+    def _language(self):
+        return request_language(self.context.get("request"))
+
+    def _open_state(self, obj):
+        if getattr(obj, "_open_state", None) is None:
+            obj._open_state = open_state(obj.schedule)
+        return obj._open_state
+
+    def get_name(self, obj) -> str:
+        return translated(obj, "name", self._language())
+
+    def get_address(self, obj) -> str:
+        return translated(obj, "address", self._language()) or ""
+
+    def get_landmark(self, obj) -> str:
+        return translated(obj, "landmark", self._language()) or ""
+
+    def get_is_open_now(self, obj) -> bool:
+        return self._open_state(obj)["is_open_now"]
+
+    def get_closes_at(self, obj) -> str | None:
+        return self._open_state(obj)["closes_at"]
+
+    def get_next_open(self, obj) -> StoreNextOpenSerializer(allow_null=True):
+        return self._open_state(obj)["next_open"]
+
+
+class OrderPickupStoreSerializer(serializers.Serializer):
+    """The order's pickup store as it was when the order was placed (`Order.pickup_store_snapshot`)."""
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    address = serializers.CharField()
+    landmark = serializers.CharField()
+    phone = serializers.CharField()
+    latitude = serializers.FloatField()
+    longitude = serializers.FloatField()
+
+    def to_representation(self, instance):
+        return localized_snapshot(instance, request_language(self.context.get("request")))

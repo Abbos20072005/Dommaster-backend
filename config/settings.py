@@ -356,6 +356,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "apps.service.tasks.build_merchant_feeds",
         "schedule": crontab(hour="*/6", minute=50),  # 4 times a day, after the hourly jobs
     },
+    "expire-pickup-orders": {
+        "task": "apps.service.tasks.expire_pickup_orders",
+        "schedule": crontab(minute="*/10"),
+    },
     "clean-feed-log": {
         "task": "apps.service.tasks.clean_feed_log",
         "schedule": crontab(hour=4, minute=30),

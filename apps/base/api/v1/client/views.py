@@ -14,9 +14,9 @@ from .serializers import BannerSerializer, MessageSerializer, MessageCreateSeria
     ChatCreateSerializer, PromocodeRequestSerializer, NewsSerializer, NewsDetailSerializer, ArticlesSerializer, \
     ArticlesDetailSerializer, ReviewsSerializer, ReviewsDetailSerializer, VideoSerializer, PromocodeSerializer, \
     DeleteButtonSerializer, BaseInformationSerializer, MarketBranchSerializer, NotificationSerializer, \
-    NotificationListParamsSerializer, NotificationUnreadCountSerializer
+    NotificationListParamsSerializer, NotificationUnreadCountSerializer, StoreSerializer
 from apps.base.models import Banner, Chat, AboutUs, Messages, Promocodes, News, Articles, Reviews, Video, DeleteButton, \
-    BaseInformation, MarketBranch, Notification, NotificationRead
+    BaseInformation, MarketBranch, Notification, NotificationRead, PICKUP_BRANCH_TYPES
 from apps.base.paginations.get_notifications import get_notifications_paginator
 from django.db.models import Exists, OuterRef
 from apps.service.models import Cart
@@ -467,6 +467,35 @@ class BaseInformationViewSet(ViewSet):
     def base_info(self, request):
         base_info = BaseInformation.objects.last()
         serializer = BaseInformationSerializer(base_info, context={"request": request})
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+
+
+class StoreViewSet(ViewSet):
+    @extend_schema(
+        summary="Stores list",
+        description="Active stores (pickup points) in `sort_order`, not paginated. Texts in the "
+                    "Accept-Language language; `is_open_now` / `closes_at` / `next_open` by the schedule in "
+                    "Tashkent time.",
+        responses={200: StoreSerializer(many=True)},
+        tags=["Stores"]
+    )
+    def store_list(self, request):
+        stores = MarketBranch.objects.filter(is_active=True, branch_type__in=PICKUP_BRANCH_TYPES).order_by(
+            "position", "id")
+        serializer = StoreSerializer(stores, many=True, context={"request": request})
+        return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+
+    @extend_schema(
+        summary="Store detail",
+        description="One active store; an inactive or unknown one = 404.",
+        responses={200: StoreSerializer()},
+        tags=["Stores"]
+    )
+    def store_detail(self, request, pk):
+        store = MarketBranch.objects.filter(id=pk, is_active=True, branch_type__in=PICKUP_BRANCH_TYPES).first()
+        if not store:
+            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
+        serializer = StoreSerializer(store, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
 

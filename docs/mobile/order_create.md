@@ -16,9 +16,9 @@ POST order/
 
 ```
 1. GET  cart/                              → savat, narxlar (is_checked'larni tekshirish)
-2. GET  auth/customer/addresses/           → manzil tanlash (address_id)
+2. GET  auth/customer/addresses/           → manzil tanlash (address_id; faqat delivery_type = 0)
 3. POST integration/yandex/check-price/    → yetkazish narxi (faqat delivery_type = 0)
-   GET  base/branches/                     → filial tanlash (faqat delivery_type = 1)
+   GET  base/stores/                       → do'kon tanlash (faqat delivery_type = 1, store_id) — stores_pickup.md
 4. POST base/promocode/checker/            → promokod bo'lsa, tekshirish (ixtiyoriy)
 5. POST order/                             → order_id + to'lov havolasi   ✅
 6. To'lov havolasini ochish (Click / Payme / Uzum) yoki payment_type = 4 bo'lsa tugadi
@@ -34,7 +34,8 @@ POST order/
 | `payment_method` | string | yo'q | faqat `payment_type = 4` da ishlatiladi: `cash` yoki `card` |
 | `delivery_type` | int | yo'q (default `0`) | `0` yetkazib berish, `1` olib ketish (pickup) |
 | `address_id` | int | yo'q | mijozning manzili. Yuborilmasa default manzil olinadi |
-| `branch_id` | int | `delivery_type = 1` da **ha** | olib ketiladigan filial (`GET base/branches/`), aktiv bo'lishi kerak |
+| `store_id` | int | `delivery_type = 1` da **ha** | olib ketiladigan do'kon (`GET base/stores/`; filial ID'si), aktiv bo'lishi kerak |
+| `branch_id` | int | yo'q | **eskirgan**: eski ilova versiyalarining pickup filiali (`base/branches/`). Yangi ilova `store_id` yuboradi |
 | `delivery_price` | string | yo'q | yetkazish narxi (`yandex/check-price/` javobidan). `delivery_type = 0` da umumiy summaga qo'shiladi |
 | `promocode` | string (≤ 15) | yo'q | promokod kodi |
 | `receiver_name` | string (≤ 255) | yo'q | qabul qiluvchi ismi |
@@ -46,10 +47,11 @@ Muhim qoidalar:
 
 - **`payment_type`** — faqat `1`–`4` yuboring. Boshqa qiymat validatsiyadan o'tib ketadi, lekin to'lov havolasi `null` bo'ladi.
 - **Manzil tafsilotlari** (kvartira, domofon, podyezd, qavat, kuryerga izoh) request'da yuborilmaydi — tanlangan manzildan buyurtmaga nusxa qilinadi (`docs/mobile/customer_addresses.md`). Buyurtmadan oldin ularni `PATCH auth/customer/addresses/<id>/` bilan saqlang.
-- **`address_id`** yuborilsa, shu manzil mijozning **default** manzili bo'lib qoladi. Yuborilmasa va default manzil ham bo'lmasa → `404`. Manzil **pickup'da ham kerak** (`delivery_type = 1` bo'lsa ham default manzil yoki `address_id` bo'lishi shart).
+- **`address_id`** yuborilsa, shu manzil mijozning **default** manzili bo'lib qoladi. Yuborilmasa va default manzil ham bo'lmasa → `404`. **Pickup'da (`store_id`) manzil kerak emas** — yuborilsa ham e'tiborga olinmaydi (eski `branch_id` pickup'ida esa avvalgidek kerak).
+- **Pickup (`delivery_type = 1` + `store_id`)**: yetkazish narxi `0` (yuborilgan `delivery_price` e'tiborga olinmaydi), to'lov **faqat onlayn** — `payment_type` `1` / `2` / `3`; `4` (qabul qilganda) → validatsiya xatosi. Do'konning nomi, manzili, telefoni va koordinatasi buyurtmaga shu paytdagi holatida saqlanadi.
 - **`delivery_price`** — `"25000"`, `"25 000"`, `"25000.50"`, `"25,5"` yoki son (`25000`) qabul qilinadi. Bo'sh string (`""`) → validatsiya xatosi; narx yo'q bo'lsa maydonni umuman yubormang. Pickup'da yubormang.
 - **`promocode`** — `promocode/checker/` dan o'tgan kodni **kichik harflarda** yuboring. Kod topilmasa xato qaytmaydi — buyurtma promokodsiz, to'liq narxda yaratiladi.
-- **`branch_id`** ni faqat pickup'da yuboring.
+- **`store_id`** ni faqat pickup'da yuboring (`delivery_type = 0` da e'tiborga olinmaydi).
 - **`channel`** — faqat `site` / `ios` / `android` (`home/?platform=` dagi qiymatlar). Boshqa qiymat → validatsiya xatosi. Yuborilmasa buyurtma yaratiladi, lekin kanali noma'lum bo'lib qoladi (`is_web: true` bo'lsa — `site`).
 
 Yetkazib berish + Click:
@@ -70,18 +72,17 @@ curl -X POST {{host}}/api/v1/order/ \
   }'
 ```
 
-Olib ketish + qabul qilganda naqd to'lash:
+Do'kondan olib ketish + Payme:
 
 ```bash
 curl -X POST {{host}}/api/v1/order/ \
   -H "Authorization: Bearer <access_token>" \
   -H "Content-Type: application/json" \
   -d '{
-    "payment_type": 4,
-    "payment_method": "cash",
+    "payment_type": 2,
     "channel": "ios",
     "delivery_type": 1,
-    "branch_id": 3
+    "store_id": 3
   }'
 ```
 
@@ -166,8 +167,10 @@ Validatsiya (`error_code: 5`) — `detail` maydonlar bo'yicha obyekt:
 | Holat | `detail` |
 | --- | --- |
 | `payment_type` yuborilmagan | `{"payment_type": ["Обязательное поле."]}` |
-| `delivery_type = 1`, `branch_id` yo'q | `{"non_field_errors": ["branch_id is required for pickup delivery"]}` |
-| Filial topilmadi yoki aktiv emas | `{"non_field_errors": ["Market branch not found"]}` |
+| `delivery_type = 1`, `store_id` yo'q | `{"store_id": ["store_id is required for pickup delivery"]}` |
+| Do'kon topilmadi yoki aktiv emas | `{"store_id": ["Store not found or inactive"]}` |
+| Pickup'da `payment_type = 4` | `{"payment_type": ["Pickup orders are paid online only (1 Click, 2 Payme, 3 Uzum)"]}` |
+| (eski `branch_id`) filial topilmadi yoki aktiv emas | `{"non_field_errors": ["Market branch not found"]}` |
 | `delivery_price` noto'g'ri yoki bo'sh string | `{"delivery_price": ["Некорректная цена доставки"]}` |
 | `channel` ro'yxatda yo'q qiymat | `{"channel": ["Значения web нет среди допустимых вариантов."]}` |
 
@@ -183,4 +186,4 @@ Validatsiya (`error_code: 5`) — `detail` maydonlar bo'yicha obyekt:
 - Muvaffaqiyatli javobdan keyin savatni qayta yuklang (`GET cart/`) — belgilangan mahsulotlar o'chgan bo'ladi.
 - Buyurtmani bekor qilish: `POST order/<id>/cancel/` — faqat `status` `0` yoki `1` bo'lganda.
 - Buyurtmalar ro'yxati: `GET order/active/`, `GET order/history/`.
-- Holatlar: `status` — `0` Pending, `1` Collecting, `2` Delivering, `3` Completed, `4` Canceled.
+- Holatlar: `status` — `0` Pending, `1` Collecting, `2` Delivering, `3` Completed, `4` Canceled, `5` Ready for pickup (faqat pickup; `stores_pickup.md`).

@@ -9,8 +9,9 @@ from apps.base.models import Banner, Chat, Messages, Notification
 from apps.service.models import Order, Product, ProductAttributeValue, ProductImage, Questions, QuestionsReply
 from apps.service.models.choices import PUBLISH_STATUS_DRAFT, PUBLISH_STATUS_PUBLISHED, PUBLISH_STATUS_REVIEW
 from utils.admin_views import AdminViewMixin
-from ..serializers import TodaySerializer, PENDING, COLLECTING, DELIVERING, CANCELED, STALE_PENDING_ORDERS, \
-    REFUND_PENDING_ORDERS, UNASSIGNED_ORDERS, OUT_OF_STOCK_PRODUCTS, NO_PRICE_PRODUCTS, REVIEW_PRODUCTS, \
+from apps.base.stores import tashkent_now
+from ..serializers import TodaySerializer, PENDING, COLLECTING, DELIVERING, CANCELED, READY_FOR_PICKUP, \
+    STALE_PENDING_ORDERS, REFUND_PENDING_ORDERS, UNASSIGNED_ORDERS, EXPIRED_PICKUP_ORDERS, OUT_OF_STOCK_PRODUCTS, NO_PRICE_PRODUCTS, REVIEW_PRODUCTS, \
     UNANSWERED_QUESTIONS, UNANSWERED_CHATS, MODERATION_QUEUE, EXPIRING_BANNERS, DRAFT_NOTIFICATIONS, ORDERS, \
     CATALOG, FEEDBACK, CONTENT, DANGER, WARNING, INFO
 from .dashboard import day_range, get_recent_orders
@@ -22,7 +23,7 @@ CHART_DAYS = 7
 RECENT_ORDERS = 10
 # PAYMENT_STATUS Hold / Paid: the money is still on our side
 UNREFUNDED = (1, 2)
-OPEN_ORDERS = (PENDING, COLLECTING, DELIVERING)
+OPEN_ORDERS = (PENDING, COLLECTING, DELIVERING, READY_FOR_PICKUP)
 
 
 def stale_pending_orders():
@@ -79,6 +80,9 @@ def get_attention():
         attention_item(UNASSIGNED_ORDERS, ORDERS, INFO,
                        Order.objects.filter(status__in=OPEN_ORDERS, manager=None).order_by("created_at"),
                        date_field="created_at"),
+        attention_item(EXPIRED_PICKUP_ORDERS, ORDERS, WARNING,
+                       Order.objects.filter(status=READY_FOR_PICKUP, pickup_deadline__lt=tashkent_now())
+                       .order_by("pickup_deadline"), date_field="pickup_deadline"),
 
         attention_item(OUT_OF_STOCK_PRODUCTS, CATALOG, DANGER,
                        active_products.filter(quantity__lte=0).order_by("-updated_at"), name_field="name"),

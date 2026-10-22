@@ -1,11 +1,14 @@
 from django.urls import path
 from .views import BannerViewSet, ChatViewSet, AboutUsViewSet, PromocodeViewSet, NewsViewSet, ArticlesViewSet, \
-    ReviewsViewSet, VideoViewSet, DeleteButtonViewSet, BaseInformationViewSet, BranchViewSet, NotificationViewSet
+    ReviewsViewSet, VideoViewSet, DeleteButtonViewSet, BaseInformationViewSet, BranchViewSet, NotificationViewSet, \
+    StoreViewSet
 
 urlpatterns = [
     path("banner/", BannerViewSet.as_view({"get": "banner_list"}), name="banner_list"),
     path("branches/", BranchViewSet.as_view({"get": "branch_list"}), name="branch_list"),
     path("branches/<int:pk>/", BranchViewSet.as_view({"get": "branch_detail"}), name="branch_detail"),
+    path("stores/", StoreViewSet.as_view({"get": "store_list"}), name="store_list"),
+    path("stores/<int:pk>/", StoreViewSet.as_view({"get": "store_detail"}), name="store_detail"),
     path("chat/", ChatViewSet.as_view({"get": "message_list", "post": "message_create"}), name="chat_message_list"),
     path("about/", AboutUsViewSet.as_view({"get": "about_us"}), name="about_us"),
     path("promocode/checker/", PromocodeViewSet.as_view({"post": "promocode_checker"}), name="promocode_checker"),

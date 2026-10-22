@@ -4,7 +4,7 @@ from celery import shared_task
 from django.core.management import call_command
 
 from utils.background import exclusive
-from . import badges, filter_pages, merchant_feed, order_push, outbox
+from . import badges, filter_pages, merchant_feed, order_push, outbox, pickup
 
 
 @shared_task
@@ -49,3 +49,9 @@ def clean_feed_log():
 @exclusive(60 * 60)
 def build_merchant_feeds():
     return merchant_feed.build_feeds()
+
+
+@shared_task
+@exclusive(10 * 60)
+def expire_pickup_orders():
+    return pickup.expire_overdue_pickups()

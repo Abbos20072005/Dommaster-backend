@@ -318,7 +318,7 @@ def _find_closest_branch(latitude, longitude):
         branch_type__in=DELIVERY_BRANCH_TYPES,
         latitude__isnull=False,
         longitude__isnull=False,
-    ).only("id", "name", "location_name", "address", "latitude", "longitude")
+    ).only("id", "name", "location_name", "address", "address_ru", "address_uz", "latitude", "longitude")
     return min(
         branches,
         key=lambda branch: _haversine_km(latitude, longitude, branch.latitude, branch.longitude),

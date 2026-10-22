@@ -20,6 +20,7 @@ DELETE {{host}}/api/v1/auth/fcm/token/     {"device_id": "..."}
 | 2 | Delivering | yuboriladi |
 | 3 | Completed | yuboriladi |
 | 4 | Canceled | yuboriladi |
+| 5 | Ready for pickup | yuboriladi (faqat pickup buyurtma; `stores_pickup.md`) |
 
 - Status kim tomonidan o'zgartirilishidan qat'i nazar yuboriladi: admin panel, 1C, to'lov tizimi callback'i (to'lov o'tgach `1`), mijozning o'zi bekor qilganda (`4`).
 - Faqat status **haqiqatan o'zgarganda** yuboriladi; buyurtma yaratilganda (status `0`) push yo'q.
@@ -37,6 +38,9 @@ DELETE {{host}}/api/v1/auth/fcm/token/     {"device_id": "..."}
 | 2 | Заказ в доставке | Ваш заказ №125 передан в доставку. |
 | 3 | Заказ выполнен | Ваш заказ №125 выполнен. Спасибо за покупку! |
 | 4 | Заказ отменён | Ваш заказ №125 отменён. |
+| 5 | Заказ готов к выдаче | Ваш заказ №125 ждёт вас в магазине «Chilonzor». Заберите его до 24.10.2026 15:30. |
+
+Status `5` push'ida `data` ga yana ikki kalit qo'shiladi: `store_id` (do'kon ID) va `pickup_deadline` (ISO, Toshkent vaqti, masalan `"2026-10-24T15:30:00"`). Matnda shaxsiy ma'lumot (ism, telefon, manzil) yo'q — faqat buyurtma raqami, do'kon nomi va muddat.
 
 `data` (barcha qiymatlar **string**):
 

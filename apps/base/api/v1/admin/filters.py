@@ -4,9 +4,14 @@ from apps.base.models import MarketBranch, Banner, Chat, Messages, Notification
 
 
 class MarketBranchFilter(django_filters.FilterSet):
+    has_orders = django_filters.BooleanFilter(field_name="orders_count", method="filter_has_orders")
+
     class Meta:
         model = MarketBranch
         fields = ("branch_type", "is_active")
+
+    def filter_has_orders(self, queryset, name, value):
+        return queryset.filter(orders_count__gt=0) if value else queryset.filter(orders_count=0)
 
 
 class BannerFilter(django_filters.FilterSet):

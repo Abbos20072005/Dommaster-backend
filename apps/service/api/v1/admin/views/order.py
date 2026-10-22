@@ -5,11 +5,12 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.filters import OrderingFilter
 from rest_framework.response import Response
+from apps.base.stores import tashkent_now
 from apps.service.models import Manager, Order, OrderComment
 from utils.admin_views import AdminModelViewSet
 from ..filters import OrderFilter, OrderSearchFilter
 from ..serializers import OrderListSerializer, OrderSerializer, OrderStatsSerializer, ManagerSerializer, \
-    OrderCommentSerializer, PENDING, COLLECTING, DELIVERING, COMPLETED, CANCELED, PAID
+    OrderCommentSerializer, PENDING, COLLECTING, DELIVERING, COMPLETED, CANCELED, READY_FOR_PICKUP, PAID
 
 
 class ManagerViewSet(AdminModelViewSet):
@@ -56,7 +57,7 @@ class OrderViewSet(AdminModelViewSet):
 
     def perform_destroy(self, instance):
         # stock is already taken for these; cancelling restores it (Order pre_save signal)
-        if instance.status in (COLLECTING, DELIVERING):
+        if instance.status in (COLLECTING, DELIVERING, READY_FOR_PICKUP):
             raise ValidationError({"status": "Cancel the order before deleting it."})
         instance.delete()
 
@@ -70,6 +71,8 @@ class OrderViewSet(AdminModelViewSet):
             delivering=Count("id", filter=Q(status=DELIVERING)),
             completed=Count("id", filter=Q(status=COMPLETED)),
             canceled=Count("id", filter=Q(status=CANCELED)),
+            ready_for_pickup=Count("id", filter=Q(status=READY_FOR_PICKUP)),
+            pickup_expired=Count("id", filter=Q(status=READY_FOR_PICKUP, pickup_deadline__lt=tashkent_now())),
             paid=Count("id", filter=Q(payment_status=PAID)),
             revenue=Coalesce(Sum("total_price", filter=Q(status=COMPLETED)), 0.0),
             average_check=Coalesce(Avg("total_price", filter=Q(status=COMPLETED)), 0.0),

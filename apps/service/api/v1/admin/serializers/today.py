@@ -4,12 +4,14 @@ from .order import OrderListSerializer
 # attention rows
 STALE_PENDING_ORDERS, REFUND_PENDING_ORDERS = "stale_pending_orders", "refund_pending_orders"
 UNASSIGNED_ORDERS = "unassigned_orders"
+EXPIRED_PICKUP_ORDERS = "expired_pickup_orders"
 OUT_OF_STOCK_PRODUCTS, NO_PRICE_PRODUCTS, REVIEW_PRODUCTS = "out_of_stock_products", "no_price_products", \
     "review_products"
 UNANSWERED_QUESTIONS, UNANSWERED_CHATS, MODERATION_QUEUE = "unanswered_questions", "unanswered_chats", \
     "moderation_queue"
 EXPIRING_BANNERS, DRAFT_NOTIFICATIONS = "expiring_banners", "draft_notifications"
-ATTENTION_KEYS = (STALE_PENDING_ORDERS, REFUND_PENDING_ORDERS, UNASSIGNED_ORDERS, OUT_OF_STOCK_PRODUCTS,
+ATTENTION_KEYS = (STALE_PENDING_ORDERS, REFUND_PENDING_ORDERS, UNASSIGNED_ORDERS, EXPIRED_PICKUP_ORDERS,
+                  OUT_OF_STOCK_PRODUCTS,
                   NO_PRICE_PRODUCTS, REVIEW_PRODUCTS, UNANSWERED_QUESTIONS, UNANSWERED_CHATS, MODERATION_QUEUE,
                   EXPIRING_BANNERS, DRAFT_NOTIFICATIONS)
 ORDERS, CATALOG, FEEDBACK, CONTENT = "orders", "catalog", "feedback", "content"

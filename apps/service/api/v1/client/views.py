@@ -2490,7 +2490,9 @@ class OrderViewSet(ViewSet):
 
     @extend_schema(
         summary="Create order",
-        description="Create order",
+        description="Create order. Pickup: `delivery_type=1` + `store_id` (an active store of `base/stores/`) - "
+                    "no address needed, delivery price 0, online payment only (`payment_type` 1 / 2 / 3). "
+                    "`branch_id` = pickup of old app versions (deprecated).",
         request=OrderCreateSerializer(),
         responses={201: OrderSerializer()},
         tags=["Order"],
@@ -2509,8 +2511,11 @@ class OrderViewSet(ViewSet):
                 error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors
             )
 
+        store = serializer.validated_data.get("store")
         customer_address_id = serializer.validated_data.get("address_id")
-        if customer_address_id:
+        if store:
+            customer_location = None
+        elif customer_address_id:
             customer_location = CustomerAddresses.objects.filter(
                 customer_id=request.user.id, id=customer_address_id
             ).first()
@@ -2561,8 +2566,8 @@ class OrderViewSet(ViewSet):
                     )
 
                 delivery_type = serializer.validated_data.get("delivery_type", 0)
-                delivery_price = serializer.validated_data.get("delivery_price", 0.0)
-                delivery_cost = float(delivery_price) if delivery_type == 0 else 0.0
+                delivery_price = serializer.validated_data.get("delivery_price", 0.0) if delivery_type == 0 else 0
+                delivery_cost = float(delivery_price)
 
                 order = Order.objects.create(
                     customer_id=request.user.id,
@@ -2573,15 +2578,15 @@ class OrderViewSet(ViewSet):
                     saved_price=cart.saved_price,
                     products_total_price=cart.products_total_price,
                     order_location=customer_location,
-                    **customer_location.details(),
+                    **(customer_location.details() if customer_location else {}),
                     delivery_type=delivery_type,
-                    pickup_branch_id=serializer.validated_data.get("branch_id"),
+                    pickup_branch_id=store.id if store else serializer.validated_data.get("branch_id"),
                     delivery_price=delivery_price,
                 )
             else:
                 delivery_type = serializer.validated_data.get("delivery_type", 0)
-                delivery_price = serializer.validated_data.get("delivery_price", 0.0)
-                delivery_cost = float(delivery_price) if delivery_type == 0 else 0.0
+                delivery_price = serializer.validated_data.get("delivery_price", 0.0) if delivery_type == 0 else 0
+                delivery_cost = float(delivery_price)
 
                 order = Order.objects.create(
                     customer_id=request.user.id,
@@ -2591,9 +2596,9 @@ class OrderViewSet(ViewSet):
                     saved_price=cart.saved_price,
                     products_total_price=cart.products_total_price,
                     order_location=customer_location,
-                    **customer_location.details(),
+                    **(customer_location.details() if customer_location else {}),
                     delivery_type=delivery_type,
-                    pickup_branch_id=serializer.validated_data.get("branch_id"),
+                    pickup_branch_id=store.id if store else serializer.validated_data.get("branch_id"),
                     delivery_price=delivery_price,
                 )
 
