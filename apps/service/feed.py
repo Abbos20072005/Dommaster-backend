@@ -11,7 +11,7 @@ from datetime import timedelta
 
 from django.core.cache import cache
 from django.db.models import CharField, Count, Exists, OuterRef, Q, Value
-from django.db.models.functions import Cast, Concat, MD5, TruncWeek
+from django.db.models.functions import Cast, Coalesce, Concat, MD5, TruncWeek
 from django.utils import timezone
 
 from apps.service.models import CartItem, Favourites, FeedImpression, InterestEvent, OrderItem, Product, \
@@ -58,11 +58,21 @@ HEAD_SIZE = 300
 
 POPULAR_DAYS = 180
 POPULAR_HALF_LIFE = 45
+# what makes a product popular: an order counts in full; with few orders the cart additions, favourites
+# and views of all visitors fill the list (each counted once per cart / customer / viewer and week)
+POPULAR_SIGNALS = {
+    "order": 1.0,
+    "cart": 0.3,
+    "favourite": 0.3,
+    "view": 0.05,
+}
 POPULAR_LIMIT = 200
 POPULAR_SHUFFLE = 20
 POPULAR_CACHE_KEY = "feed:popularity"
 POPULAR_CACHE_TIMEOUT = 3600
 
+# a bought product is not shown for this long, and its item category gives its personal places to the sibling
+# categories: someone who has just bought an axe needs a saw, not three more axes
 RECENT_PURCHASE_DAYS = 14
 SNAPSHOT_CACHE_TIMEOUT = 3600
 
@@ -237,17 +247,29 @@ def interest_profile(viewer, now=None):
 
 
 def product_popularity():
-    """{product id: score}: in how many orders of the last POPULAR_DAYS days the product is (orders, not units:
-    one bulk order must not make a bestseller), newer weeks weigh more. Cached."""
+    """{product id: score} over the last POPULAR_DAYS days: orders the product is in (orders, not units: one bulk
+    order must not make a bestseller), plus — weaker, POPULAR_SIGNALS — carts it was added to, customers who liked
+    it and visitors who viewed it; newer weeks weigh more. Cached."""
     scores = cache.get(POPULAR_CACHE_KEY)
     if scores is None:
         now = timezone.now()
-        rows = OrderItem.objects.filter(order__created_at__gte=now - timedelta(days=POPULAR_DAYS)) \
-            .exclude(order__status=ORDER_CANCELED).annotate(week=TruncWeek("order__created_at")) \
-            .values("product_id", "week").annotate(orders=Count("order_id", distinct=True)).order_by()
+        since = now - timedelta(days=POPULAR_DAYS)
+        sources = (
+            ("order", OrderItem.objects.filter(order__created_at__gte=since).exclude(order__status=ORDER_CANCELED),
+             "order__created_at", Count("order_id", distinct=True)),
+            ("cart", CartItem.objects.filter(created_at__gte=since, product__isnull=False),
+             "created_at", Count("cart_id", distinct=True)),
+            ("favourite", Favourites.objects.filter(created_at__gte=since), "created_at", Count("id")),
+            ("view", InterestEvent.objects.filter(event_type=InterestEvent.VIEW, created_at__gte=since),
+             "created_at", Count(Coalesce(Cast("customer_id", CharField()), "device_id"), distinct=True)),
+        )
         scores = defaultdict(float)
-        for row in rows:
-            scores[row["product_id"]] += row["orders"] * 0.5 ** ((now - row["week"]).days / POPULAR_HALF_LIFE)
+        for signal, rows, date_field, counted in sources:
+            rows = rows.annotate(week=TruncWeek(date_field)).values("product_id", "week") \
+                .annotate(n=counted).order_by()
+            for row in rows:
+                scores[row["product_id"]] += POPULAR_SIGNALS[signal] * row["n"] * \
+                    0.5 ** ((now - row["week"]).days / POPULAR_HALF_LIFE)
         scores = dict(scores)
         cache.set(POPULAR_CACHE_KEY, scores, timeout=POPULAR_CACHE_TIMEOUT)
     return scores
@@ -261,13 +283,21 @@ def eligible_products():
         Exists(ProductImage.objects.filter(product_id=OuterRef("pk"))))
 
 
+def recently_bought(viewer, now):
+    """[(product id, item category id)] the customer bought in the last RECENT_PURCHASE_DAYS days."""
+    if not viewer.customer_id:
+        return []
+    return list(OrderItem.objects.filter(
+        order__customer_id=viewer.customer_id, order__created_at__gte=now - timedelta(days=RECENT_PURCHASE_DAYS),
+    ).exclude(order__status=ORDER_CANCELED).values_list("product_id", "product__product_item_category_id"))
+
+
 def excluded_product_ids(viewer, now):
-    """Not shown to the viewer: in the cart now, or bought in the last RECENT_PURCHASE_DAYS days."""
+    """Not shown to the viewer: in the cart or the favourites now (they have found those already), or bought in
+    the last RECENT_PURCHASE_DAYS days."""
     ids = set(_cart_items(viewer).values_list("product_id", flat=True))
-    if viewer.customer_id:
-        ids.update(OrderItem.objects.filter(
-            order__customer_id=viewer.customer_id, order__created_at__gte=now - timedelta(days=RECENT_PURCHASE_DAYS),
-        ).exclude(order__status=ORDER_CANCELED).values_list("product_id", flat=True))
+    ids.update(_favourites(viewer).values_list("product_id", flat=True))
+    ids.update(product_id for product_id, _ in recently_bought(viewer, now))
     ids.discard(None)
     return ids
 
@@ -292,6 +322,27 @@ def block_pattern(personal, neighbour):
     return pattern
 
 
+def variant_families():
+    """{product id: family id}: products joined by variant groups, directly or through other products. Groups are
+    made per dimension (amperage, poles), so one series of a product is a grid of groups: all of it is one family."""
+    parent = {}
+
+    def find(group_id):
+        while parent[group_id] != group_id:
+            parent[group_id] = parent[parent[group_id]]
+            group_id = parent[group_id]
+        return group_id
+
+    first_group = {}
+    for product_id, group_id in ProductVariantItem.objects.values_list("product_id", "group_id"):
+        parent.setdefault(group_id, group_id)
+        if product_id in first_group:
+            parent[find(group_id)] = find(first_group[product_id])
+        else:
+            first_group[product_id] = group_id
+    return {product_id: find(group_id) for product_id, group_id in first_group.items()}
+
+
 def _seed_rank(product_id, seed):
     return hashlib.md5(f"{product_id}:{seed}".encode()).hexdigest()
 
@@ -304,22 +355,27 @@ def build_snapshot(viewer, seed, now=None):
     profile = interest_profile(viewer, now)
     excluded = excluded_product_ids(viewer, now)
     popularity = product_popularity()
+    bought_categories = {category_id for _, category_id in recently_bought(viewer, now) if category_id}
 
-    top = sorted(profile, key=lambda pk: (-profile[pk], pk))[:TOP_CATEGORIES]
-    neighbours = []
+    # equal scores (the categories of one order) take turns from seed to seed instead of losing to a smaller id.
+    # Scores are rounded: they fade every second, and a feed rebuilt for the same seed must come out the same
+    top = sorted(profile, key=lambda pk: (-round(profile[pk], 3), _seed_rank(pk, seed)))[:TOP_CATEGORIES]
+    sub_category_of, siblings_of = {}, defaultdict(list)
     if top:
         sub_categories = ProductItemCategory.objects.filter(id__in=top).values("product_sub_category_id")
-        neighbours = list(ProductItemCategory.objects.filter(
-            product_sub_category_id__in=sub_categories, is_active=True,
-        ).exclude(id__in=top).order_by("id").values_list("id", flat=True))
+        for category_id, sub_category_id in ProductItemCategory.objects.filter(
+                product_sub_category_id__in=sub_categories, is_active=True,
+        ).order_by("id").values_list("id", "product_sub_category_id"):
+            sub_category_of[category_id] = sub_category_id
+            siblings_of[sub_category_id].append(category_id)
+    neighbours = [pk for pk in sub_category_of if pk not in top and pk not in bought_categories]
     popular_ids = sorted(popularity, key=lambda pk: (-popularity[pk], pk))[:POPULAR_LIMIT]
 
     category_of = dict(eligible_products().filter(
         Q(product_item_category_id__in=[*top, *neighbours]) | Q(id__in=popular_ids),
     ).exclude(id__in=excluded).values_list("id", "product_item_category_id"))
-    # variants of one product (sizes, colours): the feed shows one of them
-    group_of = dict(ProductVariantItem.objects.filter(product_id__in=category_of)
-                    .values_list("product_id", "group_id"))
+    # variants of one product (sizes, colours, amperage...): the feed shows one product of a family
+    family_of = variant_families()
     by_category = defaultdict(list)
     for product_id, category_id in category_of.items():
         by_category[category_id].append(product_id)
@@ -333,7 +389,16 @@ def build_snapshot(viewer, seed, now=None):
         rng.shuffle(pool)
         return pool
 
-    top_pools = {pk: category_pool(pk, CATEGORY_POOL) for pk in top}
+    def top_pool(category_id):
+        """A category the customer has just bought from offers its siblings (same sub category) instead."""
+        if category_id not in bought_categories:
+            return category_pool(category_id, CATEGORY_POOL)
+        pool = [pk for sibling in siblings_of.get(sub_category_of.get(category_id), ())
+                if sibling not in bought_categories for pk in category_pool(sibling, NEIGHBOUR_POOL)]
+        rng.shuffle(pool)
+        return pool[:CATEGORY_POOL]
+
+    top_pools = {pk: top_pool(pk) for pk in top}
     neighbour_pool = [pk for category_id in neighbours for pk in category_pool(category_id, NEIGHBOUR_POOL)]
     rng.shuffle(neighbour_pool)
     # roughly by popularity, but not the same products on top after every refresh
@@ -350,32 +415,33 @@ def build_snapshot(viewer, seed, now=None):
                        max(MIN_PERSONAL_PER_BLOCK, round(PERSONAL_PER_BLOCK * signal / FULL_SIGNAL)))
     pattern = block_pattern(personal, personal * NEIGHBOUR_PER_BLOCK // PERSONAL_PER_BLOCK)
 
-    head, used, used_groups = [], set(), set()
+    head, used, used_families = [], set(), set()
     credit = dict.fromkeys(top, 0.0)
+    share = {pk: round(profile[pk] / signal, 3) for pk in top}
 
     def take(pool, blocked):
         """Pops the first product of the pool that may go next; products already shown are dropped on the way."""
         index = 0
         while index < len(pool):
             product_id = pool[index]
-            group = group_of.get(product_id)
-            if product_id in used or (group is not None and group in used_groups):
+            family = family_of.get(product_id)
+            if product_id in used or family in used_families:
                 del pool[index]
             elif blocked is not None and category_of[product_id] == blocked:
                 index += 1
             else:
                 del pool[index]
                 used.add(product_id)
-                if group is not None:
-                    used_groups.add(group)
+                if family is not None:
+                    used_families.add(family)
                 return product_id
         return None
 
     def take_top(blocked):
         # the top categories take turns in proportion to their scores
         for category_id in top:
-            credit[category_id] += profile[category_id] / signal
-        for category_id in sorted(top, key=lambda pk: -credit[pk]):
+            credit[category_id] += share[category_id]
+        for category_id in sorted(top, key=lambda pk: -round(credit[pk], 9)):
             product_id = take(top_pools[category_id], blocked)
             if product_id:
                 credit[category_id] -= 1

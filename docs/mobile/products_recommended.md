@@ -67,9 +67,9 @@ when the visitor adds something to the cart in between. Pull-to-refresh / a new 
 
 | Value | |
 |---|---|
-| `personal` | from the visitor's interest categories (and their sibling categories) |
+| `personal` | from the visitor's interest categories (and their sibling categories; a category the customer has just bought from offers its siblings instead — after an axe come saws and spades, not more axes) |
 | `cross_sell` | reserved: products linked by hand to what the visitor viewed / bought. Not sent yet |
-| `popular` | most ordered products |
+| `popular` | most ordered products; with few orders the products most added to carts / favourites and viewed fill the list |
 | `fallback` | the rest of the catalog in random order |
 
 New values may be added: treat an unknown `rec_source` as a usual product, not as an error.
@@ -81,7 +81,8 @@ New values may be added: treat an unknown `rec_source` as a usual product, not a
 - **A page may be shorter than `page_size`** (a product was deactivated after the feed was built). The end of
   the feed is `result.last`, not a short page.
 - The feed shows only products that are active, have a price, a picture and are in stock; products that are
-  in the cart, or were bought in the last 14 days, are left out.
+  in the cart or in the favourites, or were bought in the last 14 days, are left out. Of the variants of one
+  product (sizes, colours, amperage — the product's `variant_groups`) the feed shows one.
 - A part of the visitors (a control group, 10% by default) always gets the random feed with
   `personalized=false` — this is how the effect of the feed is measured. A test account that never becomes
   personalized is probably in that group: ask the backend to set the group to 0 for the check.
