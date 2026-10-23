@@ -129,7 +129,9 @@ class BranchAdminTests(TestCase):
 class StorePublicTests(TestCase):
     def test_list(self):
         second = make_store("B", position=2)
-        first = make_store("A", position=1, name_uz="", address_uz="")
+        # `address` is a nullable column: "not filled" is NULL there (manage.py backfill_empty_translations),
+        # while `name` defaults to "" and falls back on an empty string too
+        first = make_store("A", position=1, name_uz="", address_uz=None)
         make_store("Off", is_active=False)
         make_store("Warehouse", branch_type=2)
         with mock.patch("django.utils.timezone.now", return_value=MONDAY.replace(hour=10)):

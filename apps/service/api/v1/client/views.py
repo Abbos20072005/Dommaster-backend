@@ -62,7 +62,7 @@ from apps.service.models import (
     QuestionsReply,
     ProductCharacteristics,
 )
-from apps.service.attributes import DEFAULT_LANGUAGE, attribute_values_prefetch, request_language
+from apps.service.attributes import attribute_values_prefetch, request_language
 from apps.service.product_filters import apply_attribute_filters, build_available_filters, category_filters
 from apps.service.pro import money
 from .serializers import (
@@ -135,15 +135,6 @@ from .serializers import (
 )
 
 logger = logging.getLogger(__name__)
-
-
-def localized_names(products, language, limit):
-    """The `name` of each product in the language, ru as the fallback.
-
-    `values_list` returns ONE column for a repeated field name, so ru has to ask for ru alone.
-    """
-    columns = ("name_ru",) if language == DEFAULT_LANGUAGE else (f"name_{language}", "name_ru")
-    return [row[0] or row[-1] for row in products.values_list(*columns)[:limit]]
 
 
 def linked_products_data(ids, request):
@@ -314,8 +305,7 @@ class HomeViewSet(ViewSet):
         platform = request.query_params.get("platform")
         if platform not in home.PLATFORMS:
             platform = None
-        language = request.META.get("HTTP_ACCEPT_LANGUAGE")
-        cache_key = home.layout_cache_key(platform, language if language in home.LANGUAGES else "ru")
+        cache_key = home.layout_cache_key(platform, request_language())
 
         cached_data = cache.get(cache_key)
         if cached_data is not None:
@@ -527,11 +517,12 @@ class ProductViewSet(ViewSet):
                 data={"result": cached, "ok": True}, status=status.HTTP_200_OK
             )
 
-        products = localized_names(
+        # modeltranslation reads `name` in the active language, an empty uz falling back to ru
+        products = list(
             Product.objects.filter(is_active=True).annotate(most_solds=Sum("product_order_item__quantity"))
             .exclude(most_solds=0)
-            .order_by("-most_solds"),
-            language, 7,
+            .order_by("-most_solds")
+            .values_list("name", flat=True)[:7]
         )
         cache.set(cache_key, products, timeout=600)
         return Response(
@@ -610,7 +601,7 @@ class ProductViewSet(ViewSet):
 
         query = cache.get(cache_key)
         if not query:
-            product = (
+            product = list(
                 Product.objects.filter(is_active=True).annotate(
                     similarity=Greatest(
                         TrigramSimilarity("name", param_data),
@@ -623,8 +614,8 @@ class ProductViewSet(ViewSet):
                     Q(name__icontains=param_data) | Q(name_uz__icontains=param_data) | Q(name_ru__icontains=param_data)
                 )
                 .order_by("-similarity")
+                .values_list("name", flat=True)[:5]
             )
-            product = localized_names(product, language, 5)
 
             category = (
                 ProductCategory.objects.filter(is_active=True).annotate(

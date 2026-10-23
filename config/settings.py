@@ -62,6 +62,10 @@ MIDDLEWARE = [
 
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    # the request language for modeltranslation; RequestLanguageMiddleware keeps the default one
+    # active outside the client API (see middleware/language.py)
+    'django.middleware.locale.LocaleMiddleware',
+    'middleware.language.RequestLanguageMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',

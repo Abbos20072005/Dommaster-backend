@@ -1,7 +1,7 @@
 """Product attribute values as customers see them (product cards, filters)."""
 from django.conf import settings
 from django.db.models import OuterRef, Prefetch, Subquery
-from django.utils.translation.trans_real import parse_accept_lang_header
+from django.utils import translation
 
 from .models import ProductAttribute, ProductAttributeValue, ProductItemCategoryAttribute
 
@@ -14,14 +14,15 @@ BOOLEAN_LABELS = {
 VALUES_ATTR = "_attribute_values"
 
 
-def request_language(request):
-    """The first of our languages in Accept-Language ("uz", "uz-UZ", "uz-UZ,uz;q=0.9,ru;q=0.8"), else ru."""
-    header = request.META.get("HTTP_ACCEPT_LANGUAGE", "") if request else ""
-    for language, _ in parse_accept_lang_header(header):
-        language = language.split("-")[0]
-        if language in settings.MODELTRANSLATION_LANGUAGES:
-            return language
-    return DEFAULT_LANGUAGE
+def request_language(request=None):
+    """The language the request is answered in - one of MODELTRANSLATION_LANGUAGES, ru for anything else.
+
+    The active language is the single source of truth: `LocaleMiddleware` sets it from `Accept-Language`
+    and modeltranslation reads translated fields by it, so a cache key built from this can never disagree
+    with the text that was rendered. `request` is accepted (and ignored) for the call sites.
+    """
+    language = (translation.get_language() or DEFAULT_LANGUAGE).split("-")[0]
+    return language if language in settings.MODELTRANSLATION_LANGUAGES else DEFAULT_LANGUAGE
 
 
 def translated(obj, field, language):

@@ -3,8 +3,7 @@ from apps.base.models import Banner, Chat, LoyaltyCard, AboutUs, Messages, Promo
     BaseInformation, MarketBranch, Notification, BRANCH_TYPE_CHOICES
 from apps.base.api.v1.admin.serializers.branch import ScheduleDaySerializer
 from apps.base.stores import localized_snapshot, open_state
-from apps.service.attributes import request_language, translated
-from config import settings
+from apps.service.attributes import request_language
 
 
 class DeleteButtonSerializer(serializers.Serializer):
@@ -12,14 +11,6 @@ class DeleteButtonSerializer(serializers.Serializer):
 
 
 class NewsSerializer(serializers.ModelSerializer):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        request = self.context.get('request')
-        language = 'ru'
-        if request and request.META.get('HTTP_ACCEPT_LANGUAGE') in settings.MODELTRANSLATION_LANGUAGES:
-            language = request.META.get('HTTP_ACCEPT_LANGUAGE')
-        self.fields["title"] = serializers.CharField(source=f'title_{language}')
-
     class Meta:
         model = News
         fields = (
@@ -30,15 +21,6 @@ class NewsSerializer(serializers.ModelSerializer):
         )
 
 class NewsDetailSerializer(serializers.ModelSerializer):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        request = self.context.get('request')
-        language = 'ru'
-        if request and request.META.get('HTTP_ACCEPT_LANGUAGE') in settings.MODELTRANSLATION_LANGUAGES:
-            language = request.META.get('HTTP_ACCEPT_LANGUAGE')
-        self.fields["title"] = serializers.CharField(source=f'title_{language}')
-        self.fields["description"] = serializers.CharField(source=f'description_{language}')
-
 
     class Meta:
         model = News
@@ -90,14 +72,6 @@ class ReviewsDetailSerializer(serializers.ModelSerializer):
         )
 
 class VideoSerializer(serializers.ModelSerializer):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        request = self.context.get('request')
-        language = 'ru'
-        if request and request.META.get('HTTP_ACCEPT_LANGUAGE') in settings.MODELTRANSLATION_LANGUAGES:
-            language = request.META.get('HTTP_ACCEPT_LANGUAGE')
-        self.fields["name"] = serializers.CharField(source=f'name_{language}')
-
     class Meta:
         model = Video
         fields = (
@@ -108,14 +82,6 @@ class VideoSerializer(serializers.ModelSerializer):
         )
 
 class PromocodeSerializer(serializers.ModelSerializer):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        request = self.context.get('request')
-        language = 'ru'
-        if request and request.META.get('HTTP_ACCEPT_LANGUAGE') in settings.MODELTRANSLATION_LANGUAGES:
-            language = request.META.get('HTTP_ACCEPT_LANGUAGE')
-        self.fields["name"] = serializers.CharField(source=f'name_{language}')
-
     class Meta:
         model = Promocodes
         fields = (
@@ -129,8 +95,6 @@ class PromocodeSerializer(serializers.ModelSerializer):
 
 
 class NotificationSerializer(serializers.ModelSerializer):
-    title = serializers.SerializerMethodField()
-    description = serializers.SerializerMethodField()
     # annotated by the view
     is_read = serializers.BooleanField(read_only=True)
     content_type_info = serializers.SerializerMethodField()
@@ -159,20 +123,6 @@ class NotificationSerializer(serializers.ModelSerializer):
             }
         return None
 
-    def _translated(self, obj, field) -> str:
-        request = self.context.get('request')
-        language = 'ru'
-        if request and request.META.get('HTTP_ACCEPT_LANGUAGE') in settings.MODELTRANSLATION_LANGUAGES:
-            language = request.META.get('HTTP_ACCEPT_LANGUAGE')
-        # only ru is required in the admin API -> fall back to it
-        return getattr(obj, f'{field}_{language}') or getattr(obj, f'{field}_ru') or ""
-
-    def get_title(self, obj) -> str:
-        return self._translated(obj, "title")
-
-    def get_description(self, obj) -> str:
-        return self._translated(obj, "description")
-
 
 class NotificationListParamsSerializer(serializers.Serializer):
     page = serializers.IntegerField(required=False, default=1, min_value=1)
@@ -189,14 +139,6 @@ class PromocodeRequestSerializer(serializers.Serializer):
 
 
 class BannerSerializer(serializers.ModelSerializer):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        request = self.context.get('request')
-        language = 'ru'
-        if request and request.META.get('HTTP_ACCEPT_LANGUAGE') in settings.MODELTRANSLATION_LANGUAGES:
-            language = request.META.get('HTTP_ACCEPT_LANGUAGE')
-        self.fields["title"] = serializers.CharField(source=f'title_{language}')
-
     content_type_info = serializers.SerializerMethodField()
 
     class Meta:
@@ -268,14 +210,6 @@ class LoyaltyCardSerializer(serializers.ModelSerializer):
 
 
 class AboutUsSerializer(serializers.ModelSerializer):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        request = self.context.get('request')
-        language = 'ru'
-        if request and request.META.get('HTTP_ACCEPT_LANGUAGE') in settings.MODELTRANSLATION_LANGUAGES:
-            language = request.META.get('HTTP_ACCEPT_LANGUAGE')
-        self.fields["description"] = serializers.CharField(source=f'description_{language}')
-
     class Meta:
         model = AboutUs
         fields = (
@@ -305,16 +239,6 @@ class BaseInformationSerializer(serializers.ModelSerializer):
 
 
 class MarketBranchSerializer(serializers.ModelSerializer):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        request = self.context.get('request')
-        language = 'ru'
-        if request and request.META.get('HTTP_ACCEPT_LANGUAGE') in settings.MODELTRANSLATION_LANGUAGES:
-            language = request.META.get('HTTP_ACCEPT_LANGUAGE')
-        self.fields["name"] = serializers.CharField(source=f'name_{language}')
-        self.fields["location_name"] = serializers.CharField(source=f'location_name_{language}')
-        self.fields["description"] = serializers.CharField(source=f'description_{language}')
-
     class Meta:
         model = MarketBranch
         fields = (
@@ -350,9 +274,9 @@ class StoreNextOpenSerializer(serializers.Serializer):
 class StoreSerializer(serializers.ModelSerializer):
     """A store (`MarketBranch` of a pickup type) in the request language (an empty uz text falls back to ru);
     open state in Tashkent time."""
-    name = serializers.SerializerMethodField()
-    address = serializers.SerializerMethodField()
-    landmark = serializers.SerializerMethodField()
+    name = serializers.CharField()
+    address = serializers.SerializerMethodField(help_text='"" when the store has no address')
+    landmark = serializers.SerializerMethodField(help_text='"" when there is no landmark')
     phone = serializers.CharField(source="phone_number", allow_null=True)
     photo = serializers.ImageField(source="image", allow_null=True)
     sort_order = serializers.IntegerField(source="position")
@@ -366,22 +290,17 @@ class StoreSerializer(serializers.ModelSerializer):
         fields = ("id", "name", "address", "landmark", "phone", "photo", "latitude", "longitude", "schedule",
                   "is_open_now", "closes_at", "next_open", "sort_order")
 
-    def _language(self):
-        return request_language(self.context.get("request"))
+    def get_address(self, obj) -> str:
+        # nullable column, but the JSON has always carried a string
+        return obj.address or ""
+
+    def get_landmark(self, obj) -> str:
+        return obj.landmark or ""
 
     def _open_state(self, obj):
         if getattr(obj, "_open_state", None) is None:
             obj._open_state = open_state(obj.schedule)
         return obj._open_state
-
-    def get_name(self, obj) -> str:
-        return translated(obj, "name", self._language())
-
-    def get_address(self, obj) -> str:
-        return translated(obj, "address", self._language()) or ""
-
-    def get_landmark(self, obj) -> str:
-        return translated(obj, "landmark", self._language()) or ""
 
     def get_is_open_now(self, obj) -> bool:
         return self._open_state(obj)["is_open_now"]
@@ -404,4 +323,4 @@ class OrderPickupStoreSerializer(serializers.Serializer):
     longitude = serializers.FloatField()
 
     def to_representation(self, instance):
-        return localized_snapshot(instance, request_language(self.context.get("request")))
+        return localized_snapshot(instance, request_language())
