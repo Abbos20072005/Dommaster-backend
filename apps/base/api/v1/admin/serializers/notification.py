@@ -1,7 +1,7 @@
 from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.fields import empty
-from apps.base.models import Banner, Notification
+from apps.base.models import Articles, Banner, Notification, Video
 from apps.base.notification_push import push_if_published
 from apps.service.models import Product, ProductBadge, ProductCategory, ProductItemCategory, ProductSubCategory
 from .banner import BannerTargetSerializer
@@ -11,7 +11,8 @@ REQUIRED = {"required": True, "allow_null": False, "allow_blank": False}
 # models a notification may lead to; key = ContentType.model (the client gets it in `content_type_info.model`)
 NOTIFICATION_TARGET_MODELS = {
     model._meta.model_name: model
-    for model in (ProductCategory, ProductSubCategory, ProductItemCategory, Product, ProductBadge, Banner)
+    for model in (ProductCategory, ProductSubCategory, ProductItemCategory, Product, ProductBadge, Banner,
+                  Articles, Video)
 }
 # link types that lead to an object -> models `target` may be
 LINK_TYPE_TARGET_MODELS = {
@@ -19,6 +20,8 @@ LINK_TYPE_TARGET_MODELS = {
     Notification.PRODUCT: (Product,),
     Notification.BADGE: (ProductBadge,),
     Notification.BANNER: (Banner,),
+    Notification.ARTICLE: (Articles,),
+    Notification.VIDEO: (Video,),
 }
 LINK_FIELDS = {"link_type", "content_object", "page", "deeplink"}
 AUDIENCE_FIELDS = ("segment", "platform")
@@ -40,8 +43,9 @@ class NotificationSerializer(serializers.ModelSerializer):
         fields = ("id", "title", "title_uz", "title_ru", "description", "description_uz",
                   "description_ru", "image", "link_type", "target", "page", "deeplink",
                   "segment", "platform", "publish_at", "quiet_hours", "is_active", "status", "reads_count",
-                  "push_sent_at", "push_devices", "created_at", "updated_at")
-        read_only_fields = ("title", "description", "push_sent_at", "push_devices", "created_at", "updated_at")
+                  "push_sent_at", "push_devices", "push_to_topic", "created_at", "updated_at")
+        read_only_fields = ("title", "description", "push_sent_at", "push_devices", "push_to_topic",
+                            "created_at", "updated_at")
         extra_kwargs = {"title_ru": REQUIRED, "description_ru": REQUIRED}
 
     def get_fields(self):

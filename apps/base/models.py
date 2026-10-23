@@ -202,13 +202,18 @@ class Notification(BaseModel):
     # where a tap leads: category / product / badge / banner -> `content_object`, page -> `page`;
     # "" = nowhere, or the free `deeplink`
     CATEGORY, PRODUCT, BADGE, PAGE, BANNER = "category", "product", "badge", "page", "banner"
+    ARTICLE, VIDEO = "article", "video"
     LINK_TYPE_CHOICES = (
         (CATEGORY, "Категория"),
         (PRODUCT, "Товар"),
         (BADGE, "Тег"),
         (PAGE, "Страница"),
         (BANNER, "Баннер"),
+        (ARTICLE, "Статья"),
+        (VIDEO, "Видео"),
     )
+    # the one static FCM topic of the new articles / videos: the app subscribes every device to it
+    CONTENT_TOPIC = "buildex_content"
     # who gets it (see `apps/base/audience.py`)
     SEGMENT_ALL, PRO, TASHKENT, BUYERS_30D, ABANDONED_CART = "all", "pro", "tashkent", "buyers_30d", "abandoned_cart"
     SEGMENT_CHOICES = (
@@ -255,6 +260,9 @@ class Notification(BaseModel):
     push_sent_at = models.DateTimeField(null=True, blank=True, editable=False, verbose_name="Пуш отправлен")
     push_devices = models.PositiveIntegerField(default=0, editable=False,
                                                verbose_name="Устройств, получивших пуш")
+    # True = the push goes to CONTENT_TOPIC in one request (new article / video, see `content_push`),
+    # False = to the devices of the audience one by one
+    push_to_topic = models.BooleanField(default=False, editable=False, verbose_name="Пуш в FCM топик")
 
     def __str__(self):
         return self.title

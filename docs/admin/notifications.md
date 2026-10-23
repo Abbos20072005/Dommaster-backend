@@ -54,8 +54,8 @@ Swagger: `/swagger/admin/` → **notifications**.
 | `description_ru` * | majburiy, oddiy matn |
 | `description_uz` | ixtiyoriy |
 | `image` | ixtiyoriy rasm (pushda va ro'yxatda chiqadi). Fayl yuborilsa so'rov `multipart/form-data` bo'ladi; bo'sh `image=` — rasmni o'chiradi |
-| `link_type` | bosilganda qayerga olib boradi: `category`, `product`, `badge`, `page`, `banner`; bo'sh = havolasiz. Quyida — **Deeplink** |
-| `target` | `link_type` = `category` / `product` / `badge` / `banner` uchun obyekt: `{"model", "id"}` |
+| `link_type` | bosilganda qayerga olib boradi: `category`, `product`, `badge`, `page`, `banner`, `article`, `video`; bo'sh = havolasiz. Quyida — **Deeplink** |
+| `target` | `link_type` = `category` / `product` / `badge` / `banner` / `article` / `video` uchun obyekt: `{"model", "id"}` |
 | `page` | `link_type=page` uchun ichki yo'l, `/` bilan boshlanadi (`/pro`) |
 | `deeplink` | `link_type` berilsa — backend o'zi yasaydi (yuborilgani e'tiborga olinmaydi); `link_type` bo'sh bo'lsa — erkin matn, 255 belgigacha |
 | `segment` | auditoriya: `all` (default), `pro`, `tashkent`, `buyers_30d`, `abandoned_cart`. Quyida — **Auditoriya** |
@@ -64,7 +64,9 @@ Swagger: `/swagger/admin/` → **notifications**.
 | `quiet_hours` | default `false`; `true` — 22:00–09:00 oralig'iga tushgan `publish_at` eng yaqin 09:00 ga ko'chiriladi |
 | `is_active` | default `true`; `false` = qoralama (mijozga chiqmaydi) |
 
-Faqat o'qiladi: `id`, `title`, `description` (joriy tildagi qiymat), `status`, `reads_count`, `push_sent_at`, `push_devices`, `created_at`, `updated_at`.
+Faqat o'qiladi: `id`, `title`, `description` (joriy tildagi qiymat), `status`, `reads_count`, `push_sent_at`, `push_devices`, `push_to_topic`, `created_at`, `updated_at`.
+
+`push_to_topic` — `true` bo'lsa push qurilmalarga bittalab emas, bitta FCM topic'ga (`buildex_content`) ketgan: yangi maqola / video qo'shilganda backend o'zi yaratgan bildirishnomalar (`content.md` → `send_push`). Bunday bildirishnomada `push_devices` doim `0` — topic'da nechta qurilma olgani noma'lum (ro'yxatda "Yetkazildi" o'rniga "Topic" deb ko'rsating).
 
 ### `status` (saqlanmaydi, hisoblanadi)
 
@@ -86,12 +88,14 @@ Qoralamani chiqarish: `PATCH {"is_active": true}` — `publish_at` yuborilmasa v
 | `product` | `target` | `product` | `buildex://product/<id>` |
 | `badge` (Teg) | `target` | `productbadge` | `buildex://badge/<id>` |
 | `banner` | `target` | `banner` | `buildex://banner/<id>` |
+| `article` (Maqola) | `target` | `articles` | `buildex://article/<id>` |
+| `video` | `target` | `video` | `buildex://video/<id>` |
 | `page` (Sahifa) | `page` | — | `buildex://page/pro` (`page="/pro"`) |
 | bo'sh | ixtiyoriy `deeplink` | — | yuborilgan matn |
 
 - JSON: `"target": {"model": "product", "id": 15}`; multipart: `target.model=product`, `target.id=15`.
 - `link_type` ga mos kelmagan `target` → `400`. `link_type` almashtirilsa, keraksiz maydonlar (`target` / `page`) o'zi tozalanadi.
-- "Manzil" ro'yxati uchun mavjud endpointlar: `categories/`, `sub-categories/`, `item-categories/`, `products/`, `product-badges/`, `banners/` (hammasida `?search=`).
+- "Manzil" ro'yxati uchun mavjud endpointlar: `categories/`, `sub-categories/`, `item-categories/`, `products/`, `product-badges/`, `banners/`, `articles/`, `videos/` (hammasida `?search=`).
 - Javobdagi `deeplink` — forma ostidagi ko'rinish (`buildex://category/sement`) uchun; ilova asosan `link_type` + `target` bilan ishlaydi.
 
 ### Auditoriya — `GET notifications/audience/`

@@ -114,6 +114,7 @@ Maqolada tarjima maydonlari **yo'q** — har bir maydon bitta (tilga bog'lanmaga
 | `title` * | majburiy, 450 belgigacha |
 | `short_description` * | majburiy, qisqa matn (oddiy text) |
 | `description` * | majburiy, HTML (rich text) |
+| `send_push` | faqat yaratishda, default `true` — quyida **Mijozlarga xabar**. Javobda qaytmaydi |
 
 Faqat o'qiladi: `id`, `created_at`, `updated_at`. Rasm yo'q — JSON yuboriladi.
 
@@ -147,11 +148,34 @@ Faqat o'qiladi: `id`, `created_at`, `updated_at`. Rasm yo'q — JSON yuboriladi.
 | `name_ru` * | majburiy (asosiy til), 150 belgigacha |
 | `name_uz` | ixtiyoriy |
 | `url` * | majburiy, to'liq havola (`https://...`); noto'g'ri bo'lsa `400` |
+| `send_push` | faqat yaratishda, default `true` — quyida **Mijozlarga xabar**. Javobda qaytmaydi |
 
 Faqat o'qiladi: `id`, `name` (joriy tildagi nom), `created_at`, `updated_at`. Fayl yuklanmaydi — faqat havola, JSON yuboriladi.
 
 - Qidiruv: `?search=` (nomi uz/ru, `url`)
 - Tartib: `?ordering=` `id`, `name`, `created_at`, `updated_at`
+
+---
+
+## Mijozlarga xabar (maqola / video yaratilganda)
+
+`POST articles/` yoki `POST videos/` da `send_push` yuborilmasa yoki `true` bo'lsa, backend o'zi:
+
+1. **hammaga** bildirishnoma yaratadi (`notifications/` ro'yxatida ko'rinadi, `push_to_topic: true`):
+
+   | | Maqola | Video |
+   | --- | --- | --- |
+   | sarlavha | maqola `title` (150 belgigacha qisqartiriladi), uz = ru | `Yangi video` / `Новое видео` |
+   | matn | `short_description` (200 belgigacha), uz = ru | `name_uz` / `name_ru` |
+   | havola | `link_type=article`, `buildex://article/<id>` | `link_type=video`, `buildex://video/<id>` |
+
+2. push yuboradi — ilovaning barcha qurilmalariga bitta FCM topic orqali (ruscha matn).
+
+- **Jim soatlar** yoqilgan: 22:00–09:00 oralig'ida yaratilsa, bildirishnoma ertalab 09:00 ga rejalashtiriladi (`scheduled`) va push shu payt ketadi.
+- `"send_push": false` — bildirishnoma ham, push ham bo'lmaydi (masalan, eski maqolani qayta kiritganda). Formada "Mijozlarga xabar yuborish" checkbox'i, default yoqilgan.
+- `PUT` / `PATCH` da `send_push` e'tiborga olinmaydi — tahrirlash qayta push yubormaydi. Bildirishnoma matnini `notifications/{id}/` da tuzatish mumkin (ketgan push o'zgarmaydi).
+- Maqola / video **o'chirilsa**, unga olib boradigan bildirishnomalar ham o'chadi (rejalashtirilgani bo'lsa — push ketmaydi).
+- Django admin orqali qo'shilgan maqola / videoga xabar ketmaydi — faqat shu admin API.
 
 ---
 
@@ -168,5 +192,5 @@ Oddiy DRF formati — maydon nomi bo'yicha:
 
 ## Eslatmalar
 
-- Mijoz (sayt / ilova) tomonida hech narsa o'zgarmagan: `GET /api/v1/base/news/`, `articles/`, `video/` avvalgidek ishlaydi, yaratilgan yozuv darhol ko'rinadi (kesh yo'q). Yashirish / qoralama holati yo'q — yozuv bor bo'lsa, mijozga chiqadi.
+- Mijoz API'si (sayt / ilova) o'zgarmagan: `GET /api/v1/base/news/`, `articles/`, `video/` avvalgidek ishlaydi, yaratilgan yozuv darhol ko'rinadi (kesh yo'q). Yashirish / qoralama holati yo'q — yozuv bor bo'lsa, mijozga chiqadi.
 - `description` ichiga rasm qo'yish: admin API'da rich text uchun alohida rasm yuklash endpointi **yo'q** (django-admin'dagi ckeditor uploader faqat sessiya bilan ishlaydi). Hozircha matn ichidagi rasm tashqi havola (`<img src="https://...">`) bo'lishi kerak.

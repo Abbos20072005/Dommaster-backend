@@ -1,4 +1,6 @@
+from django.db import transaction
 from rest_framework import serializers
+from apps.base.content_push import notify_new_content
 from apps.base.models import Articles, News, Video
 
 # ru is the default (fallback) language
@@ -34,16 +36,36 @@ class ArticlesListSerializer(serializers.ModelSerializer):
         fields = ("id", "title", "short_description", "created_at", "updated_at")
 
 
-class ArticlesSerializer(serializers.ModelSerializer):
+class NewContentPushMixin(serializers.Serializer):
+    """`send_push` (create only, default true): a notification for everybody + a push to the FCM topic
+    (`apps/base/content_push.py`). Ignored on update — an edit never pushes again."""
+    send_push = serializers.BooleanField(
+        write_only=True, required=False, default=True,
+        help_text="Create: notify every customer (in-app list + push). Ignored on update.")
+
+    def create(self, validated_data):
+        send_push = validated_data.pop("send_push", True)
+        with transaction.atomic():
+            instance = super().create(validated_data)
+            if send_push:
+                notify_new_content(instance)
+        return instance
+
+    def update(self, instance, validated_data):
+        validated_data.pop("send_push", None)
+        return super().update(instance, validated_data)
+
+
+class ArticlesSerializer(NewContentPushMixin, serializers.ModelSerializer):
     class Meta:
         model = Articles
-        fields = ("id", "title", "short_description", "description", "created_at", "updated_at")
+        fields = ("id", "title", "short_description", "description", "send_push", "created_at", "updated_at")
         read_only_fields = ("created_at", "updated_at")
 
 
-class VideoSerializer(serializers.ModelSerializer):
+class VideoSerializer(NewContentPushMixin, serializers.ModelSerializer):
     class Meta:
         model = Video
-        fields = ("id", "name", "name_uz", "name_ru", "url", "created_at", "updated_at")
+        fields = ("id", "name", "name_uz", "name_ru", "url", "send_push", "created_at", "updated_at")
         read_only_fields = ("name", "created_at", "updated_at")
         extra_kwargs = {"name_ru": REQUIRED}

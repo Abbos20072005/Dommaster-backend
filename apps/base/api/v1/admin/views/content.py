@@ -1,3 +1,5 @@
+from django.db import transaction
+from apps.base.content_push import drop_content_notifications
 from apps.base.models import Articles, News, Video
 from utils.admin_views import AdminModelViewSet
 from ..filters import CreatedRangeFilter
@@ -35,6 +37,12 @@ class ArticlesViewSet(AdminModelViewSet):
             return ArticlesListSerializer
         return ArticlesSerializer
 
+    @transaction.atomic
+    def perform_destroy(self, instance):
+        # a notification of a deleted article would lead nowhere
+        drop_content_notifications(instance)
+        instance.delete()
+
 
 class VideoViewSet(AdminModelViewSet):
     queryset = Video.objects.all()
@@ -43,3 +51,8 @@ class VideoViewSet(AdminModelViewSet):
     search_fields = ("name_ru", "name_uz", "url")
     ordering_fields = ("id", "name", "created_at", "updated_at")
     ordering = ("-id",)
+
+    @transaction.atomic
+    def perform_destroy(self, instance):
+        drop_content_notifications(instance)
+        instance.delete()

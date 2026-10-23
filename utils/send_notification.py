@@ -85,6 +85,23 @@ def send_push_to_devices(fcm_tokens, title: str, body: str, data: dict | None = 
     return sum(1 for result in results if result)
 
 
+def send_push_to_topic(topic: str, title: str, body: str, data: dict | None = None,
+                       image: str | None = None) -> bool:
+    """One request to an FCM topic: Firebase delivers it to every device subscribed to it (the app
+    subscribes itself), however many there are. True = FCM accepted it; how many devices got it is unknown."""
+    try:
+        push_service = FCMNotification(
+            service_account_file=os.getcwd() + '/utils/dommaster_service_key.json',
+            project_id="buildexgo"
+        )
+        push_service.notify(topic_name=topic, notification_title=title, notification_body=body,
+                            notification_image=image, data_payload=data)
+        return True
+    except Exception as e:
+        logger.error("FCM topic push failed: topic=%s error=%s", topic, e)
+        return False
+
+
 def send_push_to_customer(customer_id, title: str, body: str, data: dict | None = None) -> int:
     """Push to every device of the customer. Returns how many devices accepted it."""
     tokens = real_fcm_tokens().filter(customer_id=customer_id)

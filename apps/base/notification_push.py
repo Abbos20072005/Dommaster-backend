@@ -6,6 +6,10 @@ the admin serializer after create / update (the push starts after commit, in the
 (Celery beat; by hand: `manage.py send_notification_pushes`) for the scheduled ones whose time has
 come. `push_sent_at` is set before sending, so two callers never push the same notification twice —
 and a failed push is not repeated.
+
+A notification with `push_to_topic` (the automatic ones of new articles / videos, `content_push.py`)
+goes to the static FCM topic `Notification.CONTENT_TOPIC` instead: one request whatever the number of
+devices, guests' devices included (the app subscribes to the topic itself).
 """
 import logging
 
@@ -17,7 +21,7 @@ from django.conf import settings
 from apps.base import audience
 from apps.base.models import Notification, NotificationRecipient
 from utils.background import run_in_background
-from utils.send_notification import send_push_to_devices
+from utils.send_notification import send_push_to_devices, send_push_to_topic
 
 logger = logging.getLogger(__name__)
 
@@ -74,8 +78,24 @@ def push_image(notification):
     return f"{settings.BACKEND_URL.rstrip('/')}/{notification.image.url.lstrip('/')}"
 
 
+def send_topic_push(notification):
+    """One request to `Notification.CONTENT_TOPIC`, ru text like every other push. The number of devices
+    is unknown, so `push_devices` stays 0 (returned as such)."""
+    accepted = send_push_to_topic(
+        Notification.CONTENT_TOPIC,
+        notification.title_ru or notification.title, notification.description_ru or notification.description,
+        data=push_data(notification), image=push_image(notification),
+    )
+    logger.info("Notification topic push: notification_id=%s topic=%s accepted=%s",
+                notification.pk, Notification.CONTENT_TOPIC, accepted)
+    return 0
+
+
 def send_push(notification_id):
     notification = Notification.objects.get(pk=notification_id)
+    # a topic reaches everybody: a notification made targeted before its push goes to its devices instead
+    if notification.push_to_topic and not notification.is_targeted:
+        return send_topic_push(notification)
     if notification.is_targeted:
         # the audience as it is now: these customers keep the notification in their list
         customers = audience.audience_customers(notification.segment, notification.platform)

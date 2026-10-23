@@ -66,10 +66,10 @@ Query: `?page=1&page_size=10` (default 1 / 10), `?is_read=false` — faqat o'qil
 | --- | --- |
 | `title`, `description` | so'ralgan tildagi matn (oddiy text, HTML emas) |
 | `image` | rasm (to'liq URL) yoki `null` |
-| `link_type` | bosilganda qayerga o'tiladi: `category`, `product`, `badge`, `page`, `banner`; bo'sh string = havola yo'q |
-| `content_type_info` | `link_type` = `category` / `product` / `badge` / `banner` uchun obyekt — bannerlardagi bilan bir xil shakl: `model` (`productcategory`, `productsubcategory`, `productitemcategory`, `product`, `productbadge`, `banner`) + `id`; aks holda `null` (obyekt o'chirilgan bo'lsa ham) |
+| `link_type` | bosilganda qayerga o'tiladi: `category`, `product`, `badge`, `page`, `banner`, `article`, `video`; bo'sh string = havola yo'q |
+| `content_type_info` | `link_type` = `category` / `product` / `badge` / `banner` / `article` / `video` uchun obyekt — bannerlardagi bilan bir xil shakl: `model` (`productcategory`, `productsubcategory`, `productitemcategory`, `product`, `productbadge`, `banner`, `articles`, `video`) + `id`; aks holda `null` (obyekt o'chirilgan bo'lsa ham) |
 | `page` | `link_type=page` uchun ichki yo'l (`/pro`), aks holda bo'sh |
-| `deeplink` | xuddi shu havola bitta satrda (`buildex://sub-category/sement`, `buildex://product/15`, `buildex://page/pro`); `link_type` bo'sh bo'lsa admin yozgan erkin matn yoki bo'sh string |
+| `deeplink` | xuddi shu havola bitta satrda (`buildex://sub-category/sement`, `buildex://product/15`, `buildex://page/pro`, `buildex://article/12`, `buildex://video/5`); `link_type` bo'sh bo'lsa admin yozgan erkin matn yoki bo'sh string |
 | `is_read` | joriy mijoz ochganmi |
 | `publish_at` | chiqarilgan vaqti — ro'yxatda sana sifatida shu ko'rsatiladi |
 
@@ -106,6 +106,8 @@ Body yuborilmaydi.
 ## Push (FCM)
 
 Bildirishnoma chiqarilganda backend uning auditoriyasidagi qurilmalarga push yuboradi (token: `PATCH auth/fcm/token/`, `order_status_push.md` dagi kabi). Har bir bildirishnoma uchun bir marta.
+
+Yangi maqola / video bildirishnomalari qurilmalarga emas, FCM topic **`buildex_content`** ga yuboriladi — ilova unga o'zi obuna bo'lishi kerak: `content_push.md`.
 
 **Token bilan birga `platform` yuboring** (`"ios"` yoki `"android"`): `PATCH auth/fcm/token/ {"device_id": "...", "fcm_token": "...", "platform": "ios"}`. Maydon ixtiyoriy, lekin usiz qurilma "faqat iOS" / "faqat Android" bildirishnomalarini olmaydi (push ham, ro'yxatda ham).
 
