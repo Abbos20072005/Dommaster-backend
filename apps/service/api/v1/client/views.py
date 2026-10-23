@@ -2863,11 +2863,7 @@ class MerchantFeedViewSet(ViewSet):
     def _feed(self, name, content_type):
         path = merchant_feed.feed_path(name)
         if not os.path.exists(path):
-            try:
-                merchant_feed.build_feeds()
-            except merchant_feed.FeedConfigError as e:
-                logger.error("Merchant feed is not built: %s", e)
-                raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
+            merchant_feed.build_feeds()
         return FileResponse(open(path, "rb"), content_type=content_type)
 
     @extend_schema(

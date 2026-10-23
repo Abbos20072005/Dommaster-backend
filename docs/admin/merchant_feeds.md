@@ -22,8 +22,10 @@ env/Scripts/python.exe manage.py build_merchant_feeds
 Fayl hali yo'q bo'lsa, birinchi so'rov uni o'zi quradi. Fayl bir qadamda almashtiriladi — yarim yozilgan fid
 hech qachon berilmaydi.
 
-**Env:** `BACKEND_URL` (rasm havolalari uchun) — bo'lmasa fid qurilmaydi va URL 404 qaytaradi. `SITE_URL`
-(sayt domeni, tovar havolalari uchun) — bo'lmasa `https://buildex.uz`.
+**Havolalar va nom kodda qattiq yozilgan** (`apps/service/merchant_feed.py`, env'dan o'qilmaydi): tovar
+havolasi `https://buildex.uz/product/<id>`, rasm `https://api.buildex.uz/media/...`. Do'kon nomi **BUILDEX**
+(Google kanalining `title` / `description`, Yandex `<name>`), yuridik shaxs **«ENERGOSNAB» MChJ** (Yandex
+`<company>`).
 
 ## Qaysi tovarlar tushadi
 
@@ -37,7 +39,7 @@ hech qachon berilmaydi.
 | tovar kodi | `g:id` | `offer id` | `Product.id` |
 | nomi | `g:title` (≤ 150 belgi) | `name` | `name_ru` |
 | tavsif | `g:description` (≤ 5000) | `description` (≤ 3000) | `description_ru` HTML'siz; bo'sh bo'lsa nom |
-| havola | `g:link` | `url` | `SITE_URL` + `/product/<id>` |
+| havola | `g:link` | `url` | `https://buildex.uz/product/<id>` |
 | rasm | `g:image_link` + `g:additional_image_link` | `picture` | tovar rasmlari tartibda, 10 tagacha |
 | narx | `g:price` (+ `g:sale_price`) | `price` (+ `oldprice`) | quyida |
 | valyuta | `UZS` narx ichida | `currencyId` = `UZS` | — |

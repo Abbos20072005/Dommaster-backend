@@ -3,8 +3,8 @@
 Both are files under MEDIA_ROOT/feeds/, rebuilt by Celery beat (`tasks.build_merchant_feeds`, every 6 hours)
 and served by `MerchantFeedViewSet` (`feeds/google.xml`, `feeds/yandex.yml`). The price is the one the cart
 charges (`discount_price` when set, else `price`), so the feed, the site and the page markup show the same number.
-Texts are ru. Links: `SITE_URL` + PRODUCT_PATH, images: `BACKEND_URL` + the media path — without them the
-feeds are not built.
+Texts are ru. Links: SITE_URL + PRODUCT_PATH, images: BACKEND_URL + the media path — both hard-coded here,
+not read from the env (an old env value put the former domain into the feeds).
 """
 import html
 import logging
@@ -28,7 +28,10 @@ GOOGLE_FILE = "google.xml"
 YANDEX_FILE = "yandex.yml"
 # the product page of the site (agree with the frontend before changing)
 PRODUCT_PATH = "/product/{id}"
-SHOP_NAME = "Dommaster"
+SITE_URL = "https://buildex.uz"  # product links
+BACKEND_URL = "https://api.buildex.uz"  # image links
+SHOP_NAME = "BUILDEX"  # store name: Google channel title / description, Yandex <name>
+COMPANY_NAME = "«ENERGOSNAB» MChJ"  # legal entity: Yandex <company>
 CURRENCY = "UZS"
 MAX_IMAGES = 10  # main + 9 more: the limit of both formats
 GOOGLE_TITLE_MAX = 150
@@ -37,10 +40,6 @@ YANDEX_DESCRIPTION_MAX = 3000
 # Yandex category ids are one number space: the three levels of our tree are put apart by these offsets
 YANDEX_CATEGORY_OFFSET = {"category": 1_000_000_000, "sub": 2_000_000_000, "item": 3_000_000_000}
 CHUNK = 2000
-
-
-class FeedConfigError(Exception):
-    """SITE_URL / BACKEND_URL are not set: links of the feed would lead nowhere."""
 
 
 def feed_path(name):
@@ -220,7 +219,7 @@ def write_yandex(out, products, site_url):
     now = datetime.now(ZoneInfo(settings.TIME_ZONE)).isoformat(timespec="minutes")
     out.write('<?xml version="1.0" encoding="UTF-8"?>\n'
               f'<yml_catalog date="{now}">\n<shop>\n'
-              f"<name>{escape(SHOP_NAME)}</name><company>{escape(SHOP_NAME)}</company>"
+              f"<name>{escape(SHOP_NAME)}</name><company>{escape(COMPANY_NAME)}</company>"
               f"<url>{escape(site_url)}</url>\n"
               f'<currencies><currency id="{CURRENCY}" rate="1"/></currencies>\n<categories>\n')
     for category_id in sorted(categories):
@@ -240,22 +239,13 @@ def write_yandex(out, products, site_url):
 
 # ---- build ----
 
-def urls():
-    site_url = (getattr(settings, "SITE_URL", "") or "").rstrip("/")
-    backend_url = (settings.BACKEND_URL or "").rstrip("/")
-    if not site_url or not backend_url:
-        raise FeedConfigError("SITE_URL and BACKEND_URL must be set to build the product feeds")
-    return site_url, backend_url
-
-
 def collect():
-    site_url, backend_url = urls()
     products = []
     for product in feed_products().iterator(chunk_size=CHUNK):
-        data = product_data(product, site_url, backend_url)
+        data = product_data(product, SITE_URL, BACKEND_URL)
         if data:
             products.append(data)
-    return products, site_url
+    return products, SITE_URL
 
 
 def write_atomically(name, writer, products, site_url):
