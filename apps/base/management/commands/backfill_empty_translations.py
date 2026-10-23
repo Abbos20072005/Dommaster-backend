@@ -1,9 +1,13 @@
-"""Empty string -> NULL in the translation columns where an empty string blocks the fallback.
+"""Empty string -> NULL where it hides the ru text of a translated field.
 
 modeltranslation falls back to ru only when the value it finds is the field's "undefined" value - the
 field default. For a `null=True` column (MarketBranch.address, Product.short_description, ...) that is
 NULL, so an empty string counts as a filled value and a uz client sees nothing instead of the ru text.
 1C, the old admin forms and DRF all write "" rather than NULL, so the rows have to be normalized once.
+
+Only the columns of the non-default languages are touched, and only when ru actually has a text: ru is
+the fallback itself, so an empty ru hides nothing, and turning it into NULL would only change the ""
+the client API has always answered with into null.
 
 Run after `migrate`; safe to run again (it only touches rows that are still ""):
 
@@ -18,15 +22,19 @@ from django.conf import settings
 
 
 def columns_to_fix():
-    """(model, column) pairs where "" is not the field's undefined value, so it would block the fallback."""
+    """(model, column, fallback column) where "" is a filled value for modeltranslation and hides ru."""
+    default_language = settings.MODELTRANSLATION_DEFAULT_LANGUAGE
     for model in translator.get_registered_models():
         options = translator.get_options_for_model(model)
         for field_name in sorted(options.fields):
             field = model._meta.get_field(field_name)
             if field.get_default() == "":
                 continue  # "" already means "not filled" here, modeltranslation falls back by itself
+            fallback = build_localized_fieldname(field_name, default_language)
             for language in settings.MODELTRANSLATION_LANGUAGES:
-                yield model, build_localized_fieldname(field_name, language)
+                if language == default_language:
+                    continue  # ru is the fallback: an empty ru hides nothing
+                yield model, build_localized_fieldname(field_name, language), fallback
 
 
 class Command(BaseCommand):
@@ -39,8 +47,11 @@ class Command(BaseCommand):
         dry_run = options["dry_run"]
         total = 0
         with transaction.atomic():
-            for model, column in columns_to_fix():
-                rows = model.objects.filter(**{column: ""})
+            for model, column, fallback in columns_to_fix():
+                # nothing to gain while the fallback is empty too
+                rows = (model.objects.filter(**{column: ""})
+                        .exclude(**{fallback: ""})
+                        .exclude(**{f"{fallback}__isnull": True}))
                 count = rows.count()
                 if not count:
                     continue

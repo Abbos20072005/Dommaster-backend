@@ -45,6 +45,7 @@ class EmptyTranslationBackfillTests(TestCase):
         self.branch = MarketBranch.objects.create(
             name="Chilonzor", name_ru="Чиланзар", name_uz="", branch_type=1,
             address_ru="Бунёдкор 1", address_uz="", landmark_ru="Metro", landmark_uz="",
+            description_ru="", description_uz="",
         )
 
     def test_empty_strings_become_null_only_where_they_block_the_fallback(self):
@@ -54,6 +55,10 @@ class EmptyTranslationBackfillTests(TestCase):
         self.assertIsNone(self.branch.address_uz)
         # name and landmark default to "" -> "" already means "not filled", the rows stay untouched
         self.assertEqual((self.branch.name_uz, self.branch.landmark_uz), ("", ""))
+        # description has no ru text to fall back to, so "" is left as it is - the API still answers ""
+        self.assertEqual(self.branch.description_uz, "")
+        # ru is the fallback itself: its own empty string is never turned into NULL
+        self.assertEqual(self.branch.address_ru, "Бунёдкор 1")
 
     def test_dry_run_changes_nothing(self):
         call_command("backfill_empty_translations", "--dry-run")

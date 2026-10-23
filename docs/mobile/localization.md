@@ -41,5 +41,5 @@ Yo'q — maydonlar, ularning nomlari va javob shakli o'zgarmagan. `Accept-Langua
 
 ## Deploydan keyin (backend uchun)
 
-1. `manage.py backfill_empty_translations` — bir marta. Bo'sh string saqlangan ustunlarni NULL qiladi, aks holda ular "to'ldirilgan" hisoblanib, uz so'rovda bo'sh matn chiqadi (`MarketBranch.address`, `Product.short_description` kabi `null=True` ustunlar). `--dry-run` bor, qayta ishga tushirish xavfsiz.
+1. `manage.py backfill_empty_translations` — bir marta. `null=True` ustunda saqlangan bo'sh string modeltranslation uchun "to'ldirilgan" qiymat bo'lib, ru matnini yashiradi (`MarketBranch.address`, `Product.short_description` kabi ustunlar). Komanda faqat shunday satrlarni NULL qiladi: uz ustuni bo'sh, ru'da matn bor. ru ustunining o'ziga va ru'da ham matn bo'lmagan satrlarga tegmaydi, shuning uchun javobdagi `""` hech qachon `null`ga aylanib ketmaydi. `--dry-run` bor, qayta ishga tushirish xavfsiz.
 2. Keshlangan javoblarning kalitida til bor (`home:main:data`, `products:most_sold`, `products:most_search`, `search:v2:<q>`, `categories:list*`, `home:blocks`), shuning uchun alohida tozalash kerak emas — birinchi so'rovlar keshni qaytadan to'ldiradi.
