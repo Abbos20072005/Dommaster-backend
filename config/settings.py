@@ -61,6 +61,8 @@ MIDDLEWARE = [
     "middleware.request_log.RequestLogMiddleware",
 
     'django.middleware.security.SecurityMiddleware',
+    # ETag on GET responses (+ Last-Modified of the views that set it) -> 304 for If-None-Match / If-Modified-Since
+    'django.middleware.http.ConditionalGetMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     # the request language for modeltranslation; RequestLanguageMiddleware keeps the default one
     # active outside the client API (see middleware/language.py)
@@ -94,6 +96,15 @@ TEMPLATES = [
         },
     },
 ]
+
+# HTTPS behind nginx (prod: HTTPS_ONLY=1; nginx must send `X-Forwarded-Proto $scheme`): HSTS + secure cookies.
+# nosniff, Referrer-Policy same-origin, X-Frame-Options DENY and COOP are Django defaults.
+if int(os.getenv("HTTPS_ONLY", 0)):
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SECURE_HSTS_SECONDS = int(os.getenv("SECURE_HSTS_SECONDS", 31536000))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True

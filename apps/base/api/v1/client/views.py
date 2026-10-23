@@ -19,6 +19,7 @@ from apps.base.models import Banner, Chat, AboutUs, Messages, Promocodes, News, 
     BaseInformation, MarketBranch, Notification, NotificationRead, PICKUP_BRANCH_TYPES
 from apps.base.paginations.get_notifications import get_notifications_paginator
 from django.db.models import Exists, OuterRef
+from apps.service import seo_redirects
 from apps.service.models import Cart
 from apps.base.telegram import send_chat_message_to_telegram
 from drf_spectacular.types import OpenApiTypes
@@ -163,14 +164,16 @@ class NewsViewSet(ViewSet):
 
     @extend_schema(
         summary="News detail",
-        description="News detail",
-        responses={200: NewsDetailSerializer()},
+        description="News detail. A deleted news answers 410 (error_code 40), an id that never existed 404.",
+        responses={200: NewsDetailSerializer(), 404: OpenApiResponse(description="Not found"),
+                   410: OpenApiResponse(description="Deleted")},
         tags=["News"]
     )
     def news_detail(self, request, pk):
         news = News.objects.filter(id=pk).first()
         if not news:
-            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
+            deleted = seo_redirects.deleted_row(News, pk)
+            raise CustomApiException(error_code=ErrorCodes.GONE if deleted else ErrorCodes.NOT_FOUND)
 
         serializer = NewsDetailSerializer(news, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)

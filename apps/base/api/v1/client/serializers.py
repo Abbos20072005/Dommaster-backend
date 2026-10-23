@@ -28,7 +28,8 @@ class NewsDetailSerializer(serializers.ModelSerializer):
             "id",
             "title",
             "description",
-            "created_at"
+            "created_at",
+            "updated_at",
         )
 
 class ArticlesSerializer(serializers.ModelSerializer):

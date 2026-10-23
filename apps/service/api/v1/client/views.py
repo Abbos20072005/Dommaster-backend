@@ -27,6 +27,8 @@ import logging
 import os
 import secrets
 from django.http import FileResponse
+from django.utils.cache import get_conditional_response
+from django.utils.http import http_date
 from django.db import transaction
 from apps.base.models import Promocodes
 from datetime import date
@@ -2834,14 +2836,17 @@ class SeoRedirectViewSet(ViewSet):
         description=(
             "Given an entity type and a slug (in the request language), tell the site whether the slug is live "
             "or an old one. `status`: `current` = serve the page; `moved` = 301 to `slug` (the current one); "
-            "`not_found` = 404. Lets the site honour renamed / old URLs (blocks BLD-243)."
+            "`gone` (products only: hidden or deleted) = 301 to `redirect` (`{type, id, slug, breadcrumbs}`: a "
+            "hand-picked alternative product, else the nearest active category level), 410 when `redirect` is "
+            "null; `not_found` = 404. A product is also found by its id (`slug=123` or the `-123` end). "
+            "Lets the site honour renamed / old / removed URLs (BLD-243, BLD-270)."
         ),
         parameters=[
             OpenApiParameter(name="type", location=OpenApiParameter.QUERY, type=OpenApiTypes.STR, required=True,
                              description="product | category | sub_category | item_category | brand"),
             OpenApiParameter(name="slug", location=OpenApiParameter.QUERY, type=OpenApiTypes.STR, required=True),
         ],
-        responses={200: OpenApiResponse(description="{status, type, id, slug}")},
+        responses={200: OpenApiResponse(description="{status, type, id, slug, redirect}")},
         tags=["SEO"],
     )
     def resolve(self, request):
@@ -2853,18 +2858,24 @@ class SeoRedirectViewSet(ViewSet):
                                               "slug": "required"})
         result = seo_redirects.resolve(entity_type, slug, request_language(request))
         if result is None:
-            result = {"status": "not_found", "type": entity_type, "id": None, "slug": None}
+            result = {"status": "not_found", "type": entity_type, "id": None, "slug": None, "redirect": None}
         return Response(data={"result": result, "ok": True}, status=status.HTTP_200_OK)
 
 
 class MerchantFeedViewSet(ViewSet):
     """The files `merchant_feed` builds 4 times a day; the first request builds a missing one."""
 
-    def _feed(self, name, content_type):
+    def _feed(self, request, name, content_type):
         path = merchant_feed.feed_path(name)
         if not os.path.exists(path):
             merchant_feed.build_feeds()
-        return FileResponse(open(path, "rb"), content_type=content_type)
+        modified = int(os.path.getmtime(path))
+        not_modified = get_conditional_response(request, last_modified=modified)
+        if not_modified is not None:
+            return not_modified
+        response = FileResponse(open(path, "rb"), content_type=content_type)
+        response["Last-Modified"] = http_date(modified)
+        return response
 
     @extend_schema(
         summary="Google Merchant Center product feed",
@@ -2873,7 +2884,7 @@ class MerchantFeedViewSet(ViewSet):
         tags=["Merchant feed"],
     )
     def google_feed(self, request):
-        return self._feed(merchant_feed.GOOGLE_FILE, "application/xml; charset=utf-8")
+        return self._feed(request, merchant_feed.GOOGLE_FILE, "application/xml; charset=utf-8")
 
     @extend_schema(
         summary="Yandex product feed (YML)",
@@ -2882,4 +2893,4 @@ class MerchantFeedViewSet(ViewSet):
         tags=["Merchant feed"],
     )
     def yandex_feed(self, request):
-        return self._feed(merchant_feed.YANDEX_FILE, "application/xml; charset=utf-8")
+        return self._feed(request, merchant_feed.YANDEX_FILE, "application/xml; charset=utf-8")

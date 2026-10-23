@@ -42,6 +42,7 @@ class ErrorCodes(Enum):
     PROJECT_ITEMS_CONFLICT = 37
     PROJECT_ARCHIVED = 38
     ORDER_CANCELED = 39
+    GONE = 40
 
 
 error_messages = {
@@ -86,6 +87,7 @@ error_messages = {
     37: {"result": "Some items are linked to another project", "http_status": status.HTTP_409_CONFLICT},
     38: {"result": "Project is archived", "http_status": status.HTTP_400_BAD_REQUEST},
     39: {"result": "Order is canceled", "http_status": status.HTTP_400_BAD_REQUEST},
+    40: {"result": "Resource was deleted", "http_status": status.HTTP_410_GONE},
 }
 
 

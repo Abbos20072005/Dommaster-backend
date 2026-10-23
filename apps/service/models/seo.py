@@ -83,3 +83,24 @@ class SlugHistory(BaseModel):
         indexes = [
             models.Index(fields=("content_type", "language", "old_slug"), name="idx_slug_history_lookup"),
         ]
+
+
+class DeletedObject(BaseModel):
+    # A product / news row deleted from the database, kept so the site can answer its old URL with a 301
+    # (product: to an alternative or its category) or 410 instead of 404. Written by a pre_delete signal.
+    # Plain ids, no FKs: the category may be deleted in the same cascade.
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, verbose_name="Тип объекта")
+    object_id = models.PositiveIntegerField(verbose_name="ID объекта")
+    item_category_id = models.PositiveIntegerField(null=True, blank=True, verbose_name="ID предметной категории")
+    alternative_ids = models.JSONField(default=list, blank=True, verbose_name="ID аналогов")
+
+    def __str__(self):
+        return f"{self.content_type.model} {self.object_id}"
+
+    class Meta:
+        verbose_name = "Удалённый объект"
+        verbose_name_plural = "Удалённые объекты"
+        ordering = ("-id",)
+        constraints = [
+            models.UniqueConstraint(fields=("content_type", "object_id"), name="uniq_deleted_object_ct_id"),
+        ]

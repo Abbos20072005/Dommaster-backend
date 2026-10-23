@@ -107,17 +107,20 @@ class ResolveRenamedProductTests(TestCase):
     def test_old_slug_is_moved_by_its_id(self):
         result = seo_redirects.resolve("product", self.old_slug, "ru")
         self.assertEqual(result, {"status": "moved", "type": "product", "id": self.product.pk,
-                                  "slug": f"vyklyuchatel-asfora-10-a-antratsit-{self.product.pk}"})
+                                  "slug": f"vyklyuchatel-asfora-10-a-antratsit-{self.product.pk}", "redirect": None})
 
     def test_current_slug(self):
         result = seo_redirects.resolve("product", Product.objects.get(pk=self.product.pk).slug_ru, "ru")
         self.assertEqual(result["status"], "current")
 
-    def test_unknown_or_hidden_id_is_not_found(self):
+    def test_unknown_id_is_not_found(self):
         self.assertIsNone(seo_redirects.resolve("product", "vyklyuchatel-999999", "ru"))
         self.assertIsNone(seo_redirects.resolve("product", "vyklyuchatel", "ru"))
+
+    def test_hidden_product_is_gone(self):
+        # more cases in tests_seo_gone.py
         Product.objects.filter(pk=self.product.pk).update(is_active=False)
-        self.assertIsNone(seo_redirects.resolve("product", self.old_slug, "ru"))
+        self.assertEqual(seo_redirects.resolve("product", self.old_slug, "ru")["status"], "gone")
 
     def test_brand_slug_with_a_number_is_not_taken_as_an_id(self):
         self.assertIsNone(seo_redirects.resolve("brand", f"weber-{self.product.pk}", "ru"))

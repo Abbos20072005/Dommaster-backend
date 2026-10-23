@@ -15,7 +15,7 @@ from .feedback import Comment, CommentReply, CommentImages, Questions, Questions
 from .home import HomeBlock, HomePage
 from .feed import InterestEvent, FeedImpression
 from .moderation import ProductModeration
-from .seo import FilterPage, SlugHistory
+from .seo import DeletedObject, FilterPage, SlugHistory
 from .pro import Project, OrderItemProjectChange
 from .content_import import ContentImport, ContentImportChange
 
@@ -36,6 +36,7 @@ __all__ = [
     "ProductModeration",
     "FilterPage",
     "SlugHistory",
+    "DeletedObject",
     "Project", "OrderItemProjectChange",
     "ContentImport", "ContentImportChange",
 ]

@@ -1,6 +1,7 @@
-from django.db.models.signals import post_save, post_delete, pre_save
+from django.db.models.signals import post_save, post_delete, pre_delete, pre_save
 from django.dispatch import receiver
-from .models import Comment, CartItem, Questions, Order, Product, ProductAttribute, ProductAttributeOption, \
+from apps.base.models import News
+from .models import AlternativeProduct, Comment, CartItem, Questions, Order, Product, ProductAttribute, ProductAttributeOption, \
     ProductAttributeValue, ProductItemCategoryAttribute
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
@@ -13,6 +14,7 @@ from .models.choices import (
 from .outbox import emit_order_event
 from .order_push import notify_order_status
 from .product_filters import clear_category_filter_cache
+from .seo_redirects import record_deletion
 
 # ORDER_STATUS of an order whose items are already taken off `Product.quantity` (taken on -> 1 Collecting,
 # given back on -> 4 Canceled): 0 Pending has not taken it, 4 Canceled has given it back
@@ -152,3 +154,16 @@ def invalidate_filter_cache_on_option_change(sender, instance, **kwargs):
     # renaming an option renames the product values (the admin serializer does it with update())
     clear_category_filter_cache(*ProductItemCategoryAttribute.objects.filter(attribute_id=instance.attribute_id)
                                 .values_list("item_category_id", flat=True))
+
+
+# the site answers the URL of a deleted product with a 301 (seo/resolve `gone`) and of a deleted news with 410;
+# pre_delete: the alternative links are still there, and the row goes away with the delete if it fails
+@receiver(pre_delete, sender=Product)
+def remember_deleted_product(sender, instance, **kwargs):
+    alternatives = AlternativeProduct.products_of(instance).values_list("pk", flat=True)
+    record_deletion(instance, instance.product_item_category_id, alternatives)
+
+
+@receiver(pre_delete, sender=News)
+def remember_deleted_news(sender, instance, **kwargs):
+    record_deletion(instance)
