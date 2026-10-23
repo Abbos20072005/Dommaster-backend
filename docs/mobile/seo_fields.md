@@ -57,9 +57,11 @@ Javob:
 Faqat ko'rinadigan obyektlar hal qilinadi (tovar/kategoriya `is_active`, brend `is_visible`). Noto'g'ri
 `type` yoki bo'sh `slug` → `400` (`error_code: 5`).
 
-`moved` **faqat kategoriya va brend** uchun bo'ladi — slug tarixi shu ikkisida yuritiladi. Tovarning eski
-slug'i `not_found` qaytaradi (404): tovar slug'ida id turadi, shuning uchun `/product/<yangi-slug>` manzili
-o'zgarmaydi.
+Kategoriya va brend slug'i nom o'zgarsa ham o'zgarmaydi; qo'lda o'zgartirilsa eski slug tarixda qoladi va
+`moved` beradi. **Tovar** slug'i esa nom o'zgarganda **yangi nomdan qayta yasaladi** (`…-asfora-antratsit-571`
+→ `…-asfora-10-a-antratsit-571`). Tovarning tarixi yo'q — eski slug **oxiridagi id** bo'yicha topiladi va
+`moved` + joriy `slug` qaytadi. Shuning uchun eski tovar manzili ham 301 bo'ladi, 404 emas. Id topilmasa
+yoki tovar nofaol bo'lsa → `not_found`.
 
 **Oqim**: foydalanuvchi `/product/<slug>` ga kirsa, sayt `resolve` ni chaqiradi. `current` → sahifa;
 `moved` → yangi slugga 301; `not_found` → 404.

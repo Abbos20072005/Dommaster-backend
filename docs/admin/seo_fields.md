@@ -29,7 +29,14 @@ Hamma matn maydoni **til bo'yicha** (`*_uz` / `*_ru`), nom kabi. ru — asosiy (
   avtomatik yasaladi (kirill va lotin o'zbekcha → ASCII transliteratsiya). Shuning uchun 1C yaratgan
   tovar/kategoriya ham slug oladi.
 - **Qo'lda**: istalgan `slug_<til>` ni yuborib o'zgartirish mumkin.
-- **Barqaror**: slug bir marta yaratilgach, nom o'zgarsa **o'zgarmaydi** (eski manzillar buzilmasin).
+- **Nom o'zgarganda**:
+  - **kategoriya va brend** slug'i **o'zgarmaydi** (eski manzillar buzilmasin);
+  - **tovar** slug'i **yangi nomdan qayta yasaladi** (`Asfora антрацит` → `Asfora 10 А, антрацит` bo'lsa
+    `…-asfora-antratsit-571` → `…-asfora-10-a-antratsit-571`). Oxiridagi id o'zgarmaydi, shuning uchun eski
+    manzil `seo/resolve/` da `moved` beradi. Til bo'yicha alohida: o'zbekcha nomi bo'sh tovarning `slug_uz`
+    i ruscha nomga ergashadi;
+  - **qo'lda kiritilgan** tovar slug'i (nomdan yasalganiga teng bo'lmagani) nom o'zgarsa ham **qoladi**;
+    nom bilan birga yangi slug yuborilsa — yuborilgani olinadi.
 - **Unikal**: har `slug_<til>` o'z tili ustunida model bo'yicha unikal. Takrorlangan slug yuborilsa
   serializer xato beradi (`unique` validatsiya).
 - **Tovarda id qo'shimchasi**: tovar slug'i `<nom>-<id>` (`kley-ventum-571`) — nomlar takrorlanadi,
@@ -67,6 +74,8 @@ python manage.py backfill_seo_slugs                      # bo'sh slug'larni to'l
 python manage.py backfill_seo_slugs --dry-run            # nechta qator to'lishini ko'rsatadi
 python manage.py backfill_seo_slugs --rebuild            # hamma slug'ni jadval bo'yicha qayta yasaydi
 python manage.py backfill_seo_slugs --rebuild --dry-run
+python manage.py backfill_seo_slugs --products --dry-run # nomiga mos kelmay qolgan tovar slug'lari
+python manage.py backfill_seo_slugs --products
 ```
 
 Oddiy rejim har tovar/brend/kategoriya uchun **bo'sh** `slug_uz`/`slug_ru` ni nomdan yasaydi, mavjudiga
@@ -76,6 +85,12 @@ tegmaydi. Qayta ishga tushirish xavfsiz.
 ham) va nomdan qaytadan yasaladi. Kategoriya/brendning eski slug'i `SlugHistory` ga tushadi, ya'ni
 `seo/resolve/` eski manzilga `moved` beradi va sayt 301 qiladi. Eski bitta `slug` ustuni ham tozalanadi
 (uni hech kim o'qimaydi, slug'lar — til bo'yicha ustunlar).
+
+`--products` — faqat tovarlar: hozirgi nomdan chiqadigan slug'ga teng bo'lmagan har `slug_<til>` qayta
+yasaladi. Tovar slug'i ilgari nom o'zgarsa ham eskicha qolardi (audit nomlarni tuzatgandan keyin 8 264 tadan
+~1 760 tovarning slug'i nomiga mos emas edi), bu — shu eski slug'larni **bir marta** tuzatish. Qo'lda
+kiritilgan tovar slug'ini ajratib bo'lmaydi, u ham qayta yasaladi. Tarix yozilmaydi — id o'zgarmaydi,
+`seo/resolve/` eski slug'ni id bo'yicha topadi. Qayta ishga tushirish xavfsiz (ikkinchi marta 0 qator).
 
 ## 1C
 

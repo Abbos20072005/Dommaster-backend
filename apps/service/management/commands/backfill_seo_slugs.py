@@ -5,6 +5,7 @@ a management command, not a migration).
 
     manage.py backfill_seo_slugs [--dry-run]            # fill the empty columns only (safe to re-run)
     manage.py backfill_seo_slugs --rebuild [--dry-run]   # regenerate every slug by the current table
+    manage.py backfill_seo_slugs --products [--dry-run]  # product slugs that no longer match the name
 
 `--rebuild` is what a change of the transliteration table (`utils/slug.CYRILLIC_TO_LATIN`) needs: it throws
 away the slugs that are in the db — including the ones entered by hand, which is the 22.10 decision — and
@@ -12,6 +13,12 @@ generates them from the name again. The old slug of a category / brand goes to `
 `seo/resolve/` answers `moved` and the site 301s the old URL (products keep no history, their slug carries
 the id). The rebuild also clears the original `slug` column (the pre-SEO single slug, from the old table):
 nothing reads it, the per-language columns are the slugs.
+
+`--products` touches products only: every `slug_<lang>` that differs from what the current name gives is
+generated again. A product slug used to stay as it was when the name changed (the audit renames left
+"…-asfora-antratsit-571" for "… Asfora 10 А, антрацит"); since then a rename moves it (`SLUG_FOLLOWS_NAME`),
+this is the one-off fix of the slugs made before that. A hand-made product slug can't be told apart and is
+regenerated too. No history — the id at the end stays the same, so the site still finds the product.
 """
 from django.conf import settings
 from django.core.management.base import BaseCommand
@@ -33,14 +40,23 @@ class Command(BaseCommand):
         parser.add_argument("--dry-run", action="store_true", help="Report what would change, save nothing.")
         parser.add_argument("--rebuild", action="store_true",
                             help="Regenerate every slug from the name by the current transliteration table.")
+        parser.add_argument("--products", action="store_true",
+                            help="Regenerate only the product slugs that no longer match the product name.")
 
     def handle(self, *args, **options):
         self.dry_run = options["dry_run"]
+        if options["products"]:
+            self._refresh_products()
+            self._done()
+            return
         for model in MODELS:
             if options["rebuild"]:
                 self._rebuild(model)
             else:
                 self._fill(model)
+        self._done()
+
+    def _done(self):
         if self.dry_run:
             self.stdout.write(self.style.WARNING("Dry run — nothing saved."))
         else:
@@ -66,6 +82,33 @@ class Command(BaseCommand):
                 self._raw(model).filter(pk=obj.pk).update(**{field: getattr(obj, field) for field in fields})
         verb = "would fill" if self.dry_run else "filled"
         self.stdout.write(f"{model.__name__}: {verb} {filled} row(s)")
+
+    # products: only the slugs that the current name would not give
+    def _refresh_products(self):
+        languages = settings.MODELTRANSLATION_LANGUAGES
+        slug_fields = self._slug_fields()
+        changed = {field: 0 for field in slug_fields}
+        refreshed, batch = 0, []
+        with transaction.atomic():
+            for product in Product.objects.order_by("pk").iterator(chunk_size=BATCH):
+                stale = False
+                for language in languages:
+                    field = f"slug_{language}"
+                    value = product._generated_slug(language)
+                    if getattr(product, field) != value:
+                        setattr(product, field, value)
+                        changed[field] += 1
+                        stale = True
+                if stale:
+                    refreshed += 1
+                    batch.append(product)
+                    if len(batch) >= BATCH:
+                        self._write(Product, batch, slug_fields)
+                        batch = []
+            self._write(Product, batch, slug_fields)
+        verb = "would refresh" if self.dry_run else "refreshed"
+        per_field = ", ".join(f"{field} {count}" for field, count in changed.items())
+        self.stdout.write(f"Product: {verb} {refreshed} row(s) ({per_field})")
 
     # rebuild: every slug from the name again (a changed transliteration table)
     def _rebuild(self, model):

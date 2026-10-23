@@ -11,8 +11,9 @@ class SeoFieldsMixin(models.Model):
 
     `slug` / `meta_title` / `meta_description` are translated (modeltranslation adds the `*_uz` / `*_ru`
     columns). Each `slug_<lang>` is unique within its own column (the base `slug` tracks the default `ru`).
-    An empty `slug_<lang>` is generated from `name_<lang>` on save (stable — a later name change does NOT
-    move the slug); a changed slug keeps the old one in `SlugHistory` for 301 redirects — categories and
+    An empty `slug_<lang>` is generated from `name_<lang>` on save. Stable by default — a later name change
+    does NOT move the slug; with `SLUG_FOLLOWS_NAME` (Product) a rename regenerates the slug of every language
+    whose slug is still the one generated from the old name (a hand-made slug stays). A changed slug keeps the old one in `SlugHistory` for 301 redirects — categories and
     brands only (`SLUG_HISTORY`), a product's slug carries its id (`SLUG_WITH_ID`) and is not redirected.
     """
     SLUG_FALLBACK = "item"
@@ -20,6 +21,8 @@ class SeoFieldsMixin(models.Model):
     SLUG_WITH_ID = False
     # keep a changed slug in SlugHistory for the 301 (decision 22.10: categories and brands only)
     SLUG_HISTORY = True
+    # a rename regenerates the slug generated from the old name (Product: the id keeps old URLs resolvable)
+    SLUG_FOLLOWS_NAME = False
 
     slug = models.SlugField(max_length=255, unique=True, null=True, blank=True, verbose_name="Slug")
     meta_title = models.CharField(max_length=255, blank=True, verbose_name="Meta title")
@@ -33,6 +36,36 @@ class SeoFieldsMixin(models.Model):
         return (getattr(self, f"name_{language}", None) or getattr(self, "name_ru", None)
                 or getattr(self, "name", None))
 
+    def _generated_slug(self, language, source=None):
+        """The slug `slug_<lang>` would get from `source` (default: the current name)."""
+        field = f"slug_{language}"
+        source = self._slug_source(language) if source is None else source
+        if self.SLUG_WITH_ID:
+            return slug_with_id(type(self), source, self.pk, field=field, fallback=self.SLUG_FALLBACK)
+        return unique_slug_for(type(self), source, field=field, exclude_pk=self.pk, fallback=self.SLUG_FALLBACK)
+
+    def follow_name(self, stored):
+        """Regenerate the slugs that were generated from the stored name when the name changed.
+
+        `stored` = the row as it is in the db (`name`, `name_<lang>`, `slug_<lang>`); returns the fields it set.
+        Only a slug equal to the one the old name gives is moved — a hand-made one is left as it is, and so is
+        a slug changed in this very save."""
+        moved = []
+        for language in settings.MODELTRANSLATION_LANGUAGES:
+            field = f"slug_{language}"
+            current = getattr(self, field, None)
+            if not current or current != stored.get(field):
+                continue
+            old_source = (stored.get(f"name_{language}") or stored.get("name_ru") or stored.get("name"))
+            new_source = self._slug_source(language)
+            if old_source == new_source or current != self._generated_slug(language, old_source):
+                continue
+            value = self._generated_slug(language, new_source)
+            if value != current:
+                setattr(self, field, value)
+                moved.append(field)
+        return moved
+
     def fill_slugs(self):
         """Generate the empty `slug_<lang>` columns; returns the fields it filled."""
         filled = []
@@ -40,13 +73,7 @@ class SeoFieldsMixin(models.Model):
             field = f"slug_{language}"
             if getattr(self, field, None):
                 continue
-            source = self._slug_source(language)
-            if self.SLUG_WITH_ID:
-                value = slug_with_id(type(self), source, self.pk, field=field, fallback=self.SLUG_FALLBACK)
-            else:
-                value = unique_slug_for(type(self), source, field=field, exclude_pk=self.pk,
-                                        fallback=self.SLUG_FALLBACK)
-            setattr(self, field, value)
+            setattr(self, field, self._generated_slug(language))
             filled.append(field)
         return filled
 
@@ -57,10 +84,22 @@ class SeoFieldsMixin(models.Model):
         if not creating and self.SLUG_HISTORY:
             old_slugs = type(self)._default_manager.filter(pk=self.pk).values(
                 *(f"slug_{language}" for language in languages)).first() or {}
+        update_fields = kwargs.get("update_fields")
+        name_fields = {"name", *(f"name_{language}" for language in languages)}
+        if (not creating and self.SLUG_FOLLOWS_NAME
+                and (update_fields is None or name_fields & set(update_fields))):
+            slug_fields = [f"slug_{language}" for language in languages]
+            rows = type(self)._default_manager.filter(pk=self.pk)
+            # without the rewrite `name` would mean the active language's column
+            rows = rows.rewrite(False) if hasattr(rows, "rewrite") else rows
+            stored = rows.values(
+                *(name_fields & {f.attname for f in self._meta.concrete_fields}), *slug_fields).first()
+            moved = self.follow_name(stored) if stored else []
+            if moved and update_fields is not None:
+                kwargs["update_fields"] = update_fields = list(update_fields) + moved
         # a `-<id>` slug needs the id, so it is generated right after the insert
         if not (creating and self.SLUG_WITH_ID):
             filled = self.fill_slugs()
-            update_fields = kwargs.get("update_fields")
             if filled and update_fields is not None:
                 kwargs["update_fields"] = list(update_fields) + filled
         super().save(*args, **kwargs)

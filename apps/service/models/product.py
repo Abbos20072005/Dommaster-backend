@@ -17,6 +17,8 @@ class Product(SeoFieldsMixin, BaseModel):
     SLUG_WITH_ID = True
     # no 301 history for products (decision 22.10) — names change often and the slug keeps the id anyway
     SLUG_HISTORY = False
+    # a rename moves the generated slug (BLD-243: "10 А" lost after the audit renames)
+    SLUG_FOLLOWS_NAME = True
     PRODUCT_UNIT_CHOICES = (
         ("kg", "KG"),
         ("l", "L"),
