@@ -62,7 +62,7 @@ from apps.service.models import (
     QuestionsReply,
     ProductCharacteristics,
 )
-from apps.service.attributes import attribute_values_prefetch, request_language
+from apps.service.attributes import DEFAULT_LANGUAGE, attribute_values_prefetch, request_language
 from apps.service.product_filters import apply_attribute_filters, build_available_filters, category_filters
 from apps.service.pro import money
 from .serializers import (
@@ -135,6 +135,15 @@ from .serializers import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def localized_names(products, language, limit):
+    """The `name` of each product in the language, ru as the fallback.
+
+    `values_list` returns ONE column for a repeated field name, so ru has to ask for ru alone.
+    """
+    columns = ("name_ru",) if language == DEFAULT_LANGUAGE else (f"name_{language}", "name_ru")
+    return [row[0] or row[-1] for row in products.values_list(*columns)[:limit]]
 
 
 def linked_products_data(ids, request):
@@ -518,13 +527,12 @@ class ProductViewSet(ViewSet):
                 data={"result": cached, "ok": True}, status=status.HTTP_200_OK
             )
 
-        names = (
+        products = localized_names(
             Product.objects.filter(is_active=True).annotate(most_solds=Sum("product_order_item__quantity"))
             .exclude(most_solds=0)
-            .order_by("-most_solds")
-            .values_list(f"name_{language}", "name_ru")[:7]
+            .order_by("-most_solds"),
+            language, 7,
         )
-        products = [name or fallback for name, fallback in names]
         cache.set(cache_key, products, timeout=600)
         return Response(
             data={"result": products, "ok": True}, status=status.HTTP_200_OK
@@ -615,9 +623,8 @@ class ProductViewSet(ViewSet):
                     Q(name__icontains=param_data) | Q(name_uz__icontains=param_data) | Q(name_ru__icontains=param_data)
                 )
                 .order_by("-similarity")
-                .values_list(f"name_{language}", "name_ru")[:5]
             )
-            product = [name or fallback for name, fallback in product]
+            product = localized_names(product, language, 5)
 
             category = (
                 ProductCategory.objects.filter(is_active=True).annotate(
