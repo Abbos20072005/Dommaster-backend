@@ -17,6 +17,7 @@ from .feed import InterestEvent, FeedImpression
 from .moderation import ProductModeration
 from .seo import FilterPage, SlugHistory
 from .pro import Project, OrderItemProjectChange
+from .content_import import ContentImport, ContentImportChange
 
 __all__ = [
     "ORDER_STATUS", "PAYMENT_STATUS", "DELIVERY_TYPE", "PAYMENT_TYPE", "CASH_PAYMENT_METHOD", "ORDER_CHANNEL",
@@ -36,4 +37,5 @@ __all__ = [
     "FilterPage",
     "SlugHistory",
     "Project", "OrderItemProjectChange",
+    "ContentImport", "ContentImportChange",
 ]

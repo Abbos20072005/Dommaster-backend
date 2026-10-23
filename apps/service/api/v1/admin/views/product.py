@@ -1,15 +1,18 @@
 from django.db.models import Count, Prefetch, Q
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
+from apps.service import content_import
 from apps.service.models import Product, ProductImage, ProductAttributeValue
 from utils.admin_views import AdminModelViewSet
 from ..filters import ProductFilter
 from ..serializers import ProductListSerializer, ProductSerializer, ProductImageSerializer, \
-    ProductImageReorderSerializer, ProductStatsSerializer
+    ProductImageReorderSerializer, ProductStatsSerializer, ContentExportQuerySerializer
 
 
 class ProductViewSet(AdminModelViewSet):
@@ -20,7 +23,7 @@ class ProductViewSet(AdminModelViewSet):
 
     def get_queryset(self):
         qs = Product.objects.all()
-        if self.action == "stats":
+        if self.action in ("stats", "content_export"):
             return qs
         qs = qs.select_related("brand", "product_model",
                                "product_item_category__product_sub_category__product_category") \
@@ -46,6 +49,21 @@ class ProductViewSet(AdminModelViewSet):
         if instance.product_order_item.exists():
             raise ValidationError({"detail": "Product is used in orders, deactivate it instead (is_active=false)."})
         instance.delete()
+
+    @action(detail=False, methods=["get"], url_path="content-export")
+    def content_export(self, request):
+        """XLSX of the filtered products' content for the bulk import (`content-imports/`): the list filters +
+        `languages`, `incomplete`."""
+        query = ContentExportQuerySerializer(data=request.query_params)
+        query.is_valid(raise_exception=True)
+        products = self.filter_queryset(self.get_queryset())
+        data = content_import.export_workbook(products, query.validated_data.get("languages"),
+                                              query.validated_data["incomplete"])
+        response = HttpResponse(
+            data, content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        name = f"products_content_{timezone.now():%Y%m%d_%H%M}.xlsx"
+        response["Content-Disposition"] = f'attachment; filename="{name}"'
+        return response
 
     @action(detail=True, methods=["post"], parser_classes=[MultiPartParser, FormParser])
     def images(self, request, pk=None):

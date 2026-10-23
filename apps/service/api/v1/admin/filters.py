@@ -5,7 +5,7 @@ from django.utils import timezone
 from rest_framework.filters import SearchFilter
 from apps.service.models import AddsBrands, Brand, PartnerBrand, ProductModel, ProductBadge, ProductCategory, \
     ProductSubCategory, ProductItemCategory, ProductAttribute, Order, OrderItem, Product, Comment, CommentReply, \
-    Questions, QuestionsReply, ORDER_STATUS, Sale, HomeBlock, ProductModeration, FilterPage, Project
+    Questions, QuestionsReply, ORDER_STATUS, Sale, HomeBlock, ProductModeration, FilterPage, Project, ContentImport
 from apps.service.filter_pages import open_pages
 
 
@@ -248,6 +248,15 @@ class ProductModerationFilter(django_filters.FilterSet):
     class Meta:
         model = ProductModeration
         fields = ("status", "product", "submitted_by", "reviewed_by")
+
+
+class ContentImportFilter(django_filters.FilterSet):
+    from_created = django_filters.DateFilter(field_name="created_at", lookup_expr="date__gte")
+    to_created = django_filters.DateFilter(field_name="created_at", lookup_expr="date__lte")
+
+    class Meta:
+        model = ContentImport
+        fields = ("status", "created_by", "applied_by")
 
 
 class FilterPageFilter(django_filters.FilterSet):
