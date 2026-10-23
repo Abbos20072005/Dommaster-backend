@@ -123,6 +123,8 @@ class CategoryMixin(SeoFieldsMixin):
     SLUG_FALLBACK = "category"
 
     image_alt = models.CharField(max_length=255, blank=True, verbose_name="Alt текст изображения")
+    # SEO text under the product list (BLD-251), stored as sent — the format is the front's job
+    description = models.TextField(blank=True, verbose_name="Описание (текст под товарами)")
     show_on_site = models.BooleanField(default=True, verbose_name="Показывать на сайте")
     show_in_app = models.BooleanField(default=True, verbose_name="Показывать в приложении")
 

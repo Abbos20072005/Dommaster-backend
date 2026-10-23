@@ -55,6 +55,8 @@ Ochish strelkasi: `children_count > 0` (L1 da L2 lar soni, L2 da L3 lar soni; L3
       "meta_title_ru": null,
       "meta_description_uz": null,
       "meta_description_ru": null,
+      "description_uz": "<h2>Qanday tanlash</h2><p>...</p>",
+      "description_ru": null,
       "show_on_site": true,
       "show_in_app": true,
       "is_active": true,
@@ -101,6 +103,7 @@ Uchala darajada maydonlar bir xil, farqi faqat ota kategoriya va rasmlarda.
 | `slug` | faqat `a-z 0-9 - _`, shu daraja ichida unikal. Yuborilmasa yoki bo'sh (`""`) bo'lsa `name_uz` dan avtomatik yasaladi (`Rozetka va o'chirgichlar` → `rozetka-va-ochirgichlar`, band bo'lsa `-2`, `-3`) |
 | `meta_title_uz`, `meta_title_ru` | SEO sarlavha (tavsiya ≤ 60 belgi, backend 255 gacha qabul qiladi) |
 | `meta_description_uz`, `meta_description_ru` | SEO tavsif (tavsiya ≤ 160 belgi) |
+| `description_uz`, `description_ru` | Saytda tovarlar ro'yxati ostidagi matn (BLD-251) — pastda **2.1** |
 | `show_on_site` | "Sayt" toggle, default `true` |
 | `show_in_app` | "Buildex Go ilovasi" toggle, default `true` |
 | `is_active` | Holat: `true` = Faol, `false` = Qoralama |
@@ -136,7 +139,24 @@ Xatolar (`400`):
 
 O'chirish: ostida mahsulot bor kategoriya o'chirilmaydi → `400 {"detail": "Category has products, move them to another category first."}`.
 
-> `show_on_site` / `show_in_app` hozircha faqat saqlanadi — mijoz (sayt / ilova) API'lari hali ularga qaramaydi, ko'rinishni `is_active` boshqaradi. `slug` va SEO maydonlari ham mijoz API'lariga hali chiqarilmagan.
+> `show_on_site` / `show_in_app` hozircha faqat saqlanadi — mijoz (sayt / ilova) API'lari hali ularga qaramaydi, ko'rinishni `is_active` boshqaradi.
+
+### 2.1. Kategoriya matni — `description_uz` / `description_ru`
+
+Kategoriya sahifasida (saytda) tovarlar ro'yxati ostida chiqadigan foydali matn. Uchala darajada bor (L1, L2, L3), har til **alohida ustun**: formada ikkita maydon (UZ va RU), har biri faqat o'z kalitiga yuboriladi. Bitta tilni yuborish ikkinchisiga tegmaydi (`PATCH {"description_uz": "..."}` → `description_ru` o'z holicha qoladi). `description` (tilsiz) kaliti yuborilsa e'tiborsiz qoldiriladi.
+
+Oddiy matn maydoni (`TextField`): backend qiymatni **yuborilganidek** saqlaydi va saytga shundayligicha beradi — formatni (markdown yoki cheklangan HTML: sarlavha, ro'yxat, havola) va uning validatsiyasini front belgilaydi. Uzunlik cheklovi yo'q, `""` va `null` = matn yo'q.
+
+Saytda: matn faqat **so'ralgan til** bo'yicha chiqadi — `description_uz` bo'sh bo'lsa, uz sahifada blok chiqmaydi (ru matn ko'rsatilmaydi).
+
+Misol — `PATCH item-categories/12/`:
+
+```json
+{
+  "description_uz": "<h2>Perforatorni qanday tanlash</h2><p>Quvvat va zarba kuchiga qarang.</p><ul><li>SDS-plus</li><li>SDS-max</li></ul>",
+  "description_ru": "<h2>Как выбрать перфоратор</h2><p>Смотрите на мощность и силу удара.</p>"
+}
+```
 
 ---
 

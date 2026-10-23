@@ -48,6 +48,8 @@ SEO_FIELDS = ("meta_title_uz", "meta_title_ru", "meta_description_uz", "meta_des
               "image_alt_uz", "image_alt_ru")
 VISIBILITY_FIELDS = ("show_on_site", "show_in_app", "is_active")
 COUNT_FIELDS = ("products_count", "filters_count")
+# each language its own column, never the plain `description` (BLD-321: uz must not land in ru)
+DESCRIPTION_FIELDS = ("description_uz", "description_ru")
 
 
 class CategoryBaseSerializer(serializers.ModelSerializer):
@@ -66,7 +68,7 @@ class ProductCategorySerializer(CategoryBaseSerializer):
     class Meta:
         model = ProductCategory
         fields = ("id", *NAME_FIELDS, *SLUG_FIELDS, "code", "icon", "image", "position", *SEO_FIELDS,
-                  *VISIBILITY_FIELDS, "children_count", *COUNT_FIELDS, "created_at", "updated_at")
+                  *DESCRIPTION_FIELDS, *VISIBILITY_FIELDS, "children_count", *COUNT_FIELDS, "created_at", "updated_at")
         read_only_fields = ("name", "created_at", "updated_at")
         extra_kwargs = NAME_KWARGS
 
@@ -78,7 +80,7 @@ class ProductSubCategoryAdminSerializer(CategoryBaseSerializer):
     class Meta:
         model = ProductSubCategory
         fields = ("id", *NAME_FIELDS, *SLUG_FIELDS, "code", "product_category", "image", "position", *SEO_FIELDS,
-                  *VISIBILITY_FIELDS, "children_count", *COUNT_FIELDS, "created_at", "updated_at")
+                  *DESCRIPTION_FIELDS, *VISIBILITY_FIELDS, "children_count", *COUNT_FIELDS, "created_at", "updated_at")
         read_only_fields = ("name", "created_at", "updated_at")
         extra_kwargs = NAME_KWARGS
 
@@ -89,7 +91,7 @@ class ProductItemCategoryAdminSerializer(CategoryBaseSerializer):
     class Meta:
         model = ProductItemCategory
         fields = ("id", *NAME_FIELDS, *SLUG_FIELDS, "code", "product_sub_category", "image", "position", *SEO_FIELDS,
-                  *VISIBILITY_FIELDS, *COUNT_FIELDS, "created_at", "updated_at")
+                  *DESCRIPTION_FIELDS, *VISIBILITY_FIELDS, *COUNT_FIELDS, "created_at", "updated_at")
         read_only_fields = ("name", "created_at", "updated_at")
         extra_kwargs = NAME_KWARGS
 

@@ -898,7 +898,25 @@ class ProductCategoryFilterSerializer(serializers.Serializer):
         ).distinct()
         return ProductSubCategoryFilterSerializer(qs, many=True, context=self.context).data
 
-class ProductItemCategorySerializer(TranslatedSerializerMixin, serializers.ModelSerializer):
+class CategoryDescriptionMixin(serializers.Serializer):
+    """`description` = the category's text under the product list, in the request language.
+
+    No ru fallback: a uz page shows no block rather than a ru text. Only on the requested category -
+    nested children and lists leave the key out."""
+    description = serializers.SerializerMethodField(
+        help_text="'' = no text (hide the block). Only on the requested category")
+
+    def get_description(self, obj) -> str:
+        return getattr(obj, f"description_{request_language()}", None) or ""
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if self.parent is not None:
+            data.pop("description", None)
+        return data
+
+
+class ProductItemCategorySerializer(TranslatedSerializerMixin, CategoryDescriptionMixin, serializers.ModelSerializer):
     breadcrumbs = serializers.SerializerMethodField()
     product_amount = serializers.SerializerMethodField()
     updated_at = serializers.DateTimeField(read_only=True)
@@ -913,6 +931,7 @@ class ProductItemCategorySerializer(TranslatedSerializerMixin, serializers.Model
             "meta_description",
             "image",
             "image_alt",
+            "description",
             "product_amount",
             "breadcrumbs",
             "updated_at"
@@ -925,7 +944,7 @@ class ProductItemCategorySerializer(TranslatedSerializerMixin, serializers.Model
         return obj.get_breadcrumbs(self.get_language())
 
 
-class ProductSubCategorySerializer(TranslatedSerializerMixin, serializers.ModelSerializer):
+class ProductSubCategorySerializer(TranslatedSerializerMixin, CategoryDescriptionMixin, serializers.ModelSerializer):
     product_item_categories = ProductItemCategorySerializer(source="product_sub_category", many=True, read_only=True)
     breadcrumbs = serializers.SerializerMethodField()
     updated_at = serializers.DateTimeField(read_only=True)
@@ -940,6 +959,7 @@ class ProductSubCategorySerializer(TranslatedSerializerMixin, serializers.ModelS
             "meta_description",
             "image",
             "image_alt",
+            "description",
             "breadcrumbs",
             "product_item_categories",
             "updated_at"
@@ -959,7 +979,7 @@ class ProductCategorySearchSerializer(serializers.ModelSerializer):
             "position"
         )
 
-class ProductCategorySerializer(TranslatedSerializerMixin, serializers.ModelSerializer):
+class ProductCategorySerializer(TranslatedSerializerMixin, CategoryDescriptionMixin, serializers.ModelSerializer):
     sub_categories = ProductSubCategorySerializer(source="product_category", many=True, read_only=True)
     breadcrumbs = serializers.SerializerMethodField()
     updated_at = serializers.DateTimeField(read_only=True)
@@ -974,6 +994,7 @@ class ProductCategorySerializer(TranslatedSerializerMixin, serializers.ModelSeri
             "meta_description",
             "image",
             "image_alt",
+            "description",
             "icon",
             "position",
             "breadcrumbs",
