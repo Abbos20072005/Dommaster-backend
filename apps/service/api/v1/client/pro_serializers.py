@@ -8,8 +8,10 @@ MONEY = {"max_digits": 18, "decimal_places": 2}
 
 
 class ProjectSerializer(serializers.ModelSerializer):
-    items_count = serializers.IntegerField(read_only=True, default=0, help_text="Linked order items")
-    orders_count = serializers.IntegerField(read_only=True, default=0, help_text="Orders with linked items")
+    items_count = serializers.IntegerField(read_only=True, default=0,
+                                           help_text="Linked items of paid, not canceled orders")
+    orders_count = serializers.IntegerField(read_only=True, default=0,
+                                            help_text="Paid, not canceled orders with linked items")
 
     class Meta:
         model = Project

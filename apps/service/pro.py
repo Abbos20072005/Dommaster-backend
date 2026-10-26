@@ -102,9 +102,11 @@ def delete_project(project):
 
 
 def projects_with_counts(customer):
+    """Counts follow the expenses: items of paid, not canceled orders only (as the summary / items list)."""
+    counted = Q(order_items__order__payment_status=PAID) & ~Q(order_items__order__status=CANCELED)
     return Project.objects.filter(customer=customer).annotate(
-        items_count=Count("order_items", distinct=True),
-        orders_count=Count("order_items__order", distinct=True),
+        items_count=Count("order_items", filter=counted, distinct=True),
+        orders_count=Count("order_items__order", filter=counted, distinct=True),
     )
 
 

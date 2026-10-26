@@ -56,6 +56,8 @@ Boshqa mijozning loyihasi yoki buyurtmasi → 404.
 - Pul summalari xarajat endpointlarida **string** bo'lib keladi, 2 xona bilan: `"241666.67"`.
 - Xarajatga faqat **to'langan** va bekor qilinmagan buyurtmalar kiradi (naqd to'lov — admin "to'landi" qilgandan
   keyin). Bog'lash esa har qanday bekor qilinmagan buyurtmaga mumkin.
+- Loyihadagi `items_count` / `orders_count`, `summary/`, `dashboard/` va `items/` ro'yxati — hammasi bir xil qoida:
+  faqat to'langan, bekor qilinmagan buyurtmalar. To'lanmagan buyurtmaga bog'langan tovar to'lov o'tgach chiqadi.
 - Promokod chegirmasi va yetkazish narxi buyurtma qatorlariga summasiga qarab bo'linadi. Ikki loyihaga bo'lingan
   buyurtma ham to'lagan summaga teng chiqadi.
 - PRO olib qo'yilsa loyihalar o'chmaydi, faqat yashiriladi. Qayta berilsa hammasi joyida.

@@ -34,6 +34,9 @@ When PRO is taken away the projects are kept, just hidden (403); when it is give
 }
 ```
 
+- `items_count` / `orders_count` count, like the expenses, only items of **paid, not canceled** orders — an item
+  linked to an unpaid order shows up (in the counts, the summary and `items/`) once the order is paid. Delete still
+  looks at every linked item: a project whose items are all unpaid has `items_count` 0 but answers 409.
 - `name`: 3–100 characters (extra spaces are dropped). Two **active** projects can't have the same name
   (case does not matter) → 400, `error_code` 35. Archived projects don't count, so restoring one whose name is taken
   meanwhile → 400 (35) as well: rename one of them first.

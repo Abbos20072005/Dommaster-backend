@@ -309,6 +309,12 @@ class ProExpensesTests(ApiTestCase):
         self.assertEqual(rows, [(D("50000"), D("1666.67"), D("48333.33"), D("4166.67")),
                                 (D("200000"), D("0"), D("200000"), D("0"))])
 
+    def test_project_counts_follow_expenses(self):
+        # house has 4 linked items, only the 2 of the paid order 1 count (order 3 canceled, order 4 unpaid)
+        projects = {row["id"]: row for row in self.client_pro.get("/api/v1/pro/projects/").data["result"]}
+        self.assertEqual((projects[self.house.id]["items_count"], projects[self.house.id]["orders_count"]), (2, 1))
+        self.assertEqual((projects[self.office.id]["items_count"], projects[self.office.id]["orders_count"]), (2, 2))
+
     def test_period_filter(self):
         Order.objects.filter(order_items__project=self.office, delivery_type=1).update(created_at="2026-01-10")
         result = self.client_pro.get("/api/v1/pro/dashboard/?from=2026-01-01&to=2026-01-31").data["result"]
