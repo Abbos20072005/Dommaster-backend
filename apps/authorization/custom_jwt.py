@@ -5,6 +5,7 @@ from rest_framework_simplejwt.exceptions import InvalidToken
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from .models import Customer
+from .visits import record_visit
 
 
 class CustomJwtAuthentication(JWTAuthentication):
@@ -19,6 +20,8 @@ class CustomJwtAuthentication(JWTAuthentication):
             customer = Customer.objects.filter(id=user_id).first()
             if customer and customer.is_blocked:
                 raise CustomApiException(error_code=ErrorCodes.USER_BLOCKED)
+            if customer:
+                record_visit(customer)  # the dashboard active users chart
             return customer
         raise CustomApiException(error_code=ErrorCodes.USER_DOES_NOT_EXIST)
 

@@ -41,6 +41,23 @@ class Customer(BaseModel):
         verbose_name_plural = "Клиенты"
 
 
+class CustomerVisit(BaseModel):
+    """A day the customer used the app / site with their token (any client API request).
+    One row per customer × day, written by `apps/authorization/visits.record_visit`; read by the dashboard
+    `active_users` chart."""
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="visits", verbose_name="Клиент")
+    day = models.DateField(verbose_name="День")
+
+    def __str__(self):
+        return f"{self.customer_id}: {self.day}"
+
+    class Meta:
+        verbose_name = "Посещение клиента"
+        verbose_name_plural = "Посещения клиентов"
+        constraints = [models.UniqueConstraint(fields=["customer", "day"], name="uniq_customer_visit_day")]
+        indexes = [models.Index(fields=["day"], name="idx_customer_visit_day")]
+
+
 class CustomerRoleChange(BaseModel):
     """One change of `Customer.role` by staff (grant / revoke PRO = prorab); revoking needs a reason."""
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="role_changes",

@@ -1,14 +1,14 @@
 from datetime import date, timedelta
-from django.db.models import Avg, Count, DateField, Exists, Max, OuterRef, Q, Subquery, Sum
+from django.db.models import Avg, Count, DateField, Exists, F, Max, OuterRef, Q, Subquery, Sum
 from django.db.models.functions import Coalesce, TruncDate, TruncMonth, TruncWeek
 from django.utils import timezone
 from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
 from apps.authorization.api.v1.admin.filters import active_since
-from apps.authorization.models import Customer, FcmToken
+from apps.authorization.models import Customer, CustomerVisit, FcmToken
 from apps.base.models import Chat, Messages
-from apps.service.models import Order, Product, ProductCategory, ProductImage, ProductRemaining, Questions, \
-    QuestionsReply
+from apps.service.models import CartItem, Comment, Favourites, InterestEvent, Order, Product, ProductCategory, \
+    ProductImage, ProductRemaining, Questions, QuestionsReply, RecentlyViewedProducts
 from utils.admin_views import AdminViewMixin
 from ..serializers import DashboardQuerySerializer, DashboardSerializer, PERIOD_DAYS, PERIOD_WEEKS, YEAR, DAY, \
     WEEK_STEP, MONTH_STEP, \
@@ -160,6 +160,85 @@ def get_registrations(period):
     }
 
 
+def bucket_of(step, field, is_date=False):
+    """Chart point of a row: the day / Monday / first day of the month of `field`."""
+    if step == DAY:
+        return F(field) if is_date else TruncDate(field)
+    return (TruncWeek if step == WEEK_STEP else TruncMonth)(field, output_field=DateField())
+
+
+ORDERS = "orders"
+# action -> (queryset, customer field, time field, time field is a DateField); one action may have several sources
+ACTIVITY_SOURCES = (
+    (ORDERS, lambda: Order.objects.exclude(customer=None), "customer_id", "created_at", False),
+    ("favourites", lambda: Favourites.objects.exclude(customer=None), "customer_id", "created_at", False),
+    ("cart", lambda: CartItem.objects.exclude(cart__customer=None), "cart__customer_id", "updated_at", False),
+    ("questions", lambda: Questions.objects.all(), "customer_id", "created_at", False),
+    ("reviews", lambda: Comment.objects.exclude(customer=None), "customer_id", "created_at", False),
+    ("chat", lambda: Messages.objects.filter(is_answer=False).exclude(chat__customer=None),
+     "chat__customer_id", "created_at", False),
+    ("views", lambda: InterestEvent.objects.exclude(customer=None), "customer_id", "created_at", False),
+    ("views", lambda: RecentlyViewedProducts.objects.all(), "customer_id", "created_at", False),
+    ("visits", lambda: CustomerVisit.objects.all(), "customer_id", "day", True),
+    ("visits", lambda: Customer.objects.exclude(last_login=None), "id", "last_login", False),
+)
+ACTIONS = tuple(dict.fromkeys(key for key, *_ in ACTIVITY_SOURCES))
+
+
+def activity_by_bucket(since, step):
+    """{action: {bucket: {customer ids}}} of the rows since `since`."""
+    data = {key: {} for key in ACTIONS}
+    for key, queryset, customer, field, is_date in ACTIVITY_SOURCES:
+        rows = queryset().filter(**{f"{field}__gte": since}).annotate(bucket=bucket_of(step, field, is_date))             .order_by().values_list(customer, "bucket").distinct()
+        for customer_id, bucket in rows:
+            data[key].setdefault(bucket, set()).add(customer_id)
+    return data
+
+
+def split_active(by_action, buckets):
+    """(everybody active, ordered) customer ids over the given buckets."""
+    active, buyers = set(), set()
+    for key, by_bucket in by_action.items():
+        for bucket in buckets:
+            ids = by_bucket.get(bucket, ())
+            active.update(ids)
+            if key == ORDERS:
+                buyers.update(ids)
+    return active, buyers
+
+
+def get_active_users(period):
+    """Distinct customers who did anything over the period: ordered (buyers) + did only something else
+    (others: favourites, cart, question, review, chat message, product view / search, used the app)."""
+    start, prev_start, dates, step, _ = period_buckets(period)
+    by_action = activity_by_bucket(prev_start, step)
+    all_buckets = {bucket for by_bucket in by_action.values() for bucket in by_bucket}
+
+    active, buyers = split_active(by_action, [b for b in all_buckets if b >= start])
+    prev_active, prev_buyers = split_active(by_action, [b for b in all_buckets if b < start])
+    points = []
+    for day in dates:
+        day_active, day_buyers = split_active(by_action, [day])
+        points.append({"date": day, "total": len(day_active), "buyers": len(day_buyers),
+                       "others": len(day_active - day_buyers)})
+
+    guests = InterestEvent.objects.filter(customer=None, created_at__gte=start).exclude(device_id="")         .values("device_id").distinct().count()
+    return {
+        "period": period,
+        "step": step,
+        "total": len(active),
+        "buyers": len(buyers),
+        "others": len(active - buyers),
+        "total_change": percent_change(len(active), len(prev_active)),
+        "buyers_change": percent_change(len(buyers), len(prev_buyers)),
+        "others_change": percent_change(len(active - buyers), len(prev_active - prev_buyers)),
+        "actions": {key: len(set().union(*(ids for bucket, ids in by_action[key].items() if bucket >= start)))
+                    for key in ACTIONS},
+        "guests": guests,
+        "points": points,
+    }
+
+
 def get_recent_orders(limit=RECENT_ORDERS):
     return Order.objects.select_related("customer", "manager").annotate(items_count=Count("order_items")) \
         .order_by("-created_at")[:limit]
@@ -262,6 +341,7 @@ class DashboardAPIView(AdminViewMixin, GenericAPIView):
             "delivered_orders": get_delivered_orders(params["period"]),
             "received_orders": get_received_orders(params["period"]),
             "registrations": get_registrations(params["period"]),
+            "active_users": get_active_users(params["period"]),
             "recent_orders": get_recent_orders(),
             "attention": get_attention(),
             "customers": get_customers(),

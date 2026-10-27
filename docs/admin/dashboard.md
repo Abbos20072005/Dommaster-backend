@@ -19,7 +19,7 @@ Hammasi ixtiyoriy. Noto'g'ri qiymat → `400 {"<param>": ["..."]}`.
 | --- | --- | --- | --- |
 | `days` | `30` | `1`–`365` | `summary` (KPI kartochkalar) — bugunda tugaydigan oyna |
 | `date_from`, `date_to` | — | `YYYY-MM-DD`, `date_from <= date_to` | `summary` — ixtiyoriy sana oralig'i (ikkala chegara ham kiradi). Berilsa `days` **e'tiborga olinmaydi** |
-| `period` | `week` | `week` (7 kun) / `month` (30 kun) / `quarter` (13 hafta) / `half_year` (26 hafta) / `year` (12 oy) | `delivered_orders`, `received_orders` va `registrations` grafiklari |
+| `period` | `week` | `week` (7 kun) / `month` (30 kun) / `quarter` (13 hafta) / `half_year` (26 hafta) / `year` (12 oy) | `delivered_orders`, `received_orders`, `registrations` va `active_users` grafiklari |
 | `months` | `6` | `1`–`24` | `revenue` grafigi |
 | `low_stock` | `10` | `>= 0` | `catalog` — "kam qoldi" chegarasi |
 
@@ -54,6 +54,7 @@ Misollar:
   "delivered_orders": { ... },
   "received_orders": { ... },
   "registrations": { ... },
+  "active_users": { ... },
   "recent_orders": [ ... ],
   "attention": { ... },
   "customers": { ... },
@@ -163,6 +164,66 @@ Kun — buyurtma **tushgan** (yaratilgan) sana. Jami `count` `summary.orders` bi
 | `web` | `total - mobile` |
 | `mobile_percent`, `web_percent` | ulushlar, % (`total=0` bo'lsa `0.0`) |
 | `points[]` | har bir kun (`step=week` — hafta, `step=month` — oy): `date`, `count` |
+
+### `active_users` — faol mijozlar grafigi
+
+Davr ichida **biror amal qilgan** mijozlar (har biri bir marta sanaladi), ikki guruhga bo'lingan: buyurtma berganlar va boshqa amal qilganlar.
+
+```json
+"active_users": {
+  "period": "month",
+  "step": "day",
+  "total": 412,
+  "buyers": 96,
+  "others": 316,
+  "total_change": 8.4,
+  "buyers_change": -3.0,
+  "others_change": 12.1,
+  "actions": {
+    "orders": 96, "favourites": 58, "cart": 141, "questions": 12,
+    "reviews": 9, "chat": 17, "views": 230, "visits": 388
+  },
+  "guests": 1240,
+  "points": [
+    { "date": "2026-09-28", "total": 21, "buyers": 4, "others": 17 },
+    { "date": "2026-09-29", "total": 0, "buyers": 0, "others": 0 }
+  ]
+}
+```
+
+| Maydon | Izoh |
+| --- | --- |
+| `period`, `step` | `delivered_orders` dagi bilan bir xil (`?period=`) |
+| `total` | **jami faol mijozlar** — davrda quyidagi amallardan kamida bittasini qilganlar. `total = buyers + others` |
+| `buyers` | davrda **buyurtma bergan** mijozlar (buyurtma holatidan qat'i nazar, bekor qilingani ham) |
+| `others` | davrda faol bo'lgan, lekin **buyurtma bermagan** mijozlar (faqat like / savat / savol / sharh / chat / ko'rish / ilovaga kirish) |
+| `total_change`, `buyers_change`, `others_change` | oldingi shu uzunlikdagi davrga nisbatan %, oldingi davr `0` → `null` |
+| `actions` | har bir amal bo'yicha mijozlar soni (davr bo'yicha). Bir mijoz bir nechta amalda sanaladi — **yig'indisi `total` ga teng emas** |
+| `guests` | login qilmagan, mahsulot ochgan / qidirgan qurilmalar soni (`X-Device-Id`). `total` ga **kirmaydi** |
+| `points[]` | har bir nuqta: `date`, `total`, `buyers`, `others` (`total = buyers + others`). Nuqta ichida `buyers` — shu kun/hafta/oyda buyurtma berganlar, `others` — shu nuqtada faol bo'lib, shu nuqtada buyurtma bermaganlar |
+
+Nuqtalarning yig'indisi davr `total` iga teng **emas**: bir mijoz bir necha kunda faol bo'lsa, har kunida sanaladi, davr jamisida esa bir marta.
+
+`actions` kalitlari — qaysi amal nimadan olinadi:
+
+| Kalit | Amal | Sana |
+| --- | --- | --- |
+| `orders` | buyurtma berdi | buyurtma yaratilgan sana |
+| `favourites` | sevimlilarga qo'shdi (like) | qo'shilgan sana (keyin o'chirgan bo'lsa — sanalmaydi) |
+| `cart` | savatga qo'shdi / sonini o'zgartirdi | savat elementining oxirgi o'zgarishi (o'chirilgani sanalmaydi) |
+| `questions` | mahsulotga savol berdi | savol sanasi |
+| `reviews` | mahsulotga sharh yozdi | sharh sanasi |
+| `chat` | qo'llab-quvvatlash chatiga yozdi | xabar sanasi (operator javoblari sanalmaydi) |
+| `views` | mahsulotni ochdi yoki qidirdi | ko'rish / qidiruv sanasi |
+| `visits` | ilova / saytga **login bilan kirdi** (token bilan istalgan so'rov — ochib, ko'rib chiqib ketgan bo'lsa ham) yoki login qildi | kun |
+
+Faqat **ro'yxatdan o'tgan** mijozlar sanaladi (login qilmagan mehmonlar — alohida `guests`). Bloklangan mijozlar ham, o'sha davrda faol bo'lgan bo'lsa, sanaladi.
+
+Cheklovlar (tarix uchun):
+
+- `visits` — kunlik tashriflar **shu o'zgarish deploy qilingan kundan** yoziladi. Undan oldingi davr uchun faqat mijozning **oxirgi** login sanasi bor, shuning uchun eski davrlarda `visits` (va `others`) kamroq chiqadi.
+- `views` dagi ko'rish / qidiruv tarixi 90 kun saqlanadi (bundan eskisi faqat "yaqinda ko'rilganlar" ro'yxatidagi birinchi ko'rish bo'yicha), shuning uchun `half_year` / `year` ning eski oylarida `views` kamroq.
+- `guests` — faqat ilova `X-Device-Id` sarlavhasini yuborgan so'rovlardan (mahsulot ochish / qidirish), ilovani ochib hech narsa qilmagan mehmon sanalmaydi.
 
 ### `recent_orders` — oxirgi buyurtmalar
 

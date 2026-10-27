@@ -87,6 +87,41 @@ class RegistrationsSerializer(serializers.Serializer):
     points = RegistrationsPointSerializer(many=True)
 
 
+class ActiveUsersPointSerializer(serializers.Serializer):
+    date = serializers.DateField(help_text="The day, the Monday (step = week) or the first day of the month")
+    total = serializers.IntegerField(help_text="Customers active in this point; buyers + others = total")
+    buyers = serializers.IntegerField(help_text="Placed an order in this point")
+    others = serializers.IntegerField(help_text="Active in this point, but placed no order in it")
+
+
+class ActiveUsersActionsSerializer(serializers.Serializer):
+    """Customers per action over the period; one customer counts in every action they did."""
+    orders = serializers.IntegerField(help_text="Placed an order (any status)")
+    favourites = serializers.IntegerField(help_text="Added a product to favourites")
+    cart = serializers.IntegerField(help_text="Added / changed a product in the cart")
+    questions = serializers.IntegerField(help_text="Asked a product question")
+    reviews = serializers.IntegerField(help_text="Wrote a product review")
+    chat = serializers.IntegerField(help_text="Wrote to the support chat")
+    views = serializers.IntegerField(help_text="Opened a product / searched")
+    visits = serializers.IntegerField(help_text="Used the app / site logged in (any request with the token) "
+                                                "or logged in")
+
+
+class ActiveUsersSerializer(serializers.Serializer):
+    period = serializers.ChoiceField(choices=PERIODS)
+    step = serializers.ChoiceField(choices=STEPS)
+    total = serializers.IntegerField(help_text="Distinct active customers over the period; buyers + others = total")
+    buyers = serializers.IntegerField(help_text="Placed at least one order in the period")
+    others = serializers.IntegerField(help_text="Active, but placed no order in the period")
+    total_change = serializers.FloatField(allow_null=True, help_text="% vs the previous period")
+    buyers_change = serializers.FloatField(allow_null=True)
+    others_change = serializers.FloatField(allow_null=True)
+    actions = ActiveUsersActionsSerializer()
+    guests = serializers.IntegerField(help_text="Devices without login that opened a product / searched "
+                                                "(X-Device-Id); not in total")
+    points = ActiveUsersPointSerializer(many=True)
+
+
 class AttentionSerializer(serializers.Serializer):
     total = serializers.IntegerField(help_text="Sum of all counters below")
     out_of_stock = serializers.IntegerField(help_text="Active products with quantity <= 0")
@@ -137,6 +172,7 @@ class DashboardSerializer(serializers.Serializer):
     delivered_orders = DeliveredOrdersSerializer(help_text="Completed orders")
     received_orders = DeliveredOrdersSerializer(help_text="Every created order, any status (canceled too)")
     registrations = RegistrationsSerializer()
+    active_users = ActiveUsersSerializer(help_text="Active customers: buyers vs other actions")
     recent_orders = OrderListSerializer(many=True)
     attention = AttentionSerializer()
     customers = CustomersCompositionSerializer()
