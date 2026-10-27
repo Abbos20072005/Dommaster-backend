@@ -1,6 +1,6 @@
 from datetime import date, timedelta
 from django.db.models import Avg, Count, DateField, Exists, Max, OuterRef, Q, Subquery, Sum
-from django.db.models.functions import Coalesce, TruncDate, TruncMonth
+from django.db.models.functions import Coalesce, TruncDate, TruncMonth, TruncWeek
 from django.utils import timezone
 from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
@@ -10,7 +10,8 @@ from apps.base.models import Chat, Messages
 from apps.service.models import Order, Product, ProductCategory, ProductImage, ProductRemaining, Questions, \
     QuestionsReply
 from utils.admin_views import AdminViewMixin
-from ..serializers import DashboardQuerySerializer, DashboardSerializer, PERIOD_DAYS, YEAR, DAY, MONTH_STEP, \
+from ..serializers import DashboardQuerySerializer, DashboardSerializer, PERIOD_DAYS, PERIOD_WEEKS, YEAR, DAY, \
+    WEEK_STEP, MONTH_STEP, \
     PENDING, COMPLETED, CANCELED
 
 PENDING_ORDER_HOURS = 2
@@ -42,12 +43,25 @@ def month_starts(months):
     return [date(i // 12, i % 12 + 1, 1) for i in range(index - months + 1, index + 1)]
 
 
+def week_starts(weeks):
+    """Mondays of the last `weeks` weeks incl. the current one, oldest first."""
+    monday = timezone.now().date()
+    monday -= timedelta(days=monday.weekday())
+    return [monday - timedelta(weeks=i) for i in range(weeks - 1, -1, -1)]
+
+
 def period_buckets(period):
     """Chart points of a period: (start, previous_start, dates, step, trunc).
-    week / month = last 7 / 30 days by day, year = last 12 calendar months (incl. the current one) by month."""
+    week / month = last 7 / 30 days by day, quarter / half_year = last 13 / 26 weeks (incl. the current one)
+    by week, year = last 12 calendar months (incl. the current one) by month."""
     if period == YEAR:
         months = month_starts(24)
         return months[12], months[0], months[12:], MONTH_STEP, TruncMonth("created_at", output_field=DateField())
+    if period in PERIOD_WEEKS:
+        weeks = PERIOD_WEEKS[period]
+        mondays = week_starts(weeks * 2)
+        return mondays[weeks], mondays[0], mondays[weeks:], WEEK_STEP, \
+            TruncWeek("created_at", output_field=DateField())
     return *day_range(PERIOD_DAYS[period]), DAY, TruncDate("created_at")
 
 
@@ -86,10 +100,10 @@ def get_summary(start, end):
     return data
 
 
-def get_delivered_orders(period):
-    """Completed orders per day (per month for a year) over the period vs the previous one."""
+def orders_chart(orders, period):
+    """Orders per day (per month for a year) over the period vs the previous one."""
     start, prev_start, dates, step, trunc = period_buckets(period)
-    rows = Order.objects.filter(status=COMPLETED, created_at__date__gte=prev_start) \
+    rows = orders.filter(created_at__date__gte=prev_start) \
         .annotate(day=trunc).values("day") \
         .annotate(count=Count("id"), revenue=Coalesce(Sum("total_price"), 0.0))
     by_day = {row["day"]: row for row in rows}
@@ -99,16 +113,27 @@ def get_delivered_orders(period):
         row = by_day.get(day, {"count": 0, "revenue": 0.0})
         points.append({"date": day, "count": row["count"], "revenue": row["revenue"],
                        "average_check": row["revenue"] / row["count"] if row["count"] else 0.0})
-    revenue = sum(p["revenue"] for p in points)
-    prev_revenue = sum(row["revenue"] for day, row in by_day.items() if day < start)
+    count, revenue = sum(p["count"] for p in points), sum(p["revenue"] for p in points)
+    previous = [row for day, row in by_day.items() if day < start]
     return {
         "period": period,
         "step": step,
-        "count": sum(p["count"] for p in points),
+        "count": count,
         "revenue": revenue,
-        "change": percent_change(revenue, prev_revenue),
+        "change": percent_change(revenue, sum(row["revenue"] for row in previous)),
+        "count_change": percent_change(count, sum(row["count"] for row in previous)),
         "points": points,
     }
+
+
+def get_delivered_orders(period):
+    """Completed orders."""
+    return orders_chart(Order.objects.filter(status=COMPLETED), period)
+
+
+def get_received_orders(period):
+    """Every created order, whatever its status now (canceled ones too)."""
+    return orders_chart(Order.objects.all(), period)
 
 
 def get_registrations(period):
@@ -235,6 +260,7 @@ class DashboardAPIView(AdminViewMixin, GenericAPIView):
         data = {
             "summary": get_summary(*summary_range(params)),
             "delivered_orders": get_delivered_orders(params["period"]),
+            "received_orders": get_received_orders(params["period"]),
             "registrations": get_registrations(params["period"]),
             "recent_orders": get_recent_orders(),
             "attention": get_attention(),

@@ -1,10 +1,13 @@
 from rest_framework import serializers
 from .order import OrderListSerializer
 
-WEEK, MONTH, YEAR = "week", "month", "year"
-PERIOD_DAYS = {WEEK: 7, MONTH: 30}  # year = the last 12 calendar months, grouped by month
-PERIODS = (WEEK, MONTH, YEAR)
-DAY, MONTH_STEP = "day", "month"
+WEEK, MONTH, QUARTER, HALF_YEAR, YEAR = "week", "month", "quarter", "half_year", "year"
+PERIOD_DAYS = {WEEK: 7, MONTH: 30}  # grouped by day
+PERIOD_WEEKS = {QUARTER: 13, HALF_YEAR: 26}  # grouped by week (Monday), the current one incl.
+# year = the last 12 calendar months, grouped by month
+PERIODS = (WEEK, MONTH, QUARTER, HALF_YEAR, YEAR)
+DAY, WEEK_STEP, MONTH_STEP = "day", "week", "month"
+STEPS = (DAY, WEEK_STEP, MONTH_STEP)
 
 
 class DateRangeQuerySerializer(serializers.Serializer):
@@ -27,8 +30,8 @@ class DateRangeQuerySerializer(serializers.Serializer):
 class DashboardQuerySerializer(DateRangeQuerySerializer):
     """Query params of the dashboard endpoint: the date range drives the KPI cards only."""
     period = serializers.ChoiceField(choices=PERIODS, default=WEEK,
-                                     help_text="Delivered orders / registrations charts: "
-                                               "7 days, 30 days or 12 months")
+                                     help_text="Delivered / received orders and registrations charts: "
+                                               "7 / 30 days by day, 13 / 26 weeks by week, 12 months by month")
     months = serializers.IntegerField(default=6, min_value=1, max_value=24)
     low_stock = serializers.IntegerField(default=10, min_value=0)
 
@@ -58,10 +61,12 @@ class DeliveredOrdersPointSerializer(serializers.Serializer):
 
 class DeliveredOrdersSerializer(serializers.Serializer):
     period = serializers.ChoiceField(choices=PERIODS)
-    step = serializers.ChoiceField(choices=(DAY, MONTH_STEP), help_text="What one point is: month for period=year")
+    step = serializers.ChoiceField(choices=STEPS, help_text="What one point is: week for quarter / half_year, "
+                                                            "month for year, else day")
     count = serializers.IntegerField()
     revenue = serializers.FloatField()
     change = serializers.FloatField(allow_null=True, help_text="Revenue % vs the previous period")
+    count_change = serializers.FloatField(allow_null=True, help_text="Order count % vs the previous period")
     points = DeliveredOrdersPointSerializer(many=True)
 
 
@@ -72,7 +77,7 @@ class RegistrationsPointSerializer(serializers.Serializer):
 
 class RegistrationsSerializer(serializers.Serializer):
     period = serializers.ChoiceField(choices=PERIODS)
-    step = serializers.ChoiceField(choices=(DAY, MONTH_STEP))
+    step = serializers.ChoiceField(choices=STEPS)
     days = serializers.IntegerField(help_text="Days in the period incl. today")
     total = serializers.IntegerField()
     mobile = serializers.IntegerField(help_text="Has an FCM token (registered a device in the app)")
@@ -129,7 +134,8 @@ class RevenueSerializer(serializers.Serializer):
 
 class DashboardSerializer(serializers.Serializer):
     summary = DashboardSummarySerializer()
-    delivered_orders = DeliveredOrdersSerializer()
+    delivered_orders = DeliveredOrdersSerializer(help_text="Completed orders")
+    received_orders = DeliveredOrdersSerializer(help_text="Every created order, any status (canceled too)")
     registrations = RegistrationsSerializer()
     recent_orders = OrderListSerializer(many=True)
     attention = AttentionSerializer()

@@ -27,7 +27,8 @@ from .feedback import FeedbackCustomerSerializer, FeedbackProductSerializer, Com
     CommentReplyShortSerializer, QuestionReplyShortSerializer, CommentListSerializer, CommentSerializer, \
     QuestionListSerializer, QuestionSerializer, ReplyCommentSerializer, ReplyQuestionSerializer, ReplyBaseSerializer, \
     CommentReplySerializer, QuestionReplySerializer, CommentStatsSerializer, QuestionStatsSerializer
-from .dashboard import WEEK, MONTH, YEAR, PERIOD_DAYS, PERIODS, DAY, MONTH_STEP, \
+from .dashboard import WEEK, MONTH, QUARTER, HALF_YEAR, YEAR, PERIOD_DAYS, PERIOD_WEEKS, PERIODS, \
+    DAY, WEEK_STEP, MONTH_STEP, STEPS, \
     DateRangeQuerySerializer, DashboardQuerySerializer, MetricSerializer, \
     DashboardSummarySerializer, DeliveredOrdersPointSerializer, DeliveredOrdersSerializer, \
     RegistrationsPointSerializer, RegistrationsSerializer, AttentionSerializer, CustomersCompositionSerializer, \
@@ -75,7 +76,8 @@ __all__ = [
     "CommentImageSerializer", "CommentReplyShortSerializer", "QuestionReplyShortSerializer", "CommentListSerializer",
     "CommentSerializer", "QuestionListSerializer", "QuestionSerializer", "ReplyCommentSerializer",
     "ReplyQuestionSerializer", "ReplyBaseSerializer", "CommentReplySerializer", "QuestionReplySerializer",
-    "CommentStatsSerializer", "QuestionStatsSerializer", "WEEK", "MONTH", "YEAR", "PERIOD_DAYS", "PERIODS", "DAY", "MONTH_STEP",
+    "CommentStatsSerializer", "QuestionStatsSerializer", "WEEK", "MONTH", "QUARTER", "HALF_YEAR", "YEAR",
+    "PERIOD_DAYS", "PERIOD_WEEKS", "PERIODS", "DAY", "WEEK_STEP", "MONTH_STEP", "STEPS",
     "DashboardQuerySerializer", "MetricSerializer",
     "DashboardSummarySerializer", "DeliveredOrdersPointSerializer", "DeliveredOrdersSerializer",
     "RegistrationsPointSerializer", "RegistrationsSerializer", "AttentionSerializer", "CustomersCompositionSerializer",

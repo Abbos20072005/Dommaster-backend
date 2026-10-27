@@ -19,21 +19,23 @@ Hammasi ixtiyoriy. Noto'g'ri qiymat → `400 {"<param>": ["..."]}`.
 | --- | --- | --- | --- |
 | `days` | `30` | `1`–`365` | `summary` (KPI kartochkalar) — bugunda tugaydigan oyna |
 | `date_from`, `date_to` | — | `YYYY-MM-DD`, `date_from <= date_to` | `summary` — ixtiyoriy sana oralig'i (ikkala chegara ham kiradi). Berilsa `days` **e'tiborga olinmaydi** |
-| `period` | `week` | `week` (7 kun) / `month` (30 kun) / `year` (12 oy) | `delivered_orders` va `registrations` grafiklari |
+| `period` | `week` | `week` (7 kun) / `month` (30 kun) / `quarter` (13 hafta) / `half_year` (26 hafta) / `year` (12 oy) | `delivered_orders`, `received_orders` va `registrations` grafiklari |
 | `months` | `6` | `1`–`24` | `revenue` grafigi |
 | `low_stock` | `10` | `>= 0` | `catalog` — "kam qoldi" chegarasi |
 
 Qolgan vidjetlar (`recent_orders`, `attention`, `customers`) parametrga bog'liq emas.
 
-Hafta / oy / yil tugmalari:
+Hafta / oy / 3 oy / 6 oy / yil tugmalari:
 
 | Tugma | Grafiklar | KPI kartochkalar (`summary`) |
 | --- | --- | --- |
 | Hafta | `period=week` — bugun va oldingi 6 kun, nuqta = kun | `days=7` |
 | Oy | `period=month` — bugun va oldingi 29 kun, nuqta = kun | `days=30` |
+| 3 oy | `period=quarter` — joriy hafta va oldingi 12 ta hafta, nuqta = hafta (13 ta nuqta) | `days=90` |
+| 6 oy | `period=half_year` — joriy hafta va oldingi 25 ta hafta, nuqta = hafta (26 ta nuqta) | `days=180` |
 | Yil | `period=year` — joriy oy va oldingi 11 ta **kalendar oy**, nuqta = oy (12 ta nuqta) | `days=365` |
 
-`summary` `period` ga **bog'liq emas** — unga `days` yoki `date_from` + `date_to` yuboriladi. `period=year` kalendar oylar bo'yicha (1-sanadan), `days=365` esa aynan 365 kun — shuning uchun yillik grafik jami bilan `summary` biroz farq qilishi mumkin.
+`summary` `period` ga **bog'liq emas** — unga `days` yoki `date_from` + `date_to` yuboriladi. `period=year` kalendar oylar bo'yicha (1-sanadan), `days=365` esa aynan 365 kun — shuning uchun yillik grafik jami bilan `summary` biroz farq qilishi mumkin. `quarter` / `half_year` ham shunday: ular **dushanbadan** boshlanadigan to'liq haftalar (oxirgisi — joriy hafta, bugungacha), `days=90` / `days=180` esa aynan kunlar soni.
 
 `date_from` va `date_to` faqat **birga** yuboriladi: bittasi bo'lsa → `400 {"date_to": ["..."]}` (yoki `date_from`), `date_from > date_to` → `400 {"date_to": ["..."]}`, format noto'g'ri → `400 {"date_from": ["..."]}`. Bo'sh qiymat (`?date_from=&date_to=`) — yuborilmagan hisoblanadi. Oraliq uzunligi cheklanmagan, kelajakdagi sana ham qabul qilinadi (o'sha kunlar `0`).
 
@@ -50,6 +52,7 @@ Misollar:
 {
   "summary": { ... },
   "delivered_orders": { ... },
+  "received_orders": { ... },
   "registrations": { ... },
   "recent_orders": [ ... ],
   "attention": { ... },
@@ -63,7 +66,7 @@ Umumiy qoidalar:
 
 - Davrlar **kalendar kun** bo'yicha, bugun ham kiradi: `days=30` — bugun va undan oldingi 29 kun. Vaqt — Toshkent vaqti.
 - `change` — shu uzunlikdagi **oldingi davrga** nisbatan o'zgarish, foizda (`12.5` = +12.5%, `-8.0` = −8%). Oldingi davr `0` bo'lsa — `null` (foizni hisoblab bo'lmaydi, "—" ko'rsating). Oldingi davr joriy davrdan bevosita oldin turadi: `date_from=2026-09-10&date_to=2026-09-16` (7 kun) → `2026-09-03 … 2026-09-09`.
-- Tushum (`revenue`, `average_check`) faqat **yakunlangan** buyurtmalardan (`status=3`) hisoblanadi.
+- Tushum (`revenue`, `average_check`) faqat **yakunlangan** buyurtmalardan (`status=3`) hisoblanadi — `received_orders` bundan mustasno (u barcha tushgan buyurtmalar summasi).
 - Grafik nuqtalari (`points`, `months`) bo'sh kunlar/oylar bilan to'liq keladi (`0` bilan), eskidan yangiga tartibda.
 - Summalar — so'mda, `float`.
 
@@ -101,6 +104,7 @@ Umumiy qoidalar:
   "count": 41,
   "revenue": 23800000.0,
   "change": 5.4,
+  "count_change": -2.4,
   "points": [
     { "date": "2026-09-26", "count": 6, "revenue": 3400000.0, "average_check": 566666.67 },
     { "date": "2026-09-27", "count": 0, "revenue": 0.0, "average_check": 0.0 }
@@ -110,13 +114,26 @@ Umumiy qoidalar:
 
 | Maydon | Izoh |
 | --- | --- |
-| `period` | `week` — 7 ta nuqta, `month` — 30 ta nuqta, `year` — 12 ta nuqta |
-| `step` | bitta nuqta nima: `day` (`week`, `month`) yoki `month` (`year`) |
+| `period` | `week` — 7 ta nuqta, `month` — 30 ta nuqta, `quarter` — 13 ta, `half_year` — 26 ta, `year` — 12 ta nuqta |
+| `step` | bitta nuqta nima: `day` (`week`, `month`), `week` (`quarter`, `half_year`) yoki `month` (`year`) |
 | `count`, `revenue` | davr bo'yicha jami |
-| `change` | **tushum**ning oldingi davrga nisbatan o'zgarishi, % (`year` — oldingi 12 oy) |
-| `points[]` | har bir kun (`step=month` bo'lsa — oy, `date` = oyning birinchi kuni): `date`, `count`, `revenue`, `average_check` |
+| `change` | **tushum**ning oldingi davrga nisbatan o'zgarishi, % (`quarter` — oldingi 13 hafta, `half_year` — oldingi 26 hafta, `year` — oldingi 12 oy) |
+| `count_change` | buyurtmalar **soni**ning oldingi davrga nisbatan o'zgarishi, % (oldingi davr `0` → `null`) |
+| `points[]` | har bir kun (`step=week` bo'lsa — hafta, `date` = haftaning dushanbasi; `step=month` bo'lsa — oy, `date` = oyning birinchi kuni): `date`, `count`, `revenue`, `average_check` |
 
 Kun buyurtmaning **yaratilgan sanasi** (`created_at`) bo'yicha olinadi, yetkazilgan sanasi bo'yicha emas.
+
+### `received_orders` — tushgan buyurtmalar grafigi
+
+`delivered_orders` bilan **bir xil shakl** (`period`, `step`, `count`, `revenue`, `change`, `count_change`, `points[]`) — o'sha grafik komponentini ishlating. Farqi — qaysi buyurtmalar sanaladi:
+
+| | `delivered_orders` | `received_orders` |
+| --- | --- | --- |
+| Buyurtmalar | faqat yakunlangan (`status=3`) | **barchasi** — hozirgi holatidan qat'i nazar (kutilmoqda, yig'ilmoqda, yetkazilmoqda, yakunlangan, bekor qilingan, do'konda kutmoqda) |
+| `revenue` | yakunlangan buyurtmalar summasi | barcha tushgan buyurtmalar summasi (bekor qilinganlari ham kiradi) |
+| `average_check` | yakunlanganlarning o'rtachasi | tushganlarning o'rtachasi |
+
+Kun — buyurtma **tushgan** (yaratilgan) sana. Jami `count` `summary.orders` bilan bir xil qoidada (davrlari mos kelsa — bir xil son: `period=week` ↔ `days=7`, `period=month` ↔ `days=30`).
 
 ### `registrations` — ro'yxatdan o'tishlar grafigi
 
@@ -140,12 +157,12 @@ Kun buyurtmaning **yaratilgan sanasi** (`created_at`) bo'yicha olinadi, yetkazil
 | Maydon | Izoh |
 | --- | --- |
 | `period`, `step` | `delivered_orders` dagi bilan bir xil |
-| `days` | davrdagi kunlar soni: `week` → 7, `month` → 30, `year` → 12 oyning birinchi kunidan bugungacha (`?days=` ga bog'liq **emas**) |
+| `days` | davrdagi kunlar soni: `week` → 7, `month` → 30, `quarter` / `half_year` → birinchi haftaning dushanbasidan bugungacha, `year` → 12 oyning birinchi kunidan bugungacha (`?days=` ga bog'liq **emas**) |
 | `total` | davrdagi yangi mijozlar |
 | `mobile` | FCM tokeni bor mijozlar (ilovada qurilma ro'yxatdan o'tkazgan) |
 | `web` | `total - mobile` |
 | `mobile_percent`, `web_percent` | ulushlar, % (`total=0` bo'lsa `0.0`) |
-| `points[]` | har bir kun (`step=month` bo'lsa — oy): `date`, `count` |
+| `points[]` | har bir kun (`step=week` — hafta, `step=month` — oy): `date`, `count` |
 
 ### `recent_orders` — oxirgi buyurtmalar
 
