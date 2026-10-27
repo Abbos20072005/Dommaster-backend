@@ -53,7 +53,7 @@ from .moderation import ModerationStaffSerializer, ModerationProductSerializer, 
 from .filter_page import FilterPageSerializer
 from .pro import ProjectSerializer, ProjectDetailSerializer
 from .content_import import ContentExportQuerySerializer, ContentImportListSerializer, ContentImportSerializer, \
-    ContentImportChangeSerializer
+    ContentImportChangeSerializer, I18nExportQuerySerializer
 
 __all__ = [
     "SaleProductSerializer", "SaleListSerializer", "SaleSerializer", "SaleProductReorderSerializer",
@@ -104,5 +104,5 @@ __all__ = [
     "FilterPageSerializer",
     "ProjectSerializer", "ProjectDetailSerializer",
     "ContentExportQuerySerializer", "ContentImportListSerializer", "ContentImportSerializer",
-    "ContentImportChangeSerializer",
+    "ContentImportChangeSerializer", "I18nExportQuerySerializer",
 ]

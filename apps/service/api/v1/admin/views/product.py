@@ -7,12 +7,12 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
-from apps.service import content_import
+from apps.service import content_import, products_i18n_export
 from apps.service.models import Product, ProductImage, ProductAttributeValue
 from utils.admin_views import AdminModelViewSet
 from ..filters import ProductFilter
 from ..serializers import ProductListSerializer, ProductSerializer, ProductImageSerializer, \
-    ProductImageReorderSerializer, ProductStatsSerializer, ContentExportQuerySerializer
+    ProductImageReorderSerializer, ProductStatsSerializer, ContentExportQuerySerializer, I18nExportQuerySerializer
 
 
 class ProductViewSet(AdminModelViewSet):
@@ -23,7 +23,7 @@ class ProductViewSet(AdminModelViewSet):
 
     def get_queryset(self):
         qs = Product.objects.all()
-        if self.action in ("stats", "content_export"):
+        if self.action in ("stats", "content_export", "i18n_export"):
             return qs
         qs = qs.select_related("brand", "product_model",
                                "product_item_category__product_sub_category__product_category") \
@@ -62,6 +62,20 @@ class ProductViewSet(AdminModelViewSet):
         response = HttpResponse(
             data, content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         name = f"products_content_{timezone.now():%Y%m%d_%H%M}.xlsx"
+        response["Content-Disposition"] = f'attachment; filename="{name}"'
+        return response
+
+    @action(detail=False, methods=["get"], url_path="i18n-export")
+    def i18n_export(self, request):
+        """XLSX of the filtered products' texts in both languages (`manage.py export_products_i18n`): id, uz / ru
+        name, category chain, short description, description (plain text unless `raw_html=true`), has image."""
+        query = I18nExportQuerySerializer(data=request.query_params)
+        query.is_valid(raise_exception=True)
+        products = self.filter_queryset(self.get_queryset())
+        data, _, _ = products_i18n_export.export_workbook(products, query.validated_data["raw_html"])
+        response = HttpResponse(
+            data, content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        name = f"products_i18n_{timezone.now():%Y%m%d_%H%M}.xlsx"
         response["Content-Disposition"] = f'attachment; filename="{name}"'
         return response
 

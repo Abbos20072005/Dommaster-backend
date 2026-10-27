@@ -9,6 +9,11 @@ from utils.background import run_in_background
 from .moderation import ModerationStaffSerializer
 
 
+class I18nExportQuerySerializer(serializers.Serializer):
+    raw_html = serializers.BooleanField(required=False, default=False,
+                                        help_text="Keep descriptions as stored HTML instead of plain text")
+
+
 class ContentExportQuerySerializer(serializers.Serializer):
     languages = serializers.CharField(required=False, help_text="uz,ru (default: all) — the text columns to export")
     incomplete = serializers.BooleanField(required=False, default=False,
