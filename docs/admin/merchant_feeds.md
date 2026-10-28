@@ -23,7 +23,7 @@ Fayl hali yo'q bo'lsa, birinchi so'rov uni o'zi quradi. Fayl bir qadamda almasht
 hech qachon berilmaydi.
 
 **Havolalar va nom kodda qattiq yozilgan** (`apps/service/merchant_feed.py`, env'dan o'qilmaydi): tovar
-havolasi `https://buildex.uz/product/<id>`, rasm `https://api.buildex.uz/media/...`. Do'kon nomi **BUILDEX**
+havolasi `https://buildex.uz/product/<slug>` (tovarning ruscha slug'i, oxirida id: `…/product/kley-ventum-571`), rasm `https://api.buildex.uz/media/...`. Do'kon nomi **BUILDEX**
 (Google kanalining `title` / `description`, Yandex `<name>`), yuridik shaxs **«ENERGOSNAB» MChJ** (Yandex
 `<company>`).
 
@@ -39,7 +39,7 @@ havolasi `https://buildex.uz/product/<id>`, rasm `https://api.buildex.uz/media/.
 | tovar kodi | `g:id` | `offer id` | `Product.id` |
 | nomi | `g:title` (≤ 150 belgi) | `name` | `name_ru` |
 | tavsif | `g:description` (≤ 5000) | `description` (≤ 3000) | `description_ru` HTML'siz; bo'sh bo'lsa nom |
-| havola | `g:link` | `url` | `https://buildex.uz/product/<id>` |
+| havola | `g:link` | `url` | `https://buildex.uz/product/<slug_ru>` (`…-<id>`) |
 | rasm | `g:image_link` + `g:additional_image_link` | `picture` | tovar rasmlari tartibda, 10 tagacha |
 | narx | `g:price` (+ `g:sale_price`) | `price` (+ `oldprice`) | quyida |
 | valyuta | `UZS` narx ichida | `currencyId` = `UZS` | — |
@@ -68,8 +68,9 @@ Sayt ham narxni xuddi shu maydonlardan oladi. Shuning uchun fid va API narxi bir
   chegirmali), `priceCurrency: "UZS"`, `availability`. Google fid narxini sahifadagi narx bilan solishtiradi —
   farq bo'lsa tovarni rad etadi.
 - Sahifa keshi narx o'zgargandan keyin 1 soat ichida yangilanishi kerak.
-- Tovar sahifasining manzili `/product/<id>` bo'lishi kerak (boshqacha bo'lsa — backend'da
-  `merchant_feed.PRODUCT_PATH` o'zgartiriladi).
+- Tovar sahifasining manzili `/product/<slug>` (ruscha slug, `products/<id>/` dagi `slug`) redirect'siz 200
+  qaytarishi kerak — Merchant Center va Yandex yo'naltiriladigan havolani rad etadi. Eski `/product/<id>` 301
+  bilan yangisiga o'tadi, fidda u yo'q (format o'zgarsa — backend'da `merchant_feed.PRODUCT_PATH`).
 
 ## Fidda yo'q narsalar
 

@@ -3,8 +3,8 @@
 Both are files under MEDIA_ROOT/feeds/, rebuilt by Celery beat (`tasks.build_merchant_feeds`, every 6 hours)
 and served by `MerchantFeedViewSet` (`feeds/google.xml`, `feeds/yandex.yml`). The price is the one the cart
 charges (`discount_price` when set, else `price`), so the feed, the site and the page markup show the same number.
-Texts are ru. Links: SITE_URL + PRODUCT_PATH, images: BACKEND_URL + the media path — both hard-coded here,
-not read from the env (an old env value put the former domain into the feeds).
+Texts are ru. Links: SITE_URL + PRODUCT_PATH (`/product/<slug_ru>`), images: BACKEND_URL + the media path —
+both hard-coded here, not read from the env (an old env value put the former domain into the feeds).
 """
 import html
 import logging
@@ -19,6 +19,8 @@ from django.conf import settings
 from django.db.models import Exists, OuterRef, Prefetch
 from django.utils.html import strip_tags
 
+from utils.slug import slug_with_id
+
 from .models import Product, ProductImage, ProductCategory, ProductSubCategory, ProductItemCategory
 
 logger = logging.getLogger(__name__)
@@ -26,8 +28,8 @@ logger = logging.getLogger(__name__)
 FEEDS_DIR = "feeds"
 GOOGLE_FILE = "google.xml"
 YANDEX_FILE = "yandex.yml"
-# the product page of the site (agree with the frontend before changing)
-PRODUCT_PATH = "/product/{id}"
+# the product page of the site (agree with the frontend before changing): the ru slug, which ends with `-<id>`
+PRODUCT_PATH = "/product/{slug}"
 SITE_URL = "https://buildex.uz"  # product links
 BACKEND_URL = "https://api.buildex.uz"  # image links
 SHOP_NAME = "BUILDEX"  # store name: Google channel title / description, Yandex <name>
@@ -57,6 +59,13 @@ def feed_products():
 
 
 # ---- values ----
+
+def product_slug(product):
+    """The ru slug of the product page; a row the backfill missed gets the one save() would generate
+    (the site finds it by the trailing id)."""
+    return product.slug_ru or slug_with_id(Product, product.name_ru or product.name, product.id,
+                                           field="slug_ru", fallback=Product.SLUG_FALLBACK)
+
 
 def final_price(product):
     """What the cart charges for the product (`Cart` totals: discount_price when it is set)."""
@@ -108,7 +117,7 @@ def product_data(product, site_url, backend_url):
         "id": str(product.id),
         "name": name,
         "description": product.description_ru or product.description or product.short_description_ru or "",
-        "url": site_url + PRODUCT_PATH.format(id=product.id),
+        "url": site_url + PRODUCT_PATH.format(slug=product_slug(product)),
         "images": images,
         "price": price,
         # the crossed-out price: only when the cart really charges less
