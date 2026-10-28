@@ -2,7 +2,8 @@
 kept in CustomerRoleChange."""
 from django.db import transaction
 
-from apps.authorization.models import Customer, CustomerRoleChange
+from apps.authorization.activity import record_admin
+from apps.authorization.models import Customer, CustomerActivity, CustomerRoleChange
 
 
 class RoleError(Exception):
@@ -25,4 +26,6 @@ def change_role(customer_id, new_role, user, reason=""):
     customer.save(update_fields=["role", "updated_at"])
     CustomerRoleChange.objects.create(customer=customer, old_value=old_role, new_value=new_role, changed_by=user,
                                       reason=reason)
+    record_admin(customer, CustomerActivity.Kind.ROLE_CHANGED, user, old_value=old_role, new_value=new_role,
+                 reason=reason)
     return customer

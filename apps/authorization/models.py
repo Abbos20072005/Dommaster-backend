@@ -12,6 +12,25 @@ class Customer(BaseModel):
         USER = 'user', 'User'
         PRORAB = 'prorab', 'Prorab'
 
+    class Platform(models.TextChoices):
+        """Where a client request came from; the same values as `Order.channel` / the client `?platform=`."""
+        SITE = 'site', 'Сайт'
+        IOS = 'ios', 'iOS'
+        ANDROID = 'android', 'Android'
+
+    class Segment(models.TextChoices):
+        """Set by staff by hand (admin panel); nothing computes it."""
+        REGULAR = 'regular', 'Обычный'
+        BIG = 'big', 'Крупный'
+        VIP = 'vip', 'VIP'
+
+    class Language(models.TextChoices):
+        UZ = 'uz', 'Узбекский'
+        RU = 'ru', 'Русский'
+
+    MAX_TAGS = 20
+    MAX_TAG_LENGTH = 50
+
     full_name = models.CharField(max_length=150, blank=True, default="", verbose_name="Полное имя")
     phone_number = models.CharField(max_length=14, validators=[validate_number],
                                     verbose_name="Номер телефона")
@@ -23,9 +42,47 @@ class Customer(BaseModel):
     is_blocked = models.BooleanField(default=False, db_index=True, verbose_name="Заблокирован")
     last_login = models.DateTimeField(blank=True, null=True, db_index=True, verbose_name="Последний вход")
     avatar = models.ImageField(upload_to="customer/avatar/", blank=True, null=True, verbose_name="Фото профиля")
+    # null = unknown: customers older than the field, app versions that don't send `platform`
+    registration_channel = models.CharField(max_length=10, choices=Platform.choices, blank=True, null=True,
+                                            db_index=True, verbose_name="Канал регистрации")
+    last_login_platform = models.CharField(max_length=10, choices=Platform.choices, blank=True, null=True,
+                                           verbose_name="Платформа последнего входа")
+    # language of the client API requests (Accept-Language), kept by record_visit; staff may change it too
+    language = models.CharField(max_length=5, choices=Language.choices, default=Language.RU,
+                                verbose_name="Язык")
+    segment = models.CharField(max_length=20, choices=Segment.choices, blank=True, null=True, db_index=True,
+                               verbose_name="Сегмент")
+    tags = models.JSONField(default=list, blank=True, verbose_name="Теги")
+    # soft delete: the row stays for the orders / admin panel, the customer can't sign in any more and the same
+    # phone number gets a new account (every auth lookup filters is_deleted=False)
+    is_deleted = models.BooleanField(default=False, db_index=True, verbose_name="Удален")
+    deleted_at = models.DateTimeField(blank=True, null=True, verbose_name="Дата удаления")
+    # tokens issued before this moment are refused (logout from every device, delete)
+    tokens_valid_after = models.DateTimeField(blank=True, null=True, verbose_name="Токены действительны после")
 
     def __str__(self):
         return self.full_name or self.phone_number
+
+    def token_revoked(self, iat):
+        """True when a token with this `iat` (epoch seconds) was issued before `tokens_valid_after`."""
+        if not self.tokens_valid_after or iat is None:
+            return False
+        cutoff = self.tokens_valid_after
+        if timezone.is_naive(cutoff):  # USE_TZ=False: naive Tashkent time
+            cutoff = timezone.make_aware(cutoff)
+        return int(iat) < int(cutoff.timestamp())
+
+    def end_sessions(self):
+        """Refuses every token issued so far and drops the push tokens of all devices."""
+        self.tokens_valid_after = timezone.now()
+        self.save(update_fields=["tokens_valid_after", "updated_at"])
+        FcmToken.objects.filter(customer=self).delete()
+
+    def soft_delete(self):
+        self.is_deleted = True
+        self.deleted_at = timezone.now()
+        self.save(update_fields=["is_deleted", "deleted_at", "updated_at"])
+        self.end_sessions()
 
     @property
     def is_authenticated(self):
@@ -77,6 +134,60 @@ class CustomerRoleChange(BaseModel):
         ordering = ("-created_at", "-id")
 
 
+class CustomerNote(BaseModel):
+    """Internal staff note about a customer (admin API only, never shown to the customer)."""
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="notes", verbose_name="Клиент")
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, blank=True, null=True,
+                               related_name="customer_notes", verbose_name="Автор")
+    text = models.TextField(verbose_name="Текст")
+
+    def __str__(self):
+        return f"{self.customer_id}: {self.text[:50]}"
+
+    class Meta:
+        verbose_name = "Заметка о клиенте"
+        verbose_name_plural = "Заметки о клиентах"
+        ordering = ("-created_at", "-id")
+
+
+class CustomerActivity(BaseModel):
+    """Customer journal ("Jurnal" in the admin panel): account events written by the client auth views and the
+    admin customer API (`apps/authorization/activity.py`). History starts at deploy."""
+
+    class Kind(models.TextChoices):
+        REGISTERED = 'registered', 'Аккаунт создан'
+        LOGGED_IN = 'logged_in', 'Вход'
+        UPDATED = 'updated', 'Профиль изменен'
+        BLOCKED = 'blocked', 'Заблокирован'
+        UNBLOCKED = 'unblocked', 'Разблокирован'
+        ROLE_CHANGED = 'role_changed', 'Роль изменена'
+        PHONE_REVEALED = 'phone_revealed', 'Телефон показан'
+        LOGGED_OUT_ALL = 'logged_out_all', 'Выход со всех устройств'
+        DELETED = 'deleted', 'Аккаунт удален'
+
+    ADMIN = 'admin'
+    CHANNEL_CHOICES = (*Customer.Platform.choices, (ADMIN, 'Админ панель'))
+
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="activities",
+                                 verbose_name="Клиент")
+    kind = models.CharField(max_length=30, choices=Kind.choices, verbose_name="Событие")
+    # admin = staff action; null = client action of an unknown platform
+    channel = models.CharField(max_length=10, choices=CHANNEL_CHOICES, blank=True, null=True,
+                               verbose_name="Канал")
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, blank=True, null=True,
+                              related_name="customer_activities", verbose_name="Сотрудник")
+    data = models.JSONField(default=dict, blank=True, verbose_name="Данные")
+
+    def __str__(self):
+        return f"{self.customer_id}: {self.kind}"
+
+    class Meta:
+        verbose_name = "Событие клиента"
+        verbose_name_plural = "Журнал клиентов"
+        ordering = ("-created_at", "-id")
+        indexes = [models.Index(fields=["customer", "-created_at"], name="idx_customer_activity")]
+
+
 class CustomerAddresses(BaseModel):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, verbose_name="Клиент")
     name = models.CharField(max_length=150, verbose_name="Название")
@@ -90,7 +201,11 @@ class CustomerAddresses(BaseModel):
     entrance = models.CharField(max_length=20, blank=True, default="", verbose_name="Подъезд")
     floor = models.CharField(max_length=20, blank=True, default="", verbose_name="Этаж")
     courier_comment = models.CharField(max_length=500, blank=True, default="", verbose_name="Комментарий для курьера")
+    # who takes the order at this address; "" = the customer themself (not copied to the order)
+    recipient_name = models.CharField(max_length=150, blank=True, default="", verbose_name="Имя получателя")
+    recipient_phone = models.CharField(max_length=20, blank=True, default="", verbose_name="Телефон получателя")
 
+    RECIPIENT_FIELDS = ("recipient_name", "recipient_phone")
     DETAIL_FIELDS = ("apartment", "intercom", "entrance", "floor", "courier_comment")
 
     def details(self):

@@ -45,6 +45,8 @@ class TelegramOTPSerializer(serializers.Serializer):
 class OTPVerifySerializer(serializers.Serializer):
     otp_key = serializers.UUIDField()
     otp_code = serializers.IntegerField()
+    platform = serializers.ChoiceField(choices=Customer.Platform.choices, required=False, allow_blank=True,
+                                       help_text="site / ios / android - where the customer signs in (admin panel)")
 
 
 class ResetPasswordSerializer(serializers.Serializer):
@@ -61,6 +63,8 @@ class LoginSerializer(serializers.Serializer):
 class PhoneAuthSerializer(serializers.Serializer):
     phone_number = serializers.CharField(max_length=20, help_text="998XXXXXXXXX (12 digits)")
     device_id = serializers.CharField(max_length=300, required=False, allow_blank=True)
+    platform = serializers.ChoiceField(choices=Customer.Platform.choices, required=False, allow_blank=True,
+                                       help_text="site / ios / android - where the customer signs in (admin panel)")
 
     def validate_phone_number(self, value):
         try:
@@ -113,6 +117,7 @@ class CustomerAddressesSerializer(serializers.ModelSerializer):
             "longitude",
             "is_default",
             *CustomerAddresses.DETAIL_FIELDS,
+            *CustomerAddresses.RECIPIENT_FIELDS,
         )
 
 class CustomerAddressesCreateSerializer(serializers.ModelSerializer):
@@ -126,6 +131,7 @@ class CustomerAddressesCreateSerializer(serializers.ModelSerializer):
             "latitude",
             "longitude",
             *CustomerAddresses.DETAIL_FIELDS,
+            *CustomerAddresses.RECIPIENT_FIELDS,
         )
 
 class TokenRefreshSerializer(serializers.Serializer):
@@ -143,4 +149,5 @@ class CustomerAddressesUpdateSerializer(serializers.ModelSerializer):
             "longitude",
             "is_default",
             *CustomerAddresses.DETAIL_FIELDS,
+            *CustomerAddresses.RECIPIENT_FIELDS,
         )

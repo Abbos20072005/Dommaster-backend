@@ -26,7 +26,7 @@ ORDER_CANCELED = 4
 
 
 def segment_customers(segment):
-    customers = Customer.objects.filter(is_blocked=False)
+    customers = Customer.objects.filter(is_blocked=False, is_deleted=False)
     now = timezone.now()
     if segment == Notification.PRO:
         return customers.filter(role=Customer.Role.PRORAB)

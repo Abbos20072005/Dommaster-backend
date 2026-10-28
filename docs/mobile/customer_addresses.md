@@ -22,9 +22,12 @@ DELETE customer/addresses/<id>/   → o'chirish
 | `entrance` | string (≤ 20) | yo'q | Подъезд |
 | `floor` | string (≤ 20) | yo'q | Этаж |
 | `courier_comment` | string (≤ 500) | yo'q | Комментарий для курьера |
+| `recipient_name` | string (≤ 150) | yo'q | Qabul qiluvchi ismi (`""` = mijozning o'zi) |
+| `recipient_phone` | string (≤ 20) | yo'q | Qabul qiluvchi telefoni (`""` = mijozning o'zi; format tekshirilmaydi) |
 | `is_default` | bool | yo'q, faqat `PATCH` da | Сделать основным (`true` → boshqa manzillar default emas bo'ladi) |
 
 - Yangi maydonlar (`apartment` … `courier_comment`) bo'sh bo'lsa `""` keladi. Bo'sh qiymat uchun `""` yuboring yoki maydonni yubormang — **`null` yubormang** (validatsiya xatosi).
+- `recipient_name` / `recipient_phone` buyurtmaga nusxa qilinmaydi: buyurtmada qabul qiluvchini avvalgidek `POST order/` ning `receiver_name` / `receiver_phone` maydonlarida yuboring (manzildagi qiymatni oldindan to'ldirish uchun ishlatsa bo'ladi).
 - `entrance` / `floor` — matn (`"1"`, `"цоколь"`), son emas.
 - `is_default` ni `POST` qabul qilmaydi: yangi manzilni asosiy qilish uchun yaratgandan keyin `PATCH {"is_default": true}` yuboring.
 

@@ -4,7 +4,9 @@ from django.db.models import Q, F
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from utils.send_notification import send_notification
-from apps.authorization.models import Customer, OTP, FcmToken, CustomerAddresses, PasswordResetToken
+from apps.authorization.models import Customer, OTP, FcmToken, CustomerAddresses, PasswordResetToken, \
+    CustomerActivity
+from apps.authorization.activity import platform_of, record as record_activity
 from rest_framework.response import Response
 from rest_framework import status
 from drf_spectacular.utils import extend_schema, OpenApiResponse
@@ -32,13 +34,18 @@ logger = logging.getLogger(__name__)
 OTP_MAX_ATTEMPTS = 3
 
 
-def issue_customer_tokens(customer):
-    """Blocked customers get no tokens; `last_login` feeds the admin "active (30 days)" stat."""
+def issue_customer_tokens(customer, platform=None):
+    """Blocked customers get no tokens; `last_login` feeds the admin "active (30 days)" stat,
+    `platform` (site / ios / android, when the client sends it) the admin "last login" platform."""
     if customer.is_blocked:
         raise CustomApiException(error_code=ErrorCodes.USER_BLOCKED)
 
     customer.last_login = timezone.now()
-    customer.save(update_fields=["last_login"])
+    update_fields = ["last_login"]
+    if platform:
+        customer.last_login_platform = platform
+        update_fields.append("last_login_platform")
+    customer.save(update_fields=update_fields)
 
     refresh = RefreshToken.for_user(customer)
     refresh['role'] = customer.role
@@ -61,10 +68,13 @@ class AuthViewSet(ViewSet):
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
 
         phone = serializer.validated_data["phone_number"]
-        customer = Customer.objects.filter(phone_number=phone).order_by("-verified", "-created_at").first()
+        # a deleted account is never reused: the same number gets a new one
+        customer = Customer.objects.filter(phone_number=phone, is_deleted=False) \
+            .order_by("-verified", "-created_at").first()
         is_new = customer is None
         if is_new:
-            customer = Customer.objects.create(phone_number=phone)
+            customer = Customer.objects.create(
+                phone_number=phone, registration_channel=platform_of(serializer.validated_data.get("platform")))
 
         otp = create_otp(customer)
         EskizOTP.send_otp_service(phone, f"Код подтверждения для регистрации в приложение Buildex Go: {otp.otp_code}")
@@ -85,11 +95,13 @@ class AuthViewSet(ViewSet):
         tags=["Auth"]
     )
     def delete_account(self, request):
-        customer = Customer.objects.filter(id=request.user.id).first()
+        customer = Customer.objects.filter(id=request.user.id, is_deleted=False).first()
         if not customer:
             raise CustomApiException(error_code=ErrorCodes.USER_DOES_NOT_EXIST)
-        
-        customer.delete()
+
+        # soft delete: orders keep their customer, the admin panel lists it under "deleted"
+        customer.soft_delete()
+        record_activity(customer, CustomerActivity.Kind.DELETED, channel=customer.last_login_platform)
         return Response(data={"result": "Account successfully deleted", "ok": True},
                         status=status.HTTP_204_NO_CONTENT)
     
@@ -112,7 +124,7 @@ class AuthViewSet(ViewSet):
         if login_email:
             lookup |= Q(email=login_email)
 
-        customer = Customer.objects.filter(lookup).first()
+        customer = Customer.objects.filter(lookup, is_deleted=False).first()
 
         if not customer:
             raise CustomApiException(error_code=ErrorCodes.USER_DOES_NOT_EXIST)
@@ -143,9 +155,11 @@ class AuthViewSet(ViewSet):
         except (TokenError, InvalidToken):
             raise CustomApiException(error_code=ErrorCodes.REFRESH_TOKEN_INVALID)
 
-        customer = Customer.objects.filter(id=refresh.payload.get("user_id")).first()
+        customer = Customer.objects.filter(id=refresh.payload.get("user_id"), is_deleted=False).first()
         if not customer:
             raise CustomApiException(error_code=ErrorCodes.USER_DOES_NOT_EXIST)
+        if customer.token_revoked(refresh.payload.get("iat")):  # logged out from every device by staff
+            raise CustomApiException(error_code=ErrorCodes.REFRESH_TOKEN_INVALID)
 
         new_access, new_refresh = issue_customer_tokens(customer)
 
@@ -171,11 +185,11 @@ class AuthViewSet(ViewSet):
         if email:
             lookup |= Q(email=email)
 
-        customer = Customer.objects.filter(lookup, verified=True).first()
+        customer = Customer.objects.filter(lookup, verified=True, is_deleted=False).first()
         if customer:
             raise CustomApiException(error_code=ErrorCodes.ALREADY_EXISTS)
 
-        customer_none = Customer.objects.filter(lookup, verified=False).first()
+        customer_none = Customer.objects.filter(lookup, verified=False, is_deleted=False).first()
 
         if customer_none is None:
             customer_save = serializer.save()
@@ -295,7 +309,7 @@ class AuthViewSet(ViewSet):
         if not serializer.is_valid():
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
 
-        customer = Customer.objects.filter(phone_number=data.get("phone_number")).first()
+        customer = Customer.objects.filter(phone_number=data.get("phone_number"), is_deleted=False).first()
         if not customer:
             raise CustomApiException(error_code=ErrorCodes.USER_DOES_NOT_EXIST)
 
@@ -501,12 +515,25 @@ class OTPViewSet(ViewSet):
         if not customer:
             raise CustomApiException(error_code=ErrorCodes.USER_DOES_NOT_EXIST)
 
+        if customer.is_deleted:
+            raise CustomApiException(error_code=ErrorCodes.USER_DOES_NOT_EXIST)
+
+        platform = platform_of(serializer.validated_data.get("platform"))
+        first_time = not customer.verified
         customer.verified = True
-        customer.save(update_fields=["verified"])
+        update_fields = ["verified"]
+        if first_time and platform and not customer.registration_channel:
+            customer.registration_channel = platform
+            update_fields.append("registration_channel")
+        customer.save(update_fields=update_fields)
 
         OTP.objects.filter(customer_id=customer.id).delete()
 
-        access_token, refresh = issue_customer_tokens(customer)
+        access_token, refresh = issue_customer_tokens(customer, platform)
+        if first_time:
+            record_activity(customer, CustomerActivity.Kind.REGISTERED, channel=platform, otp_channel=otp.channel)
+        else:
+            record_activity(customer, CustomerActivity.Kind.LOGGED_IN, channel=platform)
 
         # send_notification_to_customer(customer.id)
         return Response(data={"result": {"access_token": access_token, "refresh_token": refresh}, "ok": True},

@@ -52,7 +52,8 @@ Xato (HTTP 400 / 401 / 503):
 {
   "phone_number": "998901234567",
   "role": "user",
-  "device_id": "a1b2c3..."
+  "device_id": "a1b2c3...",
+  "platform": "ios"
 }
 ```
 
@@ -61,6 +62,7 @@ Xato (HTTP 400 / 401 / 503):
 | `phone_number` | ha | O'zbek raqami, 12 raqam `998XXXXXXXXX`. `+`, probel, `-`, qavslar ruxsat: `+998 (90) 123-45-67` ham bo'ladi |
 | `role` | yo'q | `user` (default) yoki `prorab`. **Faqat yangi user yaratilganda** qo'llanadi |
 | `device_id` | yo'q | Qurilma ID. Login'dan keyin baribir `PATCH fcm/token/` bilan FCM token yuboring |
+| `platform` | yo'q, lekin yuboring | `site` / `ios` / `android`. Admin panelda "Ro'yxatdan o'tish kanali" (faqat yangi user yaratilganda yoziladi). Boshqa qiymat → 5 |
 
 Javob `200`:
 ```json
@@ -94,9 +96,12 @@ Xatolar:
 ```json
 {
   "otp_key": "3f6c1a0e-8b2d-4c1e-9a55-0f5e2b7d9c11",
-  "otp_code": 12345
+  "otp_code": 12345,
+  "platform": "ios"
 }
 ```
+
+`platform` (`site` / `ios` / `android`, ixtiyoriy, lekin yuboring) — admin panelda "Oxirgi kirish · platforma"; birinchi tasdiqlashda ro'yxatdan o'tish kanali ham bo'ladi (agar `auth/phone/` da yuborilmagan bo'lsa).
 
 `otp_code` son (`12345`) yoki string (`"12345"`) bo'lishi mumkin.
 
@@ -238,6 +243,8 @@ Javob (⚠️ `result` ichida emas):
 ```
 Refresh token rotatsiya qilinadi — **yangi `refresh_token`ni ham saqlang**, eskisi ishlamay qoladi. `error_code 22` (HTTP 401) → logout, `auth/phone/` dan boshlash.
 Muddatlar (default): access — 1 kun, refresh — 2 kun.
+
+**Hamma qurilmalardan chiqarish / akkaunt o'chirilgan.** Admin "Barcha qurilmalardan chiqarish" bosganda shu paytgacha berilgan hamma tokenlar ishlamay qoladi: token bilan so'rov → `error_code 15`, `token/refresh/` → `22`. Akkaunt o'chirilgan bo'lsa (ilovadan yoki admin panel) token bilan so'rov → `error_code 7`. Uchala holatda ham: tokenlarni o'chirib, `auth/phone/` dan boshlang. O'chirilgan akkaunt raqami bilan qayta kirilsa **yangi akkaunt** ochiladi (`is_new: true`), eski buyurtmalar unga o'tmaydi.
 
 ### Telegram ulanishi (profil sozlamalari uchun, token kerak)
 - `GET telegram/link/` → `{"result": {"linked": true, "username": "...", "first_name": "...", "linked_at": "..."}, "ok": true}`
