@@ -849,7 +849,25 @@ class SaleMainSerializer(serializers.ModelSerializer):
         )
 
 
-class BrandDetailSerializer(serializers.ModelSerializer):
+class CategoryDescriptionMixin(serializers.Serializer):
+    """`description` = the page text of a category (under the product list) or a brand, in the request language.
+
+    No ru fallback: a uz page shows no block rather than a ru text. Only on the requested object -
+    nested children and lists leave the key out."""
+    description = serializers.SerializerMethodField(
+        help_text="'' = no text (hide the block). Only on the requested category / brand")
+
+    def get_description(self, obj) -> str:
+        return getattr(obj, f"description_{request_language()}", None) or ""
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if self.parent is not None:
+            data.pop("description", None)
+        return data
+
+
+class BrandDetailSerializer(CategoryDescriptionMixin, serializers.ModelSerializer):
     products_count = serializers.IntegerField(read_only=True)
     updated_at = serializers.DateTimeField(read_only=True)
 
@@ -859,6 +877,7 @@ class BrandDetailSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "slug",
+            "description",
             "meta_title",
             "meta_description",
             "image",
@@ -897,24 +916,6 @@ class ProductCategoryFilterSerializer(serializers.Serializer):
             product_sub_category__product_item_category__id__isnull=False,
         ).distinct()
         return ProductSubCategoryFilterSerializer(qs, many=True, context=self.context).data
-
-class CategoryDescriptionMixin(serializers.Serializer):
-    """`description` = the category's text under the product list, in the request language.
-
-    No ru fallback: a uz page shows no block rather than a ru text. Only on the requested category -
-    nested children and lists leave the key out."""
-    description = serializers.SerializerMethodField(
-        help_text="'' = no text (hide the block). Only on the requested category")
-
-    def get_description(self, obj) -> str:
-        return getattr(obj, f"description_{request_language()}", None) or ""
-
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        if self.parent is not None:
-            data.pop("description", None)
-        return data
-
 
 class ProductItemCategorySerializer(TranslatedSerializerMixin, CategoryDescriptionMixin, serializers.ModelSerializer):
     breadcrumbs = serializers.SerializerMethodField()

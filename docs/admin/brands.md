@@ -38,7 +38,7 @@ Swagger: `/swagger/admin/` → **brands**.
 | --- | --- |
 | `name_ru` * | majburiy (asosiy til) |
 | `name_uz` | ixtiyoriy |
-| `description_uz`, `description_ru` | tavsif, ixtiyoriy; bo'sh bo'lsa `null` yoki `""` keladi |
+| `description_uz`, `description_ru` | brend sahifasidagi qisqa tavsif, ixtiyoriy; bo'sh bo'lsa `null` yoki `""` keladi. Ikkala til **alohida** maydon: formada uz va ru uchun ikki xil input, faqat o'zgargan tilni yuborsa ham bo'ladi — ikkinchisi o'zgarmaydi. Oddiy `description` (tilsiz) kaliti yo'q, uni yubormang. Matn qanday yuborilsa shunday saqlanadi (oddiy matn yoki kategoriya matnidagi kabi cheklangan HTML — sayt bilan kelishilgan format) |
 | `country` | mamlakat — oddiy matn (bitta maydon, tarjimasiz), ixtiyoriy, 100 belgigacha; bo'sh = `""` |
 | `image` * | logotip, yaratishda majburiy (multipart) |
 | `is_visible` | default `true` |
@@ -55,7 +55,7 @@ Rasm o'zgarmasa `PATCH` ni JSON bilan yuborish mumkin:
 
 O'chirish: mahsuloti bor brend o'chirilmaydi → `400 {"detail": "Brand has products, hide it instead (is_visible=false)."}`.
 
-> `description`, `country` va `show_on_home` hozircha faqat admin API'da — mijoz (sayt / ilova) API'lariga chiqarilmagan.
+> `description_uz` / `description_ru` sayt / ilovaning `GET /api/v1/brands/<id>/` javobida `description` bo'lib, so'rov tilida chiqadi (uz matn bo'sh bo'lsa uz sahifada `""` — ru matn qo'yilmaydi). `country` va `show_on_home` hozircha faqat admin API'da.
 
 ---
 
