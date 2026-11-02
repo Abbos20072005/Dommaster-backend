@@ -18,7 +18,7 @@ from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 
 # ORDER_STATUS / PAYMENT_STATUS / DELIVERY_TYPE
-CANCELED = 4
+CANCELED = Order.CANCELED
 PAID = 2
 DELIVERY = 0
 

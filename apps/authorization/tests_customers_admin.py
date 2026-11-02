@@ -43,8 +43,8 @@ class CustomersAdminTest(TestCase):
         self.assertEqual(mask_phone("+998901234567"), "+998 90 *** ** 67")
 
     def test_list_fields_and_masked_phone(self):
-        Order.objects.create(customer=self.ali, status=3, total_price=100)
-        Order.objects.create(customer=self.ali, status=4, total_price=50)
+        Order.objects.create(customer=self.ali, status=Order.COMPLETED, total_price=100)
+        Order.objects.create(customer=self.ali, status=Order.CANCELED, total_price=50)
         FcmToken.objects.create(customer=self.ali, device_id="d1", fcm_token="t1", platform="ios")
         FcmToken.objects.create(customer=self.ali, device_id="d2", fcm_token="t2", platform="android")
         row = next(r for r in self.client.get(URL).json()["results"] if r["id"] == self.ali.id)
@@ -62,8 +62,8 @@ class CustomersAdminTest(TestCase):
         self.assertEqual(activity[0]["actor"]["id"], self.admin.id)
 
     def test_filters(self):
-        Order.objects.create(customer=self.ali, status=3, total_price=500)
-        Order.objects.create(customer=self.vali, status=4, total_price=10)
+        Order.objects.create(customer=self.ali, status=Order.COMPLETED, total_price=500)
+        Order.objects.create(customer=self.vali, status=Order.CANCELED, total_price=10)
         android = make_customer("+998941112233", registration_channel="android")
         self.assertEqual(self.ids(self.client.get(URL, {"registration_channel": "ios,android"})),
                          {self.ali.id, android.id})
@@ -77,12 +77,12 @@ class CustomersAdminTest(TestCase):
         self.assertEqual(self.ids(self.client.get(URL, {"last_order_from": today})), {self.ali.id, self.vali.id})
 
     def test_search_by_order_number(self):
-        order = Order.objects.create(customer=self.vali, status=0, total_price=10)
+        order = Order.objects.create(customer=self.vali, status=Order.PENDING, total_price=10)
         self.assertEqual(self.ids(self.client.get(URL, {"search": f"#{order.id}"})), {self.vali.id})
         self.assertEqual(self.ids(self.client.get(URL, {"search": "90 123"})), {self.ali.id})
 
     def test_ordering_by_last_order(self):
-        Order.objects.create(customer=self.vali, status=0)
+        Order.objects.create(customer=self.vali, status=Order.PENDING)
         rows = self.client.get(URL, {"ordering": "-last_order_at"}).json()["results"]
         self.assertEqual(rows[0]["id"], self.vali.id)
 
@@ -97,7 +97,7 @@ class CustomersAdminTest(TestCase):
         self.assertCountEqual(kinds, ["updated", "blocked"])
 
     def test_admin_delete_is_soft(self):
-        Order.objects.create(customer=self.ali, status=3, total_price=1)
+        Order.objects.create(customer=self.ali, status=Order.COMPLETED, total_price=1)
         client, _ = self.customer_client(self.ali)
         self.assertEqual(self.client.delete(f"{URL}{self.ali.id}/").status_code, 204)
         self.ali.refresh_from_db()

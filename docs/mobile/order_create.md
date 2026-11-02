@@ -104,7 +104,7 @@ Muvaffaqiyatli → `201 Created`. `result` — to'lov havolasi (string) yoki `nu
 | `1` Click | `https://my.click.uz/services/pay?...` | `status: 0` (Pending), to'lov kutilmoqda |
 | `2` Payme | `https://checkout.paycom.uz/<base64>` | `status: 0` (Pending), to'lov kutilmoqda |
 | `3` Uzum Bank | `https://www.uzumbank.uz/open-service?...` | `status: 0` (Pending), to'lov kutilmoqda |
-| `4` qabul qilganda | `null` | darhol `status: 1` (Collecting), ombordagi qoldiq kamayadi |
+| `4` qabul qilganda | `null` | darhol `status: 2` (Collecting), ombordagi qoldiq kamayadi |
 
 `payment_type = 4` javobi:
 
@@ -182,6 +182,6 @@ Validatsiya (`error_code: 5`) — `detail` maydonlar bo'yicha obyekt:
 
 - So'rovdan oldin savatda kamida bitta belgilangan mahsulot borligini tekshiring — server buni tekshirmaydi, bo'sh buyurtma yaratilib qoladi.
 - Muvaffaqiyatli javobdan keyin savatni qayta yuklang (`GET cart/`) — belgilangan mahsulotlar o'chgan bo'ladi.
-- Buyurtmani bekor qilish: `POST order/<id>/cancel/` — faqat `status` `0` yoki `1` bo'lganda.
+- Buyurtmani bekor qilish: `POST order/<id>/cancel/` — faqat `status` `0`, `1` yoki `2` bo'lganda.
 - Buyurtmalar ro'yxati: `GET order/active/`, `GET order/history/`.
-- Holatlar: `status` — `0` Pending, `1` Collecting, `2` Delivering, `3` Completed, `4` Canceled, `5` Ready for pickup (faqat pickup; `stores_pickup.md`).
+- Holatlar: `status` — `0` Pending (Tushgan), `1` Confirmed (Tasdiqlangan), `2` Collecting (Tayyorlash), `3` Delivering, `4` Ready for pickup (faqat pickup; `stores_pickup.md`), `5` Completed (Yakunlandi), `6` Canceled. Kodlar 02.11.2026 da o'zgardi — `order_status_changes.md`.

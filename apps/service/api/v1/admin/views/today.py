@@ -9,7 +9,7 @@ from apps.base.models import Banner, Chat, Messages, Notification
 from apps.service.models import Order, Product, ProductAttributeValue, ProductImage, Questions, QuestionsReply
 from apps.service.models.choices import PUBLISH_STATUS_DRAFT, PUBLISH_STATUS_PUBLISHED, PUBLISH_STATUS_REVIEW
 from utils.admin_views import AdminViewMixin
-from ..serializers import TodaySerializer, PENDING, COLLECTING, DELIVERING, CANCELED, READY_FOR_PICKUP, \
+from ..serializers import TodaySerializer, PENDING, CONFIRMED, COLLECTING, DELIVERING, CANCELED, READY_FOR_PICKUP, \
     STALE_PENDING_ORDERS, REFUND_PENDING_ORDERS, UNASSIGNED_ORDERS, EXPIRED_PICKUP_ORDERS, OUT_OF_STOCK_PRODUCTS, NO_PRICE_PRODUCTS, REVIEW_PRODUCTS, \
     UNANSWERED_QUESTIONS, UNANSWERED_CHATS, MODERATION_QUEUE, EXPIRING_BANNERS, DRAFT_NOTIFICATIONS, ORDERS, \
     CATALOG, FEEDBACK, CONTENT, DANGER, WARNING, INFO
@@ -22,7 +22,7 @@ CHART_DAYS = 7
 RECENT_ORDERS = 10
 # PAYMENT_STATUS Hold / Paid: the money is still on our side
 UNREFUNDED = (1, 2)
-OPEN_ORDERS = (PENDING, COLLECTING, DELIVERING, READY_FOR_PICKUP)
+OPEN_ORDERS = (PENDING, CONFIRMED, COLLECTING, DELIVERING, READY_FOR_PICKUP)
 
 
 def stale_pending_orders():
@@ -36,6 +36,7 @@ def get_cards():
         today_orders=Count("id", filter=today),
         today_total=Coalesce(Sum("total_price", filter=today), 0.0),
         pending=Count("id", filter=Q(status=PENDING)),
+        confirmed=Count("id", filter=Q(status=CONFIRMED)),
         collecting=Count("id", filter=Q(status=COLLECTING)),
         delivering=Count("id", filter=Q(status=DELIVERING)),
     )

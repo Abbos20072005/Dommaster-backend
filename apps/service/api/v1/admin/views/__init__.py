@@ -11,6 +11,7 @@ from .dashboard import DashboardAPIView
 from .today import TodayAPIView
 from .sale import SaleViewSet
 from .analytics import SalesAnalyticsAPIView
+from .order_stages import OrderStagesAPIView
 from .home import HomeBlockViewSet, HomePageAPIView, HomePagePublishAPIView
 from .moderation import ProductModerationViewSet
 from .filter_page import FilterPageViewSet
@@ -22,7 +23,7 @@ __all__ = [
     "ProductItemCategoryViewSet", "BrandViewSet", "PartnerBrandViewSet", "ProductModelViewSet", "ProductBadgeViewSet",
     "ProductAttributeViewSet", "CommentViewSet", "QuestionViewSet", "CommentReplyViewSet", "QuestionReplyViewSet",
     "DashboardAPIView", "AddsBrandsViewSet", "TodayAPIView", "SaleViewSet",
-    "SalesAnalyticsAPIView", "HomeBlockViewSet", "HomePageAPIView", "HomePagePublishAPIView",
+    "SalesAnalyticsAPIView", "OrderStagesAPIView", "HomeBlockViewSet", "HomePageAPIView", "HomePagePublishAPIView",
     "ProductModerationViewSet", "FilterPageViewSet",
     "ProjectViewSet", "ContentImportViewSet",
 ]

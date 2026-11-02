@@ -4,6 +4,7 @@ from apps.payment.utils.get_params import get_params
 
 from apps.payment.utils.logger import logged
 from apps.payment.models import MerchatTransactionsModel, AccountModel
+from apps.service.models.choices import ORDER_COLLECTING
 from apps.payment.api.v1.client.serializers import MerchatTransactionsModelSerializer
 
 
@@ -32,7 +33,7 @@ class PerformTransaction:
 
             transaction.save()
             order = AccountModel.objects.get(id=transaction.order_id)
-            order.status = 1
+            order.status = ORDER_COLLECTING
             order.save()
             response: dict = {
                 "result": {

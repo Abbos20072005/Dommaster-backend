@@ -525,7 +525,8 @@ class Command(BaseCommand):
                 delivery_type = random.choice([0, 1])
                 order = Order.objects.create(
                     customer=customer,
-                    status=random.choice([0, 1, 2, 3]),
+                    status=random.choice([Order.PENDING, Order.CONFIRMED, Order.COLLECTING, Order.DELIVERING,
+                                           Order.COMPLETED]),
                     channel=random.choice(["site", "ios", "android"]),
                     payment_status=random.choice([0, 2]),
                     delivery_type=delivery_type,

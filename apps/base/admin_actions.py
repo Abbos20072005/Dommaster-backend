@@ -1,5 +1,7 @@
 from django.contrib import admin, messages
 from apps.payment.services_pay.auth_services import AtmosAuthService, AtmosHoldService
+from apps.service.models import OrderStatusChange
+from apps.service.models.choices import ORDER_COLLECTING, ORDER_DELIVERING, ORDER_COMPLETED, ORDER_CANCELED
 from apps.service.order_push import notify_order_status
 
 
@@ -34,29 +36,31 @@ mark_default = toggle_bool_field("is_default", True, "Set selected as default")
 
 
 def _update_order_status(queryset, status):
-    # queryset.update() skips the Order signals, so the customer push is sent by hand
-    changed = list(queryset.exclude(status=status).values_list("id", "customer_id"))
+    # queryset.update() skips the Order signals, so the status log and the customer push are done by hand
+    changed = list(queryset.exclude(status=status).values_list("id", "customer_id", "status"))
     updated = queryset.update(status=status)
-    for order_id, customer_id in changed:
+    OrderStatusChange.objects.bulk_create([
+        OrderStatusChange(order_id=order_id, from_status=old, to_status=status) for order_id, _, old in changed])
+    for order_id, customer_id, _ in changed:
         notify_order_status(order_id, customer_id, status)
     return updated
 
 
 @admin.action(description="Set order status to Collecting")
 def status_collecting(modeladmin, request, queryset):
-    updated = _update_order_status(queryset, 1)
+    updated = _update_order_status(queryset, ORDER_COLLECTING)
     messages.success(request, f"{updated} orders set to Collecting.")
 
 
 @admin.action(description="Set order status to Delivering")
 def status_delivering(modeladmin, request, queryset):
-    updated = _update_order_status(queryset, 2)
+    updated = _update_order_status(queryset, ORDER_DELIVERING)
     messages.success(request, f"{updated} orders set to Delivering.")
 
 
 @admin.action(description="Set order status to Completed")
 def status_completed(modeladmin, request, queryset):
-    updated = _update_order_status(queryset, 3)
+    updated = _update_order_status(queryset, ORDER_COMPLETED)
     messages.success(request, f"{updated} orders set to Completed.")
 
 
@@ -69,8 +73,8 @@ def status_canceled(modeladmin, request, queryset):
 
     # save() per order (not queryset.update) so signals restore stock and emit order.canceled
     updated = 0
-    for order in plain_orders.exclude(status=4):
-        order.status = 4
+    for order in plain_orders.exclude(status=ORDER_CANCELED):
+        order.status = ORDER_CANCELED
         order.save(update_fields=["status"])
         updated += 1
 
@@ -88,7 +92,7 @@ def status_canceled(modeladmin, request, queryset):
                         access_token=access_token,
                         hold_id=order.hold_id,
                     )
-                    order.status = 4
+                    order.status = ORDER_CANCELED
                     order.payment_status = 3
                     order.save(update_fields=["status", "payment_status"])
                     updated += 1

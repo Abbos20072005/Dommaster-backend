@@ -16,10 +16,10 @@ from django.utils import timezone
 
 from apps.service.models import CartItem, Favourites, FeedImpression, InterestEvent, OrderItem, Product, \
     ProductImage, ProductItemCategory, ProductVariantItem, RecentlyViewedProducts
+from apps.service.models.choices import ORDER_CANCELED
 
 logger = logging.getLogger(__name__)
 
-ORDER_CANCELED = 4
 
 # `rec_source` of a product in the response. "cross_sell" is reserved in the contract: the feed does not
 # read the hand-linked products (CrossSellProduct) yet

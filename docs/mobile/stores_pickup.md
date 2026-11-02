@@ -99,9 +99,9 @@ Token kerak emas. Matnlar `Accept-Language` tilida (`uz` / `ru`, boshqasi → `r
 
 ## "Olib ketishga tayyor" holati
 
-Yangi status: **`5` Ready for pickup** (faqat pickup buyurtmalar). Odatdagi yo'l: `0` Pending → to'lovdan keyin `1` Collecting → `5` Ready for pickup → `3` Completed (mijoz olib ketdi).
+Status: **`4` Ready for pickup** (faqat pickup buyurtmalar). Odatdagi yo'l: `0` Pending → to'lovdan keyin `2` Collecting → `4` Ready for pickup → `5` Completed (mijoz olib ketdi).
 
-- `5` ga o'tganda `pickup_deadline` = hozir + 2 kun yoziladi va ilovaga push boradi (`order_status_push.md`): "Заказ готов к выдаче", matnda buyurtma raqami, do'kon nomi va muddat; `data` da `branch_id`, `pickup_deadline`.
-- `5` holatidagi buyurtmani mijoz bekor qila olmaydi (`POST order/<id>/cancel/` faqat `0` / `1` da).
+- `4` ga o'tganda `pickup_deadline` = hozir + 2 kun yoziladi va ilovaga push boradi (`order_status_push.md`): "Заказ готов к выдаче", matnda buyurtma raqami, do'kon nomi va muddat; `data` da `branch_id`, `pickup_deadline`.
+- `4` holatidagi buyurtmani mijoz bekor qila olmaydi (`POST order/<id>/cancel/` faqat `0` / `1` / `2` da).
 - Muddat o'tsa buyurtma avtomatik bekor qilinmaydi — `pickup_expired: true` bo'ladi, xodimlar hal qiladi.
-- `5` status `GET order/active/` ro'yxatida chiqadi.
+- `4` status `GET order/active/` ro'yxatida chiqadi.

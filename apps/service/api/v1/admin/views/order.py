@@ -10,7 +10,7 @@ from apps.service.models import Manager, Order, OrderComment
 from utils.admin_views import AdminModelViewSet
 from ..filters import OrderFilter, OrderSearchFilter
 from ..serializers import OrderListSerializer, OrderSerializer, OrderStatsSerializer, ManagerSerializer, \
-    OrderCommentSerializer, PENDING, COLLECTING, DELIVERING, COMPLETED, CANCELED, READY_FOR_PICKUP, PAID
+    OrderCommentSerializer, PENDING, CONFIRMED, COLLECTING, DELIVERING, COMPLETED, CANCELED, READY_FOR_PICKUP, PAID
 
 
 class ManagerViewSet(AdminModelViewSet):
@@ -67,6 +67,7 @@ class OrderViewSet(AdminModelViewSet):
         data = self.filter_queryset(self.get_queryset()).aggregate(
             total=Count("id"),
             pending=Count("id", filter=Q(status=PENDING)),
+            confirmed=Count("id", filter=Q(status=CONFIRMED)),
             collecting=Count("id", filter=Q(status=COLLECTING)),
             delivering=Count("id", filter=Q(status=DELIVERING)),
             completed=Count("id", filter=Q(status=COMPLETED)),

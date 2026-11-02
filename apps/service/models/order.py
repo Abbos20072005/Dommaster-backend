@@ -8,7 +8,9 @@ from abstract_model.base_model import BaseModel
 from apps.authorization.models import Customer, CustomerAddresses
 from apps.base.models import Promocodes, MarketBranch
 from django.conf import settings
-from .choices import ORDER_STATUS, PAYMENT_STATUS, DELIVERY_TYPE, PAYMENT_TYPE, CASH_PAYMENT_METHOD, ORDER_CHANNEL
+from .choices import ORDER_STATUS, PAYMENT_STATUS, DELIVERY_TYPE, PAYMENT_TYPE, CASH_PAYMENT_METHOD, ORDER_CHANNEL, \
+    ORDER_PENDING, ORDER_CONFIRMED, ORDER_COLLECTING, ORDER_DELIVERING, ORDER_READY_FOR_PICKUP, ORDER_COMPLETED, \
+    ORDER_CANCELED
 from .catalog import ProductCategory
 from .product import Product
 
@@ -31,7 +33,7 @@ class Order(BaseModel):
     hold_id = models.BigIntegerField(null=True, blank=True)
     promocode = models.ForeignKey(Promocodes, on_delete=models.SET_NULL, blank=True, null=True, verbose_name="Промокод")
     customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, verbose_name="Покупатель")
-    status = models.IntegerField(choices=ORDER_STATUS, default=0, verbose_name="Статус")
+    status = models.IntegerField(choices=ORDER_STATUS, default=ORDER_PENDING, verbose_name="Статус")
     # null = unknown: orders placed before the field, by an old app version or from the admin panel
     channel = models.CharField(max_length=10, choices=ORDER_CHANNEL, blank=True, null=True, verbose_name="Канал")
     total_price = models.FloatField(default=0.0, verbose_name="Общая стоимость")
@@ -69,7 +71,8 @@ class Order(BaseModel):
     promocode_discount = models.DecimalField(max_digits=18, decimal_places=2, blank=True, null=True,
                                              verbose_name="Скидка по промокоду")
 
-    PENDING, COLLECTING, DELIVERING, COMPLETED, CANCELED, READY_FOR_PICKUP = 0, 1, 2, 3, 4, 5
+    PENDING, CONFIRMED, COLLECTING, DELIVERING = ORDER_PENDING, ORDER_CONFIRMED, ORDER_COLLECTING, ORDER_DELIVERING
+    READY_FOR_PICKUP, COMPLETED, CANCELED = ORDER_READY_FOR_PICKUP, ORDER_COMPLETED, ORDER_CANCELED
     DELIVERY, PICKUP = 0, 1
     PICKUP_DAYS = 2
     DEPENDENT_FIELDS = {
@@ -153,3 +156,20 @@ class OrderComment(BaseModel):
         verbose_name = "Внутренний комментарий к заказу"
         verbose_name_plural = "Внутренние комментарии к заказам"
         ordering = ("-created_at",)
+
+
+class OrderStatusChange(BaseModel):
+    """Status log of an order: one row per status it got, `created_at` = when. The first row is the status the
+    order was created with (`from_status` null). Written by the Order signals; history starts at the deploy."""
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="status_changes", verbose_name="Заказ")
+    from_status = models.IntegerField(choices=ORDER_STATUS, blank=True, null=True, verbose_name="Из статуса")
+    to_status = models.IntegerField(choices=ORDER_STATUS, verbose_name="В статус")
+
+    def __str__(self):
+        return f"{self.order_id}: {self.from_status} -> {self.to_status}"
+
+    class Meta:
+        verbose_name = "Смена статуса заказа"
+        verbose_name_plural = "Смены статусов заказов"
+        ordering = ("created_at", "id")
+        indexes = [models.Index(fields=["order", "to_status"], name="idx_order_status_change")]

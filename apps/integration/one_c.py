@@ -1101,13 +1101,13 @@ class OneCIntegrationViewSet(ViewSet):
         raw_status = (data.get("status") or "").strip().lower()
 
         status_map = {
-            "delivered": 3,
-            "completed": 3,
-            "collecting": 1,
-            "delivering": 2,
-            "canceled": 4,
-            "cancelled": 4,
-            "pending": 0,
+            "delivered": Order.COMPLETED,
+            "completed": Order.COMPLETED,
+            "collecting": Order.COLLECTING,
+            "delivering": Order.DELIVERING,
+            "canceled": Order.CANCELED,
+            "cancelled": Order.CANCELED,
+            "pending": Order.PENDING,
         }
 
         if raw_status not in status_map:

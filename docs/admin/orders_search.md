@@ -27,7 +27,7 @@ Token kerak: `Authorization: Bearer <admin_access_token>`.
 GET orders/?search=28 610
 GET orders/?search=45 67
 GET orders/?search=Jamshid Karimov
-GET orders/?search=Avtomat NXB-63&status=0&status=1
+GET orders/?search=Avtomat NXB-63&status=0&status=1&status=2
 GET orders/?search=CHT-NXB63-1P-C16
 ```
 

@@ -4,10 +4,10 @@ from django.db import transaction
 from django.db.models import Q, Sum
 from django.utils import timezone
 from apps.base.models import Articles, Banner, Video
+from apps.service.models.choices import ORDER_CANCELED
 from apps.service.models import AddsBrands, Brand, HomeBlock, HomePage, OrderItem, Product, ProductBadge, \
     ProductCategory, Sale, SaleProduct
 
-ORDER_CANCELED = 4
 
 RULE_FIELDS = ("hide_out_of_stock", "hide_stale_price", "min_products")
 # what "publish" stores per block; the list order is the page order

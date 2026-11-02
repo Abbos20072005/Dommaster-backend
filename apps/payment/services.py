@@ -58,10 +58,10 @@ class UzumBankService:
         if not order:
             return False, UzumBankErrors.ATTRIBUTE_NOT_FOUND, None
 
-        if order.status == 1:
+        if order.status == Order.COLLECTING:
             return False, UzumBankErrors.ALREADY_PAID, None
 
-        if order.status == 4:
+        if order.status == Order.CANCELED:
             return False, UzumBankErrors.PAYMENT_CANCELLED, None
 
         data = {
@@ -120,7 +120,7 @@ class UzumBankService:
             trans.save()
 
             order = Order.objects.get(id=trans.order_id)
-            order.status = 1
+            order.status = Order.COLLECTING
             order.save()
 
             return True, None, trans
@@ -144,7 +144,7 @@ class UzumBankService:
             trans.save()
 
             order = Order.objects.get(id=trans.order_id)
-            order.status = 4
+            order.status = Order.CANCELED
             order.save()
 
             return True, None, trans

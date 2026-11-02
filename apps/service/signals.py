@@ -1,8 +1,8 @@
 from django.db.models.signals import post_save, post_delete, pre_delete, pre_save
 from django.dispatch import receiver
 from apps.base.models import News
-from .models import AlternativeProduct, Comment, CartItem, Questions, Order, Product, ProductAttribute, ProductAttributeOption, \
-    ProductAttributeValue, ProductItemCategoryAttribute
+from .models import AlternativeProduct, Comment, CartItem, Questions, Order, OrderStatusChange, Product, ProductAttribute, \
+    ProductAttributeOption, ProductAttributeValue, ProductItemCategoryAttribute
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from django.utils import timezone
@@ -16,17 +16,22 @@ from .order_push import notify_order_status
 from .product_filters import clear_category_filter_cache
 from .seo_redirects import record_deletion
 
-# ORDER_STATUS of an order whose items are already taken off `Product.quantity` (taken on -> 1 Collecting,
-# given back on -> 4 Canceled): 0 Pending has not taken it, 4 Canceled has given it back
-STOCK_TAKEN_STATUSES = (1, 2, 3, 5)
+# ORDER_STATUS of an order whose items are already taken off `Product.quantity` (taken on -> Collecting,
+# given back on -> Canceled): Pending / Confirmed have not taken it, Canceled has given it back
+STOCK_TAKEN_STATUSES = (Order.COLLECTING, Order.DELIVERING, Order.READY_FOR_PICKUP, Order.COMPLETED)
 
 
 # Order.save() is atomic, so stock changes and outbox events here commit together with the order
 @receiver(pre_save, sender=Order)
 def decrease_product_quantity_on_collecting(sender, instance, update_fields=None, **kwargs):
     instance._status_changed_to = None
+    instance._status_log = None
     instance._pickup_selected = False
     previous = sender.objects.filter(pk=instance.pk).first() if instance.pk else None
+    if previous is None:
+        instance._status_log = (None, instance.status)
+    elif previous.status != instance.status and (update_fields is None or "status" in update_fields):
+        instance._status_log = (previous.status, instance.status)
 
     if update_fields is None or "pickup_branch" in update_fields:
         if previous is None or previous.pickup_branch_id != instance.pickup_branch_id:
@@ -45,8 +50,8 @@ def decrease_product_quantity_on_collecting(sender, instance, update_fields=None
     # whether the stock is already taken is decided by the status the order comes FROM, not only by the new
     # one: -> 1 from a status that holds the stock (1C re-sending "collecting" for an order that is being
     # delivered or waiting in a store) must not take it twice, and cancelling an order that never took it
-    # (0 Pending, unpaid) must not give the stock back
-    if instance.status == 1 and previous.status not in STOCK_TAKEN_STATUSES:
+    # (Pending / Confirmed, unpaid) must not give the stock back
+    if instance.status == Order.COLLECTING and previous.status not in STOCK_TAKEN_STATUSES:
         items = instance.order_items.select_related('product').all()
         products_to_update = []
         for item in items:
@@ -58,7 +63,7 @@ def decrease_product_quantity_on_collecting(sender, instance, update_fields=None
         if products_to_update:
             Product.objects.bulk_update(products_to_update, ['quantity'])
 
-    elif instance.status == 4 and previous.status != 4:
+    elif instance.status == Order.CANCELED and previous.status != Order.CANCELED:
         if previous.status in STOCK_TAKEN_STATUSES:
             items = instance.order_items.select_related('product').all()
             products_to_update = []
@@ -98,6 +103,15 @@ def emit_pickup_selected(sender, instance, **kwargs):
     if getattr(instance, "_pickup_selected", False):
         instance._pickup_selected = False
         emit_order_event(instance, ORDER_EVENT_PICKUP_SELECTED, payload={"branch_id": instance.pickup_branch_id})
+
+
+@receiver(post_save, sender=Order)
+def log_order_status(sender, instance, **kwargs):
+    change = getattr(instance, "_status_log", None)
+    if change is None:
+        return
+    instance._status_log = None
+    OrderStatusChange.objects.create(order=instance, from_status=change[0], to_status=change[1])
 
 
 @receiver(post_save, sender=Order)

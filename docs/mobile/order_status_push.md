@@ -15,14 +15,17 @@ DELETE {{host}}/api/v1/auth/fcm/token/     {"device_id": "..."}
 
 | `status` | Ma'nosi | Push |
 | --- | --- | --- |
-| 0 | Pending | yuborilmaydi |
-| 1 | Collecting | yuboriladi |
-| 2 | Delivering | yuboriladi |
-| 3 | Completed | yuboriladi |
-| 4 | Canceled | yuboriladi |
-| 5 | Ready for pickup | yuboriladi (faqat pickup buyurtma; `stores_pickup.md`) |
+| 0 | Pending (Tushgan) | yuborilmaydi |
+| 1 | Confirmed (Tasdiqlangan) | yuboriladi |
+| 2 | Collecting (Tayyorlash) | yuboriladi |
+| 3 | Delivering | yuboriladi |
+| 4 | Ready for pickup | yuboriladi (faqat pickup buyurtma; `stores_pickup.md`) |
+| 5 | Completed (Yakunlandi) | yuboriladi |
+| 6 | Canceled | yuboriladi |
 
-- Status kim tomonidan o'zgartirilishidan qat'i nazar yuboriladi: admin panel, 1C, to'lov tizimi callback'i (to'lov o'tgach `1`), mijozning o'zi bekor qilganda (`4`).
+Kodlar 02.11.2026 da o'zgardi (`1` Confirmed qo'shildi, qolganlari surildi) — `order_status_changes.md`.
+
+- Status kim tomonidan o'zgartirilishidan qat'i nazar yuboriladi: admin panel, 1C, to'lov tizimi callback'i (to'lov o'tgach `2`), mijozning o'zi bekor qilganda (`6`).
 - Faqat status **haqiqatan o'zgarganda** yuboriladi; buyurtma yaratilganda (status `0`) push yo'q.
 - `payment_status` o'zgarishi alohida push bermaydi.
 
@@ -34,13 +37,14 @@ DELETE {{host}}/api/v1/auth/fcm/token/     {"device_id": "..."}
 
 | `status` | `title` | `body` |
 | --- | --- | --- |
-| 1 | Заказ в сборке | Ваш заказ №125 принят и передан в сборку. |
-| 2 | Заказ в доставке | Ваш заказ №125 передан в доставку. |
-| 3 | Заказ выполнен | Ваш заказ №125 выполнен. Спасибо за покупку! |
-| 4 | Заказ отменён | Ваш заказ №125 отменён. |
-| 5 | Заказ готов к выдаче | Ваш заказ №125 ждёт вас в магазине «Chilonzor». Заберите его до 24.10.2026 15:30. |
+| 1 | Заказ подтверждён | Ваш заказ №125 подтверждён. |
+| 2 | Заказ в сборке | Ваш заказ №125 принят и передан в сборку. |
+| 3 | Заказ в доставке | Ваш заказ №125 передан в доставку. |
+| 4 | Заказ готов к выдаче | Ваш заказ №125 ждёт вас в магазине «Chilonzor». Заберите его до 24.10.2026 15:30. |
+| 5 | Заказ выполнен | Ваш заказ №125 выполнен. Спасибо за покупку! |
+| 6 | Заказ отменён | Ваш заказ №125 отменён. |
 
-Status `5` push'ida `data` ga yana ikki kalit qo'shiladi: `branch_id` (do'kon ID'si — checkout'ga yuborilgan qiymat) va `pickup_deadline` (ISO, Toshkent vaqti, masalan `"2026-10-24T15:30:00"`). Matnda shaxsiy ma'lumot (ism, telefon, manzil) yo'q — faqat buyurtma raqami, do'kon nomi va muddat.
+Status `4` push'ida `data` ga yana ikki kalit qo'shiladi: `branch_id` (do'kon ID'si — checkout'ga yuborilgan qiymat) va `pickup_deadline` (ISO, Toshkent vaqti, masalan `"2026-10-24T15:30:00"`). Matnda shaxsiy ma'lumot (ism, telefon, manzil) yo'q — faqat buyurtma raqami, do'kon nomi va muddat.
 
 `data` (barcha qiymatlar **string**):
 
@@ -48,7 +52,7 @@ Status `5` push'ida `data` ga yana ikki kalit qo'shiladi: `branch_id` (do'kon ID
 {
   "type": "order_status",
   "order_id": "125",
-  "status": "3",
+  "status": "5",
   "deeplink": "buildex://order/125"
 }
 ```

@@ -25,6 +25,7 @@ class TodayCardsSerializer(serializers.Serializer):
     pending = serializers.IntegerField(help_text="All orders in status Pending")
     stale_pending = serializers.IntegerField(help_text="Pending longer than `stale_minutes`")
     stale_minutes = serializers.IntegerField()
+    confirmed = serializers.IntegerField(help_text="All orders in status Confirmed")
     collecting = serializers.IntegerField(help_text="All orders in status Collecting")
     delivering = serializers.IntegerField(help_text="All orders in status Delivering")
 

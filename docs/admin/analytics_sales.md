@@ -56,7 +56,7 @@ Xatolar — `400`: `{"date_to": ["date_from and date_to are sent together."]}`, 
 Umumiy qoidalar:
 
 - Buyurtma davrga **yaratilgan sanasi** (`created_at`) bo'yicha tushadi.
-- **Tushum** — faqat **yakunlangan** (`status=3`) buyurtmalar summasi (`total_price`, yetkazib berish bilan) — bosh sahifadagi (`dashboard/`) bilan bir xil qoida. Shuning uchun oxirgi kunlar tushumi buyurtmalar yakunlangani sari o'sadi.
+- **Tushum** — faqat **yakunlangan** (`status=5`) buyurtmalar summasi (`total_price`, yetkazib berish bilan) — bosh sahifadagi (`dashboard/`) bilan bir xil qoida. Shuning uchun oxirgi kunlar tushumi buyurtmalar yakunlangani sari o'sadi.
 - **Buyurtmalar soni** — holatidan qat'i nazar yaratilgan barcha buyurtmalar.
 - Summalar — so'mda, `float`. Foizlar — `0–100`, 1 xona aniqlikda.
 - Javob keshlanmaydi.
@@ -82,7 +82,7 @@ Umumiy qoidalar:
 | `revenue` | Tushum | yakunlangan buyurtmalar summasi |
 | `orders` | Buyurtmalar | yaratilgan barcha buyurtmalar |
 | `average_check` | O'rtacha chek | yakunlangan buyurtmalarning o'rtacha summasi |
-| `cancel_rate` | Bekor qilish | bekor qilingan (`status=4`) / barcha buyurtmalar, % |
+| `cancel_rate` | Bekor qilish | bekor qilingan (`status=6`) / barcha buyurtmalar, % |
 | `refund_rate` | Qaytarish | puli qaytarilgan (`payment_status=3`) / barcha buyurtmalar, % |
 | `repeat_rate` | Takroriy xarid | davrda buyurtma bergan mijozlardan nechasi uchun bu **birinchi buyurtma emas** (bekor qilinganlar hisobga olinmaydi), % |
 

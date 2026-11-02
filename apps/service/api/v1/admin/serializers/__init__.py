@@ -1,4 +1,4 @@
-from .order import PENDING, COLLECTING, DELIVERING, COMPLETED, CANCELED, READY_FOR_PICKUP, DELIVERY, PICKUP, \
+from .order import PENDING, CONFIRMED, COLLECTING, DELIVERING, COMPLETED, CANCELED, READY_FOR_PICKUP, DELIVERY, PICKUP, \
     PAYMENT_ON_DELIVERY, PAID, \
     PRICE_FIELDS, OrderCustomerSerializer, OrderAddressSerializer, OrderBranchSerializer, OrderPromocodeSerializer, \
     OrderProductSerializer, OrderItemSerializer, OrderListSerializer, OrderSerializer, OrderStatsSerializer, \
@@ -40,6 +40,8 @@ from .today import STALE_PENDING_ORDERS, REFUND_PENDING_ORDERS, UNASSIGNED_ORDER
     TodayCardsSerializer, \
     TodayAttentionObjectSerializer, TodayAttentionItemSerializer, TodayAttentionSerializer, TodayCatalogSerializer, \
     TodayOrdersPointSerializer, TodayOrdersChartSerializer, TodaySerializer
+from .order_stages import STAGE_PERIOD_MONTHS, ALL_METHODS, COURIER, PICKUP_METHOD, DELIVERY_METHODS, \
+    OrderStagesQuerySerializer, StageMetricSerializer, OrderStagesMonthSerializer, OrderStagesSerializer
 from .analytics import CLICK, PAYME, UZUM, CASH, CARD, OTHER, PAYMENT_KEYS, DELIVERY_KEY, PICKUP_KEY, DELIVERY_KEYS, \
     CHANNEL_KEYS, INDIVIDUAL, B2B, SEGMENTS, SalesChannelSerializer, SalesAnalyticsQuerySerializer, RateSerializer, SalesSummarySerializer, SalesChartPointSerializer, \
     SalesChartSerializer, SalesCategorySerializer, SalesShareSerializer, SalesPaymentMethodSerializer, \
@@ -57,7 +59,7 @@ from .content_import import ContentExportQuerySerializer, ContentImportListSeria
 
 __all__ = [
     "SaleProductSerializer", "SaleListSerializer", "SaleSerializer", "SaleProductReorderSerializer",
-    "PENDING", "COLLECTING", "DELIVERING", "COMPLETED", "CANCELED", "DELIVERY", "PICKUP", "PAYMENT_ON_DELIVERY", "PAID",
+    "PENDING", "CONFIRMED", "COLLECTING", "DELIVERING", "COMPLETED", "CANCELED", "DELIVERY", "PICKUP", "PAYMENT_ON_DELIVERY", "PAID",
     "PRICE_FIELDS", "OrderCustomerSerializer", "OrderAddressSerializer", "OrderBranchSerializer",
     "OrderPromocodeSerializer", "OrderProductSerializer", "OrderItemSerializer", "OrderListSerializer",
     "OrderSerializer", "OrderStatsSerializer", "OrderManagerSerializer", "ManagerSerializer",
@@ -97,6 +99,8 @@ __all__ = [
     "SalesPaymentMethodSerializer", "SalesDeliveryTypeSerializer", "SalesProductSerializer",
     "SalesTopProductSerializer", "SalesRefundedProductSerializer", "SalesCohortSerializer", "SalesCohortsSerializer",
     "SalesAnalyticsSerializer",
+    "STAGE_PERIOD_MONTHS", "ALL_METHODS", "COURIER", "PICKUP_METHOD", "DELIVERY_METHODS", "OrderStagesQuerySerializer",
+    "StageMetricSerializer", "OrderStagesMonthSerializer", "OrderStagesSerializer",
     "HomeBlockBannerSerializer", "HomeBlockSaleSerializer", "HomeBlockPageSerializer", "HomeBlockSerializer",
     "HomeBlockReorderSerializer", "HomePageSerializer", "HomePagePublishSerializer",
     "ModerationStaffSerializer", "ModerationProductSerializer", "ModerationProductPreviewSerializer", "ReadinessCheckSerializer", "ReadinessAttributeSerializer", "ReadinessShortSerializer", "ReadinessSerializer",

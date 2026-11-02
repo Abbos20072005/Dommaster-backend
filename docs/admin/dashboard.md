@@ -67,7 +67,7 @@ Umumiy qoidalar:
 
 - Davrlar **kalendar kun** bo'yicha, bugun ham kiradi: `days=30` — bugun va undan oldingi 29 kun. Vaqt — Toshkent vaqti.
 - `change` — shu uzunlikdagi **oldingi davrga** nisbatan o'zgarish, foizda (`12.5` = +12.5%, `-8.0` = −8%). Oldingi davr `0` bo'lsa — `null` (foizni hisoblab bo'lmaydi, "—" ko'rsating). Oldingi davr joriy davrdan bevosita oldin turadi: `date_from=2026-09-10&date_to=2026-09-16` (7 kun) → `2026-09-03 … 2026-09-09`.
-- Tushum (`revenue`, `average_check`) faqat **yakunlangan** buyurtmalardan (`status=3`) hisoblanadi — `received_orders` bundan mustasno (u barcha tushgan buyurtmalar summasi).
+- Tushum (`revenue`, `average_check`) faqat **yakunlangan** buyurtmalardan (`status=5`) hisoblanadi — `received_orders` bundan mustasno (u barcha tushgan buyurtmalar summasi).
 - Grafik nuqtalari (`points`, `months`) bo'sh kunlar/oylar bilan to'liq keladi (`0` bilan), eskidan yangiga tartibda.
 - Summalar — so'mda, `float`.
 
@@ -130,7 +130,7 @@ Kun buyurtmaning **yaratilgan sanasi** (`created_at`) bo'yicha olinadi, yetkazil
 
 | | `delivered_orders` | `received_orders` |
 | --- | --- | --- |
-| Buyurtmalar | faqat yakunlangan (`status=3`) | **barchasi** — hozirgi holatidan qat'i nazar (kutilmoqda, yig'ilmoqda, yetkazilmoqda, yakunlangan, bekor qilingan, do'konda kutmoqda) |
+| Buyurtmalar | faqat yakunlangan (`status=5`) | **barchasi** — hozirgi holatidan qat'i nazar (kutilmoqda, yig'ilmoqda, yetkazilmoqda, yakunlangan, bekor qilingan, do'konda kutmoqda) |
 | `revenue` | yakunlangan buyurtmalar summasi | barcha tushgan buyurtmalar summasi (bekor qilinganlari ham kiradi) |
 | `average_check` | yakunlanganlarning o'rtachasi | tushganlarning o'rtachasi |
 
@@ -255,7 +255,7 @@ Oxirgi **5 ta** buyurtma (yangi birinchi). Obyekt `orders/` ro'yxatidagi bilan b
 
 | Maydon | Qiymatlar |
 | --- | --- |
-| `status` | `0` Kutilmoqda, `1` Yig'ilmoqda, `2` Yetkazilmoqda, `3` Yakunlangan, `4` Bekor qilingan |
+| `status` | `0` Tushgan, `1` Tasdiqlangan, `2` Tayyorlash (yig'ilmoqda), `3` Yetkazilmoqda, `4` Olib ketishga tayyor, `5` Yakunlandi, `6` Bekor qilingan |
 | `payment_status` | `0` Kutilmoqda, `1` Hold, `2` To'langan, `3` Bekor qilingan |
 | `payment_type` | `1` Click, `2` Payme, `3` Uzum, `4` yetkazilganda (`payment_method`: `cash` / `card`) |
 | `delivery_type` | `0` Yetkazib berish, `1` Olib ketish |

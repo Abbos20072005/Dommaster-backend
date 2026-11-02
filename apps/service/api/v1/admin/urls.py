@@ -3,7 +3,7 @@ from rest_framework.routers import SimpleRouter
 from .views import BrandViewSet, PartnerBrandViewSet, ProductBadgeViewSet, ProductCategoryViewSet, \
     ProductSubCategoryViewSet, ProductItemCategoryViewSet, ProductAttributeViewSet, OrderViewSet, ProductViewSet, \
     CommentViewSet, QuestionViewSet, CommentReplyViewSet, QuestionReplyViewSet, DashboardAPIView, ManagerViewSet, \
-    OrderCommentViewSet, ProductModelViewSet, AddsBrandsViewSet, TodayAPIView, SaleViewSet, SalesAnalyticsAPIView, \
+    OrderCommentViewSet, ProductModelViewSet, AddsBrandsViewSet, TodayAPIView, SaleViewSet, SalesAnalyticsAPIView, OrderStagesAPIView, \
     HomeBlockViewSet, HomePageAPIView, HomePagePublishAPIView, ProductModerationViewSet, \
     FilterPageViewSet, ProjectViewSet, ContentImportViewSet
 
@@ -36,6 +36,7 @@ router.register("content-imports", ContentImportViewSet, basename="admin_content
 
 urlpatterns = router.urls + [
     path("dashboard/", DashboardAPIView.as_view(), name="admin_dashboard"),
+    path("dashboard/order-stages/", OrderStagesAPIView.as_view(), name="admin_dashboard_order_stages"),
     path("today/", TodayAPIView.as_view(), name="admin_today"),
     path("analytics/sales/", SalesAnalyticsAPIView.as_view(), name="admin_analytics_sales"),
     path("home-page/", HomePageAPIView.as_view(), name="admin_home_page"),

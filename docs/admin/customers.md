@@ -14,10 +14,10 @@ PRO berish / olish: [pro_customers.md](pro_customers.md) (`POST customers/<id>/r
 | `last_login` | datetime / null | Oxirgi kirish |
 | `last_login_platform` | `site` / `ios` / `android` / `null` | Oxirgi kirish platformasi (OTP tasdiqlanganda yoziladi). Faqat o'qish |
 | `active_devices` | int | Push token'i bor qurilmalar soni |
-| `orders_count` | int | **Yakunlangan** (status 3) buyurtmalar |
+| `orders_count` | int | **Yakunlangan** (status 5) buyurtmalar |
 | `total_purchase` | number | Yakunlangan buyurtmalar summasi |
 | `last_order_at` | datetime / null | Oxirgi buyurtma (har qanday status) |
-| `returns_count` | int | **Bekor qilingan** (status 4) buyurtmalar — hozircha qaytarish modeli yo'q, "Qaytarishlar" shuni ko'rsatadi |
+| `returns_count` | int | **Bekor qilingan** (status 6) buyurtmalar — hozircha qaytarish modeli yo'q, "Qaytarishlar" shuni ko'rsatadi |
 | `segment` | `regular` / `big` / `vip` / `null` | Qo'lda belgilanadi (`PATCH`), hech narsa hisoblamaydi |
 | `tags` | string[] | Qo'lda (`PATCH`): ≤ 20 ta, har biri ≤ 50 belgi; probellar kesiladi, takrorlar (katta-kichik harf farqsiz) tashlanadi |
 | `language` | `uz` / `ru` | Ilova / sayt so'rovlaridagi til (kuniga bir marta yangilanadi). `PATCH` qabul qiladi, lekin mijoz ilovadan boshqa tilda kirsa, keyingi kun o'sha til yoziladi. `en` yo'q |
@@ -112,7 +112,7 @@ Allaqachon o'chirilganni qayta `DELETE` → `204`, hech narsa o'zgarmaydi.
 ## 7. Hozircha yo'q
 
 - **Qaytarishlar** (`/returns/`): qaytarish modeli yo'q. "Qaytarishlar" tabi uchun bekor qilingan buyurtmalarni
-  oling: `GET orders/?customer=<id>&status=4` (`returns_count` shu son).
+  oling: `GET orders/?customer=<id>&status=6` (`returns_count` shu son).
 - **Murojaatlar / tiketlar** (`/tickets/`): tiket tizimi yo'q, tab avvalgidek `GET chats/?customer=<id>`.
 - **Rozilik** (push / sms / email): saqlanmaydi, maydon qaytmaydi.
 - Telefon faqat `customers/` javoblarida maskalanadi: `orders/`, `chats/` va boshqalarda mijoz telefoni to'liq.

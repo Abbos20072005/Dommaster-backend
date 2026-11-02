@@ -1,10 +1,13 @@
+ORDER_PENDING, ORDER_CONFIRMED, ORDER_COLLECTING, ORDER_DELIVERING, ORDER_READY_FOR_PICKUP, ORDER_COMPLETED, \
+    ORDER_CANCELED = range(7)
 ORDER_STATUS = (
-    (0, "Pending"),
-    (1, "Collecting"),
-    (2, "Delivering"),
-    (3, "Completed"),
-    (4, "Canceled"),
-    (5, "Ready for pickup"),
+    (ORDER_PENDING, "Pending"),
+    (ORDER_CONFIRMED, "Confirmed"),
+    (ORDER_COLLECTING, "Collecting"),
+    (ORDER_DELIVERING, "Delivering"),
+    (ORDER_READY_FOR_PICKUP, "Ready for pickup"),
+    (ORDER_COMPLETED, "Completed"),
+    (ORDER_CANCELED, "Canceled"),
 )
 
 PAYMENT_STATUS = (

@@ -9,6 +9,8 @@ import logging
 from django.db import transaction
 
 from apps.base.models import Notification
+from apps.service.models.choices import ORDER_CONFIRMED, ORDER_COLLECTING, ORDER_DELIVERING, \
+    ORDER_READY_FOR_PICKUP, ORDER_COMPLETED, ORDER_CANCELED
 from utils.background import run_in_background
 from utils.send_notification import send_push_to_customer
 
@@ -19,13 +21,14 @@ ORDER_STATUS_PUSH_TYPE = "order_status"
 # the customer's language is not stored anywhere, so the texts are in the project default language (ru);
 # the app can localize by `data.status` instead. Status 0 (Pending) is not announced.
 ORDER_STATUS_PUSH = {
-    1: ("Заказ в сборке", "Ваш заказ №{order_id} принят и передан в сборку."),
-    2: ("Заказ в доставке", "Ваш заказ №{order_id} передан в доставку."),
-    3: ("Заказ выполнен", "Ваш заказ №{order_id} выполнен. Спасибо за покупку!"),
-    4: ("Заказ отменён", "Ваш заказ №{order_id} отменён."),
-    5: ("Заказ готов к выдаче", "Ваш заказ №{order_id} ждёт вас в магазине «{store}». Заберите его до {deadline}."),
+    ORDER_CONFIRMED: ("Заказ подтверждён", "Ваш заказ №{order_id} подтверждён."),
+    ORDER_COLLECTING: ("Заказ в сборке", "Ваш заказ №{order_id} принят и передан в сборку."),
+    ORDER_DELIVERING: ("Заказ в доставке", "Ваш заказ №{order_id} передан в доставку."),
+    ORDER_READY_FOR_PICKUP: ("Заказ готов к выдаче",
+                             "Ваш заказ №{order_id} ждёт вас в магазине «{store}». Заберите его до {deadline}."),
+    ORDER_COMPLETED: ("Заказ выполнен", "Ваш заказ №{order_id} выполнен. Спасибо за покупку!"),
+    ORDER_CANCELED: ("Заказ отменён", "Ваш заказ №{order_id} отменён."),
 }
-READY_FOR_PICKUP = 5
 
 
 def notify_order_status(order_id, customer_id, status):
@@ -64,7 +67,7 @@ def send_order_status_push(order_id, customer_id, status):
     data = {"type": ORDER_STATUS_PUSH_TYPE, "order_id": str(order_id), "status": str(status),
             "deeplink": order_deeplink(order_id)}
     text = {"order_id": order_id}
-    if status == READY_FOR_PICKUP:
+    if status == ORDER_READY_FOR_PICKUP:
         pickup = _pickup_details(order_id)
         text.update(store=pickup["store"], deadline=pickup["deadline"])
         data.update(branch_id=str(pickup["branch_id"] or ""), pickup_deadline=pickup["pickup_deadline"])

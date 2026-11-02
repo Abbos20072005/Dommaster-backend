@@ -9,7 +9,7 @@ from .product import (
 from .filters import ProductItemCategoryFilterSchema, ProductFilterNumericValue
 from .marketing import AddsBrands, PartnerBrand, Tag, ProductBadge, Sale, SaleProduct, Announcements, Service
 from .cart import Cart, CartItem, Favourites, RecentlyViewedProducts
-from .order import Manager, Order, OrderItem, OrderComment
+from .order import Manager, Order, OrderItem, OrderComment, OrderStatusChange
 from .outbox import OrderOutboxEvent
 from .feedback import Comment, CommentReply, CommentImages, Questions, QuestionsReply
 from .home import HomeBlock, HomePage
@@ -29,7 +29,7 @@ __all__ = [
     "ProductItemCategoryFilterSchema", "ProductFilterNumericValue",
     "AddsBrands", "PartnerBrand", "Tag", "ProductBadge", "Sale", "SaleProduct", "Announcements", "Service",
     "Cart", "CartItem", "Favourites", "RecentlyViewedProducts",
-    "Manager", "Order", "OrderItem", "OrderComment", "OrderOutboxEvent",
+    "Manager", "Order", "OrderItem", "OrderComment", "OrderStatusChange", "OrderOutboxEvent",
     "Comment", "CommentReply", "CommentImages", "Questions", "QuestionsReply",
     "HomeBlock", "HomePage",
     "InterestEvent", "FeedImpression",

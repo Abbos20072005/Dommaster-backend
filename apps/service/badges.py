@@ -4,9 +4,9 @@ from django.db import transaction
 from django.db.models import Q, Sum
 from django.utils import timezone
 from apps.service.models import OrderItem, Product, ProductBadge
+from apps.service.models.choices import ORDER_CANCELED
 
 SALES_DAYS = 30
-ORDER_CANCELED = 4
 
 OPERATORS = {
     ProductBadge.GT: operator.gt,

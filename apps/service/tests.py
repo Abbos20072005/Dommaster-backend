@@ -213,7 +213,7 @@ class LinkTests(ApiTestCase):
         response = self.client_pro.post(self.url, {"project_id": self.house.id}, format="json")
         self.assertEqual((response.status_code, response.data["error_code"]), (400, 38))
 
-        Order.objects.filter(id=self.order.id).update(status=4)
+        Order.objects.filter(id=self.order.id).update(status=Order.CANCELED)
         response = self.client_pro.post(self.url, {"project_id": self.office.id}, format="json")
         self.assertEqual((response.status_code, response.data["error_code"]), (400, 39))
 
@@ -267,8 +267,8 @@ class ProExpensesTests(ApiTestCase):
         self.link(order2, self.office, [items2[0].id])
         self.link(order3, self.house)
         self.link(order4, self.house)
-        Order.objects.filter(id=order3.id).update(status=4)
-        Order.objects.filter(id__in=[order1.id, order2.id]).update(status=3)
+        Order.objects.filter(id=order3.id).update(status=Order.CANCELED)
+        Order.objects.filter(id__in=[order1.id, order2.id]).update(status=Order.COMPLETED)
 
     def link(self, order, project, item_ids=None, force=False):
         body = {"project_id": project.id, "force": force, **({"item_ids": item_ids} if item_ids else {})}

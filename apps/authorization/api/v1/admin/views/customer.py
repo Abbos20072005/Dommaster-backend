@@ -11,6 +11,7 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 from apps.authorization.activity import record_admin
 from apps.authorization.roles import RoleError, change_role
+from apps.service.models.choices import ORDER_COMPLETED, ORDER_CANCELED
 from apps.authorization.models import Customer, CustomerActivity, CustomerNote, CustomerRoleChange, FcmToken
 from utils.admin_views import AdminModelViewSet
 from ..filters import CustomerFilter, CustomerSearchFilter, NullsLastOrderingFilter, active_since
@@ -18,8 +19,6 @@ from ..serializers import CustomerSerializer, CustomerDetailSerializer, Customer
     RoleChangeSerializer, RoleHistorySerializer, RevealPhoneSerializer, CustomerNoteSerializer, \
     CustomerActivitySerializer
 
-ORDER_COMPLETED = 3
-ORDER_CANCELED = 4
 ORDERED_DAYS = 30
 Kind = CustomerActivity.Kind
 # fields of an admin PATCH that go to the journal as "profile updated" (is_blocked has events of its own)

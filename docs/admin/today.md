@@ -52,8 +52,9 @@ Umumiy qoidalar:
 | `pending` | "Kutilmoqda" (`status=0`) holatidagi barcha buyurtmalar — "Tasdiq kutmoqda" |
 | `stale_pending` | shulardan `stale_minutes` daqiqadan ko'p kutayotganlari |
 | `stale_minutes` | chegara, hozir `30` |
-| `collecting` | "Yig'ilmoqda" (`status=1`) holatidagi barcha buyurtmalar |
-| `delivering` | "Yetkazilmoqda" (`status=2`) holatidagi barcha buyurtmalar |
+| `confirmed` | "Tasdiqlangan" (`status=1`) holatidagi barcha buyurtmalar |
+| `collecting` | "Tayyorlash" / yig'ilmoqda (`status=2`) holatidagi barcha buyurtmalar |
+| `delivering` | "Yetkazilmoqda" (`status=3`) holatidagi barcha buyurtmalar |
 
 ### `attention` — diqqat talab qiladi
 
@@ -118,8 +119,8 @@ Qatorlar:
 | `key` | `group` | `level` | Nima sanaladi | `date` | `objects[].name` | "Ochish" → ro'yxat |
 | --- | --- | --- | --- | --- | --- | --- |
 | `stale_pending_orders` | orders | warning | 30 daqiqadan ko'p "Kutilmoqda" turgan buyurtmalar | yaratilgan vaqt (eng eskisi) | `null` | `orders/?status=0&ordering=created_at` |
-| `refund_pending_orders` | orders | warning | bekor qilingan (`status=4`), lekin to'lovi `Hold`/`To'langan` buyurtmalar — pul qaytarilmagan | oxirgi o'zgargan vaqt | `null` | `orders/?status=4&payment_status=1` va `...&payment_status=2` |
-| `unassigned_orders` | orders | info | menejer biriktirilmagan ochiq buyurtmalar (`status` 0–2) | yaratilgan vaqt | `null` | `orders/?status=0&status=1&status=2&has_manager=false` |
+| `refund_pending_orders` | orders | warning | bekor qilingan (`status=6`), lekin to'lovi `Hold`/`To'langan` buyurtmalar — pul qaytarilmagan | oxirgi o'zgargan vaqt | `null` | `orders/?status=6&payment_status=1` va `...&payment_status=2` |
+| `unassigned_orders` | orders | info | menejer biriktirilmagan ochiq buyurtmalar (`status` 0–4) | yaratilgan vaqt | `null` | `orders/?status=0&status=1&status=2&status=3&status=4&has_manager=false` |
 | `out_of_stock_products` | catalog | danger | faol, qoldig'i `<= 0` mahsulotlar | `null` | mahsulot nomi | `products/?is_active=true&in_stock=false` |
 | `no_price_products` | catalog | danger | faol, narxi `0` mahsulotlar | `null` | mahsulot nomi | `products/?is_active=true&max_price=0` |
 | `review_products` | catalog | info | moderatsiyadagi mahsulotlar (`publish_status=review`) | `null` | mahsulot nomi | `products/?publish_status=review` |

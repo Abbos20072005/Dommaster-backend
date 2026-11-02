@@ -91,15 +91,15 @@ Yangi maydonlar:
 - `pickup_store` buyurtma paytidagi **snapshot** — filial keyin tahrirlansa (admin panelda yoki 1C'da) / nofaol qilinsa ham buyurtmada o'zgarmaydi. Kartada boshqa filial tanlansa (`pickup_branch`), snapshot yangi filialdan olinadi; nofaol filialni tanlab bo'lmaydi.
 - `delivery_type = 1` da `pickup_branch` majburiy; `delivery_type = 0` ga o'tkazilsa `pickup_branch` tozalanadi.
 
-Filtrlar: `?pickup_branch=<id>`, `?pickup_expired=true|false`, `?status=5`.
-`orders/stats/` ga qo'shildi: `ready_for_pickup`, `pickup_expired`.
+Filtrlar: `?pickup_branch=<id>`, `?pickup_expired=true|false`, `?status=4`.
+`orders/stats/` ga qo'shildi: `ready_for_pickup`, `pickup_expired` (va keyinroq `confirmed`).
 
-### "Olib ketishga tayyor" (status `5`)
+### "Olib ketishga tayyor" (status `4`)
 
-- Faqat pickup buyurtma va faqat `1` Collecting'dan o'tkaziladi (`PATCH {"status": 5}`), aks holda `400 {"status": [...]}`. Qoldiq `1` da kamaygan bo'ladi.
-- `5` ga o'tganda: `ready_for_pickup_at` = hozir, `pickup_deadline` = +2 kun (Toshkent vaqti), mijozga push (buyurtma raqami, do'kon nomi, muddat — shaxsiy ma'lumotsiz).
-- Keyin faqat: `3` Completed (olib ketildi) yoki `4` Canceled (qoldiq qaytadi); boshqa status → `400` — yig'ilib do'konda turgan buyurtma faqat berilishi yoki bekor qilinishi mumkin. 1C `PATCH orders/<id>/status/` bu qoidani bilmaydi va `5` ni o'rnata olmaydi, lekin `5` da turgan buyurtmaga "collecting" yuborishi mumkin — bu holda status `1` ga tushadi, **qoldiq esa ikkinchi marta kamaymaydi** (signal buyurtma qaysi statusdan kelganiga qaraydi, `STOCK_TAKEN_STATUSES`).
-- `5` holatidagi buyurtmani o'chirib bo'lmaydi (avval bekor qiling).
+- Faqat pickup buyurtma va faqat `2` Collecting'dan o'tkaziladi (`PATCH {"status": 4}`), aks holda `400 {"status": [...]}`. Qoldiq `2` da kamaygan bo'ladi.
+- `4` ga o'tganda: `ready_for_pickup_at` = hozir, `pickup_deadline` = +2 kun (Toshkent vaqti), mijozga push (buyurtma raqami, do'kon nomi, muddat — shaxsiy ma'lumotsiz).
+- Keyin faqat: `5` Completed (olib ketildi) yoki `6` Canceled (qoldiq qaytadi); boshqa status → `400` — yig'ilib do'konda turgan buyurtma faqat berilishi yoki bekor qilinishi mumkin. 1C `PATCH orders/<id>/status/` bu qoidani bilmaydi va `4` ni o'rnata olmaydi, lekin `4` da turgan buyurtmaga "collecting" yuborishi mumkin — bu holda status `2` ga tushadi, **qoldiq esa ikkinchi marta kamaymaydi** (signal buyurtma qaysi statusdan kelganiga qaraydi, `STOCK_TAKEN_STATUSES`).
+- `4` holatidagi buyurtmani o'chirib bo'lmaydi (avval bekor qiling).
 - Muddat o'tsa avtomatik bekor qilinmaydi: `pickup_expired: true`, "Bugungi ishlar" sahifasida `expired_pickup_orders` qatori, Telegram guruhiga "⏰ Заказ № … не забрали вовремя" xabari (bir marta).
 
 ### Telegram
@@ -113,9 +113,9 @@ Yangi buyurtma xabarida (caption + Excel) olib ketishda do'kon nomi, manzili (mo
 | Event | Qachon | Telegram |
 | --- | --- | --- |
 | `order.pickup_selected` | buyurtma do'kon bilan yaratilganda / kartada do'kon o'zgarganda | yo'q (`status = recorded`) |
-| `order.pickup_ready` | status → `5` (`payload`: `branch_id`, `pickup_deadline`) | yo'q (`recorded`) |
-| `order.pickup_done` | pickup buyurtma → `3` Completed | yo'q (`recorded`) |
-| `order.pickup_expired` | `pickup_deadline` o'tgan, hali `5` (fon vazifasi, har 10 daqiqada) | ha |
+| `order.pickup_ready` | status → `4` (`payload`: `branch_id`, `pickup_deadline`) | yo'q (`recorded`) |
+| `order.pickup_done` | pickup buyurtma → `5` Completed | yo'q (`recorded`) |
+| `order.pickup_expired` | `pickup_deadline` o'tgan, hali `4` (fon vazifasi, har 10 daqiqada) | ha |
 
 Hozircha event'larni o'qiydigan hisobot yo'q — faqat qayd.
 

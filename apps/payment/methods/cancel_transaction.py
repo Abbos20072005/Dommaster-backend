@@ -4,6 +4,7 @@ from django.db import transaction
 from apps.payment.utils.get_params import get_params
 
 from apps.payment.models import MerchatTransactionsModel, AccountModel
+from apps.service.models.choices import ORDER_PENDING
 from apps.payment.api.v1.client.serializers import MerchatTransactionsModelSerializer
 from apps.payment.utils.exception_payme import PerformTransactionDoesNotExist
 
@@ -33,7 +34,7 @@ class CancelTransaction:
                 transactions.reason = clean_data.get("reason")
                 transactions.save()
                 order = AccountModel.objects.get(id=transactions.order_id)
-                order.status = 0
+                order.status = ORDER_PENDING
                 order.save()
 
         except PerformTransactionDoesNotExist:

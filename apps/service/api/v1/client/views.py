@@ -2428,7 +2428,7 @@ class OrderViewSet(ViewSet):
         order = Order.objects.filter(
             id=data_serializer.validated_data.get("order_id"),
             customer_id=request.user.id,
-            status=0,
+            status=Order.PENDING,
         ).first()
         if not order:
             raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
@@ -2464,7 +2464,7 @@ class OrderViewSet(ViewSet):
         if not order:
             raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
 
-        if order.status not in (0, 1):
+        if order.status not in (Order.PENDING, Order.CONFIRMED, Order.COLLECTING):
             raise CustomApiException(
                 error_code=ErrorCodes.INVALID_INPUT,
                 message="You could not cancel this order",
@@ -2483,7 +2483,7 @@ class OrderViewSet(ViewSet):
                 )
             order.payment_status = 3
 
-        order.status = 4
+        order.status = Order.CANCELED
         order.save(update_fields=["status", "payment_status"])
         return Response(
             data={
@@ -2693,7 +2693,7 @@ class OrderViewSet(ViewSet):
             )
 
         orders = Order.objects.filter(
-            Q(status=3) | Q(status=4), customer_id=request.user.id
+            Q(status=Order.COMPLETED) | Q(status=Order.CANCELED), customer_id=request.user.id
         ).prefetch_related(
             Prefetch('order_items',
                 queryset=OrderItem.objects.select_related('product').prefetch_related('product__product_image')
@@ -2744,7 +2744,7 @@ class OrderViewSet(ViewSet):
 
         orders = (
             Order.objects.filter(customer_id=request.user.id)
-            .exclude(Q(status=3) | Q(status=4))
+            .exclude(Q(status=Order.COMPLETED) | Q(status=Order.CANCELED))
             .prefetch_related(
                 Prefetch('order_items',
                     queryset=OrderItem.objects.select_related('product').prefetch_related('product__product_image')

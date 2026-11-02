@@ -13,6 +13,7 @@ from django.utils import timezone
 from apps.authorization.models import Customer, CustomerAddresses, FcmToken
 from apps.base.models import Notification
 from apps.service.models import CartItem, Order
+from apps.service.models.choices import ORDER_CANCELED
 from utils.send_notification import real_fcm_tokens
 
 # the city of Tashkent as a box: an address has only coordinates and a free-form name, no city
@@ -22,7 +23,6 @@ BUYERS_PERIOD = timedelta(days=30)
 # a cart is abandoned when it has items and nothing in it changed for a day; after a month it is forgotten
 CART_ABANDONED_AFTER = timedelta(days=1)
 CART_FORGOTTEN_AFTER = timedelta(days=30)
-ORDER_CANCELED = 4
 
 
 def segment_customers(segment):

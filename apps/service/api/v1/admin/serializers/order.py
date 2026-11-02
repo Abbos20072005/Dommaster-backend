@@ -9,7 +9,7 @@ from apps.service.pro import money
 from utils.admin_serializers import RelationSerializer
 
 # ORDER_STATUS / DELIVERY_TYPE - the values live on the model, these are the short names the admin modules use
-PENDING, COLLECTING, DELIVERING = Order.PENDING, Order.COLLECTING, Order.DELIVERING
+PENDING, CONFIRMED, COLLECTING, DELIVERING = Order.PENDING, Order.CONFIRMED, Order.COLLECTING, Order.DELIVERING
 COMPLETED, CANCELED, READY_FOR_PICKUP = Order.COMPLETED, Order.CANCELED, Order.READY_FOR_PICKUP
 DELIVERY, PICKUP = Order.DELIVERY, Order.PICKUP
 # PAYMENT_TYPE / PAYMENT_STATUS
@@ -304,6 +304,7 @@ class OrderCommentSerializer(serializers.ModelSerializer):
 class OrderStatsSerializer(serializers.Serializer):
     total = serializers.IntegerField()
     pending = serializers.IntegerField()
+    confirmed = serializers.IntegerField()
     collecting = serializers.IntegerField()
     delivering = serializers.IntegerField()
     completed = serializers.IntegerField()

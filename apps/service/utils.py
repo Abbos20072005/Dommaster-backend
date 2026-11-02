@@ -1,4 +1,6 @@
 from .models import ProductItemCategory, ProductSubCategory, ProductCategory, Product
+from .models.choices import ORDER_PENDING, ORDER_CONFIRMED, ORDER_COLLECTING, ORDER_DELIVERING, ORDER_READY_FOR_PICKUP, \
+    ORDER_COMPLETED, ORDER_CANCELED
 from .attributes import DEFAULT_LANGUAGE, translated
 import requests
 import json
@@ -49,25 +51,24 @@ def _format_price(value):
 
 
 ORDER_STATUS_RU = {
-    0: "В ожидании",
-    1: "В процессе сборки",
-    2: "В процессе доставки",
-    3: "Выполнен",
-    4: "Отменен",
-    5: "Готов к выдаче",
-    "0": "В ожидании",
-    "1": "В процессе сборки",
-    "2": "В процессе доставки",
-    "3": "Выполнен",
-    "4": "Отменен",
-    "5": "Готов к выдаче",
+    ORDER_PENDING: "В ожидании",
+    ORDER_CONFIRMED: "Подтверждён",
+    ORDER_COLLECTING: "В процессе сборки",
+    ORDER_DELIVERING: "В процессе доставки",
+    ORDER_READY_FOR_PICKUP: "Готов к выдаче",
+    ORDER_COMPLETED: "Выполнен",
+    ORDER_CANCELED: "Отменен",
+}
+ORDER_STATUS_RU.update({str(code): name for code, name in ORDER_STATUS_RU.items()})
+ORDER_STATUS_RU.update({
     "pending": "В ожидании",
+    "confirmed": "Подтверждён",
     "collecting": "В процессе сборки",
     "delivering": "В процессе доставки",
     "completed": "Выполнен",
     "canceled": "Отменен",
     "cancelled": "Отменен",
-}
+})
 
 PAYMENT_STATUS_RU = {
     0: "В ожидании",

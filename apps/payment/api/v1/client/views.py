@@ -124,7 +124,7 @@ class CompletePaymentView(APIView):
             raise response
 
         txn.state = ClickTransaction.SUCCESSFULLY if int(params["error"]) == 0 else ClickTransaction.CANCELLED
-        order.status = 1 if int(params["error"]) == 0 else 0
+        order.status = Order.COLLECTING if int(params["error"]) == 0 else Order.PENDING
         order.save()
         txn.save()
 
@@ -846,7 +846,7 @@ class AtmosCreateHoldView(APIView):
             return Response(apply_data, status=status.HTTP_400_BAD_REQUEST)
 
         order.payment_status = 1
-        order.status = 1
+        order.status = Order.COLLECTING
         order.save()
 
         return Response({
@@ -928,7 +928,7 @@ class AtmosChargeHoldView(APIView):
         )
 
         order.payment_status = 2
-        order.status = 2
+        order.status = Order.DELIVERING
         order.ofd_url = ofd_url
         order.save()
 
