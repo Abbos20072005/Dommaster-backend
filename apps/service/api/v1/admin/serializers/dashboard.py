@@ -52,6 +52,16 @@ class DashboardSummarySerializer(serializers.Serializer):
     new_customers = MetricSerializer()
 
 
+class DashboardAllTimeSerializer(serializers.Serializer):
+    """The summary cards over the whole history, same rules, no query param applies."""
+    date_from = serializers.DateField(allow_null=True, help_text="Day of the first order, null = no orders yet")
+    date_to = serializers.DateField(help_text="Today")
+    orders = serializers.IntegerField(help_text="All created orders")
+    revenue = serializers.FloatField(help_text="Sum of completed orders")
+    average_check = serializers.FloatField(help_text="Average total of completed orders")
+    new_customers = serializers.IntegerField(help_text="All customers")
+
+
 class DeliveredOrdersPointSerializer(serializers.Serializer):
     date = serializers.DateField(help_text="The day, or the first day of the month when step = month")
     count = serializers.IntegerField()
@@ -169,6 +179,7 @@ class RevenueSerializer(serializers.Serializer):
 
 class DashboardSerializer(serializers.Serializer):
     summary = DashboardSummarySerializer()
+    all_time = DashboardAllTimeSerializer()
     delivered_orders = DeliveredOrdersSerializer(help_text="Completed orders")
     received_orders = DeliveredOrdersSerializer(help_text="Every created order, any status (canceled too)")
     registrations = RegistrationsSerializer()

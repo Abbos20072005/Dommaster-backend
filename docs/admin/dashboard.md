@@ -23,7 +23,7 @@ Hammasi ixtiyoriy. Noto'g'ri qiymat → `400 {"<param>": ["..."]}`.
 | `months` | `6` | `1`–`24` | `revenue` grafigi |
 | `low_stock` | `10` | `>= 0` | `catalog` — "kam qoldi" chegarasi |
 
-Qolgan vidjetlar (`recent_orders`, `attention`, `customers`) parametrga bog'liq emas.
+Qolgan vidjetlar (`all_time`, `recent_orders`, `attention`, `customers`) parametrga bog'liq emas.
 
 Hafta / oy / 3 oy / 6 oy / yil tugmalari:
 
@@ -51,6 +51,7 @@ Misollar:
 ```json
 {
   "summary": { ... },
+  "all_time": { ... },
   "delivered_orders": { ... },
   "received_orders": { ... },
   "registrations": { ... },
@@ -95,6 +96,36 @@ Umumiy qoidalar:
 | `new_customers` | shu davrda ro'yxatdan o'tgan mijozlar soni |
 
 `value` har doim `float` keladi (sonlar ham: `184.0`).
+
+### `all_time` — barcha vaqt uchun (biznes boshidan beri)
+
+Xuddi shu 4 ta kartochka, lekin butun tarix bo'yicha — bitta raqam, `change` yo'q. **Hech qaysi parametrga bog'liq emas** (`days`, `date_from` / `date_to`, `period` uni o'zgartirmaydi), har doim javobda keladi — alohida so'rov kerak emas.
+
+```json
+"all_time": {
+  "date_from": "2025-12-31",
+  "date_to": "2026-11-02",
+  "orders": 1842,
+  "revenue": 964500000.0,
+  "average_check": 612000.0,
+  "new_customers": 5710
+}
+```
+
+| Maydon | Izoh |
+| --- | --- |
+| `date_from` | birinchi buyurtma kuni; buyurtma hali yo'q bo'lsa — `null` |
+| `date_to` | bugun |
+| `orders` | yaratilgan **barcha** buyurtmalar soni (holatidan qat'i nazar, bekor qilinganlar ham) — `summary.orders` bilan bir xil qoida |
+| `revenue` | yakunlangan (`status=5`) buyurtmalar summasi — `summary.revenue` bilan bir xil |
+| `average_check` | yakunlangan buyurtmalarning o'rtacha summasi — `summary.average_check` bilan bir xil |
+| `new_customers` | barcha mijozlar soni (ro'yxatdan o'tganlar) — `summary.new_customers` bilan bir xil |
+
+Qoida bir xil bo'lgani uchun `orders`, `revenue`, `new_customers` har doim `summary` dagi qiymatdan **katta yoki teng**. `average_check` — o'rtacha qiymat, u kichik ham bo'lishi mumkin (masalan oxirgi 30 kunda qimmat buyurtmalar ko'p bo'lsa) — bu xato emas.
+
+`orders` va `new_customers` — butun son (`summary` dagidan farqli, `184.0` emas `184`).
+
+Test buyurtmalar alohida ajratilmaydi — buyurtmada "test" belgisi yo'q (`summary` ham ularni sanaydi).
 
 ### `delivered_orders` — yetkazilgan buyurtmalar grafigi
 

@@ -1,5 +1,5 @@
 from datetime import date, timedelta
-from django.db.models import Avg, Count, DateField, Exists, F, Max, OuterRef, Q, Subquery, Sum
+from django.db.models import Avg, Count, DateField, Exists, F, Max, Min, OuterRef, Q, Subquery, Sum
 from django.db.models.functions import Coalesce, TruncDate, TruncMonth, TruncWeek
 from django.utils import timezone
 from rest_framework.generics import GenericAPIView
@@ -73,22 +73,24 @@ def summary_range(params):
     return end - timedelta(days=params["days"] - 1), end
 
 
+def order_kpis(scope, prefix=""):
+    """Aggregates of the order KPI cards over `scope` - one rule for the period cards and the all-time ones."""
+    completed = scope & Q(status=COMPLETED)
+    return {
+        f"{prefix}orders": Count("id", filter=scope),
+        f"{prefix}revenue": Coalesce(Sum("total_price", filter=completed), 0.0),
+        f"{prefix}average_check": Coalesce(Avg("total_price", filter=completed), 0.0),
+    }
+
+
 def get_summary(start, end):
     """KPI cards over start..end (inclusive) vs the previous range of the same length."""
     days = (end - start).days + 1
     prev_start = start - timedelta(days=days)
     in_ranges = Q(created_at__date__range=(prev_start, end))
     current, previous = Q(created_at__date__gte=start), Q(created_at__date__lt=start)
-    completed = Q(status=COMPLETED)
 
-    orders = Order.objects.filter(in_ranges).aggregate(
-        orders=Count("id", filter=current),
-        prev_orders=Count("id", filter=previous),
-        revenue=Coalesce(Sum("total_price", filter=current & completed), 0.0),
-        prev_revenue=Coalesce(Sum("total_price", filter=previous & completed), 0.0),
-        average_check=Coalesce(Avg("total_price", filter=current & completed), 0.0),
-        prev_average_check=Coalesce(Avg("total_price", filter=previous & completed), 0.0),
-    )
+    orders = Order.objects.filter(in_ranges).aggregate(**order_kpis(current), **order_kpis(previous, "prev_"))
     customers = Customer.objects.filter(in_ranges).aggregate(
         new_customers=Count("id", filter=current),
         prev_new_customers=Count("id", filter=previous),
@@ -98,6 +100,18 @@ def get_summary(start, end):
     for key in ("orders", "revenue", "average_check", "new_customers"):
         data[key] = {"value": values[key], "change": percent_change(values[key], values[f"prev_{key}"])}
     return data
+
+
+def get_all_time():
+    """The KPI cards over the whole history, no filters."""
+    data = Order.objects.aggregate(**order_kpis(Q()), first_order_at=Min("created_at"))
+    first = data.pop("first_order_at")
+    return {
+        **data,
+        "new_customers": Customer.objects.count(),
+        "date_from": first and first.date(),
+        "date_to": timezone.now().date(),
+    }
 
 
 def orders_chart(orders, period):
@@ -326,7 +340,8 @@ def get_revenue(months):
 
 class DashboardAPIView(AdminViewMixin, GenericAPIView):
     """Admin home page, all widgets in one response.
-    ?days= KPI window (30) or ?date_from=&date_to= instead of it, ?period=week|month|year charts (week),
+    ?days= KPI window (30) or ?date_from=&date_to= instead of it (all_time ignores every param),
+    ?period=week|month|year charts (week),
     ?months= revenue chart (6), ?low_stock= (10)."""
     serializer_class = DashboardSerializer
     filter_backends = []
@@ -338,6 +353,7 @@ class DashboardAPIView(AdminViewMixin, GenericAPIView):
         params = params.validated_data
         data = {
             "summary": get_summary(*summary_range(params)),
+            "all_time": get_all_time(),
             "delivered_orders": get_delivered_orders(params["period"]),
             "received_orders": get_received_orders(params["period"]),
             "registrations": get_registrations(params["period"]),
