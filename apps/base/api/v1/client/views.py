@@ -38,7 +38,7 @@ class VideoViewSet(ViewSet):
         tags=["Video"]
     )
     def video_list(self, request):
-        video = Video.objects.all()
+        video = Video.objects.order_by("-created_at", "-id")
         serializer = VideoSerializer(video, many=True, context={"request": request})
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
 
@@ -156,7 +156,7 @@ class NewsViewSet(ViewSet):
         if not param_serializer.is_valid():
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=param_serializer.errors)
 
-        news = News.objects.all()
+        news = News.objects.order_by("-created_at", "-id")
         return Response(data={
             "result": get_news_paginator(response_data=news, page=param_serializer.validated_data.get("page"),
                                          page_size=param_serializer.validated_data.get("page_size"),
