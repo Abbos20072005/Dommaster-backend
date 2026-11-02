@@ -4,6 +4,7 @@ from .views import BrandViewSet, PartnerBrandViewSet, ProductBadgeViewSet, Produ
     ProductSubCategoryViewSet, ProductItemCategoryViewSet, ProductAttributeViewSet, OrderViewSet, ProductViewSet, \
     CommentViewSet, QuestionViewSet, CommentReplyViewSet, QuestionReplyViewSet, DashboardAPIView, ManagerViewSet, \
     OrderCommentViewSet, ProductModelViewSet, AddsBrandsViewSet, TodayAPIView, SaleViewSet, SalesAnalyticsAPIView, OrderStagesAPIView, \
+    OrderStatusesAPIView, ProductStatusesAPIView, \
     HomeBlockViewSet, HomePageAPIView, HomePagePublishAPIView, ProductModerationViewSet, \
     FilterPageViewSet, ProjectViewSet, ContentImportViewSet
 
@@ -37,6 +38,8 @@ router.register("content-imports", ContentImportViewSet, basename="admin_content
 urlpatterns = router.urls + [
     path("dashboard/", DashboardAPIView.as_view(), name="admin_dashboard"),
     path("dashboard/order-stages/", OrderStagesAPIView.as_view(), name="admin_dashboard_order_stages"),
+    path("dashboard/order-statuses/", OrderStatusesAPIView.as_view(), name="admin_dashboard_order_statuses"),
+    path("dashboard/product-statuses/", ProductStatusesAPIView.as_view(), name="admin_dashboard_product_statuses"),
     path("today/", TodayAPIView.as_view(), name="admin_today"),
     path("analytics/sales/", SalesAnalyticsAPIView.as_view(), name="admin_analytics_sales"),
     path("home-page/", HomePageAPIView.as_view(), name="admin_home_page"),
