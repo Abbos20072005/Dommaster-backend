@@ -64,6 +64,8 @@ from .pro import ProjectSerializer, ProjectDetailSerializer
 from .content_import import ContentExportQuerySerializer, ContentImportListSerializer, ContentImportSerializer, \
     ContentImportChangeSerializer, I18nExportQuerySerializer
 
+from .product_funnel import ProductFunnelQuerySerializer, ProductFunnelExportQuerySerializer, ProductFunnelRowSerializer
+
 __all__ = [
     "SaleProductSerializer", "SaleListSerializer", "SaleSerializer", "SaleProductReorderSerializer",
     "PENDING", "CONFIRMED", "COLLECTING", "DELIVERING", "COMPLETED", "CANCELED", "DELIVERY", "PICKUP", "PAYMENT_ON_DELIVERY", "PAID",
@@ -121,4 +123,5 @@ __all__ = [
     "ProjectSerializer", "ProjectDetailSerializer",
     "ContentExportQuerySerializer", "ContentImportListSerializer", "ContentImportSerializer",
     "ContentImportChangeSerializer", "I18nExportQuerySerializer",
+    "ProductFunnelQuerySerializer", "ProductFunnelExportQuerySerializer", "ProductFunnelRowSerializer",
 ]

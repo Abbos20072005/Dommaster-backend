@@ -2,19 +2,22 @@
 the app, one row per product (`ProductEvent`), written in the background. Purchases are not recorded: the funnel
 report reads them from the orders. Every night the events are summed up per day, product and platform
 (`ProductFunnelDaily`, kept forever) and the raw ones older than `EVENT_DAYS` are deleted."""
+import io
 import logging
 from datetime import datetime, time, timedelta
 
 from django.core.cache import cache
 from django.db import transaction
-from django.db.models import Case, CharField, Count, Q, Value, When
-from django.db.models.functions import Cast, Concat
+from django.db.models import Case, CharField, Count, DecimalField, F, IntegerField, OuterRef, Q, Subquery, Sum,     Value, When
+from django.db.models.functions import Cast, Coalesce, Concat
 from django.utils import timezone
+
+from openpyxl import Workbook
 
 from utils.background import run_in_background
 from .feed import Viewer
-from .models import CartItem, Product, ProductEvent, ProductFunnelDaily
-from .models.choices import ORDER_CHANNEL
+from .models import CartItem, Order, OrderItem, Product, ProductEvent, ProductFunnelDaily, ProductImage
+from .models.choices import ORDER_CHANNEL, ORDER_CHANNEL_ANDROID, ORDER_CHANNEL_IOS, ORDER_CHANNEL_SITE
 
 logger = logging.getLogger(__name__)
 
@@ -122,3 +125,94 @@ def nightly(days=REBUILD_DAYS, keep_days=EVENT_DAYS):
     deleted, _ = ProductEvent.objects.filter(
         created_at__lt=datetime.combine(today - timedelta(days=keep_days), time.min)).delete()
     return built, deleted
+
+
+# ---- report (admin "Savdo" page) ----
+
+ALL, SITE, APP = "all", "site", "app"
+CHANNELS = (ALL, SITE, APP)
+CHANNEL_PLATFORMS = {ALL: None, SITE: [ORDER_CHANNEL_SITE], APP: [ORDER_CHANNEL_IOS, ORDER_CHANNEL_ANDROID]}
+EVENT_COLUMNS = {"views": ProductEvent.VIEW, "add_to_cart": ProductEvent.ADD_TO_CART,
+                 "checkout_start": ProductEvent.CHECKOUT_START}
+
+
+def _count(queryset, aggregate):
+    """A correlated per-product number, 0 when there is nothing."""
+    return Coalesce(Subquery(queryset.values("product_id").annotate(n=aggregate).values("n")[:1],
+                             output_field=IntegerField()), 0)
+
+
+def report(date_from, date_to, channel=ALL):
+    """Products with any event or purchase in the range (Tashkent dates, both inclusive), annotated with the
+    columns of the report. Days before yesterday are read from the daily table, yesterday and today (not built
+    yet, or still going on) from the raw events. Purchase = a Completed order created in the range (the top
+    sales / revenue card rule), counted once per order; `purchases` = orders of the site / the app (of the
+    `channel`), `other_purchases` = orders with no channel (made in the admin panel or by an old app version)
+    — only for `channel=all`, they have no checkout_start and stay out of `incomplete` / `completion_rate`."""
+    platforms = CHANNEL_PLATFORMS[channel]
+    raw_from = max(date_from, timezone.now().date() - timedelta(days=1))
+
+    daily = ProductFunnelDaily.objects.filter(date__gte=date_from, date__lte=date_to, date__lt=raw_from)
+    raw = ProductEvent.objects.filter(created_at__gte=datetime.combine(raw_from, time.min),
+                                      created_at__lt=datetime.combine(date_to + timedelta(days=1), time.min))
+    if platforms:
+        daily, raw = daily.filter(platform__in=platforms), raw.filter(platform__in=platforms)
+    sold = OrderItem.objects.filter(order__status=Order.COMPLETED, order__created_at__date__gte=date_from,
+                                    order__created_at__date__lte=date_to)
+    own_sold = sold.filter(order__channel__in=platforms or list(PLATFORMS))
+    other_sold = sold.filter(order__channel__isnull=True) if channel == ALL else sold.none()
+
+    products = Product.objects.filter(
+        Q(id__in=daily.values("product_id")) | Q(id__in=raw.values("product_id"))
+        | Q(id__in=own_sold.values("product_id")) | Q(id__in=other_sold.values("product_id")))
+
+    columns = {
+        name: _count(daily.filter(product_id=OuterRef("pk")), Sum(name))
+        + _count(raw.filter(product_id=OuterRef("pk"), event_type=event_type), Count("id"))
+        for name, event_type in EVENT_COLUMNS.items()
+    }
+    image = ProductImage.objects.filter(product_id=OuterRef("pk")).order_by("position", "id").values("image")[:1]
+    return products.annotate(
+        **columns,
+        purchases=_count(own_sold.filter(product_id=OuterRef("pk")), Count("order_id", distinct=True)),
+        other_purchases=_count(other_sold.filter(product_id=OuterRef("pk")), Count("order_id", distinct=True)),
+        image_path=Subquery(image),
+    ).annotate(
+        incomplete=F("checkout_start") - F("purchases"),
+        completion_rate=Case(
+            When(checkout_start=0, then=None),
+            default=Cast(F("purchases") * 100.0 / F("checkout_start"), DecimalField(max_digits=9, decimal_places=1)),
+        ),
+    )
+
+
+EXPORT_COLUMNS = (
+    # (field, ru header, uz header)
+    ("id", "ID", "ID"),
+    ("name", "Наименование", "Nomi"),
+    ("articul_code", "Артикул", "Artikul"),
+    ("views", "Просмотры", "Ko'rishlar"),
+    ("add_to_cart", "Добавления в корзину", "Savatga qo'shish"),
+    ("checkout_start", "Начали оформление", "Rasmiylashtirishni boshlash"),
+    ("purchases", "Покупки", "Xaridlar"),
+    ("incomplete", "Не завершили", "Yakunlanmagan"),
+    ("completion_rate", "Доля завершённых, %", "Yakunlangan ulushi, %"),
+    ("other_purchases", "Покупки без канала (оператор)", "Kanalsiz xaridlar (operator)"),
+)
+
+
+def export_workbook(products, language="ru"):
+    """XLSX of the report rows as they are (filters and order applied by the caller, no pagination)."""
+    header = 1 if language == "ru" else 2
+    workbook = Workbook(write_only=True)
+    sheet = workbook.create_sheet("Воронка" if language == "ru" else "Voronka")
+    sheet.append([column[header] for column in EXPORT_COLUMNS])
+    for product in products.iterator(chunk_size=1000):
+        name = (product.name_uz or product.name_ru) if language == "uz" else product.name_ru
+        values = {"name": name, "completion_rate": None if product.completion_rate is None
+                  else float(product.completion_rate)}
+        sheet.append([values[field] if field in values else getattr(product, field)
+                      for field, *_ in EXPORT_COLUMNS])
+    buffer = io.BytesIO()
+    workbook.save(buffer)
+    return buffer.getvalue()

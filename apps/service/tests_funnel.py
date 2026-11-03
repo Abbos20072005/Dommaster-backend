@@ -128,3 +128,99 @@ class FunnelDailyTests(ApiTestCase):
 
         self.assertEqual((built, deleted), (1, 1))
         self.assertEqual(ProductEvent.objects.count(), 1)
+
+
+class FunnelReportTests(ApiTestCase):
+    """3 products counted by hand: daily rows (older days) + raw events (today) + completed orders."""
+    URL = "/api/v1/admin/analytics/product-funnel/"
+
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from apps.service.models import Order
+        from apps.service.tests import make_order
+
+        admin = get_user_model().objects.create_user("funnel-admin", password="x", is_staff=True)
+        self.client = APIClient()
+        self.client.force_authenticate(admin)
+
+        _, item_category = make_item_category("Asboblar")
+        self.a, self.b, self.c, self.d = (make_product(code, item_category, 1000) for code in ("RA", "RB", "RC", "RD"))
+        for product, articul in ((self.a, "ART-A"), (self.b, "ART-B"), (self.c, "ART-C")):
+            product.articul_code = articul
+            product.save(update_fields=["articul_code"])
+
+        today = timezone.now().date()
+        self.date_from = today - timedelta(days=9)
+        daily = [(self.a, "site", 10, 4, 3), (self.a, "ios", 5, 2, 1), (self.b, "site", 3, 0, 0)]
+        for product, platform, views, carts, checkouts in daily:
+            ProductFunnelDaily.objects.create(date=today - timedelta(days=5), product=product, platform=platform,
+                                              views=views, viewers=views, add_to_cart=carts, checkout_start=checkouts)
+        # outside the range
+        ProductFunnelDaily.objects.create(date=today - timedelta(days=20), product=self.a, platform="site", views=100)
+        # today: raw events
+        for product, event_type, platform in ((self.a, ProductEvent.VIEW, "site"), (self.a, ProductEvent.VIEW, "site"),
+                                              (self.a, ProductEvent.CHECKOUT_START, "android"),
+                                              (self.c, ProductEvent.VIEW, "ios")):
+            ProductEvent.objects.create(event_type=event_type, product=product, platform=platform)
+
+        customer = make_customer("+998900000073")
+        in_range = datetime.combine(today - timedelta(days=3), datetime.min.time())
+        orders = [
+            (Order.COMPLETED, "site", [(self.a, 1), (self.b, 2)], in_range),
+            (Order.COMPLETED, "ios", [(self.a, 3)], in_range),
+            (Order.COMPLETED, None, [(self.c, 1)], in_range),  # made in the admin panel
+            (Order.CANCELED, "site", [(self.a, 1)], in_range),
+            (Order.COMPLETED, "site", [(self.a, 1)], in_range - timedelta(days=20)),
+        ]
+        for status, channel, lines, created in orders:
+            order, _ = make_order(customer, lines, status=status, channel=channel)
+            Order.objects.filter(pk=order.pk).update(created_at=created)
+
+    def rows(self, **params):
+        params.setdefault("date_from", self.date_from)
+        params.setdefault("date_to", timezone.now().date())
+        response = self.client.get(self.URL, params)
+        self.assertEqual(response.status_code, 200, response.data)
+        return {row["articul_code"]: (row["views"], row["add_to_cart"], row["checkout_start"], row["purchases"],
+                                      row["incomplete"], row["completion_rate"], row["other_purchases"])
+                for row in response.data["results"]}
+
+    def test_all_channels(self):
+        self.assertEqual(self.rows(), {
+            "ART-A": (17, 6, 5, 2, 3, 40.0, 0),
+            "ART-B": (3, 0, 0, 1, -1, None, 0),
+            "ART-C": (1, 0, 0, 0, 0, None, 1),
+        })
+
+    def test_site(self):
+        self.assertEqual(self.rows(channel="site"), {
+            "ART-A": (12, 4, 3, 1, 2, 33.3, 0),
+            "ART-B": (3, 0, 0, 1, -1, None, 0),
+        })
+
+    def test_app(self):
+        self.assertEqual(self.rows(channel="app"), {
+            "ART-A": (5, 2, 2, 1, 1, 50.0, 0),
+            "ART-C": (1, 0, 0, 0, 0, None, 0),
+        })
+
+    def test_search_ordering_and_default_range(self):
+        self.assertEqual(list(self.rows(search="art-b")), ["ART-B"])
+        response = self.client.get(self.URL, {"ordering": "completion_rate"})
+        # nulls last, then by id
+        self.assertEqual([row["articul_code"] for row in response.data["results"]], ["ART-A", "ART-B", "ART-C"])
+        # default = the last 30 days
+        self.assertEqual(response.data["count"], 3)
+
+    def test_export_has_the_rows_of_the_list(self):
+        from io import BytesIO
+        from openpyxl import load_workbook
+
+        response = self.client.get(self.URL + "export/", {"date_from": self.date_from,
+                                                          "date_to": timezone.now().date(),
+                                                          "channel": "site", "language": "uz"})
+        self.assertEqual(response.status_code, 200)
+        sheet = load_workbook(BytesIO(response.content)).active
+        rows = list(sheet.iter_rows(values_only=True))
+        self.assertEqual(rows[0][:4], ("ID", "Nomi", "Artikul", "Ko'rishlar"))
+        self.assertEqual([(row[2], row[3], row[8]) for row in rows[1:]], [("ART-A", 12, 33.3), ("ART-B", 3, None)])

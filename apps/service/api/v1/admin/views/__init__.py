@@ -20,6 +20,7 @@ from .moderation import ProductModerationViewSet
 from .filter_page import FilterPageViewSet
 from .pro import ProjectViewSet
 from .content_import import ContentImportViewSet
+from .product_funnel import ProductFunnelViewSet
 
 __all__ = [
     "OrderViewSet", "ManagerViewSet", "OrderCommentViewSet", "ProductViewSet", "ProductCategoryViewSet", "ProductSubCategoryViewSet",
@@ -28,5 +29,5 @@ __all__ = [
     "DashboardAPIView", "AddsBrandsViewSet", "TodayAPIView", "SaleViewSet",
     "SalesAnalyticsAPIView", "OrderStagesAPIView", "OrderStatusesAPIView", "ProductStatusesAPIView", "TopSalesAPIView", "TopCustomersAPIView", "NewCustomersAPIView", "HomeBlockViewSet", "HomePageAPIView", "HomePagePublishAPIView",
     "ProductModerationViewSet", "FilterPageViewSet",
-    "ProjectViewSet", "ContentImportViewSet",
+    "ProjectViewSet", "ContentImportViewSet", "ProductFunnelViewSet",
 ]

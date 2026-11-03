@@ -62,4 +62,7 @@ class ProductFunnelDaily(models.Model):
         constraints = [
             models.UniqueConstraint(fields=["date", "product", "platform"], name="uniq_funnel_day_product_platform"),
         ]
-        indexes = [models.Index(fields=["date"], name="idx_funnel_day_date")]
+        indexes = [
+            models.Index(fields=["date"], name="idx_funnel_day_date"),
+            models.Index(fields=["product", "date"], name="idx_funnel_day_product_date"),
+        ]
