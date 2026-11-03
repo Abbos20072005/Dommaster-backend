@@ -4,7 +4,7 @@ from celery import shared_task
 from django.core.management import call_command
 
 from utils.background import exclusive
-from . import badges, content_import, filter_pages, merchant_feed, order_push, outbox, pickup
+from . import badges, content_import, filter_pages, funnel, merchant_feed, order_push, outbox, pickup
 
 
 @shared_task
@@ -65,3 +65,14 @@ def validate_content_import(import_id):
 @shared_task
 def apply_content_import(import_id):
     content_import.apply_import(import_id)
+
+
+@shared_task
+def record_product_events(event_type, product_ids, platform, customer_id, session_id):
+    funnel.write_events(event_type, product_ids, platform, customer_id, session_id)
+
+
+@shared_task
+@exclusive(60 * 60)
+def build_product_funnel():
+    call_command("build_product_funnel")

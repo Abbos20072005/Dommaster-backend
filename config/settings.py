@@ -379,6 +379,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "apps.service.tasks.clean_feed_log",
         "schedule": crontab(hour=4, minute=30),
     },
+    "build-product-funnel": {
+        "task": "apps.service.tasks.build_product_funnel",
+        "schedule": crontab(hour=0, minute=30),
+    },
 }
 
 # Static files (CSS, JavaScript, Images)

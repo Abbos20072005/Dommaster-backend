@@ -14,6 +14,7 @@ from .outbox import OrderOutboxEvent
 from .feedback import Comment, CommentReply, CommentImages, Questions, QuestionsReply
 from .home import HomeBlock, HomePage
 from .feed import InterestEvent, FeedImpression
+from .funnel import ProductEvent, ProductFunnelDaily
 from .moderation import ProductModeration
 from .seo import DeletedObject, FilterPage, SlugHistory
 from .pro import Project, OrderItemProjectChange
@@ -33,6 +34,7 @@ __all__ = [
     "Comment", "CommentReply", "CommentImages", "Questions", "QuestionsReply",
     "HomeBlock", "HomePage",
     "InterestEvent", "FeedImpression",
+    "ProductEvent", "ProductFunnelDaily",
     "ProductModeration",
     "FilterPage",
     "SlugHistory",

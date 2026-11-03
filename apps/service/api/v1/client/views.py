@@ -37,8 +37,9 @@ from apps.base.api.v1.client.serializers import BannerSerializer
 from apps.base.telegram import send_comment_to_telegram, send_question_to_telegram
 from utils.pyment_link import generate_link
 from apps.payment.services_pay.auth_services import AtmosAuthService, AtmosHoldService
-from apps.service import feed, filter_pages, home, merchant_feed, product_links, seo_redirects
+from apps.service import feed, filter_pages, funnel, home, merchant_feed, product_links, seo_redirects
 from apps.service.models import (
+    ProductEvent,
     HomeBlock,
     HomePage,
     ProductCategory,
@@ -68,6 +69,7 @@ from apps.service.attributes import attribute_values_prefetch, request_language
 from apps.service.product_filters import apply_attribute_filters, build_available_filters, category_filters
 from apps.service.pro import money
 from .serializers import (
+    ProductEventCreateSerializer,
     FilterPageListItemSerializer,
     FilterPageDetailSerializer,
     FilterPageResolveSerializer,
@@ -1923,7 +1925,8 @@ class CartViewSet(ViewSet):
 
     @extend_schema(
         summary="Create cart item",
-        description="Create cart item",
+        description="Create cart item. Send `platform` (site | ios | android) in the body: the addition is "
+                    "recorded for the product funnel with it.",
         request=CartItemCreateSerializer(),
         responses={200: CartSerializer()},
         tags=["Cart"],
@@ -1947,6 +1950,7 @@ class CartViewSet(ViewSet):
                     )
 
                 serializer.save()
+                funnel.record(request, ProductEvent.ADD_TO_CART, [serializer.instance.product_id])
                 resp = Response(
                     data={"result": serializer.data, "ok": True},
                     status=status.HTTP_200_OK,
@@ -1968,6 +1972,7 @@ class CartViewSet(ViewSet):
             )
 
         serializer.save()
+        funnel.record(request, ProductEvent.ADD_TO_CART, [serializer.instance.product_id])
         return Response(
             data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK
         )
@@ -2860,6 +2865,34 @@ class SeoRedirectViewSet(ViewSet):
         if result is None:
             result = {"status": "not_found", "type": entity_type, "id": None, "slug": None, "redirect": None}
         return Response(data={"result": result, "ok": True}, status=status.HTTP_200_OK)
+
+
+class ProductEventViewSet(ViewSet):
+    @extend_schema(
+        summary="Product funnel event",
+        description=(
+            "Tells the backend that a person saw a product card (`product_view` + `product_id`) or opened the "
+            "checkout (`checkout_start`: recorded for every checked item of the cart — the customer's, else the "
+            "`cart_token` cookie's). Site: send it from the browser once the page is shown, never from the SSR "
+            "server; app: when the screen opens. `platform` = site | ios | android. Guests send `X-Device-Id`. "
+            "Bots, prefetch and a repeat of the same event within 30 s are not counted. Cart additions are "
+            "recorded by `cart/item/` itself (send `platform` there), purchases come from the orders."
+        ),
+        request=ProductEventCreateSerializer(),
+        responses={200: OpenApiResponse(description="{result: \"accepted\", ok: true}")},
+        tags=["Product"],
+    )
+    def create_event(self, request):
+        serializer = ProductEventCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
+        data = serializer.validated_data
+        if data["type"] == "product_view":
+            funnel.record(request, ProductEvent.VIEW, [data["product_id"]], data["platform"])
+        else:
+            funnel.record(request, ProductEvent.CHECKOUT_START, funnel.checked_cart_product_ids(request),
+                          data["platform"])
+        return Response(data={"result": "accepted", "ok": True}, status=status.HTTP_200_OK)
 
 
 class MerchantFeedViewSet(ViewSet):

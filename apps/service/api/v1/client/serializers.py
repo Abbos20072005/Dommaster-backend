@@ -1362,3 +1362,15 @@ class FilterPageResolveSerializer(serializers.Serializer):
 
 class FilterPageResolveResultSerializer(serializers.Serializer):
     slug = serializers.CharField(allow_null=True, help_text="Open page of exactly this combination, else null")
+
+
+class ProductEventCreateSerializer(serializers.Serializer):
+    type = serializers.ChoiceField(choices=("product_view", "checkout_start"))
+    product_id = serializers.IntegerField(required=False, min_value=1,
+                                          help_text="product_view only: the product whose card was opened")
+    platform = serializers.ChoiceField(choices=ORDER_CHANNEL)
+
+    def validate(self, attrs):
+        if attrs["type"] == "product_view" and not attrs.get("product_id"):
+            raise serializers.ValidationError({"product_id": "required for product_view"})
+        return attrs
