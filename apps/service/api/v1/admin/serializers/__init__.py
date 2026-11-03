@@ -46,6 +46,8 @@ from .statuses import CURRENT_MONTH, LAST_MONTH, LAST_3_MONTHS, LAST_YEAR, CUSTO
     OrderStatusesQuerySerializer, StatusShareSerializer, \
     OrderStatusShareSerializer, OrderStatusesSerializer, PublishStatusShareSerializer, ActivityShareSerializer, \
     ProductStatusesSerializer
+from .new_customers import LAST_6_MONTHS, LAST_12_MONTHS, ALL_TIME, NEW_CUSTOMERS_PERIODS, \
+    NewCustomersQuerySerializer, NewCustomersCountSerializer, NewCustomersMonthSerializer, NewCustomersSerializer
 from .analytics import CLICK, PAYME, UZUM, CASH, CARD, OTHER, PAYMENT_KEYS, DELIVERY_KEY, PICKUP_KEY, DELIVERY_KEYS, \
     CHANNEL_KEYS, INDIVIDUAL, B2B, SEGMENTS, SalesChannelSerializer, SalesAnalyticsQuerySerializer, RateSerializer, SalesSummarySerializer, SalesChartPointSerializer, \
     SalesChartSerializer, SalesCategorySerializer, SalesShareSerializer, SalesPaymentMethodSerializer, \
@@ -107,7 +109,8 @@ __all__ = [
     "StageMetricSerializer", "OrderStagesMonthSerializer", "OrderStagesSerializer",
     "CURRENT_MONTH", "LAST_MONTH", "LAST_3_MONTHS", "LAST_YEAR", "CUSTOM", "STATUS_PERIODS", "OrderStatusesQuerySerializer", "StatusShareSerializer",
     "OrderStatusShareSerializer", "OrderStatusesSerializer", "PublishStatusShareSerializer", "ActivityShareSerializer",
-    "ProductStatusesSerializer",
+    "ProductStatusesSerializer", "LAST_6_MONTHS", "LAST_12_MONTHS", "ALL_TIME", "NEW_CUSTOMERS_PERIODS",
+    "NewCustomersQuerySerializer", "NewCustomersCountSerializer", "NewCustomersMonthSerializer", "NewCustomersSerializer",
     "HomeBlockBannerSerializer", "HomeBlockSaleSerializer", "HomeBlockPageSerializer", "HomeBlockSerializer",
     "HomeBlockReorderSerializer", "HomePageSerializer", "HomePagePublishSerializer",
     "ModerationStaffSerializer", "ModerationProductSerializer", "ModerationProductPreviewSerializer", "ReadinessCheckSerializer", "ReadinessAttributeSerializer", "ReadinessShortSerializer", "ReadinessSerializer",
