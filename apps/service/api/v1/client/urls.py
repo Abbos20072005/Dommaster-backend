@@ -18,6 +18,7 @@ from .views import (
     ProductEventViewSet,
 )
 from .pro_views import ProViewSet
+from .assistant_views import AssistantViewSet
 
 urlpatterns = [
     path(
@@ -303,4 +304,8 @@ urlpatterns = [
     path("pro/orders/unlinked/", ProViewSet.as_view({"get": "unlinked_orders"}), name="pro_unlinked_orders"),
     path("pro/orders/<int:pk>/link/", ProViewSet.as_view({"post": "order_link"}), name="pro_order_link"),
     path("pro/orders/<int:pk>/unlink/", ProViewSet.as_view({"post": "order_unlink"}), name="pro_order_unlink"),
+    # AI assistant (apps/service/assistant/); public, the WebSocket is ws/assistant/ (apps/service/routing.py)
+    path("assistant/chat/", AssistantViewSet.as_view({"post": "chat"}), name="assistant_chat"),
+    path("assistant/conversations/<int:pk>/", AssistantViewSet.as_view({"get": "conversation"}),
+         name="assistant_conversation"),
 ]

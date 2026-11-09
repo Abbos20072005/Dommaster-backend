@@ -67,6 +67,7 @@ from apps.service.models import (
 )
 from apps.service.attributes import attribute_values_prefetch, request_language
 from apps.service.product_filters import apply_attribute_filters, build_available_filters, category_filters
+from apps.service.search import search_products
 from apps.service.pro import money
 from .serializers import (
     ProductEventCreateSerializer,
@@ -1101,23 +1102,7 @@ class ProductViewSet(ViewSet):
                 available_filters, quick_filters = category_filters(item_category, language)
 
         if q and not brand:
-            products = products.select_related("brand").annotate(
-                sim_name=TrigramSimilarity("name", q),
-                sim_name_uz=TrigramSimilarity("name_uz", q),
-                sim_name_ru=TrigramSimilarity("name_ru", q),
-                sim_brand_name=TrigramSimilarity("brand__name", q),
-                sim_brand_uz=TrigramSimilarity("brand__name_uz", q),
-                sim_brand_ru=TrigramSimilarity("brand__name_ru", q),
-            ).annotate(
-                similarity=Greatest(
-                    "sim_name", "sim_name_uz", "sim_name_ru",
-                    "sim_brand_name", "sim_brand_uz", "sim_brand_ru",
-                )
-            ).filter(
-                Q(similarity__gt=0.155) |
-                Q(name__icontains=q) | Q(name_uz__icontains=q) | Q(name_ru__icontains=q) |
-                Q(brand__name__icontains=q) | Q(brand__name_uz__icontains=q) | Q(brand__name_ru__icontains=q)
-            ).order_by("-similarity", sort)
+            products = search_products(products, q).order_by("-similarity", sort)
         elif sale_id and not sort_by:
             # products of a sale: in the order set in the admin panel
             products = products.annotate(_sale_position=SaleProduct.position_of(sale_id)).order_by(

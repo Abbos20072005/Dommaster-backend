@@ -43,6 +43,9 @@ class ErrorCodes(Enum):
     PROJECT_ARCHIVED = 38
     ORDER_CANCELED = 39
     GONE = 40
+    ASSISTANT_DISABLED = 41
+    ASSISTANT_LIMIT_EXCEEDED = 42
+    ASSISTANT_UNAVAILABLE = 43
 
 
 error_messages = {
@@ -88,6 +91,9 @@ error_messages = {
     38: {"result": "Project is archived", "http_status": status.HTTP_400_BAD_REQUEST},
     39: {"result": "Order is canceled", "http_status": status.HTTP_400_BAD_REQUEST},
     40: {"result": "Resource was deleted", "http_status": status.HTTP_410_GONE},
+    41: {"result": "The assistant is switched off", "http_status": status.HTTP_503_SERVICE_UNAVAILABLE},
+    42: {"result": "Daily limit of assistant messages is used up", "http_status": status.HTTP_429_TOO_MANY_REQUESTS},
+    43: {"result": "The assistant could not answer, try again later", "http_status": status.HTTP_503_SERVICE_UNAVAILABLE},
 }
 
 

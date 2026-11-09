@@ -19,6 +19,7 @@ from .moderation import ProductModeration
 from .seo import DeletedObject, FilterPage, SlugHistory
 from .pro import Project, OrderItemProjectChange
 from .content_import import ContentImport, ContentImportChange
+from .assistant import AssistantConversation, AssistantMessage
 
 __all__ = [
     "ORDER_STATUS", "PAYMENT_STATUS", "DELIVERY_TYPE", "PAYMENT_TYPE", "CASH_PAYMENT_METHOD", "ORDER_CHANNEL",
@@ -41,4 +42,5 @@ __all__ = [
     "DeletedObject",
     "Project", "OrderItemProjectChange",
     "ContentImport", "ContentImportChange",
+    "AssistantConversation", "AssistantMessage",
 ]

@@ -9,6 +9,7 @@ from .models import Product, ProductCategory, ProductSubCategory, ProductItemCat
     ProductAttribute, ProductAttributeOption, ProductItemCategoryAttribute, ProductAttributeValue, Manager, \
     OrderComment, RelatedProduct, AlternativeProduct, CrossSellProduct, ProductModeration
 from .models import Project, OrderItemProjectChange
+from .models import AssistantConversation, AssistantMessage
 from .signals import clear_category_filter_cache
 from unfold.admin import ModelAdmin, TabularInline
 from apps.base.admin_actions import make_visible, make_hidden, activate, deactivate, get_model_fields, \
@@ -585,3 +586,24 @@ class OrderItemProjectChangeAdmin(ReadOnlyAdmin):
     list_display_links = ("id", "order_item")
     search_fields = ("order__id", "customer__phone_number")
     list_filter = ("action", "created_at")
+
+
+class AssistantMessageInline(TabularInline):
+    model = AssistantMessage
+    fields = ("role", "text", "product_ids", "tool_calls", "input_tokens", "output_tokens", "latency_ms", "error",
+              "created_at")
+    readonly_fields = fields
+    extra = 0
+    can_delete = False
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(AssistantConversation)
+class AssistantConversationAdmin(ReadOnlyAdmin):
+    list_display = get_model_fields(AssistantConversation)
+    list_display_links = ("id",)
+    search_fields = ("customer__phone_number", "session_id", "messages__text")
+    list_filter = ("language", "platform", "created_at")
+    inlines = (AssistantMessageInline,)

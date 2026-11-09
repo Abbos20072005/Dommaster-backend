@@ -26,7 +26,8 @@ ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '127.0.0.1').split(",")
 # Application definition
 
 INSTALLED_APPS = [
-    "unfold",                           # ← обязательно первым
+    "daphne",                           # ASGI runserver (WebSocket of the AI assistant); before staticfiles
+    "unfold",                           # ← обязательно первым после daphne
     "unfold.contrib.filters",          # опционально — кастомные фильтры
     "unfold.contrib.forms",            # опционально — красивые формы
     "unfold.contrib.inlines",          # опционально — инлайны
@@ -48,6 +49,7 @@ INSTALLED_APPS = [
     "drf_spectacular",
     "django_filters",
     "corsheaders",
+    "channels",                         # WebSocket of the AI assistant (apps/service/assistant/consumers.py)
     "rest_framework_simplejwt",
     "modeltranslation",
     'ckeditor',
@@ -116,6 +118,8 @@ CORS_ALLOW_HEADERS = [
 ]
 
 WSGI_APPLICATION = 'config.wsgi.application'
+# the WebSocket of the AI assistant (Django Channels, daphne); plain HTTP stays on gunicorn (WSGI)
+ASGI_APPLICATION = 'config.asgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
@@ -628,3 +632,11 @@ UNFOLD = {
         },
     ],
 }
+
+# AI shopping assistant (Gemini, apps/service/assistant/)
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
+ASSISTANT_ENABLED = int(os.getenv("ASSISTANT_ENABLED", 0))
+# messages per day: a guest (device id / cart token / IP) and a logged in customer
+ASSISTANT_DAILY_LIMIT_GUEST = int(os.getenv("ASSISTANT_DAILY_LIMIT_GUEST", 20))
+ASSISTANT_DAILY_LIMIT_CUSTOMER = int(os.getenv("ASSISTANT_DAILY_LIMIT_CUSTOMER", 60))
