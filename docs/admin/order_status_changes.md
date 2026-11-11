@@ -19,6 +19,10 @@
 - Qoidalar ma'nosi bo'yicha o'zgarmadi: `4` faqat pickup buyurtmaga va faqat `2` dan qo'yiladi; `4` dan faqat `5` yoki `6`; mahsulotlarni faqat `0` da o'zgartirish mumkin; `2` / `3` / `4` dagi buyurtmani o'chirib bo'lmaydi.
 - Har status o'zgarishi endi jurnalga yoziladi (admin panel, 1C, to'lov, mijoz): "Buyurtma bosqichlari vaqti" grafigi shundan hisoblanadi (`dashboard_order_stages.md`). Jurnal 02.11.2026 dan boshlanadi.
 
+## 02.11.2026 dan oldingi buyurtmalar
+
+Migration bazadagi eski buyurtmalarning raqamini o'zgartirmagan edi: 02.11.2026 dan oldin yaratilgan buyurtmalar eski kod bilan qolgan va panelda noto'g'ri ko'ringan (masalan, bekor qilingan `4` "Olib ketishga tayyor" bo'lib chiqqan, yakunlangan `3` esa "Yetkazilmoqda" bo'lib chiqqan). Ular `manage.py convert_old_order_statuses` bilan yangi kodlarga o'tkaziladi (eski kod → yangi kod, yuqoridagi jadval bo'yicha). Shundan keyin `orders/`, filtrlar, `stats/` va dashboard eski buyurtmalarni ham to'g'ri ko'rsatadi. Frontda hech narsa qilish kerak emas. Bu buyurtmalarning status jurnali yo'q, shu sababli ular "Buyurtma bosqichlari vaqti" grafigiga tushmaydi.
+
 ## Nima o'zgardi
 
 | Endpoint | Oldin | Hozir | Eski front buziladimi |
