@@ -37,7 +37,7 @@ from apps.base.api.v1.client.serializers import BannerSerializer
 from apps.base.telegram import send_comment_to_telegram, send_question_to_telegram
 from utils.pyment_link import generate_link
 from apps.payment.services_pay.auth_services import AtmosAuthService, AtmosHoldService
-from apps.service import feed, filter_pages, funnel, home, merchant_feed, product_links, seo_redirects
+from apps.service import feed, filter_pages, funnel, home, merchant_feed, product_links, search_log, seo_redirects
 from apps.service.models import (
     ProductEvent,
     HomeBlock,
@@ -71,6 +71,8 @@ from apps.service.search import search_products
 from apps.service.pro import money
 from .serializers import (
     ProductEventCreateSerializer,
+    SearchRequestCreateSerializer,
+    SearchRequestSerializer,
     FilterPageListItemSerializer,
     FilterPageDetailSerializer,
     FilterPageResolveSerializer,
@@ -607,18 +609,8 @@ class ProductViewSet(ViewSet):
         query = cache.get(cache_key)
         if not query:
             product = list(
-                Product.objects.filter(is_active=True).annotate(
-                    similarity=Greatest(
-                        TrigramSimilarity("name", param_data),
-                        TrigramSimilarity("name_uz", param_data),
-                        TrigramSimilarity("name_ru", param_data),
-                    )
-                )
-                .filter(
-                    Q(similarity__gt=0.1) |
-                    Q(name__icontains=param_data) | Q(name_uz__icontains=param_data) | Q(name_ru__icontains=param_data)
-                )
-                .order_by("-similarity")
+                search_products(Product.objects.filter(is_active=True), param_data)
+                .order_by("-similarity", "id")
                 .values_list("name", flat=True)[:5]
             )
 
@@ -1093,7 +1085,8 @@ class ProductViewSet(ViewSet):
         products = apply_attribute_filters(Product.objects.filter(filters), filters_data)
 
         language = request_language(request)
-        has_filters = any([q, brand, price_from, price_to, sale_id, filters_data, category, sub_category])
+        has_filters_besides_q = any([brand, price_from, price_to, sale_id, filters_data, category, sub_category])
+        has_filters = bool(q) or has_filters_besides_q
         available_filters, quick_filters = [], []
         if item_category:
             if has_filters:
@@ -1132,6 +1125,8 @@ class ProductViewSet(ViewSet):
         )
         if q and page == 1:
             feed.record_search(request, q, search_cat_ids, result["totalElements"])
+            if not result["totalElements"] and not (has_filters_besides_q or item_category):
+                search_log.record_not_found(request, q, language, serializer.validated_data.get("platform"))
 
         return Response(
             data={
@@ -2878,6 +2873,32 @@ class ProductEventViewSet(ViewSet):
             funnel.record(request, ProductEvent.CHECKOUT_START, funnel.checked_cart_product_ids(request),
                           data["platform"])
         return Response(data={"result": "accepted", "ok": True}, status=status.HTTP_200_OK)
+
+
+class SearchRequestViewSet(ViewSet):
+    @extend_schema(
+        summary="Leave a request for a product the search did not find",
+        description=(
+            "\"Не нашли — оставьте заявку\": `query` = what was searched (the search text, or what the customer "
+            "wrote), `phone_number` (998XXXXXXXXX), `company` optional, `platform` site / ios / android. A logged-in "
+            "customer is attached by the token. The request goes to the managers (staff Telegram group) and to the "
+            "admin panel. At most 5 requests an hour from one IP (error 45)."
+        ),
+        request=SearchRequestCreateSerializer(),
+        responses={200: SearchRequestSerializer()},
+        tags=["Product"],
+    )
+    def create_request(self, request):
+        serializer = SearchRequestCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
+        forwarded = (request.META.get("HTTP_X_FORWARDED_FOR") or "").split(",")[0].strip()
+        if not search_log.request_allowed(forwarded or request.META.get("REMOTE_ADDR") or ""):
+            raise CustomApiException(error_code=ErrorCodes.SEARCH_REQUEST_TOO_FREQUENT)
+        with transaction.atomic():
+            search_request = search_log.create_request(request, serializer.validated_data, request_language(request))
+        return Response(data={"result": SearchRequestSerializer(search_request).data, "ok": True},
+                        status=status.HTTP_200_OK)
 
 
 class MerchantFeedViewSet(ViewSet):

@@ -1,7 +1,7 @@
 import math
 
 from ckeditor.fields import RichTextField
-from django.contrib.postgres.indexes import GinIndex
+from django.contrib.postgres.indexes import GinIndex, OpClass
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 
@@ -9,6 +9,7 @@ from abstract_model.base_model import BaseModel
 from apps.base.models import MarketBranch
 from .catalog import Brand, ProductModel, ProductItemCategory, ProductAttribute, SeoFieldsMixin
 from .choices import PUBLISH_STATUS, PUBLISH_STATUS_DRAFT
+from apps.service.search import product_search_text
 
 
 class Product(SeoFieldsMixin, BaseModel):
@@ -111,6 +112,8 @@ class Product(SeoFieldsMixin, BaseModel):
             GinIndex(fields=['name'], opclasses=['gin_trgm_ops'], name='idx_product_name_trgm'),
             GinIndex(fields=['name_uz'], opclasses=['gin_trgm_ops'], name='idx_product_name_uz_trgm'),
             GinIndex(fields=['name_ru'], opclasses=['gin_trgm_ops'], name='idx_product_name_ru_trgm'),
+            # the client search (apps/service/search.py)
+            GinIndex(OpClass(product_search_text(), name='gin_trgm_ops'), name='idx_product_search_text'),
             models.Index(fields=['is_active'], name='idx_product_is_active'),
             models.Index(fields=['brand'], name='idx_product_brand'),
             models.Index(fields=['product_item_category'], name='idx_product_item_cat'),

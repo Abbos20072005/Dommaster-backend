@@ -66,6 +66,9 @@ from .content_import import ContentExportQuerySerializer, ContentImportListSeria
 
 from .product_funnel import ProductFunnelQuerySerializer, ProductFunnelExportQuerySerializer, ProductFunnelRowSerializer
 
+from .search import SearchSynonymSerializer, NotFoundSearchQuerySerializer, NotFoundSearchExportQuerySerializer, \
+    NotFoundSearchRowSerializer, SearchRequestCustomerSerializer, SearchRequestAdminSerializer
+
 __all__ = [
     "SaleProductSerializer", "SaleListSerializer", "SaleSerializer", "SaleProductReorderSerializer",
     "PENDING", "CONFIRMED", "COLLECTING", "DELIVERING", "COMPLETED", "CANCELED", "DELIVERY", "PICKUP", "PAYMENT_ON_DELIVERY", "PAID",
@@ -124,4 +127,6 @@ __all__ = [
     "ContentExportQuerySerializer", "ContentImportListSerializer", "ContentImportSerializer",
     "ContentImportChangeSerializer", "I18nExportQuerySerializer",
     "ProductFunnelQuerySerializer", "ProductFunnelExportQuerySerializer", "ProductFunnelRowSerializer",
+    "SearchSynonymSerializer", "NotFoundSearchQuerySerializer", "NotFoundSearchExportQuerySerializer",
+    "NotFoundSearchRowSerializer", "SearchRequestCustomerSerializer", "SearchRequestAdminSerializer",
 ]

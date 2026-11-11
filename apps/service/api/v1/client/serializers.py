@@ -411,6 +411,8 @@ class FilterSerializer(PaginationSerializer):
     item_category = serializers.IntegerField(required=False)
     sale_id = serializers.IntegerField(required=False)
     filters = serializers.JSONField(required=False, default=dict)
+    platform = serializers.ChoiceField(choices=ORDER_CHANNEL, required=False,
+                                       help_text="site / ios / android: stored with a search that found nothing")
 
     def validate(self, attrs):
         price_from = attrs.get("price_from")
@@ -1374,3 +1376,35 @@ class ProductEventCreateSerializer(serializers.Serializer):
         if attrs["type"] == "product_view" and not attrs.get("product_id"):
             raise serializers.ValidationError({"product_id": "required for product_view"})
         return attrs
+
+
+class SearchRequestCreateSerializer(serializers.Serializer):
+    query = serializers.CharField(max_length=500, help_text="What the customer was looking for")
+    phone_number = serializers.CharField(max_length=20, help_text="998XXXXXXXXX (12 digits, '+', spaces allowed)")
+    company = serializers.CharField(max_length=255, required=False, allow_blank=True, default="")
+    platform = serializers.ChoiceField(choices=ORDER_CHANNEL, required=False, help_text="site / ios / android")
+
+    def validate_query(self, value):
+        if not value.strip():
+            raise serializers.ValidationError("empty")
+        return value.strip()
+
+    def validate_phone_number(self, value):
+        from apps.authorization.utils import normalize_uz_phone
+        from django.core.exceptions import ValidationError
+
+        try:
+            return normalize_uz_phone(value)
+        except ValidationError as error:
+            raise serializers.ValidationError(error.messages)
+
+    def validate_company(self, value):
+        return value.strip()
+
+
+class SearchRequestSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    query = serializers.CharField()
+    phone_number = serializers.CharField()
+    company = serializers.CharField()
+    created_at = serializers.DateTimeField()

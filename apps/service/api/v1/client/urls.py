@@ -16,6 +16,7 @@ from .views import (
     MerchantFeedViewSet,
     SeoRedirectViewSet,
     ProductEventViewSet,
+    SearchRequestViewSet,
 )
 from .pro_views import ProViewSet
 from .assistant_views import AssistantViewSet
@@ -205,6 +206,7 @@ urlpatterns = [
         name="filter_page_detail",
     ),
     path("events/", ProductEventViewSet.as_view({"post": "create_event"}), name="product_event_create"),
+    path("search/requests/", SearchRequestViewSet.as_view({"post": "create_request"}), name="search_request_create"),
     path("seo/resolve/", SeoRedirectViewSet.as_view({"get": "resolve"}), name="seo_resolve"),
     path("feeds/google.xml", MerchantFeedViewSet.as_view({"get": "google_feed"}), name="merchant_feed_google"),
     path("feeds/yandex.yml", MerchantFeedViewSet.as_view({"get": "yandex_feed"}), name="merchant_feed_yandex"),
