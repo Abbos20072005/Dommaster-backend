@@ -46,6 +46,7 @@ class ErrorCodes(Enum):
     ASSISTANT_DISABLED = 41
     ASSISTANT_LIMIT_EXCEEDED = 42
     ASSISTANT_UNAVAILABLE = 43
+    ASSISTANT_TOO_FREQUENT = 44
 
 
 error_messages = {
@@ -94,6 +95,7 @@ error_messages = {
     41: {"result": "The assistant is switched off", "http_status": status.HTTP_503_SERVICE_UNAVAILABLE},
     42: {"result": "Daily limit of assistant messages is used up", "http_status": status.HTTP_429_TOO_MANY_REQUESTS},
     43: {"result": "The assistant could not answer, try again later", "http_status": status.HTTP_503_SERVICE_UNAVAILABLE},
+    44: {"result": "Too many messages, wait a minute", "http_status": status.HTTP_429_TOO_MANY_REQUESTS},
 }
 
 

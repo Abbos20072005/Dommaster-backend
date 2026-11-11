@@ -640,3 +640,17 @@ ASSISTANT_ENABLED = int(os.getenv("ASSISTANT_ENABLED", 0))
 # messages per day: a guest (device id / cart token / IP) and a logged in customer
 ASSISTANT_DAILY_LIMIT_GUEST = int(os.getenv("ASSISTANT_DAILY_LIMIT_GUEST", 20))
 ASSISTANT_DAILY_LIMIT_CUSTOMER = int(os.getenv("ASSISTANT_DAILY_LIMIT_CUSTOMER", 60))
+# messages per minute of one guest / customer; guests also per IP (a new device id does not reset it)
+ASSISTANT_MINUTE_LIMIT = int(os.getenv("ASSISTANT_MINUTE_LIMIT", 6))
+ASSISTANT_IP_MINUTE_LIMIT = int(os.getenv("ASSISTANT_IP_MINUTE_LIMIT", 20))
+ASSISTANT_IP_DAILY_LIMIT = int(os.getenv("ASSISTANT_IP_DAILY_LIMIT", 200))
+GEMINI_TEMPERATURE = float(os.getenv("GEMINI_TEMPERATURE", 0.3))
+GEMINI_MAX_OUTPUT_TOKENS = int(os.getenv("GEMINI_MAX_OUTPUT_TOKENS", 1024))
+# USD per 1M tokens of GEMINI_MODEL (thinking tokens are output); set them to the model's price list
+GEMINI_INPUT_PRICE_USD = float(os.getenv("GEMINI_INPUT_PRICE_USD", 0.10))
+GEMINI_OUTPUT_PRICE_USD = float(os.getenv("GEMINI_OUTPUT_PRICE_USD", 0.40))
+# spend of the calendar month / day (USD): warning -> staff Telegram group; budget -> the assistant stops
+# until the next month / day (0 = no limit)
+ASSISTANT_BUDGET_WARNING_USD = float(os.getenv("ASSISTANT_BUDGET_WARNING_USD", 50))
+ASSISTANT_MONTHLY_BUDGET_USD = float(os.getenv("ASSISTANT_MONTHLY_BUDGET_USD", 60))
+ASSISTANT_DAILY_BUDGET_USD = float(os.getenv("ASSISTANT_DAILY_BUDGET_USD", 2))

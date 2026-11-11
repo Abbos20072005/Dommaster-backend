@@ -44,6 +44,13 @@ class AssistantMessage(BaseModel):
     input_tokens = models.PositiveIntegerField(default=0, verbose_name="Входные токены")
     output_tokens = models.PositiveIntegerField(default=0, verbose_name="Выходные токены")
     latency_ms = models.PositiveIntegerField(default=0, verbose_name="Время ответа, мс")
+    # the answer: GEMINI_MODEL it was asked of and its price in USD (tokens × GEMINI_*_PRICE_USD at that time)
+    model = models.CharField(max_length=100, blank=True, default="", verbose_name="Модель")
+    cost_usd = models.DecimalField(max_digits=12, decimal_places=8, default=0, verbose_name="Стоимость, USD")
+    # the customer's message: a phone / card number in it was masked before saving and sending to Gemini
+    pii_masked = models.BooleanField(default=False, verbose_name="Личные данные скрыты")
+    # the answer: the client shows the "contact the operator" button under it
+    show_operator = models.BooleanField(default=False, verbose_name="Кнопка оператора")
     # "" = answered; otherwise why the model gave no answer
     error = models.CharField(max_length=500, blank=True, default="", verbose_name="Ошибка")
 
@@ -54,3 +61,6 @@ class AssistantMessage(BaseModel):
         verbose_name = "Сообщение AI ассистента"
         verbose_name_plural = "Сообщения AI ассистента"
         ordering = ("id",)
+        indexes = [
+            models.Index(fields=["created_at"], name="idx_assistmsg_created"),
+        ]

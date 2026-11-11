@@ -18,14 +18,34 @@ Send as everywhere: `Authorization` (if logged in), `Accept-Language` (uz / ru),
 ## Rules for the app
 
 - **Product cards** are in `products` (same shape as [`products/`](products_list.md), `ProductSerializer`, live
-  price and stock). Show them under the answer text. The text never contains prices you must trust — the card does.
+  price and stock) + **`stock_status`** for the badge of the card. Show them under the answer text. The text never
+  contains prices you must trust — the card does. The link of a card = the product page `/product/<slug>`.
+
+  | `stock_status` | badge |
+  |---|---|
+  | `in_stock` | «В наличии» / «Mavjud» |
+  | `low` | «Мало» / «Kam qoldi» (≤ 10) |
+  | `check` | «Уточните наличие» / «Mavjudligini tekshiring» — the stock number from 1C is not reliable (≥ 500, a placeholder), the assistant never promises it |
+  | `out_of_stock` | «Нет в наличии» / «Mavjud emas» |
+- **Operator button**: `operator: true` → show «Operator bilan bog'lanish» / «Связаться с оператором» under the
+  answer. The assistant sets it when a person must help (order status / changes, payment, delivery, returns,
+  complaints, nothing found after searching, a masked card / phone). The button opens the contact sheet — phone,
+  Telegram, working hours from `GET /api/v1/base/info/` (`phone_number`, `telegram_support`, `working_hours`).
+  The answer text never contains the operator's phone or links.
+- **Personal data**: phone and card numbers in the message are **masked before they are saved or sent to the
+  AI** (`8600 **** **** 9012`, `+998 90 *** ** 67`). `question.text` is the message as saved — replace the
+  customer's bubble with it; `question.pii_masked: true` → show the notice «Xavfsizlik uchun karta raqami va SMS
+  kodni yozmang» and the operator button.
 - The text is plain text (no markdown, no links). It has no product ids or markers.
 - **Conversation**: the first answer returns `conversation_id`; send it with the next messages, the assistant
   remembers the last 10 messages. Start a new chat = do not send it. A `conversation_id` that is not the caller's
   is ignored (a new conversation starts).
 - **Who the caller is**: the customer (token), else `X-Device-Id`, else the `cart_token` cookie, else the IP.
   A guest's conversations belong to that device id — send the same one every time.
-- **Daily limit**: 20 messages a day for a guest, 60 for a logged in customer (may change) → error `42`.
+- **Limits** (may change): 6 messages a minute → error `44`; a day 20 for a guest, 60 for a logged in customer →
+  error `42`. A guest is also counted by the IP (20 a minute, 200 a day), so a new `X-Device-Id` does not reset it.
+- **Budget**: when the month's / day's AI budget is spent the assistant answers error `41` until the next month /
+  day — show the "switched off" screen with the operator contacts (`base/info/`).
 - Message: 1–1000 characters.
 
 ## POST assistant/chat/
@@ -45,12 +65,23 @@ Send as everywhere: `Authorization` (if logged in), `Accept-Language` (uz / ru),
   "result": {
     "conversation_id": 15,
     "message_id": 342,
+    "question": { "id": 341, "text": "perforator kerak, 30 mln gacha", "pii_masked": false },
     "text": "Uy ishlari uchun Bosch GBH 2-26 mos keladi: 800 Vt, beton uchun yetarli. Arzonroq variant — Makita HR2470.",
-    "products": [ { "id": 578, "name": "Perforator Bosch GBH 2-26", "price": 1500000.0, "discount_price": 1200000.0, "images": [ ... ], ... } ]
+    "operator": false,
+    "products": [ { "id": 578, "name": "Perforator Bosch GBH 2-26", "price": 1500000.0, "discount_price": 1200000.0, "images": [ ... ], ..., "stock_status": "check" } ]
   },
   "ok": true
 }
 ```
+
+| Field | |
+|---|---|
+| `conversation_id` | send it with the next message |
+| `message_id` | id of the answer |
+| `question` | `{id, text, pii_masked}` — the customer's message as saved (phone / card numbers masked) |
+| `text` | the answer, plain text |
+| `operator` | `true` → show the operator button under the answer |
+| `products` | product cards (`ProductSerializer` + `stock_status`), 0–8 |
 
 `products` may be empty (the assistant asked a question, or nothing was found).
 
@@ -75,19 +106,19 @@ Client → server (one JSON message per question):
 Server → client, in this order:
 
 ```json
-{ "type": "start", "conversation_id": 15, "message_id": 342 }
+{ "type": "start", "conversation_id": 15, "message_id": 342, "question": { "id": 341, "text": "perforator kerak", "pii_masked": false } }
 { "type": "tool", "name": "search_products" }
 { "type": "delta", "text": "Uy ishlari uchun " }
 { "type": "delta", "text": "Bosch GBH 2-26 mos keladi..." }
-{ "type": "done", "conversation_id": 15, "message_id": 342, "text": "...", "products": [ ... ] }
+{ "type": "done", "conversation_id": 15, "message_id": 342, "question": { ... }, "text": "...", "operator": false, "products": [ ... ] }
 ```
 
 | Type | |
 |---|---|
-| `start` | the question is accepted; keep `conversation_id` |
+| `start` | the question is accepted; keep `conversation_id`, replace the customer's bubble with `question.text` |
 | `tool` | the assistant is searching (0 or more times) — show "Qidiryapman…" |
 | `delta` | the next piece of the text: append it |
-| `done` | the end: **replace** the streamed text with `done.text` (the final, cleaned one) and show `products` |
+| `done` | the end: **replace** the streamed text with `done.text` (the final, cleaned one), show `products` and, when `operator` is true, the operator button |
 | `error` | `{"type": "error", "error_code": 42, "detail": "..."}` — the answer is over |
 
 One question at a time per socket: a `message` sent before `done` / `error` gets an `error` with code `5`.
@@ -101,8 +132,8 @@ The socket stays open between questions; reconnect after a network drop and keep
   "result": {
     "conversation_id": 15,
     "messages": [
-      { "id": 341, "role": "user", "text": "perforator kerak", "created_at": "2026-11-09T12:00:00", "products": [] },
-      { "id": 342, "role": "assistant", "text": "...", "created_at": "2026-11-09T12:00:04", "products": [ ... ] }
+      { "id": 341, "role": "user", "text": "perforator kerak", "pii_masked": false, "operator": false, "created_at": "2026-11-09T12:00:00", "products": [] },
+      { "id": 342, "role": "assistant", "text": "...", "pii_masked": false, "operator": true, "created_at": "2026-11-09T12:00:04", "products": [ ... ] }
     ]
   },
   "ok": true
@@ -116,6 +147,7 @@ Oldest first, failed answers left out. Another customer's / device's conversatio
 | `error_code` | HTTP | |
 |---|---|---|
 | 5 | 400 | bad request (empty message, too long, a second message on the socket) |
-| 41 | 503 | the assistant is switched off — hide the entry point |
+| 41 | 503 | the assistant is switched off (or its budget is spent) — "Yordamchi vaqtincha ishlamayapti" + operator contacts |
 | 42 | 429 | daily limit used up — "Bugungi limit tugadi, ertaga yozing" |
 | 43 | 503 | the assistant could not answer now (AI service error) — "Qayta urinib ko'ring" |
+| 44 | 429 | too many messages in a minute — "Biroz kuting va qayta yozing" |

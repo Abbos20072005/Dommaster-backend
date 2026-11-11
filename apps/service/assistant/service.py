@@ -7,15 +7,15 @@ returned for this answer, so the card (with the live price) is always a real, ac
 import logging
 import re
 import time
-from datetime import date
 
 from django.conf import settings
 from django.core.cache import cache
 from django.db.models import F
+from django.utils import timezone
 from google.genai import types
 
 from apps.service.models import AssistantConversation, AssistantMessage, Product
-from . import gemini, prompts, tools
+from . import budget, gemini, pii, prompts, tools
 from .gemini import AssistantError
 
 logger = logging.getLogger(__name__)
@@ -24,11 +24,11 @@ MAX_TOOL_ROUNDS = 4     # tool calls of one answer; the next round must answer w
 HISTORY_MESSAGES = 10   # earlier messages of the conversation sent to the model
 MAX_PRODUCTS = 8        # product cards of one answer
 MESSAGE_MAX_LENGTH = 1000
-TEMPERATURE = 0.3
-MAX_OUTPUT_TOKENS = 1024
 LIMIT_TTL = 2 * 24 * 3600
+MINUTE_TTL = 120
 
 MARKER = re.compile(r"\[\[\s*p\s*:\s*(\d+)\s*\]\]")
+OPERATOR_MARKER = re.compile(r"\[\[\s*operator\s*\]\]", re.IGNORECASE)
 MARKER_MAX_LENGTH = 24  # "[[" not closed within this many chars is plain text
 
 FALLBACK_TEXT = {
@@ -42,11 +42,16 @@ class AssistantDisabled(Exception):
 
 
 class LimitExceeded(Exception):
-    pass
+    """The daily limit is used up."""
+
+
+class TooFrequent(LimitExceeded):
+    """The per-minute limit is used up."""
 
 
 def check_enabled():
-    if not settings.ASSISTANT_ENABLED:
+    """AssistantDisabled when switched off or the month's / day's Gemini budget is spent."""
+    if not settings.ASSISTANT_ENABLED or budget.exhausted():
         raise AssistantDisabled()
 
 
@@ -55,18 +60,32 @@ def identity(viewer, ip):
     return viewer.identity or f"ip:{ip or 'unknown'}"
 
 
-def take_limit(who, is_customer):
-    """Count one message of `who` today; LimitExceeded once the daily limit is used up."""
-    limit = settings.ASSISTANT_DAILY_LIMIT_CUSTOMER if is_customer else settings.ASSISTANT_DAILY_LIMIT_GUEST
-    key = f"assistant:limit:{who}:{date.today().isoformat()}"
-    cache.add(key, 0, LIMIT_TTL)
+def _count(key, ttl):
+    cache.add(key, 0, ttl)
     try:
-        count = cache.incr(key)
+        return cache.incr(key)
     except ValueError:  # the key expired between add and incr
-        cache.set(key, 1, LIMIT_TTL)
-        count = 1
-    if count > limit:
-        raise LimitExceeded()
+        cache.set(key, 1, ttl)
+        return 1
+
+
+def take_limit(who, is_customer, ip=""):
+    """Count one message of `who` (and of a guest's IP); TooFrequent / LimitExceeded once a limit is used up.
+
+    A customer is counted by the account only (customers of one office share an IP)."""
+    now = timezone.now()
+    day, minute = now.date().isoformat(), now.strftime("%Y%m%d%H%M")
+    daily = settings.ASSISTANT_DAILY_LIMIT_CUSTOMER if is_customer else settings.ASSISTANT_DAILY_LIMIT_GUEST
+    counters = [(f"assistant:limit:m:{who}:{minute}", MINUTE_TTL, settings.ASSISTANT_MINUTE_LIMIT, TooFrequent),
+                (f"assistant:limit:{who}:{day}", LIMIT_TTL, daily, LimitExceeded)]
+    if not is_customer and ip:
+        counters += [
+            (f"assistant:limit:m:ip:{ip}:{minute}", MINUTE_TTL, settings.ASSISTANT_IP_MINUTE_LIMIT, TooFrequent),
+            (f"assistant:limit:ip:{ip}:{day}", LIMIT_TTL, settings.ASSISTANT_IP_DAILY_LIMIT, LimitExceeded),
+        ]
+    exceeded = [error for key, ttl, limit, error in counters if _count(key, ttl) > limit]
+    if exceeded:
+        raise exceeded[0]()
 
 
 def owned_conversation(conversation_id, viewer, who):
@@ -90,11 +109,13 @@ def conversation_for(conversation_id, viewer, who, language, platform):
 
 
 class MarkerFilter:
-    """Cuts the `[[p:ID]]` markers out of the model's text, also when a marker is split between chunks."""
+    """Cuts the `[[p:ID]]` / `[[operator]]` markers out of the model's text, also when a marker is split between
+    chunks."""
 
     def __init__(self):
         self.buffer = ""
         self.ids = []
+        self.operator = False
         self.pieces = []
 
     def feed(self, chunk):
@@ -124,6 +145,8 @@ class MarkerFilter:
                 pk = int(match.group(1))
                 if pk not in self.ids:
                     self.ids.append(pk)
+            elif OPERATOR_MARKER.fullmatch(marker):
+                self.operator = True
             else:
                 out.append(marker)
             self.buffer = rest[end + 2:]
@@ -166,8 +189,8 @@ def model_config(language, allow_tools=True):
         "system_instruction": prompts.system_prompt(language),
         "tools": [types.Tool(function_declarations=[types.FunctionDeclaration(**declaration)
                                                     for declaration in tools.DECLARATIONS])],
-        "temperature": TEMPERATURE,
-        "max_output_tokens": MAX_OUTPUT_TOKENS,
+        "temperature": settings.GEMINI_TEMPERATURE,
+        "max_output_tokens": settings.GEMINI_MAX_OUTPUT_TOKENS,
         "automatic_function_calling": types.AutomaticFunctionCallingConfig(disable=True),
     }
     if not allow_tools:  # the last round: the history has tool calls, so the tools stay declared but off
@@ -229,36 +252,42 @@ def client_ip(meta):
     return forwarded or meta.get("REMOTE_ADDR") or ""
 
 
-def begin(viewer, ip, text, conversation_id, language, platform):
-    """Everything before the model call (POST and WebSocket): switch, daily limit, conversation, the two rows
-    of the exchange (the customer's message and the answer, empty until `reply` fills it).
+def question_data(question):
+    """The customer's message as saved (phone / card numbers masked): the client shows this text."""
+    return {"id": question.pk, "text": question.text, "pii_masked": question.pii_masked}
 
-    Raises AssistantDisabled / LimitExceeded.
+
+def begin(viewer, ip, text, conversation_id, language, platform):
+    """Everything before the model call (POST and WebSocket): switch + budget, limits, conversation, the two
+    rows of the exchange (the customer's message with phone / card numbers masked, and the answer, empty until
+    `reply` fills it). Returns (conversation, question, answer).
+
+    Raises AssistantDisabled / LimitExceeded / TooFrequent.
     """
     check_enabled()
     who = identity(viewer, ip)
-    take_limit(who, bool(viewer.customer_id))
+    take_limit(who, bool(viewer.customer_id), ip)
     conversation = conversation_for(conversation_id, viewer, who, language, platform)
-    question = AssistantMessage.objects.create(conversation=conversation, role=AssistantMessage.USER, text=text)
+    text, masked = pii.mask(text)
+    question = AssistantMessage.objects.create(conversation=conversation, role=AssistantMessage.USER, text=text,
+                                               pii_masked=masked)
     answer = AssistantMessage.objects.create(conversation=conversation, role=AssistantMessage.ASSISTANT)
     answer.question_id = question.pk  # not a field: `_save` marks the question too when the answer fails
-    return conversation, answer
+    return conversation, question, answer
 
 
-def reply(conversation, answer, text, language, request, on_event=None):
-    """Fill `answer` (the row from `start`) and return {conversation_id, message_id, text, products}.
+def reply(conversation, question, answer, language, request, on_event=None):
+    """Fill `answer` (the row from `begin`) and return {conversation_id, message_id, question, text, products}.
 
     `on_event(type, data)` (WebSocket) streams: "tool" {name} before every tool call, "delta" {text} chunks.
     Raises AssistantError when Gemini fails (the row keeps the error).
     """
-    from apps.service.api.v1.client.views import linked_products_data  # the views import this module
-
     started = time.monotonic()
     emit = on_event or (lambda kind, data: None)
     # the customer's message is the last one of the history (`begin` saved it)
     contents = history(conversation, answer.pk)
     if not contents or contents[-1].role != "user":
-        contents.append(types.Content(role="user", parts=[types.Part.from_text(text=text)]))
+        contents.append(types.Content(role="user", parts=[types.Part.from_text(text=question.text)]))
     ctx = tools.ToolContext(language=language)
     marker = MarkerFilter()
     usage = Usage()
@@ -289,25 +318,46 @@ def reply(conversation, answer, text, language, request, on_event=None):
 
     final = clean_text(marker.text) or FALLBACK_TEXT.get(language, FALLBACK_TEXT["ru"])
     product_ids = [pk for pk in marker.ids if pk in ctx.seen_ids][:MAX_PRODUCTS]
-    _save(conversation, answer, text=final, product_ids=product_ids, tool_calls=calls, usage=usage, started=started)
+    operator = marker.operator or question.pii_masked
+    _save(conversation, answer, text=final, product_ids=product_ids, tool_calls=calls, usage=usage, started=started,
+          operator=operator)
     return {
         "conversation_id": conversation.pk,
         "message_id": answer.pk,
+        "question": question_data(question),
         "text": final,
-        "products": linked_products_data(product_ids, request) if product_ids else [],
+        "operator": operator,
+        "products": product_cards(product_ids, request),
     }
 
 
-def _save(conversation, answer, *, text="", product_ids=(), tool_calls=(), usage, started, error=""):
+def product_cards(ids, request):
+    """`ProductSerializer` cards of `ids` + `stock_status` (the rule the model is told, `tools.stock_status`)."""
+    from apps.service.api.v1.client.views import linked_products_data  # the views import this module
+
+    if not ids:
+        return []
+    cards = linked_products_data(ids, request)
+    quantities = dict(Product.objects.filter(pk__in=ids).values_list("pk", "quantity"))
+    for card in cards:
+        card["stock_status"] = tools.stock_status(quantities.get(card["id"], 0))
+    return cards
+
+
+def _save(conversation, answer, *, text="", product_ids=(), tool_calls=(), usage, started, error="",
+          operator=False):
     answer.text = text
+    answer.show_operator = operator
     answer.product_ids = list(product_ids)
     answer.tool_calls = list(tool_calls)
     answer.input_tokens = usage.input_tokens
     answer.output_tokens = usage.output_tokens
     answer.latency_ms = int((time.monotonic() - started) * 1000)
     answer.error = error[:500]
+    answer.model = settings.GEMINI_MODEL
+    answer.cost_usd = budget.cost(usage.input_tokens, usage.output_tokens)
     answer.save(update_fields=["text", "product_ids", "tool_calls", "input_tokens", "output_tokens",
-                               "latency_ms", "error", "updated_at"])
+                               "latency_ms", "error", "model", "cost_usd", "show_operator", "updated_at"])
     AssistantConversation.objects.filter(pk=conversation.pk).update(
         messages_count=F("messages_count") + 2,
         input_tokens=F("input_tokens") + usage.input_tokens,
@@ -317,21 +367,22 @@ def _save(conversation, answer, *, text="", product_ids=(), tool_calls=(), usage
         # a question without an answer is left out of the next answers' history
         AssistantMessage.objects.filter(pk=getattr(answer, "question_id", None)).update(error=error[:500])
         logger.warning("assistant answer %s failed: %s", answer.pk, error)
+    try:
+        budget.after_answer()
+    except Exception:
+        logger.exception("assistant budget check failed")
 
 
 def conversation_messages(conversation, request):
     """The conversation for the client: answered messages, oldest first, with their product cards."""
-    from apps.service.api.v1.client.views import linked_products_data
-
     messages = list(conversation.messages.filter(error="").exclude(text=""))
-    cards = {}
     ids = list(dict.fromkeys(pk for message in messages for pk in message.product_ids))
-    if ids:
-        cards = {card["id"]: card for card in linked_products_data(ids, request)}
+    cards = {card["id"]: card for card in product_cards(ids, request)}
     return {
         "conversation_id": conversation.pk,
         "messages": [
             {"id": message.pk, "role": message.role, "text": message.text, "created_at": message.created_at,
+             "pii_masked": message.pii_masked, "operator": message.show_operator,
              "products": [cards[pk] for pk in message.product_ids if pk in cards]}
             for message in messages
         ],

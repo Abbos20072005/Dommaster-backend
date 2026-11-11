@@ -5,6 +5,8 @@ Run: env/Scripts/python.exe manage.py test apps.service.tests_assistant
 import asyncio
 import copy
 import time
+from datetime import timedelta
+from decimal import Decimal
 from unittest import mock
 
 from asgiref.sync import async_to_sync
@@ -12,11 +14,12 @@ from channels.routing import URLRouter
 from channels.testing import WebsocketCommunicator
 from django.core.cache import cache
 from django.test import override_settings
+from django.utils import timezone
 from google.genai import types
 from rest_framework.test import APIClient
 
 from apps.authorization.api.v1.client.views import issue_customer_tokens
-from apps.service.assistant import consumers, service, tools
+from apps.service.assistant import budget, consumers, pii, service, tools
 from apps.service.assistant.gemini import AssistantError
 from apps.service.models import AssistantConversation, AssistantMessage
 from apps.service.routing import websocket_urlpatterns
@@ -26,7 +29,10 @@ CHAT = "/api/v1/assistant/chat/"
 GENERATE = "apps.service.assistant.gemini.generate"
 GENERATE_STREAM = "apps.service.assistant.gemini.generate_stream"
 LOCMEM = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache", "LOCATION": "assistant-tests"}}
-ON = dict(ASSISTANT_ENABLED=1, ASSISTANT_DAILY_LIMIT_GUEST=20, ASSISTANT_DAILY_LIMIT_CUSTOMER=60, CACHES=LOCMEM)
+ON = dict(ASSISTANT_ENABLED=1, ASSISTANT_DAILY_LIMIT_GUEST=20, ASSISTANT_DAILY_LIMIT_CUSTOMER=60, CACHES=LOCMEM,
+          ASSISTANT_MINUTE_LIMIT=100, ASSISTANT_IP_MINUTE_LIMIT=100, ASSISTANT_IP_DAILY_LIMIT=1000,
+          GEMINI_MODEL="gemini-test", GEMINI_INPUT_PRICE_USD=0.10, GEMINI_OUTPUT_PRICE_USD=0.40,
+          ASSISTANT_BUDGET_WARNING_USD=50, ASSISTANT_MONTHLY_BUDGET_USD=60, ASSISTANT_DAILY_BUDGET_USD=2)
 
 
 def text(value):
@@ -198,6 +204,96 @@ class AssistantChatTests(ApiTestCase):
         result = APIClient(HTTP_X_DEVICE_ID="device-2").get(url)
         self.assertEqual((result.status_code, result.data["error_code"]), (404, 4))
 
+    @override_settings(ASSISTANT_MINUTE_LIMIT=1)
+    def test_minute_limit(self):
+        with mock.patch(GENERATE, side_effect=Script(response(text("Salom")))):
+            self.assertEqual(self.guest.post(CHAT, {"message": "salom"}, format="json").status_code, 200)
+        with mock.patch(GENERATE) as generate:
+            result = self.guest.post(CHAT, {"message": "yana"}, format="json")
+        self.assertEqual((result.status_code, result.data["error_code"]), (429, 44))
+        generate.assert_not_called()
+
+    @override_settings(ASSISTANT_IP_DAILY_LIMIT=1)
+    def test_new_device_id_does_not_reset_the_ip_limit(self):
+        with mock.patch(GENERATE, side_effect=Script(response(text("Salom")))):
+            self.assertEqual(self.guest.post(CHAT, {"message": "salom"}, format="json").status_code, 200)
+        other = APIClient(HTTP_X_DEVICE_ID="device-2")
+        result = other.post(CHAT, {"message": "salom"}, format="json")
+        self.assertEqual((result.status_code, result.data["error_code"]), (429, 42))
+        # a customer behind the same IP is counted by the account only
+        with mock.patch(GENERATE, side_effect=Script(response(text("Salom")))):
+            result = self.client_for(make_customer("+998901112233")).post(CHAT, {"message": "salom"}, format="json")
+        self.assertEqual(result.status_code, 200, result.data)
+
+    def test_card_and_phone_are_masked(self):
+        script = Script(response(text("Karta raqamini yozmang, operator yordam beradi.")))
+        message = "kartam 8600 1234 5678 9012, tel +998 90 123-45-67, gazoblok 600 300 200 kerak"
+        with mock.patch(GENERATE, side_effect=script):
+            result = self.guest.post(CHAT, {"message": message}, format="json")
+        self.assertEqual(result.status_code, 200, result.data)
+        masked = "kartam 8600 **** **** 9012, tel +998 90 *** ** 67, gazoblok 600 300 200 kerak"
+        self.assertEqual(result.data["result"]["question"]["text"], masked)
+        self.assertTrue(result.data["result"]["question"]["pii_masked"])
+        self.assertEqual(script.sent[0][0][-1].parts[0].text, masked)
+        self.assertNotIn("1234 5678", repr(script.sent))
+        question = AssistantMessage.objects.get(role=AssistantMessage.USER)
+        self.assertEqual((question.text, question.pii_masked), (masked, True))
+
+    def test_model_and_cost_are_logged(self):
+        with mock.patch(GENERATE, side_effect=Script(*self.found_drill())):
+            data = self.guest.post(CHAT, {"message": "perforator kerak"}, format="json").data["result"]
+        answer = AssistantMessage.objects.get(pk=data["message_id"])
+        # 200 input × $0.10 + 40 output × $0.40 per 1M tokens
+        self.assertEqual((answer.model, answer.cost_usd), ("gemini-test", Decimal("0.00003600")))
+        self.assertEqual(data["products"][0]["stock_status"], "in_stock")  # quantity 100
+        self.assertFalse(data["question"]["pii_masked"])
+
+    def spend(self, usd, days_ago=0):
+        conversation = AssistantConversation.objects.create(session_id="old")
+        message = AssistantMessage.objects.create(conversation=conversation, role=AssistantMessage.ASSISTANT,
+                                                  text="x", cost_usd=Decimal(usd))
+        AssistantMessage.objects.filter(pk=message.pk).update(
+            created_at=timezone.now() - timedelta(days=days_ago))
+
+    def test_monthly_budget_switches_off(self):
+        self.spend("60")
+        with mock.patch(GENERATE) as generate:
+            result = self.guest.post(CHAT, {"message": "salom"}, format="json")
+        self.assertEqual((result.status_code, result.data["error_code"]), (503, 41))
+        generate.assert_not_called()
+
+    def test_daily_budget_switches_off_for_the_day(self):
+        self.spend("2")
+        self.assertEqual(budget.exhausted(), "day")
+        cache.clear()
+        AssistantMessage.objects.update(created_at=timezone.now() - timedelta(days=1))
+        if timezone.now().day > 1:  # yesterday's spend counts for the month only
+            self.assertIsNone(budget.exhausted())
+
+    @override_settings(ASSISTANT_BUDGET_WARNING_USD=0.00001)
+    def test_budget_warning_is_sent_once(self):
+        with mock.patch("apps.service.assistant.budget._alert") as alert:
+            for _ in range(2):
+                with mock.patch(GENERATE, side_effect=Script(response(text("Salom")))):
+                    self.guest.post(CHAT, {"message": "salom"}, format="json")
+        self.assertEqual([item.args[0] for item in alert.call_args_list], ["warning"])
+
+    def test_operator_marker(self):
+        script = Script(response(text("Buyurtma holatini operator aytib beradi. [[operator]]")))
+        with mock.patch(GENERATE, side_effect=script):
+            data = self.guest.post(CHAT, {"message": "buyurtmam qayerda #1234"}, format="json").data["result"]
+        self.assertEqual((data["text"], data["operator"]), ("Buyurtma holatini operator aytib beradi.", True))
+        self.assertTrue(AssistantMessage.objects.get(pk=data["message_id"]).show_operator)
+        url = f"/api/v1/assistant/conversations/{data['conversation_id']}/"
+        self.assertEqual([m["operator"] for m in self.guest.get(url).data["result"]["messages"]], [False, True])
+        with mock.patch(GENERATE, side_effect=Script(response(text("Salom")))):
+            data = self.guest.post(CHAT, {"message": "salom"}, format="json").data["result"]
+        self.assertFalse(data["operator"])
+        # masked personal data -> the operator button even without the marker
+        with mock.patch(GENERATE, side_effect=Script(response(text("Karta raqamini yozmang.")))):
+            data = self.guest.post(CHAT, {"message": "8600123456789012"}, format="json").data["result"]
+        self.assertTrue(data["operator"])
+
 
 class AssistantToolTests(ApiTestCase):
     def setUp(self):
@@ -209,7 +305,7 @@ class AssistantToolTests(ApiTestCase):
         self.drill.save()
         found = tools.search_products(self.ctx, queries=["перфоратор"])
         self.assertEqual([row["id"] for row in found["products"]], [self.drill.pk])
-        self.assertFalse(found["products"][0]["in_stock"])
+        self.assertEqual(found["products"][0]["stock"], "out_of_stock")
         self.assertEqual(found["categories"], [{"id": self.category.pk, "name": "Asboblar", "count": 1}])
         self.assertEqual(tools.search_products(self.ctx, queries=["перфоратор"], in_stock_only=True)["products"], [])
         self.assertEqual(tools.search_products(self.ctx, queries=["перфоратор"], price_max=100)["products"], [])
@@ -228,6 +324,34 @@ class AssistantToolTests(ApiTestCase):
     def test_bad_call_is_answered(self):
         self.assertIn("error", tools.run("search_products", {"nonsense": 1}, self.ctx))
         self.assertIn("error", tools.run("drop_tables", {}, self.ctx))
+
+    def test_price_filter_uses_the_cart_price(self):
+        # list price 1 500 000, the cart charges the discount price 1 200 000
+        found = tools.search_products(self.ctx, queries=["перфоратор"], price_max=1_300_000)
+        self.assertEqual([row["id"] for row in found["products"]], [self.drill.pk])
+        self.assertEqual(tools.search_products(self.ctx, queries=["перфоратор"], price_min=1_300_000)["products"], [])
+
+    def test_stock_status(self):
+        self.assertEqual([tools.stock_status(q) for q in (0, None, 3, 10, 11, 499, 500, 1000)],
+                         ["out_of_stock", "out_of_stock", "low", "low", "in_stock", "in_stock", "check", "check"])
+
+
+class PiiMaskTests(ApiTestCase):
+    def test_masked(self):
+        for raw, masked in [
+            ("8600123456789012", "8600 **** **** 9012"),
+            ("9860-1234-5678-9012", "9860 **** **** 9012"),
+            ("+998901234567", "+998 90 *** ** 67"),
+            ("998 (90) 123 45 67", "+998 90 *** ** 67"),
+            ("tel 90 123 45 67 ga", "tel +998 90 *** ** 67 ga"),
+            ("901234567", "+998 90 *** ** 67"),
+        ]:
+            self.assertEqual(pii.mask(raw), (masked, True), raw)
+
+    def test_product_numbers_stay(self):
+        for raw in ["gazoblok 600x300x200", "600 300 200", "kabel VVG 3x2.5", "M400 50 kg", "4600123456789",
+                    "narxi 1 200 000 so'm", "artikul 12345678"]:
+            self.assertEqual(pii.mask(raw), (raw, False), raw)
 
 
 class MarkerFilterTests(ApiTestCase):

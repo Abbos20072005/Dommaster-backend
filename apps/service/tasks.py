@@ -76,3 +76,10 @@ def record_product_events(event_type, product_ids, platform, customer_id, sessio
 @exclusive(60 * 60)
 def build_product_funnel():
     call_command("build_product_funnel")
+
+
+@shared_task
+def send_assistant_budget_alert(text):
+    from apps.base.telegram import send_staff_alert
+
+    send_staff_alert(text)

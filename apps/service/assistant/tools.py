@@ -7,7 +7,7 @@ import html
 import logging
 from dataclasses import dataclass, field
 
-from django.db.models import Count
+from django.db.models import Case, Count, F, Q, When
 from django.utils.html import strip_tags
 
 from apps.service import feed, product_links
@@ -25,12 +25,29 @@ CANDIDATES = 50         # best matches taken from each query variant before merg
 ROW_ATTRIBUTES = 5      # characteristics in a list row (the details tool returns all of them)
 DESCRIPTION_CHARS = 500
 FILTER_VALUES = 15      # checkbox values of one filter returned to the model
+# Stock rule (starting values, PM to confirm): 1C sends a placeholder 1000 for most products and orders count
+# it down (999, 983, 817 ...), so a large number is not a real stock -> "check" (the model must not promise it)
+LOW_STOCK = 10
+UNRELIABLE_STOCK_FROM = 500
+
+
+def stock_status(quantity):
+    """in_stock / low / check / out_of_stock of a product quantity (cards of the answer use it too)."""
+    quantity = quantity or 0
+    if quantity <= 0:
+        return "out_of_stock"
+    if quantity >= UNRELIABLE_STOCK_FROM:
+        return "check"
+    return "low" if quantity <= LOW_STOCK else "in_stock"
 
 
 @dataclass
 class ToolContext:
     language: str
     seen_ids: set = field(default_factory=set)
+
+
+CART_PRICE = Case(When(Q(discount_price__gt=0), then=F("discount_price")), default=F("price"))
 
 
 def _price(product):
@@ -61,7 +78,7 @@ def _row(product, language):
         "brand": product.brand.name if product.brand_id else None,
         "category": product.product_item_category.name if product.product_item_category_id else None,
         "price": price,
-        "in_stock": product.quantity > 0,
+        "stock": stock_status(product.quantity),
         "unit": product.unit,
         "attributes": _attributes(product, language, ROW_ATTRIBUTES),
     }
@@ -110,10 +127,12 @@ def search_products(ctx, queries=None, item_category_id=None, price_min=None, pr
     products = Product.objects.filter(is_active=True)
     if item_category_id:
         products = products.filter(product_item_category_id=item_category_id)
-    if _number(price_min) is not None:
-        products = products.filter(price__gte=_number(price_min))
-    if _number(price_max) is not None:
-        products = products.filter(price__lte=_number(price_max))
+    if _number(price_min) is not None or _number(price_max) is not None:
+        products = products.annotate(cart_price=CART_PRICE)
+        if _number(price_min) is not None:
+            products = products.filter(cart_price__gte=_number(price_min))
+        if _number(price_max) is not None:
+            products = products.filter(cart_price__lte=_number(price_max))
     if in_stock_only:
         products = products.filter(quantity__gt=0)
     products = apply_attribute_filters(products, _filters(filters))
@@ -247,7 +266,7 @@ DECLARATIONS = [
         "description": (
             "Search the Buildex catalog (building materials, tools, plumbing, electrics). Send 1-3 short keyword "
             "variants of what the customer wants: Uzbek Latin, Russian and the brand / model if named, e.g. "
-            "[\"perforator\", \"перфоратор\", \"Bosch GBH\"]. Returns products (price in UZS, in_stock, top "
+            "[\"perforator\", \"перфоратор\", \"Bosch GBH\"]. Returns products (price in UZS, stock, top "
             "attributes) and the item categories they are in."
         ),
         "parameters_json_schema": {

@@ -13,7 +13,10 @@ from .assistant_serializers import AssistantChatSerializer, AssistantConversatio
 
 TAGS = ["Assistant"]
 ERRORS_NOTE = (
-    " Errors: 41 switched off, 42 daily limit used up (429), 43 Gemini did not answer (503)."
+    " Errors: 41 switched off or the month's / day's budget is spent (503, show the operator contacts),"
+    " 42 daily limit used up (429), 43 Gemini did not answer (503), 44 too many messages in a minute (429)."
+    " Phone / card numbers in `message` are masked before saving: `result.question.text` is the saved text,"
+    " `question.pii_masked` = something was masked (show the \"don't write card numbers\" notice)."
     " A guest is told apart by the `X-Device-Id` header (else the `cart_token` cookie, else the IP)."
 )
 
@@ -40,12 +43,14 @@ class AssistantViewSet(ViewSet):
         data = serializer.validated_data
         language = request_language(request)
         try:
-            conversation, answer = service.begin(
+            conversation, question, answer = service.begin(
                 feed.Viewer.of(request), service.client_ip(request.META), data["message"],
                 data.get("conversation_id"), language, data.get("platform"))
-            result = service.reply(conversation, answer, data["message"], language, request)
+            result = service.reply(conversation, question, answer, language, request)
         except service.AssistantDisabled:
             raise CustomApiException(error_code=ErrorCodes.ASSISTANT_DISABLED)
+        except service.TooFrequent:
+            raise CustomApiException(error_code=ErrorCodes.ASSISTANT_TOO_FREQUENT)
         except service.LimitExceeded:
             raise CustomApiException(error_code=ErrorCodes.ASSISTANT_LIMIT_EXCEEDED)
         except AssistantError:

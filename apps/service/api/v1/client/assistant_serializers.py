@@ -12,19 +12,37 @@ class AssistantChatSerializer(serializers.Serializer):
     platform = serializers.ChoiceField(choices=ORDER_CHANNEL, required=False, allow_blank=True, default="")
 
 
+class AssistantProductSerializer(ProductSerializer):
+    # in_stock / low / check (the stock number is not reliable: ask to check) / out_of_stock
+    stock_status = serializers.ChoiceField(choices=["in_stock", "low", "check", "out_of_stock"], read_only=True)
+
+    class Meta(ProductSerializer.Meta):
+        fields = (*ProductSerializer.Meta.fields, "stock_status")
+
+
+class AssistantQuestionSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    text = serializers.CharField(help_text="The message as saved: phone / card numbers masked")
+    pii_masked = serializers.BooleanField()
+
+
 class AssistantReplySerializer(serializers.Serializer):
     conversation_id = serializers.IntegerField()
     message_id = serializers.IntegerField()
+    question = AssistantQuestionSerializer()
     text = serializers.CharField()
-    products = ProductSerializer(many=True)
+    operator = serializers.BooleanField(help_text="Show the \"contact the operator\" button under the answer")
+    products = AssistantProductSerializer(many=True)
 
 
 class AssistantHistoryMessageSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     role = serializers.ChoiceField(choices=AssistantMessage.ROLE_CHOICES)
     text = serializers.CharField()
+    pii_masked = serializers.BooleanField()
+    operator = serializers.BooleanField()
     created_at = serializers.DateTimeField()
-    products = ProductSerializer(many=True)
+    products = AssistantProductSerializer(many=True)
 
 
 class AssistantConversationSerializer(serializers.Serializer):

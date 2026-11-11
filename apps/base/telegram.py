@@ -158,3 +158,11 @@ def send_question_to_telegram(question):
     """Forward a customer's product question to the Telegram group (non-blocking)."""
     caption = _build_feedback_caption("❓ Новый вопрос", question, question.question)
     _send_to_group(caption, settings.TELEGRAM_QUESTION_TOPIC_ID, f"question_id={question.id}")
+
+
+def send_staff_alert(text):
+    """A plain text warning to the staff group (general topic); blocks — call it from a background task."""
+    if not settings.TELEGRAM_BOT_TOKEN or not settings.TELEGRAM_CHANNEL_ID:
+        logger.warning("Telegram is not configured, staff alert not sent: %s", text)
+        return
+    _send_to_group_sync(html.escape(text), None, (), "staff_alert")

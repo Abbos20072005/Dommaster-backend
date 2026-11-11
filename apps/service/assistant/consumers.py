@@ -135,18 +135,22 @@ class AssistantConsumer(AsyncJsonWebsocketConsumer):
         request = ScopeRequest(self.scope, self.customer, self.device_id)
         with translation.override(self.language):
             try:
-                conversation, answer = service.begin(
+                conversation, question, answer = service.begin(
                     feed.Viewer.of(request), service.client_ip(request.META), data["message"],
                     data.get("conversation_id"), self.language, data.get("platform"))
             except service.AssistantDisabled:
                 send(error_event(ErrorCodes.ASSISTANT_DISABLED))
                 return
+            except service.TooFrequent:
+                send(error_event(ErrorCodes.ASSISTANT_TOO_FREQUENT))
+                return
             except service.LimitExceeded:
                 send(error_event(ErrorCodes.ASSISTANT_LIMIT_EXCEEDED))
                 return
-            send({"type": "start", "conversation_id": conversation.pk, "message_id": answer.pk})
+            send({"type": "start", "conversation_id": conversation.pk, "message_id": answer.pk,
+                  "question": service.question_data(question)})
             try:
-                result = service.reply(conversation, answer, data["message"], self.language, request,
+                result = service.reply(conversation, question, answer, self.language, request,
                                        on_event=lambda kind, event: send({"type": kind, **event}))
             except AssistantError:
                 send(error_event(ErrorCodes.ASSISTANT_UNAVAILABLE))
