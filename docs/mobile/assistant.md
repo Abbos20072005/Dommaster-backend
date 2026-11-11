@@ -169,27 +169,14 @@ Format: `{"detail": "...", "ok": false, "result": "", "error_code": 44}`; WebSoc
 | 43 | 503 | yordamchi hozir javob bera olmadi (AI xizmati xatosi) — «Qayta urinib ko'ring» |
 | 44 | 429 | bir daqiqada juda ko'p xabar — «Biroz kuting va qayta yozing» |
 
-## Oxirgi o'zgarishlar (11.11.2026)
+## Ilova / sayt nima qilishi kerak
 
-Eski maydonlar o'chirilmagan — eski front buzilmaydi, faqat yangi holatlarni ko'rsatmaydi.
-
-| Endpoint | Oldin | Hozir | Eski front buziladimi |
-|---|---|---|---|
-| `POST assistant/chat/` → `result` | `conversation_id`, `message_id`, `text`, `products` | + `question` `{id, text, pii_masked}`, + `operator` | Yo'q |
-| `products[]` (chat, WebSocket `done`, conversations) | `ProductSerializer` | + `stock_status` | Yo'q |
-| WebSocket `start` | `conversation_id`, `message_id` | + `question` | Yo'q |
-| WebSocket `done` | chat `result` bilan bir xil | + `question`, + `operator` | Yo'q |
-| `conversations/<id>/` → `messages[]` | `id, role, text, created_at, products` | + `pii_masked`, + `operator` | Yo'q |
-| Xato `41` | yordamchi o'chirilgan | o'chirilgan **yoki** byudjet tugagan | Yo'q — ekran matni o'zgaradi |
-| Xato `44` | — | yangi: daqiqalik limit (429) | Eski front uni noma'lum xato deb ko'rsatadi |
-| Mijoz matni | qanday yozilsa shunday saqlanardi | karta va telefon saqlashdan oldin yashiriladi | Yo'q |
-
-## Frontda qilinadigan ishlar
-
-1. Javob kelganda (`chat` javobi yoki WebSocket `start`) mijoz pufakchasidagi matnni `question.text` bilan almashtiring — yashirilgan karta yoki telefon ekranda ham ko'rinmasin.
-2. `question.pii_masked: true` bo'lsa, pufakcha ostida ogohlantirish chiqaring: «Xavfsizlik uchun karta raqami va SMS kodni yozmang».
-3. `operator: true` bo'lsa, javob ostida operator tugmasini ko'rsating. U `base/info/` ma'lumotlari bilan kontakt oynasini ochadi: qo'ng'iroq, Telegram, ish vaqti.
-4. Tovar kartochkasidagi belgini `stock_status` bo'yicha chiqaring. `check` holatida «Mavjudligini tekshiring» chiqsin, «Mavjud» emas.
-5. Xato `44` uchun «biroz kuting» xabarini qo'shing.
-6. Xato `41` da kirish nuqtasini yashirmang: «vaqtincha ishlamayapti» ekrani va operator kontaktlarini ko'rsating.
-7. Suhbat tarixini (`conversations/<id>/`) qayta ochganda ham `operator` va `pii_masked` bo'yicha tugma va ogohlantirishni ko'rsating.
+1. Har so'rovda `Accept-Language`, login bo'lsa `Authorization`, mehmon uchun doim bir xil `X-Device-Id` yuboring (WebSocket'da `token`, `device_id`, `lang` parametrlari).
+2. Xabar yuborilgach, javobdagi `conversation_id` ni saqlang va keyingi xabarlar bilan yuboring. «Yangi suhbat» tugmasi = `conversation_id` siz yuborish.
+3. Sayt uchun WebSocket'dan foydalaning: `delta` larni ketma-ket qo'shib boring, `tool` kelganda «Qidiryapman…» ko'rsating, `done` da matnni `done.text` bilan almashtiring. WebSocket ishlamasa, `POST assistant/chat/` ga o'ting.
+4. Javob kelganda (`chat` javobi yoki WebSocket `start`) mijoz pufakchasidagi matnni `question.text` bilan almashtiring — yashirilgan karta yoki telefon ekranda ham ko'rinmasin.
+5. `question.pii_masked: true` bo'lsa, pufakcha ostida ogohlantirish chiqaring: «Xavfsizlik uchun karta raqami va SMS kodni yozmang».
+6. Javob matni ostida `products` kartochkalarini ko'rsating. Kartochka belgisi `stock_status` bo'yicha bo'lsin: `check` holatida «Mavjudligini tekshiring» chiqsin, «Mavjud» emas. Kartochka bosilganda tovar sahifasi `/product/<slug>` ochilsin.
+7. `operator: true` bo'lsa, javob ostida operator tugmasini ko'rsating. U `base/info/` ma'lumotlari bilan kontakt oynasini ochadi: qo'ng'iroq, Telegram, ish vaqti.
+8. Har xato uchun o'z ekranini chiqaring (jadval yuqorida). `41` da kirish nuqtasini yashirmang — «vaqtincha ishlamayapti» ekrani va operator kontaktlari bo'lsin.
+9. Chat ekranini qayta ochganda tarixni `conversations/<id>/` dan yuklang va har xabarning `operator` va `pii_masked` maydonlari bo'yicha tugma va ogohlantirishni ko'rsating.
