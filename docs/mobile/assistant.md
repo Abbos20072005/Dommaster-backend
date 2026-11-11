@@ -1,52 +1,64 @@
-# AI assistant (product search and advice)
+# AI yordamchi (tovar qidirish va maslahat) — mobile / sayt uchun
 
-A chat with an AI shopping assistant (Google Gemini): the customer writes what they need in Uzbek or Russian
-("hammom uchun suvga chidamli kafel", "перфоратор бош подешевле"), the assistant searches the catalog, asks a
-short question when the request is vague, and answers with a text plus **product cards**.
+AI yordamchi (Google Gemini) bilan chat. Mijoz nima kerakligini o'zbekcha yoki ruscha yozadi («hammom uchun suvga
+chidamli kafel», «перфоратор бош подешевле»). Yordamchi katalogdan qidiradi, so'rov noaniq bo'lsa qisqa savol beradi
+va matn bilan **tovar kartochkalarini** qaytaradi.
 
-No auth required — guests can use it too. Two ways to talk to it, the same answers:
+Login shart emas — mehmon ham foydalana oladi. Ikki usulda ishlaydi, javoblar bir xil:
 
-| | |
+| Endpoint | |
 |---|---|
-| `POST /api/v1/assistant/chat/` | one request → the whole answer (2–6 s) |
-| `ws(s)://<api host>/ws/assistant/` | WebSocket: the text comes in pieces while it is written |
-| `GET /api/v1/assistant/conversations/<id>/` | the messages of a conversation (to reopen the chat screen) |
+| `POST /api/v1/assistant/chat/` | bitta so'rov → butun javob (2–6 soniya) |
+| `ws(s)://<api host>/ws/assistant/` | WebSocket: matn yozilayotgan paytda bo'laklab keladi |
+| `GET /api/v1/assistant/conversations/<id>/` | suhbat xabarlari (chat ekranini qayta ochish uchun) |
+| `GET /api/v1/base/info/` | operator kontaktlari (mavjud endpoint): `phone_number`, `telegram_support`, `working_hours` |
 
-Send as everywhere: `Authorization` (if logged in), `Accept-Language` (uz / ru), the `cart_token` /
-`favourite_token` cookies (for `in_cart` / `is_favourite` of the cards), and **`X-Device-Id`** for a guest.
+Hamma joydagidek yuboriladi: `Authorization` (login qilgan bo'lsa), `Accept-Language` (`uz` / `ru`), `cart_token` /
+`favourite_token` cookie'lari (kartochkadagi `in_cart` / `is_favourite` uchun), mehmon uchun esa **`X-Device-Id`**.
 
-## Rules for the app
+## Ilova uchun qoidalar
 
-- **Product cards** are in `products` (same shape as [`products/`](products_list.md), `ProductSerializer`, live
-  price and stock) + **`stock_status`** for the badge of the card. Show them under the answer text. The text never
-  contains prices you must trust — the card does. The link of a card = the product page `/product/<slug>`.
+- **Tovar kartochkalari** `products` da keladi: [`products/`](products_list.md) dagi bilan bir xil shakl
+  (`ProductSerializer`, joriy narx va qoldiq) + kartochka belgisi uchun **`stock_status`**. Ularni javob matni ostida
+  ko'rsating. Ishonish kerak bo'lgan narx matnda emas, kartochkada. Kartochka havolasi = tovar sahifasi
+  `/product/<slug>`.
+- **Qoldiq belgisi** — `stock_status` bo'yicha (o'zingiz `quantity` dan hisoblamang, chegaralar o'zgarishi mumkin):
 
-  | `stock_status` | badge |
-  |---|---|
-  | `in_stock` | «В наличии» / «Mavjud» |
-  | `low` | «Мало» / «Kam qoldi» (≤ 10) |
-  | `check` | «Уточните наличие» / «Mavjudligini tekshiring» — the stock number from 1C is not reliable (≥ 500, a placeholder), the assistant never promises it |
-  | `out_of_stock` | «Нет в наличии» / «Mavjud emas» |
-- **Operator button**: `operator: true` → show «Operator bilan bog'lanish» / «Связаться с оператором» under the
-  answer. The assistant sets it when a person must help (order status / changes, payment, delivery, returns,
-  complaints, nothing found after searching, a masked card / phone). The button opens the contact sheet — phone,
-  Telegram, working hours from `GET /api/v1/base/info/` (`phone_number`, `telegram_support`, `working_hours`).
-  The answer text never contains the operator's phone or links.
-- **Personal data**: phone and card numbers in the message are **masked before they are saved or sent to the
-  AI** (`8600 **** **** 9012`, `+998 90 *** ** 67`). `question.text` is the message as saved — replace the
-  customer's bubble with it; `question.pii_masked: true` → show the notice «Xavfsizlik uchun karta raqami va SMS
-  kodni yozmang» and the operator button.
-- The text is plain text (no markdown, no links). It has no product ids or markers.
-- **Conversation**: the first answer returns `conversation_id`; send it with the next messages, the assistant
-  remembers the last 10 messages. Start a new chat = do not send it. A `conversation_id` that is not the caller's
-  is ignored (a new conversation starts).
-- **Who the caller is**: the customer (token), else `X-Device-Id`, else the `cart_token` cookie, else the IP.
-  A guest's conversations belong to that device id — send the same one every time.
-- **Limits** (may change): 6 messages a minute → error `44`; a day 20 for a guest, 60 for a logged in customer →
-  error `42`. A guest is also counted by the IP (20 a minute, 200 a day), so a new `X-Device-Id` does not reset it.
-- **Budget**: when the month's / day's AI budget is spent the assistant answers error `41` until the next month /
-  day — show the "switched off" screen with the operator contacts (`base/info/`).
-- Message: 1–1000 characters.
+  | `stock_status` | Belgi (uz / ru) | Qachon |
+  |---|---|---|
+  | `in_stock` | «Mavjud» / «В наличии» | qoldiq 11–499 |
+  | `low` | «Kam qoldi» / «Мало» | qoldiq 1–10 |
+  | `check` | «Mavjudligini tekshiring» / «Уточните наличие» | qoldiq 500 va undan ko'p — 1C'dan kelgan son ishonchsiz (placeholder 1000), yordamchi «bor» deb va'da bermaydi |
+  | `out_of_stock` | «Mavjud emas» / «Нет в наличии» | qoldiq 0 |
+
+  Hozir katalogdagi tovarlarning deyarli hammasi `check` bo'lib chiqadi — 1C haqiqiy qoldiqni yubormaguncha shunday.
+- **Operator tugmasi**: `operator: true` → javob ostida «Operator bilan bog'lanish» / «Связаться с оператором»
+  tugmasini ko'rsating. Yordamchi uni odam yordami kerak bo'lganda qo'yadi: buyurtma holati, uni o'zgartirish yoki bekor
+  qilish, to'lov, yetkazib berish, qaytarish, shikoyat, ulgurji buyurtma, qidirsa ham tovar topilmasa. Karta yoki telefon
+  yashirilgan bo'lsa ham `true` bo'ladi. Tugma kontakt oynasini ochadi: `GET /api/v1/base/info/` dan qo'ng'iroq
+  (`phone_number`), Telegram (`telegram_support`), ish vaqti (`working_hours`). Javob matnida operatorning telefoni va
+  havolasi bo'lmaydi.
+- **Shaxsiy ma'lumot**: xabardagi karta va telefon raqami **saqlashdan va AI'ga yuborishdan oldin yashiriladi**:
+  `8600 **** **** 9012`, `+998 90 *** ** 67`. `question.text` — xabar saqlangan ko'rinishda: mijoz pufakchasidagi
+  matnni shu bilan almashtiring. `question.pii_masked: true` → pufakcha ostida ogohlantirish chiqaring: «Xavfsizlik
+  uchun karta raqami va SMS kodni yozmang» / «В целях безопасности не пишите номер карты и SMS-код». Tovar
+  raqamlariga tegilmaydi (`600x300x200`, `600 300 200`, 13 xonali shtrix-kod, narxlar). SMS kodlarni aniqlab bo'lmaydi.
+- Javob matni oddiy matn: markdown yo'q, havola yo'q, tovar id'lari va belgilar yo'q.
+- **Suhbat**: birinchi javob `conversation_id` qaytaradi — keyingi xabarlar bilan uni yuboring, yordamchi oxirgi 10 ta
+  xabarni eslab qoladi. Yangi suhbat = `conversation_id` yubormaslik. Boshqa odamning `conversation_id` si e'tiborga
+  olinmaydi (yangi suhbat boshlanadi).
+- **Kim yozayotgani**: mijoz (token), bo'lmasa `X-Device-Id`, bo'lmasa `cart_token` cookie, bo'lmasa IP. Mehmonning
+  suhbatlari shu device id'ga tegishli — har safar bir xil qiymatni yuboring.
+- **Limitlar** (server sozlamasida, o'zgarishi mumkin):
+
+  | Kim | Daqiqada | Kunda |
+  |---|---|---|
+  | Mehmon (`X-Device-Id`, bo'lmasa `cart_token`, bo'lmasa IP) | 6 → xato `44` | 20 → xato `42` |
+  | Mehmonning IP manzili (yangi `X-Device-Id` limitni yangilamaydi) | 20 → `44` | 200 → `42` |
+  | Login qilgan mijoz (faqat akkaunt bo'yicha) | 6 → `44` | 60 → `42` |
+- **Byudjet**: oylik yoki kunlik AI byudjeti tugasa, yordamchi keyingi oy yoki ertangi kungacha xato `41` qaytaradi —
+  «vaqtincha ishlamayapti» ekranini operator kontaktlari bilan ko'rsating.
+- Xabar uzunligi: 1–1000 belgi.
 
 ## POST assistant/chat/
 
@@ -54,11 +66,11 @@ Send as everywhere: `Authorization` (if logged in), `Accept-Language` (uz / ru),
 { "message": "perforator kerak, 30 mln gacha", "conversation_id": 15, "platform": "android" }
 ```
 
-| Field | |
+| Maydon | |
 |---|---|
-| `message` | required, 1–1000 chars |
-| `conversation_id` | optional, from the previous answer |
-| `platform` | optional: `site` / `ios` / `android` |
+| `message` * | 1–1000 belgi |
+| `conversation_id` | ixtiyoriy, oldingi javobdan |
+| `platform` | ixtiyoriy: `site` / `ios` / `android` |
 
 ```json
 {
@@ -74,36 +86,36 @@ Send as everywhere: `Authorization` (if logged in), `Accept-Language` (uz / ru),
 }
 ```
 
-| Field | |
+| Maydon | |
 |---|---|
-| `conversation_id` | send it with the next message |
-| `message_id` | id of the answer |
-| `question` | `{id, text, pii_masked}` — the customer's message as saved (phone / card numbers masked) |
-| `text` | the answer, plain text |
-| `operator` | `true` → show the operator button under the answer |
-| `products` | product cards (`ProductSerializer` + `stock_status`), 0–8 |
+| `conversation_id` | keyingi xabar bilan yuboring |
+| `message_id` | javob id'si |
+| `question` | `{id, text, pii_masked}` — mijoz xabari saqlangan ko'rinishda (karta / telefon yashirilgan) |
+| `text` | javob, oddiy matn |
+| `operator` | `true` → javob ostida operator tugmasi |
+| `products` | tovar kartochkalari (`ProductSerializer` + `stock_status`), 0–8 ta |
 
-`products` may be empty (the assistant asked a question, or nothing was found).
+`products` bo'sh bo'lishi mumkin (yordamchi savol bergan yoki hech narsa topilmagan).
 
 ## WebSocket ws/assistant/
 
 `wss://api.buildex.uz/ws/assistant/?token=<access token>&device_id=<X-Device-Id>&lang=uz`
 
-| Parameter | |
+| Parametr | |
 |---|---|
-| `token` | optional: the access JWT of a logged in customer. Bad / expired → the socket is closed with code **4001** (refresh the token and connect again) |
-| `device_id` | the same value as the `X-Device-Id` header (guests) |
-| `lang` | `uz` / `ru`; without it the handshake's `Accept-Language`, else ru |
+| `token` | ixtiyoriy: login qilgan mijozning access JWT'si. Noto'g'ri yoki eskirgan → socket **4001** kodi bilan yopiladi (tokenni yangilab qayta ulaning) |
+| `device_id` | `X-Device-Id` sarlavhasidagi qiymat (mehmon uchun) |
+| `lang` | `uz` / `ru`; bo'lmasa ulanishdagi `Accept-Language`, bo'lmasa ru |
 
-The browser sends the cookies itself; the app may send a `Cookie` header with `cart_token`.
+Brauzer cookie'larni o'zi yuboradi; ilova `cart_token` bilan `Cookie` sarlavhasini yuborishi mumkin.
 
-Client → server (one JSON message per question):
+Client → server (har savol uchun bitta JSON xabar):
 
 ```json
 { "type": "message", "message": "perforator kerak", "conversation_id": 15, "platform": "ios" }
 ```
 
-Server → client, in this order:
+Server → client, shu tartibda:
 
 ```json
 { "type": "start", "conversation_id": 15, "message_id": 342, "question": { "id": 341, "text": "perforator kerak", "pii_masked": false } }
@@ -113,17 +125,17 @@ Server → client, in this order:
 { "type": "done", "conversation_id": 15, "message_id": 342, "question": { ... }, "text": "...", "operator": false, "products": [ ... ] }
 ```
 
-| Type | |
+| Turi | |
 |---|---|
-| `start` | the question is accepted; keep `conversation_id`, replace the customer's bubble with `question.text` |
-| `tool` | the assistant is searching (0 or more times) — show "Qidiryapman…" |
-| `delta` | the next piece of the text: append it |
-| `done` | the end: **replace** the streamed text with `done.text` (the final, cleaned one), show `products` and, when `operator` is true, the operator button |
-| `error` | `{"type": "error", "error_code": 42, "detail": "..."}` — the answer is over |
+| `start` | savol qabul qilindi: `conversation_id` ni saqlang, mijoz pufakchasini `question.text` bilan almashtiring |
+| `tool` | yordamchi qidiryapti (0 yoki bir necha marta) — «Qidiryapman…» ko'rsating |
+| `delta` | matnning navbatdagi bo'lagi — oxiriga qo'shing |
+| `done` | tugadi: kelgan matnni `done.text` bilan **almashtiring** (yakuniy, tozalangan matn), `products` ni ko'rsating, `operator` true bo'lsa — operator tugmasini |
+| `error` | `{"type": "error", "error_code": 42, "detail": "..."}` — javob tugadi |
 
-One question at a time per socket: a `message` sent before `done` / `error` gets an `error` with code `5`.
-The socket stays open between questions; reconnect after a network drop and keep sending `conversation_id`
-(an answer that was being written when the socket dropped is still saved and comes with the history).
+Bitta socketda bir vaqtda bitta savol: `done` / `error` kelmasidan oldin yuborilgan `message` ga `5` kodli `error`
+keladi. Socket savollar orasida ochiq turadi; tarmoq uzilsa qayta ulaning va `conversation_id` ni yuborishda davom
+eting (uzilish paytida yozilayotgan javob baribir saqlanadi va tarixda chiqadi).
 
 ## GET assistant/conversations/<id>/
 
@@ -140,14 +152,44 @@ The socket stays open between questions; reconnect after a network drop and keep
 }
 ```
 
-Oldest first, failed answers left out. Another customer's / device's conversation → `404` (`error_code` 4).
+Eskisidan yangisiga qarab, javob berilmagan xabarlarsiz. Boshqa mijoz yoki qurilmaning suhbati → `404`
+(`error_code` 4). Tarixni ochganda ham har xabarning `operator` va `pii_masked` maydonlari bo'yicha tugma va
+ogohlantirishni ko'rsating.
 
-## Errors
+## Xatolar
 
-| `error_code` | HTTP | |
+Format: `{"detail": "...", "ok": false, "result": "", "error_code": 44}`; WebSocket'da
+`{"type": "error", "error_code": 44, "detail": "..."}`.
+
+| `error_code` | HTTP | Qachon / ekranda |
 |---|---|---|
-| 5 | 400 | bad request (empty message, too long, a second message on the socket) |
-| 41 | 503 | the assistant is switched off (or its budget is spent) — "Yordamchi vaqtincha ishlamayapti" + operator contacts |
-| 42 | 429 | daily limit used up — "Bugungi limit tugadi, ertaga yozing" |
-| 43 | 503 | the assistant could not answer now (AI service error) — "Qayta urinib ko'ring" |
-| 44 | 429 | too many messages in a minute — "Biroz kuting va qayta yozing" |
+| 5 | 400 | noto'g'ri so'rov (bo'sh xabar, juda uzun, socketda ikkinchi xabar) |
+| 41 | 503 | yordamchi o'chirilgan yoki byudjeti tugagan — «Yordamchi vaqtincha ishlamayapti» + operator kontaktlari; kirish nuqtasini yashirmang, ertaga yoki keyingi oy qayta ochiladi |
+| 42 | 429 | kunlik limit tugadi — «Bugungi limit tugadi, ertaga yozing» |
+| 43 | 503 | yordamchi hozir javob bera olmadi (AI xizmati xatosi) — «Qayta urinib ko'ring» |
+| 44 | 429 | bir daqiqada juda ko'p xabar — «Biroz kuting va qayta yozing» |
+
+## Oxirgi o'zgarishlar (11.11.2026)
+
+Eski maydonlar o'chirilmagan — eski front buzilmaydi, faqat yangi holatlarni ko'rsatmaydi.
+
+| Endpoint | Oldin | Hozir | Eski front buziladimi |
+|---|---|---|---|
+| `POST assistant/chat/` → `result` | `conversation_id`, `message_id`, `text`, `products` | + `question` `{id, text, pii_masked}`, + `operator` | Yo'q |
+| `products[]` (chat, WebSocket `done`, conversations) | `ProductSerializer` | + `stock_status` | Yo'q |
+| WebSocket `start` | `conversation_id`, `message_id` | + `question` | Yo'q |
+| WebSocket `done` | chat `result` bilan bir xil | + `question`, + `operator` | Yo'q |
+| `conversations/<id>/` → `messages[]` | `id, role, text, created_at, products` | + `pii_masked`, + `operator` | Yo'q |
+| Xato `41` | yordamchi o'chirilgan | o'chirilgan **yoki** byudjet tugagan | Yo'q — ekran matni o'zgaradi |
+| Xato `44` | — | yangi: daqiqalik limit (429) | Eski front uni noma'lum xato deb ko'rsatadi |
+| Mijoz matni | qanday yozilsa shunday saqlanardi | karta va telefon saqlashdan oldin yashiriladi | Yo'q |
+
+## Frontda qilinadigan ishlar
+
+1. Javob kelganda (`chat` javobi yoki WebSocket `start`) mijoz pufakchasidagi matnni `question.text` bilan almashtiring — yashirilgan karta yoki telefon ekranda ham ko'rinmasin.
+2. `question.pii_masked: true` bo'lsa, pufakcha ostida ogohlantirish chiqaring: «Xavfsizlik uchun karta raqami va SMS kodni yozmang».
+3. `operator: true` bo'lsa, javob ostida operator tugmasini ko'rsating. U `base/info/` ma'lumotlari bilan kontakt oynasini ochadi: qo'ng'iroq, Telegram, ish vaqti.
+4. Tovar kartochkasidagi belgini `stock_status` bo'yicha chiqaring. `check` holatida «Mavjudligini tekshiring» chiqsin, «Mavjud» emas.
+5. Xato `44` uchun «biroz kuting» xabarini qo'shing.
+6. Xato `41` da kirish nuqtasini yashirmang: «vaqtincha ishlamayapti» ekrani va operator kontaktlarini ko'rsating.
+7. Suhbat tarixini (`conversations/<id>/`) qayta ochganda ham `operator` va `pii_masked` bo'yicha tugma va ogohlantirishni ko'rsating.
