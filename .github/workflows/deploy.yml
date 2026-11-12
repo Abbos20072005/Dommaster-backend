@@ -1,0 +1,61 @@
+# api.buildex.uz (Dommaster-backend) — main ga push -> dommaster serverga yoyish.
+# Repoda: .github/workflows/deploy.yml
+#
+# GitHub'ning o'z runner'i (ubuntu-latest) SSH orqali serverga ulanadi. CI kaliti serverda
+# `restrict,command="~/bin/buildex-deploy.sh"` bilan cheklangan — u faqat deploy'ni ishga
+# tushira oladi (shell yo'q, boshqa buyruq yo'q). Butun ish serverdagi skriptda:
+#   fetch -> pip (kerak bo'lsa) -> ff merge -> pg_dump + migrate (kerak bo'lsa)
+#   -> collectstatic -> restart 4 servis -> tekshiruv; xatoda orqaga qaytadi.
+#
+# Secrets (Settings -> Secrets and variables -> Actions):
+#   DEPLOY_HOST         server IP
+#   DEPLOY_PORT         SSH port
+#   DEPLOY_SSH_KEY      CI private key (butun fayl, BEGIN/END qatorlari bilan)
+#   DEPLOY_KNOWN_HOSTS  serverning host kaliti qatori (MITM'dan himoya)
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Yangi commit bo'lmasa ham qayta yoyish (restart)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: deploy-buildex-backend
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Yoyish (dommaster)
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          ARG: ${{ inputs.force && 'force' || github.sha }}
+        run: |
+          set -euo pipefail
+          for v in DEPLOY_HOST DEPLOY_PORT DEPLOY_SSH_KEY DEPLOY_KNOWN_HOSTS; do
+            [ -n "${!v}" ] || { echo "::error::secret $v qo'yilmagan"; exit 1; }
+          done
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" | tr -d '\r' > ~/.ssh/deploy_key
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" | tr -d '\r' > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/deploy_key ~/.ssh/known_hosts
+
+          # Ulanish uzilsa ham serverdagi deploy oxirigacha ishlaydi (setsid) — log: ~/logs/buildex-deploy/
+          ssh -i ~/.ssh/deploy_key -p "$DEPLOY_PORT" \
+            -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            -o ConnectTimeout=20 -o ServerAliveInterval=30 -o ServerAliveCountMax=10 \
+            "dommaster@$DEPLOY_HOST" "$ARG"
+
+      - name: Kalitni o'chirish
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
