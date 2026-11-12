@@ -34,15 +34,29 @@ Hamma joydagidek yuboriladi: `Authorization` (login qilgan bo'lsa), `Accept-Lang
   Hozir katalogdagi tovarlarning deyarli hammasi `check` bo'lib chiqadi — 1C haqiqiy qoldiqni yubormaguncha shunday.
 - **Operator tugmasi**: `operator: true` → javob ostida «Operator bilan bog'lanish» / «Связаться с оператором»
   tugmasini ko'rsating. Yordamchi uni odam yordami kerak bo'lganda qo'yadi: buyurtma holati, uni o'zgartirish yoki bekor
-  qilish, to'lov, yetkazib berish, qaytarish, shikoyat, ulgurji buyurtma, qidirsa ham tovar topilmasa. Karta yoki telefon
+  qilish, to'lov, yetkazib berish, qaytarish, shikoyat, ulgurji buyurtma, qidirsa ham tovar topilmasa. Shaxsiy ma'lumot
   yashirilgan bo'lsa ham `true` bo'ladi. Tugma kontakt oynasini ochadi: `GET /api/v1/base/info/` dan qo'ng'iroq
   (`phone_number`), Telegram (`telegram_support`), ish vaqti (`working_hours`). Javob matnida operatorning telefoni va
   havolasi bo'lmaydi.
-- **Shaxsiy ma'lumot**: xabardagi karta va telefon raqami **saqlashdan va AI'ga yuborishdan oldin yashiriladi**:
-  `8600 **** **** 9012`, `+998 90 *** ** 67`. `question.text` — xabar saqlangan ko'rinishda: mijoz pufakchasidagi
-  matnni shu bilan almashtiring. `question.pii_masked: true` → pufakcha ostida ogohlantirish chiqaring: «Xavfsizlik
-  uchun karta raqami va SMS kodni yozmang» / «В целях безопасности не пишите номер карты и SMS-код». Tovar
-  raqamlariga tegilmaydi (`600x300x200`, `600 300 200`, 13 xonali shtrix-kod, narxlar). SMS kodlarni aniqlab bo'lmaydi.
+- **Shaxsiy ma'lumot**: xabardagi shaxsiy ma'lumot **saqlashdan va AI'ga yuborishdan oldin** belgi bilan
+  almashtiriladi (qiymatdan hech narsa qolmaydi):
+
+  | Nima | Qoida | Belgi |
+  |---|---|---|
+  | Telefon | +998 / 998 va 9 raqam, yoki operator / shahar kodi bilan boshlanadigan 9 raqam (bo'shliq, chiziqcha, qavs bilan ham) | `[TELEFON]` |
+  | Karta | 16 raqam (bo'shliq / chiziqcha bilan ham), Luhn tekshiruvidan o'tsa | `[KARTA]` |
+  | Email | oddiy shakl | `[EMAIL]` |
+  | JShShIR | ketma-ket 14 raqam | `[HUJJAT]` |
+  | Pasport / ID karta | 2 lotin harf va 7 raqam (`AA1234567`, `AB 1234567`) | `[HUJJAT]` |
+  | SMS kod | «kod / код / sms / смс / parol / пароль / code» yonidagi 4–6 raqam (`SMS kod: 123456`, `4821 kodi`); «artikul / mahsulot / tovar / shtrix» dan keyingi kod emas | `[KOD]` |
+
+  Misol: `kartam 8600 1234 5678 9012, tel +998 90 123-45-67` → `kartam [KARTA], tel [TELEFON]`. Tovar raqamlariga
+  tegilmaydi (`600x300x200`, `600 300 200`, 13 xonali shtrix-kod, narxlar, `artikul 12345678`, `mahsulot kodi 12345`);
+  shuning uchun operator kodisiz 9 raqam telefon hisoblanmaydi. `question.text` — xabar saqlangan ko'rinishda: mijoz
+  pufakchasidagi matnni shu bilan almashtiring. `question.pii_masked: true` → pufakcha ostida ogohlantirish (`pii_warning`
+  matni) chiqaring: «Xavfsizlik uchun karta raqami, hujjat va SMS kodni yozmang» / «В целях безопасности не пишите номер
+  карты, данные документа и SMS-код». AI'ga faqat xabar matnlari ketadi: mijoz id'si, IP, qurilma id'si, buyurtma
+  ma'lumotlari yuborilmaydi.
 - Javob matni oddiy matn: markdown yo'q, havola yo'q, tovar id'lari va belgilar yo'q.
 - **Suhbat**: birinchi javob `conversation_id` qaytaradi — keyingi xabarlar bilan uni yuboring, yordamchi oxirgi 10 ta
   xabarni eslab qoladi. Yangi suhbat = `conversation_id` yubormaslik. Boshqa odamning `conversation_id` si e'tiborga
@@ -90,7 +104,7 @@ Hamma joydagidek yuboriladi: `Authorization` (login qilgan bo'lsa), `Accept-Lang
 |---|---|
 | `conversation_id` | keyingi xabar bilan yuboring |
 | `message_id` | javob id'si |
-| `question` | `{id, text, pii_masked}` — mijoz xabari saqlangan ko'rinishda (karta / telefon yashirilgan) |
+| `question` | `{id, text, pii_masked}` — mijoz xabari saqlangan ko'rinishda (shaxsiy ma'lumot belgi bilan almashtirilgan) |
 | `text` | javob, oddiy matn |
 | `operator` | `true` → javob ostida operator tugmasi |
 | `products` | tovar kartochkalari (`ProductSerializer` + `stock_status`), 0–8 ta |
@@ -174,8 +188,8 @@ Format: `{"detail": "...", "ok": false, "result": "", "error_code": 44}`; WebSoc
 1. Har so'rovda `Accept-Language`, login bo'lsa `Authorization`, mehmon uchun doim bir xil `X-Device-Id` yuboring (WebSocket'da `token`, `device_id`, `lang` parametrlari).
 2. Xabar yuborilgach, javobdagi `conversation_id` ni saqlang va keyingi xabarlar bilan yuboring. «Yangi suhbat» tugmasi = `conversation_id` siz yuborish.
 3. Sayt uchun WebSocket'dan foydalaning: `delta` larni ketma-ket qo'shib boring, `tool` kelganda «Qidiryapman…» ko'rsating, `done` da matnni `done.text` bilan almashtiring. WebSocket ishlamasa, `POST assistant/chat/` ga o'ting.
-4. Javob kelganda (`chat` javobi yoki WebSocket `start`) mijoz pufakchasidagi matnni `question.text` bilan almashtiring — yashirilgan karta yoki telefon ekranda ham ko'rinmasin.
-5. `question.pii_masked: true` bo'lsa, pufakcha ostida ogohlantirish chiqaring: «Xavfsizlik uchun karta raqami va SMS kodni yozmang».
+4. Javob kelganda (`chat` javobi yoki WebSocket `start`) mijoz pufakchasidagi matnni `question.text` bilan almashtiring — yashirilgan ma'lumot (`[KARTA]`, `[TELEFON]` ...) ekranda ham ko'rinmasin.
+5. `question.pii_masked: true` bo'lsa, pufakcha ostida ogohlantirish chiqaring: «Xavfsizlik uchun karta raqami, hujjat va SMS kodni yozmang».
 6. Javob matni ostida `products` kartochkalarini ko'rsating. Kartochka belgisi `stock_status` bo'yicha bo'lsin: `check` holatida «Mavjudligini tekshiring» chiqsin, «Mavjud» emas. Kartochka bosilganda tovar sahifasi `/product/<slug>` ochilsin.
 7. `operator: true` bo'lsa, javob ostida operator tugmasini ko'rsating. U `base/info/` ma'lumotlari bilan kontakt oynasini ochadi: qo'ng'iroq, Telegram, ish vaqti.
 8. Har xato uchun o'z ekranini chiqaring (jadval yuqorida). `41` da kirish nuqtasini yashirmang — «vaqtincha ishlamayapti» ekrani va operator kontaktlari bo'lsin.

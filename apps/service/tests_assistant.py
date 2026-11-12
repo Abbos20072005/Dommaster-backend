@@ -231,7 +231,7 @@ class AssistantChatTests(ApiTestCase):
         with mock.patch(GENERATE, side_effect=script):
             result = self.guest.post(CHAT, {"message": message}, format="json")
         self.assertEqual(result.status_code, 200, result.data)
-        masked = "kartam 8600 **** **** 9012, tel +998 90 *** ** 67, gazoblok 600 300 200 kerak"
+        masked = "kartam [KARTA], tel [TELEFON], gazoblok 600 300 200 kerak"
         self.assertEqual(result.data["result"]["question"]["text"], masked)
         self.assertTrue(result.data["result"]["question"]["pii_masked"])
         self.assertEqual(script.sent[0][0][-1].parts[0].text, masked)
@@ -339,18 +339,31 @@ class AssistantToolTests(ApiTestCase):
 class PiiMaskTests(ApiTestCase):
     def test_masked(self):
         for raw, masked in [
-            ("8600123456789012", "8600 **** **** 9012"),
-            ("9860-1234-5678-9012", "9860 **** **** 9012"),
-            ("+998901234567", "+998 90 *** ** 67"),
-            ("998 (90) 123 45 67", "+998 90 *** ** 67"),
-            ("tel 90 123 45 67 ga", "tel +998 90 *** ** 67 ga"),
-            ("901234567", "+998 90 *** ** 67"),
+            ("8600123456789012", "[KARTA]"),
+            ("9860-1234-5678-9015", "[KARTA]"),
+            ("4111 1111 1111 1111 ga", "[KARTA] ga"),
+            ("+998901234567", "[TELEFON]"),
+            ("998 (90) 123 45 67", "[TELEFON]"),
+            ("+998 11 123 45 67", "[TELEFON]"),
+            ("tel 90 123 45 67 ga", "tel [TELEFON] ga"),
+            ("901234567", "[TELEFON]"),
+            ("pochtam ali.valiyev+1@mail.uz ga", "pochtam [EMAIL] ga"),
+            ("JShShIR 31234567890123", "JShShIR [HUJJAT]"),
+            ("pasport AB 1234567", "pasport [HUJJAT]"),
+            ("aa1234567", "[HUJJAT]"),
+            ("SMS kod: 123456", "SMS kod: [KOD]"),
+            ("kod 4821 keldi", "kod [KOD] keldi"),
+            ("4821 kodi", "[KOD] kodi"),
+            ("код из смс 4821", "код из смс [KOD]"),
+            ("parolim 5555", "parolim [KOD]"),
         ]:
             self.assertEqual(pii.mask(raw), (masked, True), raw)
 
     def test_product_numbers_stay(self):
         for raw in ["gazoblok 600x300x200", "600 300 200", "kabel VVG 3x2.5", "M400 50 kg", "4600123456789",
-                    "narxi 1 200 000 so'm", "artikul 12345678"]:
+                    "narxi 1 200 000 so'm", "artikul 12345678", "mahsulot kodi 12345", "артикул код 4567",
+                    "8600 1234 5678 9010",  # 16 digits that fail the Luhn check
+                    "M12 1234567 bolt", "kod 123"]:
             self.assertEqual(pii.mask(raw), (raw, False), raw)
 
 
