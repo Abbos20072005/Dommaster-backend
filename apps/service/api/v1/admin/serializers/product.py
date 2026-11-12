@@ -283,6 +283,9 @@ class ProductSerializer(serializers.ModelSerializer):
         attribute_values = validated_data.pop("attribute_values", [])
         badges = validated_data.pop("badges", [])
         links = self._pop_links(validated_data)
+        # created in the panel: hidden until it is filled in (images are uploaded after the create), not from 1C
+        validated_data.setdefault("is_active", False)
+        validated_data.setdefault("erp_active", False)
         product = super().create(validated_data)
         on_publish_status_change(product, None, self._user())
         self._set_attribute_values(product, attribute_values)

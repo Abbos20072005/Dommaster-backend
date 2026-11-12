@@ -28,7 +28,7 @@ Rasmlar mahsulotning `images` maydonida (ro'yxat va detail) **tartib bo'yicha** 
 
 `POST products/{id}/images/` — bitta so'rovda bitta rasm. Yangi rasm har doim ro'yxat **oxiriga** qo'shiladi. Javob `201` — rasm obyekti.
 
-Mahsulot qo'shishda: avval `POST products/` (mahsulot yaratiladi), keyin shu `id` bilan rasmlar yuklanadi va kerak bo'lsa `reorder/` chaqiriladi.
+Mahsulot qo'shishda: avval `POST products/` (mahsulot yaratiladi), keyin shu `id` bilan rasmlar yuklanadi va kerak bo'lsa `reorder/` chaqiriladi — batafsil `docs/admin/product_create.md`.
 
 ---
 
