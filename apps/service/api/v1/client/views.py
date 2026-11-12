@@ -602,23 +602,14 @@ class ProductViewSet(ViewSet):
 
         param_data = param.strip()
         language = request_language(request)
-        cache_key = f"search:v2:{param_data.lower()}:{language}"
+        cache_key = f"search:v3:{param_data.lower()}:{language}"
 
         query = cache.get(cache_key)
         if not query:
+            # the same text search as product/filter q (other script, articul)
             product = list(
-                Product.objects.filter(is_active=True).annotate(
-                    similarity=Greatest(
-                        TrigramSimilarity("name", param_data),
-                        TrigramSimilarity("name_uz", param_data),
-                        TrigramSimilarity("name_ru", param_data),
-                    )
-                )
-                .filter(
-                    Q(similarity__gt=0.1) |
-                    Q(name__icontains=param_data) | Q(name_uz__icontains=param_data) | Q(name_ru__icontains=param_data)
-                )
-                .order_by("-similarity")
+                search_products(Product.objects.filter(is_active=True), param_data)
+                .order_by("-similarity", "id")
                 .values_list("name", flat=True)[:5]
             )
 

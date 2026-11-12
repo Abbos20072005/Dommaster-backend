@@ -27,7 +27,7 @@ class LocalizedNameListTests(ApiTestCase):
 
         for language in ("ru", "uz"):
             cache.delete(f"products:most_search:{language}")
-            cache.delete(f"search:v2:{QUERY.lower()}:{language}")
+            cache.delete(f"search:v3:{QUERY.lower()}:{language}")
 
     def names(self, url, language=None, **params):
         headers = {"HTTP_ACCEPT_LANGUAGE": language} if language else {}

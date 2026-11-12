@@ -91,6 +91,8 @@ Til `Accept-Language` headeridan olinadi (`uz`, `ru`; default `ru`, `en` yoki bo
 - Turli filtrlar orasida — **VA** (brend va uzunlik).
 - Noma'lum kalit e'tiborga olinmaydi (xato qaytmaydi).
 
+`q` (matnli qidiruv; `search/` takliflari ham xuddi shu qidiruvdan foydalanadi): so'rov ikkala yozuvda qidiriladi — kirillda yozilsa o'zbek lotinida ham («қувур» → «quvur», «бўёқ» → «bo'yoq»), lotinda yozilsa kirillda ham («laminat» → «ламинат»). Artikul yoki 1C kodi bilan ham qidirsa bo'ladi («ai91303» = «AI-91303»: katta-kichik harf, bo'sh joy va chiziqcha hisobga olinmaydi); kod bo'yicha topilgan tovar ro'yxatda birinchi turadi. Ilova yoki sayt tomonida hech narsani o'zgartirish kerak emas.
+
 Qolgan maydonlar o'zgarmagan: `q`, `sort_by` (`newest`, `price`, `rating`), `price_from`, `price_to`, `brand`, `category`, `sub_category`, `item_category`, `sale_id`, `page`, `page_size`.
 
 ### Javob

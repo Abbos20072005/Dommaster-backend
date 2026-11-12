@@ -14,7 +14,7 @@ from apps.service import feed, product_links
 from apps.service.attributes import attribute_values_prefetch, display_value, product_attribute_values, translated
 from apps.service.models import Product, ProductItemCategory
 from apps.service.product_filters import apply_attribute_filters, category_filters
-from apps.service.search import search_products as text_search
+from apps.service.search import product_text, relevance, search_products as text_search
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +22,8 @@ MAX_RESULTS = 10        # products of one search_products call
 DEFAULT_RESULTS = 8
 MAX_QUERIES = 3         # query variants of one search (uz, ru, brand)
 CANDIDATES = 50         # best matches taken from each query variant before merging
+# a text match is returned only when at least this share of the query words is in the product (search.relevance)
+MIN_RELEVANCE = 0.5
 ROW_ATTRIBUTES = 5      # characteristics in a list row (the details tool returns all of them)
 DESCRIPTION_CHARS = 500
 FILTER_VALUES = 15      # checkbox values of one filter returned to the model
@@ -138,13 +140,10 @@ def search_products(ctx, queries=None, item_category_id=None, price_min=None, pr
     products = apply_attribute_filters(products, _filters(filters))
 
     queries = [str(query).strip()[:100] for query in (queries or []) if str(query).strip()][:MAX_QUERIES]
+    scores = None
     if queries:
-        scores = {}
-        for query in queries:
-            for pk, similarity in text_search(products, query).order_by("-similarity", "id") \
-                    .values_list("id", "similarity")[:CANDIDATES]:
-                scores[pk] = max(scores.get(pk, 0), similarity or 0)
-        found = sorted(scores, key=lambda pk: (-scores[pk], pk))
+        scores = _relevant(products, queries)
+        found = sorted(scores, key=lambda pk: (-scores[pk][0], -scores[pk][1], pk))
     elif item_category_id:
         # no words, only a category (+ filters): its popular products first
         popularity = feed.product_popularity()
@@ -152,7 +151,36 @@ def search_products(ctx, queries=None, item_category_id=None, price_min=None, pr
     else:
         return {"total": 0, "products": [], "categories": [], "note": "send queries or item_category_id"}
 
-    return {"total": len(found), "products": _products(found[:limit], ctx), "categories": _categories(found)}
+    rows = _products(found[:limit], ctx)
+    if scores is not None:
+        for row in rows:
+            row["relevance"] = scores[row["id"]][0]
+            row["match"] = "all_words" if row["relevance"] >= 1 else "partial"
+    result = {"total": len(found), "products": rows, "categories": _categories(found)}
+    if scores is not None and not found:
+        result["note"] = "no product carries the words of the queries: nothing found"
+    elif rows and rows[0].get("match") == "partial":
+        result["note"] = "no product has all the words: these only partly match the request"
+    return result
+
+
+def _relevant(products, queries):
+    """{product id: (relevance, similarity)} of the text matches that carry the query words — the trigram
+    similarity alone also finds names sharing only a few letters ("boyler" -> "otboy bolg'a")."""
+    candidates = {}
+    for query in queries:
+        for pk, similarity in text_search(products, query).order_by("-similarity", "id") \
+                .values_list("id", "similarity")[:CANDIDATES]:
+            candidates[pk] = max(candidates.get(pk, 0), similarity or 0)
+    scores = {}
+    for product in Product.objects.filter(pk__in=candidates).select_related("brand").only(
+            "id", "name_ru", "name_uz", "articul_code", "product_code", "brand_id",
+            "brand__name_ru", "brand__name_uz"):
+        text = product_text(product)
+        score = max(relevance(query, text) for query in queries)
+        if score >= MIN_RELEVANCE:
+            scores[product.pk] = (score, round(candidates[product.pk], 3))
+    return scores
 
 
 def _categories(ids):
@@ -267,7 +295,11 @@ DECLARATIONS = [
             "Search the Buildex catalog (building materials, tools, plumbing, electrics). Send 1-3 short keyword "
             "variants of what the customer wants: Uzbek Latin, Russian and the brand / model if named, e.g. "
             "[\"perforator\", \"перфоратор\", \"Bosch GBH\"]. Returns products (price in UZS, stock, top "
-            "attributes) and the item categories they are in."
+            "attributes) and the item categories they are in. Each product found by words has relevance (0-1, "
+            "the share of the query words it carries) and match: all_words, or partial = only some words fit "
+            "(e.g. plain tiles for \"clinker tiles\") - say so instead of presenting it as the exact product. "
+            "Products that do not carry the words are left out, so an empty list means nothing fits. An articul "
+            "or product code can be sent as a query."
         ),
         "parameters_json_schema": {
             "type": "object",
