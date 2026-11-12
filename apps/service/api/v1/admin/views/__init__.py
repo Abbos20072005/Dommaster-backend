@@ -21,7 +21,6 @@ from .filter_page import FilterPageViewSet
 from .pro import ProjectViewSet
 from .content_import import ContentImportViewSet
 from .product_funnel import ProductFunnelViewSet
-from .search import SearchSynonymViewSet, NotFoundSearchViewSet, SearchRequestViewSet
 
 __all__ = [
     "OrderViewSet", "ManagerViewSet", "OrderCommentViewSet", "ProductViewSet", "ProductCategoryViewSet", "ProductSubCategoryViewSet",
@@ -31,5 +30,4 @@ __all__ = [
     "SalesAnalyticsAPIView", "OrderStagesAPIView", "OrderStatusesAPIView", "ProductStatusesAPIView", "TopSalesAPIView", "TopCustomersAPIView", "NewCustomersAPIView", "HomeBlockViewSet", "HomePageAPIView", "HomePagePublishAPIView",
     "ProductModerationViewSet", "FilterPageViewSet",
     "ProjectViewSet", "ContentImportViewSet", "ProductFunnelViewSet",
-    "SearchSynonymViewSet", "NotFoundSearchViewSet", "SearchRequestViewSet",
 ]

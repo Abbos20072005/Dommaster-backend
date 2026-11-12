@@ -5,8 +5,7 @@ from django.utils import timezone
 from rest_framework.filters import SearchFilter
 from apps.service.models import AddsBrands, Brand, PartnerBrand, ProductModel, ProductBadge, ProductCategory, \
     ProductSubCategory, ProductItemCategory, ProductAttribute, Order, OrderItem, Product, Comment, CommentReply, \
-    Questions, QuestionsReply, ORDER_STATUS, Sale, HomeBlock, ProductModeration, FilterPage, Project, ContentImport, \
-    SearchRequest, SearchSynonym
+    Questions, QuestionsReply, ORDER_STATUS, Sale, HomeBlock, ProductModeration, FilterPage, Project, ContentImport
 from apps.service.filter_pages import open_pages
 
 
@@ -284,19 +283,3 @@ class ProjectFilter(django_filters.FilterSet):
     def filter_has_items(self, queryset, name, value):
         # `items_count` is annotated in ProjectViewSet.get_queryset
         return queryset.filter(items_count__gt=0) if value else queryset.filter(items_count=0)
-
-
-class SearchSynonymFilter(django_filters.FilterSet):
-    class Meta:
-        model = SearchSynonym
-        fields = ("is_active",)
-
-
-class SearchRequestFilter(django_filters.FilterSet):
-    from_created = django_filters.DateFilter(field_name="created_at", lookup_expr="date__gte")
-    to_created = django_filters.DateFilter(field_name="created_at", lookup_expr="date__lte")
-    has_customer = django_filters.BooleanFilter(field_name="customer", lookup_expr="isnull", exclude=True)
-
-    class Meta:
-        model = SearchRequest
-        fields = ("status", "language", "platform", "customer")

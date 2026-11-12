@@ -38,7 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django.contrib.postgres',          # trigram lookups + OpClass in functional indexes (product search)
+    'django.contrib.postgres',          # OpClass in the functional index of migration service 0131
 
     # apps
     "apps.authorization",

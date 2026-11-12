@@ -4,7 +4,7 @@ from celery import shared_task
 from django.core.management import call_command
 
 from utils.background import exclusive
-from . import badges, content_import, filter_pages, funnel, merchant_feed, order_push, outbox, pickup, search_log
+from . import badges, content_import, filter_pages, funnel, merchant_feed, order_push, outbox, pickup
 
 
 @shared_task
@@ -83,8 +83,3 @@ def send_assistant_budget_alert(text):
     from apps.base.telegram import send_staff_alert
 
     send_staff_alert(text)
-
-
-@shared_task
-def send_search_request(request_id):
-    search_log.send_request(request_id)
