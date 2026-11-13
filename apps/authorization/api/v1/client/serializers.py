@@ -76,11 +76,11 @@ class PhoneAuthSerializer(serializers.Serializer):
 class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = Customer
-        fields = ("id", "full_name", "email", "phone_number", "password", "role")
+        # no `role`: prorab (PRO) is given only by staff (admin `customers/<id>/role/`); a sent one is ignored
+        fields = ("id", "full_name", "email", "phone_number", "password")
         extra_kwargs = {
             "password": {"write_only": True},
             "email": {"required": False, "allow_blank": True, "allow_null": True},
-            "role": {"required": False},
         }
 
     def create(self, validated_data):

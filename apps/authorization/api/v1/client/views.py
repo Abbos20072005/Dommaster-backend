@@ -132,6 +132,10 @@ class AuthViewSet(ViewSet):
         if check_password(login_serializer.validated_data.get('password'), customer.password) is False:
             raise CustomApiException(error_code=ErrorCodes.INCORRECT_PASSWORD)
 
+        # register + login used to hand out tokens for any phone number nobody confirmed (13.11 pentest)
+        if not customer.verified:
+            raise CustomApiException(error_code=ErrorCodes.PHONE_NOT_VERIFIED)
+
         access_token, refresh = issue_customer_tokens(customer)
 
         return Response(data={'access_token': access_token, 'refresh_token': refresh, 'ok': True},

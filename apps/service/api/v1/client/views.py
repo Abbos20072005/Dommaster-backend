@@ -2534,6 +2534,11 @@ class OrderViewSet(ViewSet):
             ORDER_CHANNEL_SITE if serializer.validated_data.get("is_web") else None
         )
 
+        # an order of nothing (0 sum, no items) used to be created and got a payment link
+        cart_items = CartItem.objects.filter(cart_id=cart.id, is_checked=True, quantity__gt=0).select_related("product")
+        if not cart_items.exists():
+            raise CustomApiException(error_code=ErrorCodes.CART_EMPTY)
+
         # order, its items and the order.created outbox event are committed together
         with transaction.atomic():
             promocode = Promocodes.objects.filter(
@@ -2550,6 +2555,8 @@ class OrderViewSet(ViewSet):
                     promocode_discount_price = cart.total_price * (
                         1 - (promocode.discount_precent / 100)
                     )
+                # a fixed discount above the cart sum must not make the sum negative
+                promocode_discount_price = max(promocode_discount_price, 0)
 
                 delivery_type = serializer.validated_data.get("delivery_type", 0)
                 delivery_price = serializer.validated_data.get("delivery_price", 0.0) if delivery_type == 0 else 0
@@ -2589,9 +2596,6 @@ class OrderViewSet(ViewSet):
                 )
 
             # Bulk create OrderItems and delete CartItems in 2 queries instead of N*2
-            cart_items = CartItem.objects.filter(
-                cart_id=cart.id, is_checked=True
-            ).select_related('product')
             order_items = [
                 OrderItem(order=order, product=item.product, quantity=item.quantity,
                           unit_price=OrderItem.unit_price_of(item.product))

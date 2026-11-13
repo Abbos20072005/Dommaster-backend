@@ -102,13 +102,14 @@ class ProductAnnotationMixin:
 
 class OrderCreateSerializer(serializers.Serializer):
     promocode = serializers.CharField(max_length=15, required=False)
-    payment_type = serializers.IntegerField(required=True)
+    # PAYMENT_TYPE 1-4; 0 = not chosen yet (the app sends it, the order is paid later with `order/pay/`)
+    payment_type = serializers.IntegerField(required=True, min_value=0, max_value=4)
     payment_method = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     is_web = serializers.BooleanField(required=False)
     channel = serializers.ChoiceField(choices=ORDER_CHANNEL, required=False,
                                       help_text="Where the order is placed; without it `is_web` = site")
     address_id = serializers.IntegerField(required=False)
-    delivery_type = serializers.IntegerField(required=False, default=0)
+    delivery_type = serializers.IntegerField(required=False, default=0, min_value=0, max_value=1)
     delivery_price = serializers.CharField(required=False, allow_blank=True)
     receiver_name = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
     receiver_phone = serializers.CharField(max_length=14, required=False, allow_null=True, allow_blank=True)
@@ -117,7 +118,7 @@ class OrderCreateSerializer(serializers.Serializer):
 
     def validate_delivery_price(self, value):
         normalized = normalize_delivery_price(value)
-        if normalized is None:
+        if normalized is None or not normalized.is_finite() or normalized < 0:
             raise serializers.ValidationError("Некорректная цена доставки")
         return normalized
 
@@ -268,6 +269,8 @@ class CartItemCreateSerializer(serializers.ModelSerializer):
             "quantity",
             "is_checked"
         )
+        # a negative quantity made a negative order sum (and gave the stock back on Collecting)
+        extra_kwargs = {"quantity": {"min_value": 1}}
 
     def validate(self, attrs):
         product = Product.objects.filter(id=attrs.get("product").id, is_active=True).first()
@@ -290,6 +293,7 @@ class CartItemUpdateSerializer(serializers.ModelSerializer):
             "quantity",
             "is_checked"
         )
+        extra_kwargs = {"quantity": {"min_value": 0}}  # 0 = remove the item from the cart
 
     def validate(self, attrs):
         product = Product.objects.filter(id=attrs.get("product").id, is_active=True).first()
