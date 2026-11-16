@@ -705,8 +705,6 @@ class AtmosCardBindCallbackView(APIView):
 
         matched_card = next((card for card in cards_data if str(card.get("card_id")) == str(card_id)), None)
 
-        has_cards = CustomerCard.objects.filter(user=user, is_active=True).exists()
-
         card_info, created = CustomerCard.objects.update_or_create(
             card_id=str(card_id),
             defaults={
@@ -720,7 +718,12 @@ class AtmosCardBindCallbackView(APIView):
             }
         )
 
-        if created and not has_cards:
+        # the card becomes the default one when the customer has no other default card — also when it is a card
+        # deleted earlier and bound again (the soft-deleted row is reused, so `created` is False then)
+        has_default = CustomerCard.objects.filter(
+            user=user, is_active=True, is_default=True,
+        ).exclude(id=card_info.id).exists()
+        if not has_default and not card_info.is_default:
             card_info.is_default = True
             card_info.save(update_fields=["is_default"])
 
@@ -777,6 +780,24 @@ def _atmos_error_text(exc):
     return (response.text or "")[:1000] if response is not None else ""
 
 
+def _cancel_unapplied_hold(access_token, order):
+    """A hold Atmos created but refused to apply is cancelled at once (no SMS to the customer), so it does not
+    hang on the card; `order.hold_id` keeps the id of that attempt, `payment_status` stays Pending. Errors are
+    only logged — the customer already gets the apply error."""
+    try:
+        data = AtmosHoldService.cancel_hold(access_token=access_token, hold_id=order.hold_id, send_cancel_sms=False)
+    except Exception as e:
+        logger.warning(
+            "Atmos hold cancel after failed apply failed: order_id=%s hold_id=%s error=%s body=%s",
+            order.id, order.hold_id, e, _atmos_error_text(e),
+        )
+        return
+    logger.info(
+        "Atmos hold cancelled after failed apply: order_id=%s hold_id=%s result=%s",
+        order.id, order.hold_id, data.get("result"),
+    )
+
+
 class AtmosCreateHoldView(APIView):
     permission_classes = [IsAuthenticated]
     @extend_schema(
@@ -796,7 +817,8 @@ class AtmosCreateHoldView(APIView):
         if not order_id:
             return Response({"error": "order_id is required"}, status=status.HTTP_400_BAD_REQUEST)
 
-        card = CustomerCard.objects.filter(user_id=request.user.id, is_active=True, is_default=True).first()
+        # the default card, else the newest active one (a card bound again after a delete used to stay non-default)
+        card = CustomerCard.objects.filter(user_id=request.user.id, is_active=True).order_by("-is_default", "-created_at").first()
         if not card:
             raise CustomApiException(error_code=ErrorCodes.NOT_FOUND, message="Customer card not found")
 
@@ -844,8 +866,9 @@ class AtmosCreateHoldView(APIView):
             )
             return Response(data, status=status.HTTP_400_BAD_REQUEST)
 
-        # save hold_id to order
+        # save hold_id to order right away, so a hold that fails to apply is not lost
         order.hold_id = data.get("hold_id")
+        order.save(update_fields=["hold_id"])
 
         try:
             apply_data = AtmosHoldService.apply_hold(
@@ -858,6 +881,7 @@ class AtmosCreateHoldView(APIView):
                 "Atmos hold/apply failed: order_id=%s hold_id=%s error=%s body=%s",
                 order.id, order.hold_id, e, _atmos_error_text(e),
             )
+            _cancel_unapplied_hold(access_token, order)
             return Response({"error": f"Failed to apply hold: {e}"}, status=status.HTTP_400_BAD_REQUEST)
 
         if apply_data.get("result", {}).get("code") != "OK":
@@ -865,6 +889,7 @@ class AtmosCreateHoldView(APIView):
                 "Atmos hold/apply refused: order_id=%s hold_id=%s result=%s",
                 order.id, order.hold_id, apply_data.get("result"),
             )
+            _cancel_unapplied_hold(access_token, order)
             return Response(apply_data, status=status.HTTP_400_BAD_REQUEST)
 
         order.payment_status = 1
@@ -1071,8 +1096,15 @@ class CustomerCardViewSet(ViewSet):
         if not card:
             raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
 
+        was_default = card.is_default
         card.is_active = False
         card.is_default = False
         card.save(update_fields=["is_active", "is_default"])
+        if was_default:
+            # the newest card left becomes the default one, so the customer can still pay
+            next_card = CustomerCard.objects.filter(user=request.user.id, is_active=True).order_by("-created_at").first()
+            if next_card:
+                next_card.is_default = True
+                next_card.save(update_fields=["is_default"])
         return Response(data={"result": "Customer card successfully deleted", "ok": True},
                         status=status.HTTP_204_NO_CONTENT)
