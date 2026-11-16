@@ -2,7 +2,7 @@
 
 client -> {"type": "message", "message", "conversation_id"?, "platform"?}
 server -> {"type": "start", "conversation_id", "message_id"}, {"type": "tool", "name"}*, {"type": "delta", "text"}*,
-          {"type": "done", "conversation_id", "message_id", "text", "products"} or
+          {"type": "done", "conversation_id", "message_id", "text", "products", "sources"} or
           {"type": "error", "error_code", "detail"}
 
 One message at a time per socket: a message sent before the answer is done gets an error. The answer runs in a

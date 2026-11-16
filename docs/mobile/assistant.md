@@ -32,12 +32,19 @@ Hamma joydagidek yuboriladi: `Authorization` (login qilgan bo'lsa), `Accept-Lang
   | `out_of_stock` | «Mavjud emas» / «Нет в наличии» | qoldiq 0 |
 
   Hozir katalogdagi tovarlarning deyarli hammasi `check` bo'lib chiqadi — 1C haqiqiy qoldiqni yubormaguncha shunday.
+- **Shartlar bo'yicha savollar** (yetkazib berish, to'lov usullari, qaytarish / almashtirish / kafolat, kontaktlar):
+  yordamchi saytdagi tasdiqlangan sahifalar matnidan javob beradi (`/courier-delivery`, `/payment-methods`,
+  `/returns`, `/contacts`). Javobda **`sources`** keladi: `[{topic, title, url}]`, ya'ni javob qaysi sahifadan
+  olingani. Javob matni ostida «Manba: To'lov usullari» kabi bosiladigan chip qilib ko'rsating, bosilganda `url`
+  ochilsin. Tovar haqidagi javobda `sources` bo'sh (`[]`).
 - **Operator tugmasi**: `operator: true` → javob ostida «Operator bilan bog'lanish» / «Связаться с оператором»
-  tugmasini ko'rsating. Yordamchi uni odam yordami kerak bo'lganda qo'yadi: buyurtma holati, uni o'zgartirish yoki bekor
-  qilish, to'lov, yetkazib berish, qaytarish, shikoyat, ulgurji buyurtma, qidirsa ham tovar topilmasa. Shaxsiy ma'lumot
-  yashirilgan bo'lsa ham `true` bo'ladi. Tugma kontakt oynasini ochadi: `GET /api/v1/base/info/` dan qo'ng'iroq
-  (`phone_number`), Telegram (`telegram_support`), ish vaqti (`working_hours`). Javob matnida operatorning telefoni va
-  havolasi bo'lmaydi.
+  tugmasini ko'rsating. Yordamchi uni odam yordami kerak bo'lganda qo'yadi: aniq bir buyurtma (holati, o'zgartirish,
+  bekor qilish), noto'g'ri o'tgan to'lov (pul yechildi, buyurtma yo'q), mijoz tovarni hozir qaytarmoqchi, shikoyat,
+  ulgurji buyurtma, shartlarda javobi yo'q savol, qidirsa ham tovar topilmasa. Shaxsiy ma'lumot yashirilgan bo'lsa ham
+  `true` bo'ladi. Umumiy shartlar savoliga («qanday to'lov usullari bor?») operator kerak emas, `sources` bilan javob
+  keladi. Tugma kontakt oynasini ochadi: `GET /api/v1/base/info/` dan qo'ng'iroq (`phone_number`), Telegram
+  (`telegram_support`), ish vaqti (`working_hours`). Bunday javob matnida do'kon telefoni (+998 77 240 09 09) ham
+  yozilgan bo'lishi mumkin.
 - **Shaxsiy ma'lumot**: xabardagi shaxsiy ma'lumot **saqlashdan va AI'ga yuborishdan oldin** belgi bilan
   almashtiriladi (qiymatdan hech narsa qolmaydi):
 
@@ -57,7 +64,7 @@ Hamma joydagidek yuboriladi: `Authorization` (login qilgan bo'lsa), `Accept-Lang
   matni) chiqaring: «Xavfsizlik uchun karta raqami, hujjat va SMS kodni yozmang» / «В целях безопасности не пишите номер
   карты, данные документа и SMS-код». AI'ga faqat xabar matnlari ketadi: mijoz id'si, IP, qurilma id'si, buyurtma
   ma'lumotlari yuborilmaydi.
-- Javob matni oddiy matn: markdown yo'q, havola yo'q, tovar id'lari va belgilar yo'q.
+- Javob matni oddiy matn: markdown yo'q, havola yo'q (sahifa havolasi `sources` da), tovar id'lari va belgilar yo'q.
 - **Suhbat**: birinchi javob `conversation_id` qaytaradi — keyingi xabarlar bilan uni yuboring, yordamchi oxirgi 10 ta
   xabarni eslab qoladi. Yangi suhbat = `conversation_id` yubormaslik. Boshqa odamning `conversation_id` si e'tiborga
   olinmaydi (yangi suhbat boshlanadi).
@@ -94,7 +101,8 @@ Hamma joydagidek yuboriladi: `Authorization` (login qilgan bo'lsa), `Accept-Lang
     "question": { "id": 341, "text": "perforator kerak, 30 mln gacha", "pii_masked": false },
     "text": "Uy ishlari uchun Bosch GBH 2-26 mos keladi: 800 Vt, beton uchun yetarli. Arzonroq variant — Makita HR2470.",
     "operator": false,
-    "products": [ { "id": 578, "name": "Perforator Bosch GBH 2-26", "price": 1500000.0, "discount_price": 1200000.0, "images": [ ... ], ..., "stock_status": "check" } ]
+    "products": [ { "id": 578, "name": "Perforator Bosch GBH 2-26", "price": 1500000.0, "discount_price": 1200000.0, "images": [ ... ], ..., "stock_status": "check" } ],
+    "sources": []
   },
   "ok": true
 }
@@ -108,8 +116,20 @@ Hamma joydagidek yuboriladi: `Authorization` (login qilgan bo'lsa), `Accept-Lang
 | `text` | javob, oddiy matn |
 | `operator` | `true` → javob ostida operator tugmasi |
 | `products` | tovar kartochkalari (`ProductSerializer` + `stock_status`), 0–8 ta |
+| `sources` | shartlar sahifalari `[{topic, title, url}]`: `topic` = `delivery` / `payment` / `returns` / `contacts`, `title` so'rov tilida, `url` = `https://buildex.uz/...`; tovar javobida `[]` |
 
 `products` bo'sh bo'lishi mumkin (yordamchi savol bergan yoki hech narsa topilmagan).
+
+Shartlar savoliga javob misoli:
+
+```json
+{
+  "text": "Buyurtmani Atmos, Click, Payme yoki Uzum orqali karta bilan onlayn to'lashingiz mumkin. Yuridik shaxslar bank o'tkazmasi orqali to'laydi.",
+  "operator": false,
+  "products": [],
+  "sources": [ { "topic": "payment", "title": "To'lov usullari", "url": "https://buildex.uz/payment-methods" } ]
+}
+```
 
 ## WebSocket ws/assistant/
 
@@ -136,7 +156,7 @@ Server → client, shu tartibda:
 { "type": "tool", "name": "search_products" }
 { "type": "delta", "text": "Uy ishlari uchun " }
 { "type": "delta", "text": "Bosch GBH 2-26 mos keladi..." }
-{ "type": "done", "conversation_id": 15, "message_id": 342, "question": { ... }, "text": "...", "operator": false, "products": [ ... ] }
+{ "type": "done", "conversation_id": 15, "message_id": 342, "question": { ... }, "text": "...", "operator": false, "products": [ ... ], "sources": [] }
 ```
 
 | Turi | |
@@ -144,7 +164,7 @@ Server → client, shu tartibda:
 | `start` | savol qabul qilindi: `conversation_id` ni saqlang, mijoz pufakchasini `question.text` bilan almashtiring |
 | `tool` | yordamchi qidiryapti (0 yoki bir necha marta) — «Qidiryapman…» ko'rsating |
 | `delta` | matnning navbatdagi bo'lagi — oxiriga qo'shing |
-| `done` | tugadi: kelgan matnni `done.text` bilan **almashtiring** (yakuniy, tozalangan matn), `products` ni ko'rsating, `operator` true bo'lsa — operator tugmasini |
+| `done` | tugadi: kelgan matnni `done.text` bilan **almashtiring** (yakuniy, tozalangan matn), `products` va `sources` ni ko'rsating, `operator` true bo'lsa — operator tugmasini |
 | `error` | `{"type": "error", "error_code": 42, "detail": "..."}` — javob tugadi |
 
 Bitta socketda bir vaqtda bitta savol: `done` / `error` kelmasidan oldin yuborilgan `message` ga `5` kodli `error`
@@ -158,8 +178,8 @@ eting (uzilish paytida yozilayotgan javob baribir saqlanadi va tarixda chiqadi).
   "result": {
     "conversation_id": 15,
     "messages": [
-      { "id": 341, "role": "user", "text": "perforator kerak", "pii_masked": false, "operator": false, "created_at": "2026-11-09T12:00:00", "products": [] },
-      { "id": 342, "role": "assistant", "text": "...", "pii_masked": false, "operator": true, "created_at": "2026-11-09T12:00:04", "products": [ ... ] }
+      { "id": 341, "role": "user", "text": "perforator kerak", "pii_masked": false, "operator": false, "created_at": "2026-11-09T12:00:00", "products": [], "sources": [] },
+      { "id": 342, "role": "assistant", "text": "...", "pii_masked": false, "operator": true, "created_at": "2026-11-09T12:00:04", "products": [ ... ], "sources": [] }
     ]
   },
   "ok": true
@@ -191,6 +211,7 @@ Format: `{"detail": "...", "ok": false, "result": "", "error_code": 44}`; WebSoc
 4. Javob kelganda (`chat` javobi yoki WebSocket `start`) mijoz pufakchasidagi matnni `question.text` bilan almashtiring — yashirilgan ma'lumot (`[KARTA]`, `[TELEFON]` ...) ekranda ham ko'rinmasin.
 5. `question.pii_masked: true` bo'lsa, pufakcha ostida ogohlantirish chiqaring: «Xavfsizlik uchun karta raqami, hujjat va SMS kodni yozmang».
 6. Javob matni ostida `products` kartochkalarini ko'rsating. Kartochka belgisi `stock_status` bo'yicha bo'lsin: `check` holatida «Mavjudligini tekshiring» chiqsin, «Mavjud» emas. Kartochka bosilganda tovar sahifasi `/product/<slug>` ochilsin.
-7. `operator: true` bo'lsa, javob ostida operator tugmasini ko'rsating. U `base/info/` ma'lumotlari bilan kontakt oynasini ochadi: qo'ng'iroq, Telegram, ish vaqti.
-8. Har xato uchun o'z ekranini chiqaring (jadval yuqorida). `41` da kirish nuqtasini yashirmang — «vaqtincha ishlamayapti» ekrani va operator kontaktlari bo'lsin.
-9. Chat ekranini qayta ochganda tarixni `conversations/<id>/` dan yuklang va har xabarning `operator` va `pii_masked` maydonlari bo'yicha tugma va ogohlantirishni ko'rsating.
+7. `sources` bo'sh bo'lmasa, javob ostida manba chiplarini ko'rsating (`title`, bosilganda `url`). Tarixda ham.
+8. `operator: true` bo'lsa, javob ostida operator tugmasini ko'rsating. U `base/info/` ma'lumotlari bilan kontakt oynasini ochadi: qo'ng'iroq, Telegram, ish vaqti.
+9. Har xato uchun o'z ekranini chiqaring (jadval yuqorida). `41` da kirish nuqtasini yashirmang — «vaqtincha ishlamayapti» ekrani va operator kontaktlari bo'lsin.
+10. Chat ekranini qayta ochganda tarixni `conversations/<id>/` dan yuklang va har xabarning `operator` va `pii_masked` maydonlari bo'yicha tugma va ogohlantirishni ko'rsating.

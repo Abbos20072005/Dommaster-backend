@@ -15,6 +15,7 @@ from apps.service.attributes import attribute_values_prefetch, display_value, pr
 from apps.service.models import Product, ProductItemCategory
 from apps.service.product_filters import apply_attribute_filters, category_filters
 from apps.service.search import product_text, relevance, search_products as text_search
+from . import policies
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,7 @@ def stock_status(quantity):
 class ToolContext:
     language: str
     seen_ids: set = field(default_factory=set)
+    policy_topics: list = field(default_factory=list)  # pages of the terms the answer may quote -> its sources
 
 
 CART_PRICE = Case(When(Q(discount_price__gt=0), then=F("discount_price")), default=F("price"))
@@ -239,11 +241,21 @@ def get_alternatives(ctx, product_id):
     }
 
 
+def get_policy(ctx, topic):
+    topic = str(topic or "").strip().lower()
+    if topic not in policies.TOPICS:
+        return {"error": f"unknown topic, use one of: {', '.join(policies.TOPICS)}"}
+    if topic not in ctx.policy_topics:
+        ctx.policy_topics.append(topic)
+    return policies.policy(topic, ctx.language)
+
+
 TOOLS = {
     "search_products": search_products,
     "get_category_filters": get_category_filters,
     "get_product_details": get_product_details,
     "get_alternatives": get_alternatives,
+    "get_policy": get_policy,
 }
 
 
@@ -339,6 +351,20 @@ DECLARATIONS = [
             "type": "object",
             "properties": {"product_id": {"type": "integer"}},
             "required": ["product_id"],
+        },
+    },
+    {
+        "name": "get_policy",
+        "description": (
+            "The store's approved terms from its site pages, in the customer's language: delivery (area, how the "
+            "price and time are shown, heavy goods, delays), payment (methods, legal entities, failed or double "
+            "payments), returns (exchange, refunds, defects, warranty, cancelling an order), contacts (phone, "
+            "working hours, email, address). Returns the summary, terms, FAQ, the contacts and the page url."
+        ),
+        "parameters_json_schema": {
+            "type": "object",
+            "properties": {"topic": {"type": "string", "enum": list(policies.TOPICS)}},
+            "required": ["topic"],
         },
     },
 ]

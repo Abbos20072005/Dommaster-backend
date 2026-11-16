@@ -294,6 +294,27 @@ class AssistantChatTests(ApiTestCase):
             data = self.guest.post(CHAT, {"message": "8600123456789012"}, format="json").data["result"]
         self.assertTrue(data["operator"])
 
+    def test_terms_answer_has_sources(self):
+        script = Script(response(call("get_policy", topic="payment")),
+                        response(text("Atmos, Click, Payme yoki Uzum orqali karta bilan to'lash mumkin.")))
+        with mock.patch(GENERATE, side_effect=script):
+            data = self.guest.post(CHAT, {"message": "qanday to'lov usullari bor?"}, format="json").data["result"]
+        self.assertFalse(data["operator"])
+        self.assertEqual(data["sources"], [{"topic": "payment", "title": "To'lov usullari",
+                                            "url": "https://buildex.uz/payment-methods"}])
+        # the terms went to the model in the customer's language, with the contacts
+        terms = script.sent[1][0][-1].parts[0].function_response.response
+        self.assertIn("Atmos, Click, Payme yoki Uzum", terms["summary"])
+        self.assertIn("+998 77 240 09 09", terms["contact"])
+        self.assertIn("+998 77 240 09 09", script.sent[0][1].system_instruction)
+        # the history rebuilds the sources from the saved tool calls; a product answer has none
+        url = f"/api/v1/assistant/conversations/{data['conversation_id']}/"
+        messages = self.guest.get(url).data["result"]["messages"]
+        self.assertEqual([message["sources"] for message in messages], [[], data["sources"]])
+        with mock.patch(GENERATE, side_effect=Script(*self.found_drill())):
+            data = self.guest.post(CHAT, {"message": "perforator kerak"}, format="json").data["result"]
+        self.assertEqual(data["sources"], [])
+
 
 class AssistantToolTests(ApiTestCase):
     def setUp(self):
@@ -330,6 +351,18 @@ class AssistantToolTests(ApiTestCase):
         found = tools.search_products(self.ctx, queries=["перфоратор"], price_max=1_300_000)
         self.assertEqual([row["id"] for row in found["products"]], [self.drill.pk])
         self.assertEqual(tools.search_products(self.ctx, queries=["перфоратор"], price_min=1_300_000)["products"], [])
+
+    def test_policy(self):
+        result = tools.run("get_policy", {"topic": "Returns"}, self.ctx)
+        self.assertEqual((result["title"], result["url"]), ("Возврат и обмен", "https://buildex.uz/returns"))
+        self.assertIn("10 дней", result["summary"])
+        tools.run("get_policy", {"topic": "returns"}, self.ctx)
+        self.assertEqual(self.ctx.policy_topics, ["returns"])
+        uz = tools.get_policy(tools.ToolContext(language="uz"), "delivery")
+        self.assertEqual(uz["title"], "Yetkazib berish")
+        self.assertIn("error", tools.run("get_policy", {"topic": "discounts"}, self.ctx))
+        self.assertIn("error", tools.run("get_policy", {}, self.ctx))
+        self.assertEqual(self.ctx.policy_topics, ["returns"])
 
     def test_stock_status(self):
         self.assertEqual([tools.stock_status(q) for q in (0, None, 3, 10, 11, 499, 500, 1000)],

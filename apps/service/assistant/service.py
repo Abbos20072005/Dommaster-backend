@@ -14,8 +14,9 @@ from django.db.models import F
 from django.utils import timezone
 from google.genai import types
 
+from apps.service.attributes import request_language
 from apps.service.models import AssistantConversation, AssistantMessage, Product
-from . import budget, gemini, pii, prompts, tools
+from . import budget, gemini, pii, policies, prompts, tools
 from .gemini import AssistantError
 
 logger = logging.getLogger(__name__)
@@ -328,7 +329,18 @@ def reply(conversation, question, answer, language, request, on_event=None):
         "text": final,
         "operator": operator,
         "products": product_cards(product_ids, request),
+        "sources": [policies.source(topic, language) for topic in ctx.policy_topics],
     }
+
+
+def message_sources(message, language):
+    """The terms pages a saved answer read (its get_policy calls), for the conversation history."""
+    topics = []
+    for item in message.tool_calls or []:
+        topic = str((item.get("args") or {}).get("topic", "")).strip().lower()
+        if item.get("name") == "get_policy" and topic in policies.TOPICS and topic not in topics:
+            topics.append(topic)
+    return [policies.source(topic, language) for topic in topics]
 
 
 def product_cards(ids, request):
@@ -378,12 +390,14 @@ def conversation_messages(conversation, request):
     messages = list(conversation.messages.filter(error="").exclude(text=""))
     ids = list(dict.fromkeys(pk for message in messages for pk in message.product_ids))
     cards = {card["id"]: card for card in product_cards(ids, request)}
+    language = request_language()
     return {
         "conversation_id": conversation.pk,
         "messages": [
             {"id": message.pk, "role": message.role, "text": message.text, "created_at": message.created_at,
              "pii_masked": message.pii_masked, "operator": message.show_operator,
-             "products": [cards[pk] for pk in message.product_ids if pk in cards]}
+             "products": [cards[pk] for pk in message.product_ids if pk in cards],
+             "sources": message_sources(message, language)}
             for message in messages
         ],
     }
