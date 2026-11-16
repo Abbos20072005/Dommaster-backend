@@ -4,6 +4,7 @@ import os
 import re
 from django.db import transaction
 from django.core.files.base import ContentFile
+from django.utils import timezone
 from django.utils.text import slugify
 from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
@@ -886,7 +887,7 @@ class OneCIntegrationViewSet(ViewSet):
             price = parse_numeric(raw_price)
             if price is None:
                 continue
-            updates = {"price": price}
+            updates = {"price": price, "updated_at": timezone.now()}
             raw_discount_precent = item.get("discount_precent")
             raw_discount_price = item.get("discount_price")
             if raw_discount_precent not in (None, ""):

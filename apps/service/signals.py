@@ -59,9 +59,10 @@ def decrease_product_quantity_on_collecting(sender, instance, update_fields=None
             if product.quantity < item.quantity:
                 raise CustomApiException(error_code=ErrorCodes.PRODUCT_QUANTITY_NOT_ENOUGH)
             product.quantity -= item.quantity
+            product.updated_at = timezone.now()
             products_to_update.append(product)
         if products_to_update:
-            Product.objects.bulk_update(products_to_update, ['quantity'])
+            Product.objects.bulk_update(products_to_update, ['quantity', 'updated_at'])
 
     elif instance.status == Order.CANCELED and previous.status != Order.CANCELED:
         if previous.status in STOCK_TAKEN_STATUSES:
@@ -70,9 +71,10 @@ def decrease_product_quantity_on_collecting(sender, instance, update_fields=None
             for item in items:
                 product = item.product
                 product.quantity += item.quantity
+                product.updated_at = timezone.now()
                 products_to_update.append(product)
             if products_to_update:
-                Product.objects.bulk_update(products_to_update, ['quantity'])
+                Product.objects.bulk_update(products_to_update, ['quantity', 'updated_at'])
         # the staff group hears about every cancellation, stock or no stock
         emit_order_event(instance, ORDER_EVENT_CANCELED)
 
