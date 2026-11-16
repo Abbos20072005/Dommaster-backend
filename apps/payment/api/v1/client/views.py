@@ -771,6 +771,12 @@ class AtmosCardDetailView(APIView):
             "date_created": card_data.get("date_created"),
         }, status=status.HTTP_200_OK)
 
+def _atmos_error_text(exc):
+    """The body Atmos sent with an HTTP error (`raise_for_status`), cut to 1000 chars; "" when none."""
+    response = getattr(exc, "response", None)
+    return (response.text or "")[:1000] if response is not None else ""
+
+
 class AtmosCreateHoldView(APIView):
     permission_classes = [IsAuthenticated]
     @extend_schema(
@@ -825,9 +831,17 @@ class AtmosCreateHoldView(APIView):
                     card_token=card.token,
                 )
         except Exception as e:
+            logger.warning(
+                "Atmos hold/create failed: order_id=%s card_id=%s amount=%s error=%s body=%s",
+                order.id, card.card_id, order.total_price, e, _atmos_error_text(e),
+            )
             return Response({"error": f"{e}"}, status=status.HTTP_400_BAD_REQUEST)
-        
+
         if data.get("result", {}).get("code") != "OK":
+            logger.warning(
+                "Atmos hold/create refused: order_id=%s card_id=%s amount=%s result=%s",
+                order.id, card.card_id, order.total_price, data.get("result"),
+            )
             return Response(data, status=status.HTTP_400_BAD_REQUEST)
 
         # save hold_id to order
@@ -840,9 +854,17 @@ class AtmosCreateHoldView(APIView):
                 otp="111111",
             )
         except Exception as e:
+            logger.warning(
+                "Atmos hold/apply failed: order_id=%s hold_id=%s error=%s body=%s",
+                order.id, order.hold_id, e, _atmos_error_text(e),
+            )
             return Response({"error": f"Failed to apply hold: {e}"}, status=status.HTTP_400_BAD_REQUEST)
 
         if apply_data.get("result", {}).get("code") != "OK":
+            logger.warning(
+                "Atmos hold/apply refused: order_id=%s hold_id=%s result=%s",
+                order.id, order.hold_id, apply_data.get("result"),
+            )
             return Response(apply_data, status=status.HTTP_400_BAD_REQUEST)
 
         order.payment_status = 1
