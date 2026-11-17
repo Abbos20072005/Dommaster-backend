@@ -57,7 +57,8 @@ COLUMNS = {
     "short_description_uz": ("Qisqa tavsif",),
     "description_uz": ("Tavsif",),
 }
-BRAND_CHARACTERISTICS = {"марка", "бренд"}
+BRAND_CHARACTERISTICS_ORDER = ("бренд", "марка")
+BRAND_CHARACTERISTICS = set(BRAND_CHARACTERISTICS_ORDER)
 # the "no unit" mark of the "Name | value | unit" lines
 NO_UNIT = {"—", "–", "-"}
 TAG_RE = re.compile(r"<[a-zA-Z/][^>]*>")
@@ -383,10 +384,13 @@ class Command(BaseCommand):
         if not brand:
             brand_name = clean(row["brand"])
             if not brand_name:
-                # the brand is a field of the product, not one more attribute
-                brand_name = next((value for key, value, _ in characteristics
-                                   if key.lower() in BRAND_CHARACTERISTICS), "")
-                characteristics = [item for item in characteristics if item[0].lower() not in BRAND_CHARACTERISTICS]
+                # the brand is a field of the product, not one more attribute; "Бренд" wins over "Марка"
+                # ("Марка: Кладка-3" next to "Бренд: STROY SETKA MIX" is the model), the other one stays
+                found = {key.lower(): value for key, value, _ in reversed(characteristics)
+                         if key.lower() in BRAND_CHARACTERISTICS}
+                brand_key = next((key for key in BRAND_CHARACTERISTICS_ORDER if found.get(key)), None)
+                brand_name = found.get(brand_key, "")
+                characteristics = [item for item in characteristics if item[0].lower() != brand_key]
             if not brand_name:
                 self.stats["skipped (no brand)"] += 1
                 self.warn(f"{name!r}: no brand (--brand, a «Бренд» column or a «Марка» characteristic), skipped")
