@@ -104,7 +104,7 @@ Muvaffaqiyatli → `201 Created`. `result` — to'lov havolasi (string) yoki `nu
 | `1` Click | `https://my.click.uz/services/pay?...` | `status: 0` (Pending), to'lov kutilmoqda |
 | `2` Payme | `https://checkout.paycom.uz/<base64>` | `status: 0` (Pending), to'lov kutilmoqda |
 | `3` Uzum Bank | `https://www.uzumbank.uz/open-service?...` | `status: 0` (Pending), to'lov kutilmoqda |
-| `4` qabul qilganda | `null` | darhol `status: 2` (Collecting), ombordagi qoldiq kamayadi |
+| `4` qabul qilganda | `null` | `status: 0` (Pending) — operator tasdiqlaguncha (18.11.2026 gacha darhol `2` Collecting edi) |
 
 `payment_type = 4` javobi:
 

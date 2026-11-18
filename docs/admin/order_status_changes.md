@@ -14,7 +14,7 @@
 | `5` | Completed | Yakunlandi | `3` |
 | `6` | Canceled | Bekor qilingan | `4` |
 
-- `1` ni faqat admin panel qo'yadi (`PATCH orders/<id>/` `{"status": 1}`). 1C bu statusni yubormaydi. Click / Payme / Uzum to'lovidan keyin buyurtma avvalgidek darhol `2` ga o'tadi. Atmos karta to'lovi esa 18.11.2026 dan buyurtmani `0` da qoldiradi va pul `1` ga o'tkazilganda yechiladi (`order_card_payment.md`).
+- `1` ni faqat admin panel qo'yadi (`PATCH orders/<id>/` `{"status": 1}`). 1C bu statusni yubormaydi. 18.11.2026 dan hech qaysi to'lov buyurtmani o'zi `2` ga o'tkazmaydi: buyurtma `0` da qoladi, Atmos karta puli `1` ga o'tkazilganda yechiladi (`order_card_payment.md`).
 - Qoldiq (`Product.quantity`) avvalgidek `2` Collecting ga o'tganda kamayadi. `1` da qoldiq olinmaydi, bekor qilinsa qaytariladigan narsa yo'q.
 - Qoidalar ma'nosi bo'yicha o'zgarmadi: `4` faqat pickup buyurtmaga va faqat `2` dan qo'yiladi; `4` dan faqat `5` yoki `6`; mahsulotlarni faqat `0` da o'zgartirish mumkin; `2` / `3` / `4` dagi buyurtmani o'chirib bo'lmaydi.
 - Har status o'zgarishi endi jurnalga yoziladi (admin panel, 1C, to'lov, mijoz): "Buyurtma bosqichlari vaqti" grafigi shundan hisoblanadi (`dashboard_order_stages.md`). Jurnal 02.11.2026 dan boshlanadi.

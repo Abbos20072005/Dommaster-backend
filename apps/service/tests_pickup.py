@@ -181,12 +181,12 @@ class PickupCheckoutTests(ApiTestCase):
                          ("Chilonzor", "+998901234567"))
 
     def test_paid_at_the_store(self):
-        # payment_type 4 is taken for pickup too: the order goes to Collecting at once, still unpaid
+        # payment_type 4 is taken for pickup too: the order stays Pending until an operator confirms it (BLD-486)
         response = self.checkout(payment_type=4, payment_method="cash")
         self.assertEqual(response.status_code, 201, response.data)
         order = Order.objects.get(id=response.data["order_id"])
         self.assertEqual((order.payment_type, order.payment_method, order.status, order.payment_status),
-                         (4, "cash", Order.COLLECTING, 0))
+                         (4, "cash", Order.PENDING, 0))
         self.assertEqual(order.pickup_branch, self.store)
 
     def test_rules(self):

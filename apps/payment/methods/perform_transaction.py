@@ -4,7 +4,7 @@ from apps.payment.utils.get_params import get_params
 
 from apps.payment.utils.logger import logged
 from apps.payment.models import MerchatTransactionsModel, AccountModel
-from apps.service.models.choices import ORDER_COLLECTING
+from apps.service.models.choices import PAYMENT_PAID
 from apps.payment.api.v1.client.serializers import MerchatTransactionsModelSerializer
 
 
@@ -33,8 +33,9 @@ class PerformTransaction:
 
             transaction.save()
             order = AccountModel.objects.get(id=transaction.order_id)
-            order.status = ORDER_COLLECTING
-            order.save()
+            # paid: the order stays Pending until an operator confirms it (BLD-486), it used to go to Collecting
+            order.payment_status = PAYMENT_PAID
+            order.save(update_fields=["payment_status"])
             response: dict = {
                 "result": {
                     "perform_time": int(transaction.perform_time),

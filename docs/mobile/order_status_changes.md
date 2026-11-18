@@ -19,7 +19,7 @@ Odatdagi yo'l:
 - olib ketish: `0` → `1` → `2` → `4` → `5`;
 - istalgan joydan `6` (bekor qilish).
 
-`1` ni faqat admin panel qo'yadi. Online to'lov o'tganda (Click / Payme / Uzum / Atmos) va do'konda to'lanadigan olib ketishda buyurtma avvalgidek darhol `2` Collecting ga o'tadi, `1` siz. 1C ham `1` ni yubormaydi. Shuning uchun ilova `0` dan keyin `1` ni ham, to'g'ridan-to'g'ri `2` ni ham ko'rsata olishi kerak.
+`1` ni faqat admin panel qo'yadi. **18.11.2026 dan** to'lovdan keyin (Click / Payme / Uzum / Atmos) va to'lov turi `4` da buyurtma `0` da qoladi, `2` ga faqat operator o'tkazadi: to'lov holati `payment_status` da (`1` karta muzlatilgan, `2` to'langan). Atmos kartadagi pul `1` Tasdiqlangan qo'yilganda yechiladi (`order_receipt.md`). 1C ham `1` ni yubormaydi. Shuning uchun ilova `0` dan keyin `1` ni ham, to'g'ridan-to'g'ri `2` ni ham ko'rsata olishi kerak.
 
 ## Nima o'zgardi
 
@@ -28,7 +28,7 @@ Odatdagi yo'l:
 | `GET order/active/`, `GET order/history/`, buyurtma detail / yaratish javobi — `status` | `0`–`5` (eski ma'no) | `0`–`6` (yangi ma'no, jadval yuqorida) | **ha** — nomlar noto'g'ri chiqadi (masalan, yakunlangan `5` eski frontda "Ready for pickup" bo'lib ko'rinadi) |
 | `order/history/` | `3` va `4` | `5` va `6` (yakunlangan + bekor qilingan) | yo'q — server o'zi filtrlaydi |
 | `POST order/<id>/cancel/` | `status` `0` yoki `1` da | `0`, `1` yoki `2` da | yo'q, lekin "Bekor qilish" tugmasini ko'rsatish shartini yangilang |
-| To'lov turi `4` (qabul qilganda) bilan `POST order/payment/` | darhol `1` | darhol `2` | ha, agar ilova `1` ni tekshirsa |
+| To'lov turi `4` (qabul qilganda) bilan `POST order/payment/` | darhol `1` | `0` qoladi (18.11.2026 dan) | ha, agar ilova `1` / `2` ni kutsa |
 | Buyurtma statusi push'i, `data.status` (string) | `"1"`–`"5"` | `"1"`–`"6"` (`"0"` yuborilmaydi) | **ha** — push matnidan emas, `data.status` dan nom olsa |
 | Push `data.branch_id` / `pickup_deadline` | `status` `"5"` da | `status` `"4"` da | **ha** |
 

@@ -123,3 +123,29 @@ class HoldFlowTests(ApiTestCase):
         self.assertEqual(response.status_code, 200)
         self.order.refresh_from_db()
         self.assertEqual((self.order.status, self.order.payment_status), (Order.PENDING, 2))
+
+
+class ProviderPaymentTests(ApiTestCase):
+    """Click / Payme / Uzum take the money at once: the order stays Pending (payment Paid) for the operator."""
+
+    def setUp(self):
+        self.customer = make_customer("+998900000411")
+        self.order = Order.objects.create(customer=self.customer, total_price=1000)
+
+    def test_uzum_confirm_keeps_the_order_pending_and_reverse_refunds(self):
+        from apps.payment.models import UzumBankTransactionsModel
+        from apps.payment.services import UzumBankErrors, UzumBankService
+
+        UzumBankTransactionsModel.objects.create(trans_id="u1", order_id=self.order.id, amount=1000, status="CREATED")
+        ok, _, _ = UzumBankService.confirm_transaction("u1", {})
+        self.assertTrue(ok)
+        self.order.refresh_from_db()
+        self.assertEqual((self.order.status, self.order.payment_status), (Order.PENDING, 2))
+        # a paid order is not paid twice
+        self.assertEqual(UzumBankService.validate_order(self.order)[1], UzumBankErrors.ALREADY_PAID)
+
+        with self.captureOnCommitCallbacks():
+            ok, _, _ = UzumBankService.reverse_transaction("u1")
+        self.assertTrue(ok)
+        self.order.refresh_from_db()
+        self.assertEqual((self.order.status, self.order.payment_status), (Order.CANCELED, 3))

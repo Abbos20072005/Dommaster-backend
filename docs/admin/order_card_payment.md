@@ -1,4 +1,4 @@
-# Karta bilan to'lov (Atmos): pul tasdiqlanganda yechiladi — admin panel uchun
+# Buyurtma to'lovdan keyin Tushgan'da qoladi, karta puli tasdiqlanganda yechiladi — admin panel uchun
 
 BLD-486. Endpoint va maydonlar o'zgarmadi, `PATCH orders/<id>/` `{"status": ...}` ning ishlashi o'zgardi.
 
@@ -28,5 +28,18 @@ Xato matnini operatorga ko'rsating. Bunday buyurtmani bekor qilish yoki mijoz bi
 
 - **Muzlatish muddati cheklangan** (server sozlamasi `ATMOS_HOLD_DURATION`). Shu muddat ichida tasdiqlanmagan buyurtmaning puli Atmos tomonida o'zi qaytadi, keyin tasdiqlash `400` beradi.
 - **Pul yechilgandan keyin bekor qilish** (`1` va undan keyingi statuslarda) pulni avtomatik qaytarmaydi. Atmos refund hali qilinmagan, pulni qo'lda qaytarish kerak.
-- Faqat Atmos karta to'lovi shunday ishlaydi. Click / Payme / Uzum to'lovidan keyin buyurtma hozircha avvalgidek darhol `2` ga o'tadi.
 - 1C statusni o'zgartirsa (`2` Collecting va h.k.), pul yechilmaydi. Hold'dagi buyurtmani panelda tasdiqlang.
+
+## Boshqa to'lov turlari (18.11.2026 dan)
+
+Hech qaysi to'lov buyurtmani o'zi Yig'ilmoqda (`2`) ga o'tkazmaydi. Buyurtma `0` Tushgan'da qoladi, operator tasdiqlaydi va yig'ishga o'tkazadi:
+
+| To'lov | To'lovdan keyin | Avval |
+| --- | --- | --- |
+| Click / Payme / Uzum (pul darhol yechiladi) | `status=0`, `payment_status=2` To'langan | `status=2`, `payment_status` `0` qolardi |
+| `4` qabul qilganda / do'konda (naqd yoki karta) | `status=0`, `payment_status=0` | `status=2` |
+| Atmos karta | `status=0`, `payment_status=1` Hold, pul `1` da yechiladi | `status=2` |
+
+- Payme yoki Uzum to'lovni qaytarsa (Payme cancel, Uzum reverse), to'langan buyurtma `payment_status=3` bo'ladi va staff guruhiga "pul qaytarildi" xabari ketadi. Payme qaytarishi buyurtma statusini endi o'zgartirmaydi (avval `0` ga qaytarardi), Uzum reverse avvalgidek bekor qiladi.
+- Qoldiq faqat operator `2` ga o'tkazganda kamayadi. Yig'ilmoqda qilinayotganda qoldiq yetmasa, panel `400` qaytaradi.
+- Tushgan buyurtmalar ro'yxatida to'langanlarini `orders/?status=0&payment_status=2` bilan ajratish mumkin.

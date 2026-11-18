@@ -16,6 +16,7 @@ from rest_framework.viewsets import ViewSet
 logger = logging.getLogger(__name__)
 
 from apps.service.models import Order
+from apps.service.models.choices import PAYMENT_PAID
 from apps.payment.authentication import UzumBankBasicAuthentication
 from apps.payment.methods.cancel_transaction import CancelTransaction
 from apps.payment.methods.check_perform_transaction import CheckPerformTransaction
@@ -125,8 +126,10 @@ class CompletePaymentView(APIView):
             raise response
 
         txn.state = ClickTransaction.SUCCESSFULLY if int(params["error"]) == 0 else ClickTransaction.CANCELLED
-        order.status = Order.COLLECTING if int(params["error"]) == 0 else Order.PENDING
-        order.save()
+        # paid: the order stays Pending until an operator confirms it (BLD-486), it used to go to Collecting
+        if int(params["error"]) == 0:
+            order.payment_status = PAYMENT_PAID
+            order.save(update_fields=["payment_status"])
         txn.save()
 
         response = {

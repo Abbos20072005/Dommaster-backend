@@ -39,10 +39,10 @@ def generate_link(order_id: int, total_price: int, type_pyment: int, is_web: boo
         return url
 
     elif type_pyment == 4:
+        # paid on delivery / at the store: the order stays Pending until an operator confirms it (BLD-486)
         order = Order.objects.filter(id=order_id).first()
-        order.status = Order.COLLECTING
         order.payment_type = 4
         order.payment_method = payment_method
-        order.save(update_fields=["status", "payment_type", "payment_method"])
+        order.save(update_fields=["payment_type", "payment_method"])
         return None
     return None

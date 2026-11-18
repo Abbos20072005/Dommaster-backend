@@ -4,6 +4,7 @@ from django.conf import settings
 from django.db import transaction
 from .models import UzumBankTransactionsModel
 from apps.service.models import Order
+from apps.service.models.choices import PAYMENT_CANCELLED, PAYMENT_PAID
 
 
 class UzumBankErrors:
@@ -58,7 +59,8 @@ class UzumBankService:
         if not order:
             return False, UzumBankErrors.ATTRIBUTE_NOT_FOUND, None
 
-        if order.status == Order.COLLECTING:
+        # Collecting = paid for the orders paid before BLD-486 (payment status was not set then)
+        if order.payment_status == PAYMENT_PAID or order.status == Order.COLLECTING:
             return False, UzumBankErrors.ALREADY_PAID, None
 
         if order.status == Order.CANCELED:
@@ -119,9 +121,10 @@ class UzumBankService:
             trans.phone = pay.get("phone")
             trans.save()
 
+            # paid: the order stays Pending until an operator confirms it (BLD-486), it used to go to Collecting
             order = Order.objects.get(id=trans.order_id)
-            order.status = Order.COLLECTING
-            order.save()
+            order.payment_status = PAYMENT_PAID
+            order.save(update_fields=["payment_status"])
 
             return True, None, trans
         except:
@@ -145,6 +148,8 @@ class UzumBankService:
 
             order = Order.objects.get(id=trans.order_id)
             order.status = Order.CANCELED
+            if order.payment_status == PAYMENT_PAID:
+                order.payment_status = PAYMENT_CANCELLED
             order.save()
 
             return True, None, trans

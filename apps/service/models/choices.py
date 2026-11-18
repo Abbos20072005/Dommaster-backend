@@ -10,11 +10,12 @@ ORDER_STATUS = (
     (ORDER_CANCELED, "Canceled"),
 )
 
+PAYMENT_PENDING, PAYMENT_HOLD, PAYMENT_PAID, PAYMENT_CANCELLED = range(4)
 PAYMENT_STATUS = (
-    (0, "Pending"),
-    (1, "Hold"),
-    (2, "Paid"),
-    (3, "Cancelled"),
+    (PAYMENT_PENDING, "Pending"),
+    (PAYMENT_HOLD, "Hold"),
+    (PAYMENT_PAID, "Paid"),
+    (PAYMENT_CANCELLED, "Cancelled"),
 )
 
 DELIVERY_TYPE = (

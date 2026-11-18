@@ -11,11 +11,9 @@ from django.db import transaction
 from apps.payment.models import AtmosTransaction
 from apps.payment.services_pay.auth_services import AtmosAuthService, AtmosHoldService
 from apps.service.models import Order
+from apps.service.models.choices import PAYMENT_CANCELLED, PAYMENT_HOLD, PAYMENT_PAID
 
 logger = logging.getLogger(__name__)
-
-# PAYMENT_STATUS
-PAYMENT_HOLD, PAYMENT_PAID, PAYMENT_CANCELLED = 1, 2, 3
 
 
 class HoldError(Exception):
