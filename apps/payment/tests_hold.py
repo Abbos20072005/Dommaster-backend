@@ -18,13 +18,15 @@ OK = {"result": {"code": "OK"}}
 CHARGED = {"result": {"code": "OK"}, "ofd_url": "https://ofd2.atmos.uz/api/ofd/x",
            "store_transaction": {"trans_id": 5, "success_trans_id": 6, "amount": 100000, "store": {"id": 1}}}
 REFUSED = {"result": {"code": "STPIMS-ERR-092", "description": "Hold expired"}}
+NOT_CHARGED = {"result": {"code": "OK"}, "store_transaction": {"confirmed": False}}
 
 
 class HoldFlowTests(ApiTestCase):
     def setUp(self):
-        patcher = mock.patch.object(AtmosAuthService, "get_access_token", return_value="t")
-        patcher.start()
-        self.addCleanup(patcher.stop)
+        for patcher in (mock.patch.object(AtmosAuthService, "get_access_token", return_value="t"),
+                        mock.patch.object(AtmosHoldService, "get_hold", return_value=NOT_CHARGED)):
+            patcher.start()
+            self.addCleanup(patcher.stop)
         self.customer = make_customer("+998900000401")
         self.client = self.client_for(self.customer)
         CustomerCard.objects.create(user=self.customer, card_id="1", token="tok", is_active=True, is_default=True)
@@ -149,3 +151,37 @@ class ProviderPaymentTests(ApiTestCase):
         self.assertTrue(ok)
         self.order.refresh_from_db()
         self.assertEqual((self.order.status, self.order.payment_status), (Order.CANCELED, 3))
+
+
+class ChargeAnswerTests(HoldFlowTests.__base__):
+    """Atmos sends null for empty values: the charge of prod order 403 died on `status_message: null` after the
+    money was taken (500, the order stayed Hold)."""
+    setUp, hold, set_status = HoldFlowTests.setUp, HoldFlowTests.hold, HoldFlowTests.set_status
+
+    def test_null_fields_in_the_charge_answer(self):
+        self.hold()
+        answer = {"result": {"code": "OK"}, "ofd_url": "https://ofd2.atmos.uz/api/ofd/y",
+                  "store_transaction": {"trans_id": 7, "success_trans_id": None, "amount": "100100",
+                                        "status_message": None, "status_code": None, "terminal_id": None,
+                                        "commission_value": None, "account": 403, "pc_type": "UZCARD-LONG-NAME" * 9,
+                                        "store": None}}
+        with mock.patch.object(AtmosHoldService, "charge_hold", return_value=answer):
+            response = self.set_status(Order.COLLECTING)
+        self.assertEqual(response.status_code, 200, response.data)
+        self.order.refresh_from_db()
+        self.assertEqual((self.order.status, self.order.payment_status), (Order.COLLECTING, 2))
+        row = AtmosTransaction.objects.get(order=self.order)
+        self.assertEqual((row.trans_id, row.amount, row.status_message, row.account), (7, 100100, "", "403"))
+        self.assertEqual(len(row.pc_type), 50)
+
+    def test_charge_refused_but_atmos_charged_it_already(self):
+        # order 403 on prod: the money was taken, our save failed; the next try is refused by Atmos
+        self.hold()
+        charged = {"result": {"code": "OK"}, "store_transaction": {"confirmed": True, "trans_id": 9, "amount": 100100,
+                                                                     "status_message": None}}
+        with mock.patch.object(AtmosHoldService, "charge_hold", return_value=REFUSED),                 mock.patch.object(AtmosHoldService, "get_hold", return_value=charged):
+            response = self.set_status(Order.COLLECTING)
+        self.assertEqual(response.status_code, 200, response.data)
+        self.order.refresh_from_db()
+        self.assertEqual((self.order.status, self.order.payment_status, self.order.ofd_url), (Order.COLLECTING, 2, None))
+        self.assertEqual(AtmosTransaction.objects.get(order=self.order).trans_id, 9)

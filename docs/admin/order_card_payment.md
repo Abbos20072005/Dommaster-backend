@@ -21,6 +21,7 @@ BLD-486. Endpoint va maydonlar o'zgarmadi, `PATCH orders/<id>/` `{"status": ...}
 
 Xato matnini operatorga ko'rsating. Bunday buyurtmani bekor qilish yoki mijoz bilan bog'lanish kerak.
 
+- Atmos yechishni rad etsa, server hold holatini Atmos'dan so'raydi: pul aslida yechilgan bo'lsa (masalan oldingi urinish javobi yo'qolgan), buyurtma `payment_status=2` bo'lib status o'tadi; bunda `ofd_url` bo'sh qolishi mumkin.
 - Bir buyurtmani ikki marta bosish pulni ikki marta yechmaydi: yechilgan buyurtmada keyingi statuslar Atmos'ga murojaat qilmaydi.
 - Formani to'liq qaytarib yuborsangiz ham (eski `payment_status: 1` bilan), yechilgan to'lov bekor bo'lmaydi.
 
