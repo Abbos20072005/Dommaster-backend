@@ -4,6 +4,7 @@ from django.db import transaction
 from rest_framework import serializers
 from apps.authorization.models import Customer, CustomerAddresses
 from apps.base.models import MarketBranch, Promocodes
+from apps.payment.atmos_hold import HoldError, cancel_order_hold, charge_order_hold, has_hold
 from apps.service.models import Manager, Order, OrderComment, OrderItem, Product
 from apps.service.pro import money
 from utils.admin_serializers import RelationSerializer
@@ -257,8 +258,30 @@ class OrderSerializer(serializers.ModelSerializer):
         order.save()
         return order
 
-    @transaction.atomic
     def update(self, instance, validated_data):
+        new_status = validated_data.get("status", instance.status)
+        if new_status != instance.status:
+            self._settle_hold(instance, new_status, validated_data)
+        return self._update(instance, validated_data)
+
+    @staticmethod
+    def _settle_hold(instance, new_status, validated_data):
+        """Atmos card orders (BLD-486): the frozen money is charged when the order leaves Pending (Confirmed, or
+        any later status when Confirmed is skipped) and released when it is cancelled. Runs and commits before
+        the status is saved, so a charge Atmos refused leaves the status as it was."""
+        if not has_hold(instance) or new_status == PENDING:
+            return
+        try:
+            order = cancel_order_hold(instance.pk) if new_status == CANCELED else charge_order_hold(instance.pk)
+        except HoldError as e:
+            raise serializers.ValidationError({"status": str(e)})
+        # the panel may send the whole form back with the old payment status
+        validated_data.pop("payment_status", None)
+        validated_data.pop("ofd_url", None)
+        instance.payment_status, instance.ofd_url = order.payment_status, order.ofd_url
+
+    @transaction.atomic
+    def _update(self, instance, validated_data):
         recalculate = bool(PRICE_FIELDS & validated_data.keys())
         old_manager_id = instance.manager_id
         items = validated_data.pop("order_items", None)

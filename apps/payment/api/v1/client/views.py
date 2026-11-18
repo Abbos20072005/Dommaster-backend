@@ -44,6 +44,7 @@ from apps.payment.utils.logger import logged
 from apps.payment.utils.utils_click import _serialize_request, get_order, create_transaction, get_transaction
 from apps.payment.utils.utils_uzum import check_request, raise_exception_if_invalid
 from apps.payment.services_pay.auth_services import AtmosAuthService, AtmosHoldService, AtmosBindWithCheckoutService
+from apps.payment.atmos_hold import save_charge
 import os
 import uuid
 from apps.authorization.models import Customer
@@ -892,9 +893,9 @@ class AtmosCreateHoldView(APIView):
             _cancel_unapplied_hold(access_token, order)
             return Response(apply_data, status=status.HTTP_400_BAD_REQUEST)
 
+        # the order stays Pending (BLD-486): the money is charged when an operator confirms it in the admin panel
         order.payment_status = 1
-        order.status = Order.COLLECTING
-        order.save()
+        order.save(update_fields=["payment_status"])
 
         return Response({
             "message": "Funds frozen successfully",
@@ -907,7 +908,8 @@ class AtmosChargeHoldView(APIView):
     permission_classes = [IsAuthenticated]
     @extend_schema(
         summary="Atmos Charge Hold",
-        description="Atmos Charge Hold API endpoint",
+        description="Deprecated: the server charges the hold itself when an operator confirms the order. Charges "
+                    "the hold of the customer's own order; the order status is not changed.",
         request=ChargeHoldSerializer(),
         responses={200:OpenApiResponse(description="Charge"), 400:OpenApiResponse(description="Bad Request")},
         tags=["Atmos"]
@@ -923,66 +925,40 @@ class AtmosChargeHoldView(APIView):
         if not order_id:
             return Response({"error": "order_id is required"}, status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            order = Order.objects.get(id=order_id)
-        except Order.DoesNotExist:
-            return Response({"error": "Order not found"}, status=status.HTTP_404_NOT_FOUND)
+        with transaction.atomic():
+            # only the customer's own order; the row lock keeps the admin panel from charging it at the same time
+            order = Order.objects.select_for_update().filter(id=order_id, customer_id=request.user.id).first()
+            if not order:
+                return Response({"error": "Order not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        if not order.hold_id:
-            return Response({"error": "No hold found for this order"}, status=status.HTTP_400_BAD_REQUEST)
+            if not order.hold_id:
+                return Response({"error": "No hold found for this order"}, status=status.HTTP_400_BAD_REQUEST)
 
-        if order.payment_status != 1:
-            return Response(
-                {"error": f"Order must be in HOLD state to charge, current state: {order.payment_status}"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            if order.payment_status != 1:
+                return Response(
+                    {"error": f"Order must be in HOLD state to charge, current state: {order.payment_status}"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
-        try:
-            data = AtmosHoldService.charge_hold(
-                access_token=access_token,
-                hold_id=order.hold_id,
-                amount=amount,
-            )
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            try:
+                data = AtmosHoldService.charge_hold(
+                    access_token=access_token,
+                    hold_id=order.hold_id,
+                    amount=amount,
+                )
+            except Exception as e:
+                return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-        if data.get("result", {}).get("code") != "OK":
-            return Response(data, status=status.HTTP_400_BAD_REQUEST)
+            if data.get("result", {}).get("code") != "OK":
+                return Response(data, status=status.HTTP_400_BAD_REQUEST)
 
-        ofd_url = data.get("ofd_url")
-        store_transaction = data.get("store_transaction") or {}
-        store_info = store_transaction.get("store") or {}
-
-        AtmosTransaction.objects.create(
-            order=order,
-            success_trans_id=store_transaction.get("success_trans_id", 0),
-            trans_id=store_transaction.get("trans_id", 0),
-            store_id=store_info.get("id"),
-            store_name=store_info.get("name", ""),
-            terminal_id=store_transaction.get("terminal_id", ""),
-            account=store_transaction.get("account", ""),
-            amount=store_transaction.get("amount", 0),
-            confirmed=store_transaction.get("confirmed", False),
-            prepay_time=store_transaction.get("prepay_time"),
-            confirm_time=store_transaction.get("confirm_time"),
-            ofd_url=ofd_url,
-            commission_value=store_transaction.get("commission_value", "0"),
-            commission_type=store_transaction.get("commission_type", ""),
-            total=store_transaction.get("total"),
-            status_code=store_transaction.get("status_code", ""),
-            status_message=store_transaction.get("status_message", ""),
-            pc_type=store_transaction.get("pc_type", ""),
-        )
-
-        order.payment_status = 2
-        order.status = Order.DELIVERING
-        order.ofd_url = ofd_url
-        order.save()
+            # the order status is the operator's (BLD-486): it used to jump to Delivering here
+            save_charge(order, data)
 
         return Response({
             "message": "Payment successful",
-            "ofd_url": ofd_url,
-            "transaction": store_transaction,
+            "ofd_url": data.get("ofd_url"),
+            "transaction": data.get("store_transaction") or {},
         }, status=status.HTTP_200_OK)
 
 
@@ -1005,7 +981,7 @@ class AtmosCancelHoldView(APIView):
         if not order_id:
             return Response({"error": "order_id is required"}, status=status.HTTP_400_BAD_REQUEST)
 
-        order = Order.objects.get(id=order_id)
+        order = Order.objects.filter(id=order_id, customer_id=request.user.id).first()
         if not order:
             return Response({"error": "Order not found"}, status=status.HTTP_404_NOT_FOUND)
 
