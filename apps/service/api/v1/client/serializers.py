@@ -245,20 +245,6 @@ class ServiceDetailSerializer(serializers.ModelSerializer):
             "description"
         )
 
-class ProductCharacteristicsCreateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ProductCharacteristics
-        fields = (
-            "id",
-            "product",
-            "name",
-            "name_uz",
-            "unit",
-            "value",
-            "value_uz",
-        )
-
-
 class CartItemCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = CartItem
@@ -510,31 +496,6 @@ class ProductImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductImage
         fields = ("id", "product", "image", "alt")
-
-class ProductCreateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Product
-        fields = (
-            "id",
-            "product_item_category",
-            "brand",
-            "name",
-            "name_uz",
-            "description",
-            "description_uz",
-            "price",
-            "unit",
-            "quantity"
-        )
-
-class ProductUpdateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Product
-        fields = (
-            "id",
-            "name_ru"
-        )
-
 
 class ProductVariantItemSerializer(serializers.Serializer):
     id = serializers.IntegerField()
@@ -1051,28 +1012,6 @@ class ProductCategoryListSerializer(serializers.Serializer):
     image = serializers.ImageField()
     position = serializers.IntegerField()
     updated_at = serializers.DateTimeField(read_only=True)
-
-class ProductSubCategoryCreateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ProductSubCategory
-        fields = (
-            "id",
-            "product_category",
-            "name",
-            "image"
-        )
-
-class ProductItemCategoryCreateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ProductItemCategory
-        fields = (
-            "id",
-            "product_sub_category",
-            "name",
-            "name_uz",
-            "image"
-        )
-
 
 class OrderItemImageSerializer(serializers.ModelSerializer):
     image = serializers.SerializerMethodField()

@@ -124,16 +124,11 @@ from .serializers import (
     OrderPaySerializer,
     OrderCreateSerializer,
     ProductCategorySearchSerializer,
-    ProductCharacteristicsCreateSerializer,
-    ProductSubCategoryCreateSerializer,
-    ProductItemCategoryCreateSerializer,
-    ProductCreateSerializer,
     BrandByItemCategoriesSerializer,
     ProductCategoryFilterSerializer,
     ProductShortSerializer,
     ProducgtCategoryTreeSerializer,
     ProductDetailSerializer,
-    ProductUpdateSerializer,
     AvailableFilterSerializer,
     QuickFilterSerializer,
     HomeLayoutBlockSerializer,
@@ -394,119 +389,6 @@ def active_children_prefetches():
 
 
 class ProductViewSet(ViewSet):
-    @extend_schema(
-        summary="Product update",
-        description="Product update",
-        request=ProductUpdateSerializer(),
-        responses={200: ProductSerializer()},
-        tags=["Product"],
-    )
-    def product_update(self, request, pk):
-        product = Product.objects.filter(id=pk, is_active=True).first()
-        if not product:
-            raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
-
-        serializer = ProductUpdateSerializer(
-            product, data=request.data, partial=True, context={"request": request}
-        )
-        if not serializer.is_valid():
-            raise CustomApiException(
-                error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors
-            )
-
-        serializer.save()
-        return Response(
-            data={
-                "result": ProductSerializer(product, context={"request": request}).data,
-                "ok": True,
-            },
-            status=status.HTTP_200_OK,
-        )
-    
-    @extend_schema(
-        summary="Product create",
-        description="Product create",
-        request=ProductCreateSerializer(),
-        responses={200: ProductCreateSerializer()},
-        tags=["Product"],
-    )
-    def product_create(self, request):
-        serializer = ProductCreateSerializer(
-            data=request.data, context={"request": request}
-        )
-        if not serializer.is_valid():
-            raise CustomApiException(
-                error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors
-            )
-
-        serializer.save()
-        return Response(
-            data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK
-        )
-
-    @extend_schema(
-        summary="Product sub categories create",
-        description="Product sub categories create",
-        request=ProductSubCategoryCreateSerializer(),
-        responses={200: ProductSubCategoryCreateSerializer()},
-        tags=["Product"],
-    )
-    def sub_categories_create(self, request):
-        serializer = ProductSubCategoryCreateSerializer(
-            data=request.data, context={"request": request}
-        )
-        if not serializer.is_valid():
-            raise CustomApiException(
-                error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors
-            )
-
-        serializer.save()
-        return Response(
-            data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK
-        )
-
-    @extend_schema(
-        summary="Product categories create",
-        description="Product categories create",
-        request=ProductItemCategoryCreateSerializer(),
-        responses={200: ProductItemCategoryCreateSerializer()},
-        tags=["Product"],
-    )
-    def item_categories_create(self, request):
-        serializer = ProductItemCategoryCreateSerializer(
-            data=request.data, context={"request": request}
-        )
-        if not serializer.is_valid():
-            raise CustomApiException(
-                error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors
-            )
-
-        serializer.save()
-        return Response(
-            data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK
-        )
-
-    @extend_schema(
-        summary="Product characteristics",
-        description="Product characteristics",
-        request=ProductCharacteristicsCreateSerializer(),
-        responses={200: ProductCharacteristicsCreateSerializer()},
-        tags=["Product"],
-    )
-    def product_characteristics(self, request):
-        serializer = ProductCharacteristicsCreateSerializer(
-            data=request.data, context={"request": request}
-        )
-        if not serializer.is_valid():
-            raise CustomApiException(
-                error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors
-            )
-
-        serializer.save()
-        return Response(
-            data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK
-        )
-
     @extend_schema(
         summary="Most searched products",
         description="Most searched products",

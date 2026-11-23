@@ -22,11 +22,6 @@ from .assistant_views import AssistantViewSet
 
 urlpatterns = [
     path(
-        "products/<int:pk>/update/",
-        ProductViewSet.as_view({"patch": "product_update"}),
-        name="product_update",
-    ),
-    path(
         "categories/",
         ProductViewSet.as_view({"get": "categories_list"}),
         name="categories_list",
@@ -256,36 +251,14 @@ urlpatterns = [
     ),
     path("order/pay/", OrderViewSet.as_view({"post": "order_pay"}), name="order_pay"),
     path(
-        "characteristics/",
-        ProductViewSet.as_view({"post": "product_characteristics"}),
-        name="product_characteristics",
-    ),
-    path(
         "item-category/<int:pk>/filters/",
         ProductViewSet.as_view({"get": "available_filters"}),
         name="available_filters",
     ),
     path(
-        "sub-categories/create/",
-        ProductViewSet.as_view(
-            {"post": "sub_categories_create"}, name="sub_categories_create"
-        ),
-    ),
-    path(
         "item-categories/all/",
-        ProductViewSet.as_view(
-            {"get": "all_item_categories"}, name="all_item_categories"
-        ),
-    ),
-    path(
-        "item-categories/create/",
-        ProductViewSet.as_view(
-            {"post": "item_categories_create"}, name="item_categories_create"
-        ),
-    ),
-    path(
-        "products/create/",
-        ProductViewSet.as_view({"post": "product_create"}, name="product_create"),
+        ProductViewSet.as_view({"get": "all_item_categories"}),
+        name="all_item_categories",
     ),
     # PRO projects (apps/service/pro.py); every name is in auth_blocker.blocked_view_names
     path("pro/projects/", ProViewSet.as_view({"get": "project_list", "post": "project_create"}),

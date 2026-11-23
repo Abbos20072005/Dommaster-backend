@@ -6,7 +6,7 @@ from rest_framework.test import APIClient
 
 from apps.authorization.models import Customer, CustomerAddresses
 from apps.base.models import Promocodes
-from apps.service.models import Cart, CartItem, Order
+from apps.service.models import Cart, CartItem, Order, Product
 from apps.service.tests import ApiTestCase, make_customer, make_item_category, make_product
 
 
@@ -87,3 +87,25 @@ class PasswordLoginTests(ApiTestCase):
         }, format="json")
         self.assertEqual(response.status_code, 201, response.data)
         self.assertEqual(Customer.objects.get(phone_number="+998900000203").role, Customer.Role.USER)
+
+
+class CatalogWriteEndpointsGoneTests(ApiTestCase):
+    """The client API had open product / category / characteristic create and product rename (PTEST products 12014-12017)."""
+
+    def test_no_catalog_writes_through_the_client_api(self):
+        _, item_category = make_item_category("C")
+        product = make_product("P1", item_category, 1000)
+        client = APIClient()
+        calls = [
+            ("post", "/api/v1/products/create/", {"name": "X", "product_item_category": item_category.id, "price": 1}),
+            ("patch", f"/api/v1/products/{product.id}/update/", {"name_ru": "X"}),
+            ("post", "/api/v1/sub-categories/create/", {"name": "X", "product_category": item_category.id}),
+            ("post", "/api/v1/item-categories/create/", {"name": "X", "product_sub_category": 1}),
+            ("post", "/api/v1/characteristics/", {"product": product.id, "name": "X", "value": "1"}),
+        ]
+        for method, url, data in calls:
+            self.assertIn(getattr(client, method)(url, data, format="json").status_code, (404, 405), url)
+        product.refresh_from_db()
+        self.assertEqual((product.name_ru, item_category.product_sub_category.product_category.product_category.count()),
+                         ("P1", 1))
+        self.assertEqual(Product.objects.count(), 1)
