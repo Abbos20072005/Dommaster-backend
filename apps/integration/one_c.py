@@ -15,6 +15,7 @@ from dotenv import load_dotenv
 
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
+from utils.price import round_price_up
 from apps.service.models import (
     Product, ProductImage, ProductCharacteristics,
     ProductCategory, ProductSubCategory, ProductItemCategory,
@@ -887,7 +888,8 @@ class OneCIntegrationViewSet(ViewSet):
             price = parse_numeric(raw_price)
             if price is None:
                 continue
-            updates = {"price": price, "updated_at": timezone.now()}
+            # stored rounded up to 100 so'm, like Product.save() does (update() skips it)
+            updates = {"price": round_price_up(price), "updated_at": timezone.now()}
             raw_discount_precent = item.get("discount_precent")
             raw_discount_price = item.get("discount_price")
             if raw_discount_precent not in (None, ""):
@@ -897,7 +899,7 @@ class OneCIntegrationViewSet(ViewSet):
             if raw_discount_price not in (None, ""):
                 discount_price = parse_numeric(raw_discount_price)
                 if discount_price is not None:
-                    updates["discount_price"] = discount_price
+                    updates["discount_price"] = round_price_up(discount_price)
             product_updates[code] = updates
 
         if not product_updates:

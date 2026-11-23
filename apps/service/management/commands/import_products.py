@@ -442,6 +442,6 @@ class Command(BaseCommand):
         ])
         taken.add(name.lower())
         self.stats["products created"] += 1
-        self.stdout.write(f"  product {product.pk} {name!r} -> {item_category.name}, {brand.name}, {price:.0f}"
+        self.stdout.write(f"  product {product.pk} {name!r} -> {item_category.name}, {brand.name}, {product.price:.0f}"
                           + (f", articul {articul}" if articul else ""))
         return product

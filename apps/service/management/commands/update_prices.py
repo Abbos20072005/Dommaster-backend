@@ -5,14 +5,15 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from apps.service.models import Brand, Product
+from utils.price import round_price_up
 
 from .apply_audit_corrections import clean
 
 # 1) A sheet of products that are on the site already: our product id + a supplier price in dollars
-#    ("Saytda bor (narx)": ID / Saytdagi nomi / ... / Narx (USD)). price = round(USD × (1 + markup %) × rate).
+#    ("Saytda bor (narx)": ID / Saytdagi nomi / ... / Narx (USD)). price = USD × (1 + markup %) × rate, rounded up to 100 so'm.
 # 2) A supplier price list without our ids (NOVA: Наименование / Цена с НДС, the price in so'm): the product is
 #    found by the articul at the end of the name ("..., 4802.uz" → articul_code 4802), else by the exact name.
-#    price = round(price × (1 + markup %) [× rate when --usd-rate is given]).
+#    price = price × (1 + markup %) [× rate when --usd-rate is given], rounded up to 100 so'm.
 ID_COLUMNS = ("id", "ea id")
 NAME_COLUMNS = ("saytdagi nomi",)
 PRICE_COLUMNS = ("narx (usd)",)
@@ -68,13 +69,13 @@ class Command(BaseCommand):
                 if mode == "id" and name and clean(name).lower() != clean(product.name_ru).lower():
                     renamed.append((product.pk, name, product.name_ru))
                 exact = value * factor
-                price = float(round(exact))
+                price = round_price_up(exact)
                 if product.discount_price:
                     discounted.append((product.pk, product.discount_price))
                 if product.product_code:
                     one_c.append(product.pk)
-                # a price list carries kopeks (35503.95): the stored 35503 is the same price
-                if product.price is not None and abs(product.price - exact) < 1:
+                # prices are stored rounded up to 100 so'm (Product.save): 35503.95 -> 35600
+                if product.price == price:
                     same += 1
                     continue
                 self.stdout.write(f"  {product.pk} {product.name_ru!r}: {product.price or 0:.0f} -> {price:.0f}"

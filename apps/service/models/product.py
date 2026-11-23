@@ -6,6 +6,7 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 
 from abstract_model.base_model import BaseModel
+from utils.price import round_price_up
 from apps.base.models import MarketBranch
 from .catalog import Brand, ProductModel, ProductItemCategory, ProductAttribute, SeoFieldsMixin
 from .choices import PUBLISH_STATUS, PUBLISH_STATUS_DRAFT
@@ -68,6 +69,12 @@ class Product(SeoFieldsMixin, BaseModel):
 
     def __str__(self):
         return self.name
+
+    def save(self, *args, **kwargs):
+        # prices are stored rounded up to 100 so'm (`utils.price`); 1C's price list uses update() and rounds itself
+        self.price = round_price_up(self.price)
+        self.discount_price = round_price_up(self.discount_price)
+        super().save(*args, **kwargs)
 
     def get_breadcrumbs(self, language="ru"):
         from apps.service.utils import build_breadcrumbs

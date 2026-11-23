@@ -41,7 +41,8 @@ class CheckoutGuardTests(ApiTestCase):
         self.assertFalse(Order.objects.exists())
         response = self.checkout()
         self.assertEqual(response.status_code, 201, response.data)
-        self.assertEqual(Order.objects.get().total_price, 68364)
+        # the product price 38364 is stored rounded up to 38400 (utils.price) + delivery 30000
+        self.assertEqual(Order.objects.get().total_price, 68400)
 
     def test_unknown_payment_and_delivery_type_refused(self):
         for data in ({"payment_type": 99}, {"payment_type": -1}, {"delivery_type": 5}):

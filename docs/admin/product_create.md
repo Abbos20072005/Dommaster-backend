@@ -168,8 +168,8 @@ Bog'lanishlar (`brand`, `product_model`, `product_item_category`, `badges`, `att
 | `product_model` | id, null | null | shu `brand` ning modeli bo'lishi shart |
 | `product_item_category` | id, null | null | predmet kategoriya (3-daraja); `attribute_values` uchun kerak |
 | `badges` | id ro'yxati | `[]` | faqat qo'lda (`kind: manual`) teglar; auto teglar yuborilsa e'tiborsiz qoladi (ular o'z qoidasi bilan biriktiriladi) |
-| `price` | number ≥ 0 | `0` | so'm |
-| `discount_price` | number ≥ 0, null | null | chegirmadagi narx; `price` dan katta bo'lmasin; null = chegirma yo'q |
+| `price` | number ≥ 0 | `0` | so'm; server 100 so'mgacha **tepaga** yaxlitlab saqlaydi (12 340 → 12 400), javobda yaxlitlangani qaytadi |
+| `discount_price` | number ≥ 0, null | null | chegirmadagi narx; `price` dan katta bo'lmasin; null = chegirma yo'q; `price` kabi 100 so'mgacha tepaga yaxlitlanadi |
 | `discount` | int 0–100, null | null | chegirma foizi (ko'rsatish uchun) |
 | `unit` | `kg` `l` `sm` `pcs` `m` `g` `pkg` `set` | `pcs` | o'lchov birligi |
 | `quantity` | int ≥ 0 | `0` | qoldiq |
