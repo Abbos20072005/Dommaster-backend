@@ -30,6 +30,22 @@ class OrderTelegramTests(TestCase):
         self.order.refresh_from_db()
         self.assertIn("Источник: <b>Не указан", build_order_caption(build_order_data(self.order)))
 
+    def test_payment_is_atmos_or_on_receipt(self):
+        # Click / Payme / Uzum are not used: the app sends 0 (older versions 1) for an Atmos card payment
+        for payment_type in (0, 1, None):
+            Order.objects.filter(id=self.order.id).update(payment_type=payment_type, payment_method=None)
+            self.order.refresh_from_db()
+            caption = build_order_caption(build_order_data(self.order))
+            self.assertIn("💳 Оплата: Картой онлайн (Atmos) — ", caption)
+            self.assertNotIn("Click", caption)
+
+        Order.objects.filter(id=self.order.id).update(payment_type=4, payment_method="cash")
+        self.order.refresh_from_db()
+        data = build_order_data(self.order)
+        self.assertIn("💳 Оплата: При получении (Наличные) — ", build_order_caption(data))
+        ws = load_workbook(BytesIO(build_order_excel(data))).active
+        self.assertTrue(any("При получении (Наличные)" in str(cell.value or "") for row in ws.iter_rows() for cell in row))
+
     def test_excel_links_every_product(self):
         self.product.refresh_from_db()
         url = f"https://buildex.uz/product/{self.product.slug_ru}"

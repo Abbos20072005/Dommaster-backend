@@ -107,6 +107,18 @@ ORDER_SOURCE_RU = {
 }
 ORDER_SOURCE_UNKNOWN = "Не указан (админ-панель / старое приложение)"
 
+# the shop takes only Atmos (card online) and payment on receipt; Click / Payme / Uzum are not used,
+# so every other `payment_type` is the card: the app sends 0 before `hold/create/`, older versions 1
+PAYMENT_ATMOS_RU = "Картой онлайн (Atmos)"
+PAYMENT_ON_RECEIPT_RU = "При получении"
+PAYMENT_ON_DELIVERY = 4
+
+
+def payment_type_ru(order):
+    if order.payment_type == PAYMENT_ON_DELIVERY:
+        return PAYMENT_ON_RECEIPT_RU
+    return PAYMENT_ATMOS_RU
+
 
 def _get_russian_order_status(status_val):
     if status_val is None:
@@ -541,8 +553,9 @@ def build_order_data(order):
         'delivery_type': "Самовывоз" if order.delivery_type == 1 else "Доставка",
         'pickup_branch': pickup_name,
         'pickup_address': pickup_address,
-        'payment_type': order.get_payment_type_display() if order.payment_type else None,
-        'payment_method': order.get_payment_method_display() if order.payment_method else None,
+        'payment_type': payment_type_ru(order),
+        'payment_method': order.get_payment_method_display()
+        if order.payment_method and order.payment_type == PAYMENT_ON_DELIVERY else None,
         'payment_status': _get_russian_payment_status(order.payment_status),
         'order_status': _get_russian_order_status(order.status),
         'promocode': order.promocode.code if order.promocode else None,
