@@ -1,7 +1,8 @@
 from .models import ProductItemCategory, ProductSubCategory, ProductCategory, Product
 from .models.choices import ORDER_PENDING, ORDER_CONFIRMED, ORDER_COLLECTING, ORDER_DELIVERING, ORDER_READY_FOR_PICKUP, \
-    ORDER_COMPLETED, ORDER_CANCELED
+    ORDER_COMPLETED, ORDER_CANCELED, ORDER_CHANNEL_SITE, ORDER_CHANNEL_IOS, ORDER_CHANNEL_ANDROID
 from .attributes import DEFAULT_LANGUAGE, translated
+from .merchant_feed import PRODUCT_PATH, SITE_URL, product_slug
 import requests
 import json
 import logging
@@ -98,6 +99,15 @@ UNIT_RU = {
 }
 
 
+# where the order was placed (`Order.channel`); null = admin panel / old app version / older order
+ORDER_SOURCE_RU = {
+    ORDER_CHANNEL_SITE: "Сайт",
+    ORDER_CHANNEL_IOS: "Приложение (iOS)",
+    ORDER_CHANNEL_ANDROID: "Приложение (Android)",
+}
+ORDER_SOURCE_UNKNOWN = "Не указан (админ-панель / старое приложение)"
+
+
 def _get_russian_order_status(status_val):
     if status_val is None:
         return "В ожидании"
@@ -126,6 +136,8 @@ def _get_russian_unit(unit_val):
 def build_order_caption(order_data):
     header = [
         f"<b>🛒 Новый заказ № {order_data['id']}</b>",
+        f"🕒 Дата: {escape(order_data.get('created_at') or '—')}",
+        f"📲 Источник: <b>{escape(order_data.get('source') or ORDER_SOURCE_UNKNOWN)}</b>",
     ]
 
     # Customer info
@@ -261,21 +273,22 @@ def build_order_excel(order_data):
         ("D", 17),  # Штрихкод
         ("E", 15),  # Бренд
         ("F", 46),  # Наименование
-        ("G", 8),   # Ед.
-        ("H", 10),  # Кол-во
-        ("I", 13),  # Вес ед., кг
-        ("J", 14),  # Общ. вес, кг
-        ("K", 16),  # Цена, сум
-        ("L", 18),  # Сумма, сум
+        ("G", 18),  # Ссылка на сайте
+        ("H", 8),   # Ед.
+        ("I", 10),  # Кол-во
+        ("J", 13),  # Вес ед., кг
+        ("K", 14),  # Общ. вес, кг
+        ("L", 16),  # Цена, сум
+        ("M", 18),  # Сумма, сум
     ]
     for col_letter, width in column_specs:
         ws.column_dimensions[col_letter].width = width
 
     # 1. Header Banner (Rows 1 & 2)
     ws.row_dimensions[1].height = 32
-    ws.merge_cells("A1:L1")
+    ws.merge_cells("A1:M1")
     ws["A1"] = f"   BUILDEX  |  ЗАКАЗ № {order_data['id']}"
-    _style_range(ws, "A1:L1", font=font_title, fill=fill_primary, alignment=Alignment(vertical="center", horizontal="left"))
+    _style_range(ws, "A1:M1", font=font_title, fill=fill_primary, alignment=Alignment(vertical="center", horizontal="left"))
 
     order_status_ru = _get_russian_order_status(order_data.get("order_status"))
     payment_status_ru = _get_russian_payment_status(order_data.get("payment_status"))
@@ -284,9 +297,11 @@ def build_order_excel(order_data):
         pay_display += f" ({order_data['payment_method']})"
 
     ws.row_dimensions[2].height = 20
-    ws.merge_cells("A2:L2")
-    ws["A2"] = f"   Дата: {order_data['created_at'] or '—'}   |   Статус заказа: {order_status_ru}   |   Оплата: {pay_display} ({payment_status_ru})"
-    _style_range(ws, "A2:L2", font=font_subtitle, fill=fill_dark, alignment=Alignment(vertical="center", horizontal="left"))
+    ws.merge_cells("A2:M2")
+    source = order_data.get("source") or ORDER_SOURCE_UNKNOWN
+    ws["A2"] = (f"   Дата: {order_data['created_at'] or '—'}   |   Источник: {source}   |   "
+                f"Статус заказа: {order_status_ru}   |   Оплата: {pay_display} ({payment_status_ru})")
+    _style_range(ws, "A2:M2", font=font_subtitle, fill=fill_dark, alignment=Alignment(vertical="center", horizontal="left"))
 
     ws.row_dimensions[3].height = 10
 
@@ -321,8 +336,8 @@ def build_order_excel(order_data):
         _style_range(ws, range_lbl_l, font=font_card_lbl, fill=fill_card_lbl, border=border_cell,
                      alignment=Alignment(vertical="center", horizontal="right"))
 
-        # Left Value (Merged C:F, width 92)
-        range_val_l = f"C{idx}:F{idx}"
+        # Left Value (Merged C:G)
+        range_val_l = f"C{idx}:G{idx}"
         ws.merge_cells(range_val_l)
         ws[f"C{idx}"] = val_l
         if link_l:
@@ -334,17 +349,17 @@ def build_order_excel(order_data):
             _style_range(ws, range_val_l, font=f_val, fill=fill_card_val, border=border_cell,
                          alignment=Alignment(vertical="center", horizontal="left", indent=1))
 
-        # Right Label (Merged G:H, width 18)
-        range_lbl_r = f"G{idx}:H{idx}"
+        # Right Label (Merged H:I)
+        range_lbl_r = f"H{idx}:I{idx}"
         ws.merge_cells(range_lbl_r)
-        ws[f"G{idx}"] = lbl_r
+        ws[f"H{idx}"] = lbl_r
         _style_range(ws, range_lbl_r, font=font_card_lbl, fill=fill_card_lbl, border=border_cell,
                      alignment=Alignment(vertical="center", horizontal="right"))
 
-        # Right Value (Merged I:L, width 61)
-        range_val_r = f"I{idx}:L{idx}"
+        # Right Value (Merged J:M)
+        range_val_r = f"J{idx}:M{idx}"
         ws.merge_cells(range_val_r)
-        ws[f"I{idx}"] = val_r
+        ws[f"J{idx}"] = val_r
         f_val_r = font_card_val_bold if bold_r else font_card_val
         _style_range(ws, range_val_r, font=f_val_r, fill=fill_card_val, border=border_cell,
                      alignment=Alignment(vertical="center", horizontal="left", indent=1))
@@ -354,7 +369,7 @@ def build_order_excel(order_data):
     # 3. Products Table Header (Row 10)
     headers = [
         "№", "Код 1С", "Артикул", "Штрихкод", "Бренд",
-        "Наименование товара", "Ед.", "Кол-во",
+        "Наименование товара", "Ссылка на сайте", "Ед.", "Кол-во",
         "Вес ед. (кг)", "Общ. вес (кг)", "Цена (сум)", "Сумма (сум)"
     ]
     ws.row_dimensions[10].height = 26
@@ -366,7 +381,8 @@ def build_order_excel(order_data):
         cell.border = border_cell
         cell.alignment = Alignment(vertical="center", horizontal="center", wrap_text=True)
 
-    # 4. Products Rows (Rows 11+)
+    # 4. Products Rows (Rows 11+); the product's site page goes right after its name (BLD-515)
+    LINK_COLUMN = 7
     curr_row = 11
     for item_idx, item in enumerate(order_data["items"], start=1):
         ws.row_dimensions[curr_row].height = 22
@@ -379,6 +395,7 @@ def build_order_excel(order_data):
             (item.get("barcode", "—"), "center", None, font_td),
             (item.get("brand", "—"), "center", None, font_td),
             (item["name"], "left", None, font_td),
+            ("Открыть на сайте" if item.get("url") else "—", "center", None, font_link if item.get("url") else font_td),
             (item["unit"], "center", None, font_td),
             (item["quantity"], "center", None, font_td_bold),
             (item.get("unit_weight") or 0.0, "right", "#,##0.00", font_td),
@@ -390,6 +407,8 @@ def build_order_excel(order_data):
         for col_idx, (val, align, num_fmt, f) in enumerate(row_data, start=1):
             cell = ws.cell(row=curr_row, column=col_idx)
             cell.value = val
+            if col_idx == LINK_COLUMN and item.get("url"):
+                cell.hyperlink = item["url"]
             cell.font = f
             cell.fill = row_fill
             cell.border = border_cell
@@ -418,21 +437,21 @@ def build_order_excel(order_data):
     for label, val, f_lbl, f_val, r_fill, is_grand in totals:
         ws.row_dimensions[curr_row].height = 26 if is_grand else 21
 
-        # Label (merged H:J)
-        range_lbl = f"H{curr_row}:J{curr_row}"
+        # Label (merged I:K)
+        range_lbl = f"I{curr_row}:K{curr_row}"
         ws.merge_cells(range_lbl)
-        ws[f"H{curr_row}"] = label
+        ws[f"I{curr_row}"] = label
         b_style = border_grand if is_grand else border_cell
         _style_range(ws, range_lbl, font=f_lbl, fill=r_fill, border=b_style,
                      alignment=Alignment(vertical="center", horizontal="right"))
 
-        # Value (merged K:L)
-        range_val = f"K{curr_row}:L{curr_row}"
+        # Value (merged L:M)
+        range_val = f"L{curr_row}:M{curr_row}"
         ws.merge_cells(range_val)
-        ws[f"K{curr_row}"] = float(val or 0)
+        ws[f"L{curr_row}"] = float(val or 0)
         _style_range(ws, range_val, font=f_val, fill=r_fill, border=b_style,
                      alignment=Alignment(vertical="center", horizontal="right", indent=1))
-        ws[f"K{curr_row}"].number_format = '#,##0" сум"'
+        ws[f"L{curr_row}"].number_format = '#,##0" сум"'
 
         curr_row += 1
 
@@ -504,12 +523,15 @@ def build_order_data(order):
             'unit_weight': unit_weight,
             'total_weight': line_weight,
             'price': prod.discount_price if prod.discount_price is not None else prod.price,
+            # the page link of the merchant feeds: /product/<slug_ru>, answers 200 without a redirect
+            'url': SITE_URL + PRODUCT_PATH.format(slug=product_slug(prod)),
         })
     total_order_weight = round(total_order_weight, 3)
 
     order_data = {
         'id': order.id,
         'created_at': order.created_at.strftime("%d.%m.%Y %H:%M") if order.created_at else None,
+        'source': ORDER_SOURCE_RU.get(order.channel),
         'customer_name': customer_name,
         'customer_phone': customer_phone,
         'customer_role': customer_role,
