@@ -28,6 +28,14 @@ BIG_CHANGE = 0.5  # a new price more than 50% away from the old one is listed fo
 # product is found by the model codes / sizes of the row: every code-like token of the row must be in the name.
 LOOKALIKE = str.maketrans("авсекмнорстух", "abcekmhopctyx")  # Cyrillic letters that look Latin: С 10А = C 10A
 UNIT_AFTER_NUMBER = re.compile(r"(\d)\s+(ka|a|w|bt|kbt|kw|b|v|va|kva|mm|cm|m|ma|ah|k)(?![0-9a-zа-я])")
+# a word (4+ Cyrillic letters) is transliterated: "Динрейка" = "DIN-рейка"; short pieces (кА, В, мм, х-ка) keep the
+# look-alike Latin letters above
+TRANSLIT = {"а": "a", "б": "b", "в": "v", "г": "g", "д": "d", "е": "e", "ж": "zh", "з": "z", "и": "i", "й": "y",
+            "к": "k", "л": "l", "м": "m", "н": "n", "о": "o", "п": "p", "р": "r", "с": "s", "т": "t", "у": "u",
+            "ф": "f", "х": "h", "ц": "ts", "ч": "ch", "ш": "sh", "щ": "sch", "ъ": "", "ы": "y", "ь": "", "э": "e",
+            "ю": "yu", "я": "ya", "ў": "o", "қ": "q", "ғ": "g", "ҳ": "h"}
+# "белый" = "белая", "блоки" = "блок": a word is compared without its ending
+ENDING = re.compile(r"(?:yaya|aya|uyu|yy|iy|oy|ye|ie|oe|ee|ykh|ikh|ogo|ego|a|y|i|e|u)$")
 
 
 def words(text):
@@ -38,7 +46,9 @@ def tokens(text):
     """Comparable tokens of a name: '6 кА' = '6kA' = '6ka', 'NXB-63' = 'nxb63', '2,5 мм²' = '2.5mm', '25х25' = '25x25'."""
     text = clean(text).lower().replace("ё", "е").replace("²", "").replace("³", "")
     text = re.sub(r"\(\s*\d+\s*\)", " ", text)  # pack sizes: "Nura(18)"
-    text = re.sub(r"(\d),(\d)", r"\1.\2", text).translate(LOOKALIKE)
+    text = re.sub(r"(\d),(\d)", r"\1.\2", text)
+    text = re.sub(r"[а-яўқғҳ]{4,}", lambda word: "".join(TRANSLIT.get(char, char) for char in word.group()), text)
+    text = text.translate(LOOKALIKE)
     text = re.sub(r"(\d)\s*[x×*]\s*(\d)", r"\1x\2", text)
     text = re.sub(r"(?<=[0-9a-zа-я])-(?=[0-9a-zа-я])", "", text)
     text = UNIT_AFTER_NUMBER.sub(r"\1\2", text)
@@ -49,7 +59,15 @@ def tokens(text):
 
 
 def stem(token):
-    return token if any(char.isdigit() for char in token) else token[:5]
+    if any(char.isdigit() for char in token):
+        return token
+    bare = ENDING.sub("", token)
+    return (bare if len(bare) >= 3 else token)[:5]
+
+
+def bare_unit(token):
+    """'0.7mm' = '0.7', '80x60mm' = '80x60': the site writes "мм" after a size, the list often doesn't."""
+    return token[:-2] if token.endswith("mm") and token[-3:-2].isdigit() else token
 
 
 def is_code(token):
@@ -60,10 +78,21 @@ def is_code(token):
 def has_token(own, token):
     """The product carries the row's token: the same one, or a longer word for an abbreviation ('3клав' of
     '3-клавишный'); a short tail ('10a', '1p') must be exact."""
-    if token in own:
+    if token in own or bare_unit(token) in own or token + "mm" in own:
         return True
     tail = re.search(r"[a-zа-я]+$", token)
     return bool(tail and len(tail.group()) >= 3 and any(other.startswith(token) for other in own))
+
+
+def shape(token):
+    """What a code says: '1p' / '2p' = '#p', '6ka' = '#ka', breaker 'c10' / 'b16' = 'curve' - two different values of
+    one shape in the row and the product = another product; a shape the product name doesn't mention is no conflict."""
+    return "curve" if re.fullmatch(r"[bcd]\d+", token) else re.sub(r"\d+(?:\.\d+)?", "#", bare_unit(token))
+
+
+def is_strong(token):
+    """A model code on its own ('nxb63', 'boss95500va', 'rnb1.255'): letters and digits, 4+ characters."""
+    return len(token) >= 4 and re.search(r"[a-zа-я]", token) and re.search(r"\d", token) and shape(token) != "curve"
 
 
 def has_word(stems, word):
@@ -226,39 +255,55 @@ class Command(BaseCommand):
     @staticmethod
     def coded_products(products, brand):
         ignored = set(tokens(brand.name)) | {"electric", "electro"}
+        ignored |= {stem(token) for token in ignored}
         result = []
         for product in products:
             own = tokens(" ".join(filter(None, [product.name_ru, product.articul_code, product.product_code])))
             stems = {stem(token) for token in own} - ignored
             if stems:
-                result.append((product, set(own), stems, ignored))
+                result.append((product, set(own) - ignored, stems, ignored))
         return result
 
     @staticmethod
     def match_by_codes(name, coded):
-        """(product, None) or (None, why). Every code of the row must be a token of the product; the product whose
-        name is covered best by the row wins, a tie is not a match."""
+        """(product, None) or (None, why). A code of the row is in the product, or the product name doesn't mention
+        that property at all (the site name dropped "95-270V"); another value of it ("2P" for "1P", "C20" for "C10")
+        rules the product out. At least a model code or two codes must be the same; the product with most codes in
+        common, then the one whose name the row covers best, wins; a tie is not a match. A bare number ("Chint 120",
+        "10A" = "10") is never a conflict and never enough on its own."""
         row = tokens(name)
         if not coded:
             return None, "no products of the brand"
         ignored = coded[0][3]
         codes = {token for token in row if is_code(token)} - ignored
+        numbers = {token for token in codes if shape(token) == "#"}
+        codes -= numbers
         row_stems = {stem(token) for token in row} - ignored
         row_words = {stem(token) for token in row if token.isalpha() and len(token) >= 3} - ignored
         scored = []
         for product, own, stems, _ in coded:
-            if not all(has_token(own, token) for token in codes):
+            shapes = {shape(token) for token in own if is_code(token)}
+            same = [token for token in codes if has_token(own, token)]
+            if any(shape(token) in shapes for token in codes if token not in same):
+                continue  # another value of the same property
+            if any(is_strong(token) for token in codes if token not in same) and any(
+                    is_strong(token) and not has_token(set(row), token) for token in own):
+                continue  # another model: NB1L-63 in the row, NXB-63 in the name
+            if codes and not (any(is_strong(token) for token in same) or len(same) >= 2 or len(same) == len(codes)):
                 continue
             found = {word for word in row_words if has_word(stems, word)}
             if row_words and not found:
                 continue  # same sizes, another kind of goods
-            if not codes and (len(row_words) < 2 or found != row_words):
+            if not codes and numbers and not all(has_token(own, token) for token in numbers):
+                continue  # only bare numbers ("АТ 10-8-4,5" = "1084.5"): all of them must be there
+            if not codes and not numbers and (len(row_words) < 2 or found != row_words):
                 continue  # nothing but words: all of them must be in the name
             covered = sum(1 for other in stems if other in row_stems or any(other.startswith(word) for word in found))
-            scored.append((covered / len(stems), product))
+            exact = len(same) + len(numbers & own)
+            scored.append(((exact, covered / len(stems)), product))
         if not scored:
             return None, "no product with these codes"
-        scored.sort(key=lambda item: -item[0])
+        scored.sort(key=lambda item: item[0], reverse=True)
         if len(scored) > 1 and scored[0][0] == scored[1][0]:
             return None, f"not sure: {scored[0][1].pk} / {scored[1][1].pk}"
         return scored[0][1], None
