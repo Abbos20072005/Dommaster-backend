@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from apps.base.models import Banner, Chat, LoyaltyCard, AboutUs, Messages, Promocodes, News, Articles, Reviews, Video, DeleteButton, \
-    BaseInformation, MarketBranch, Notification, BRANCH_TYPE_CHOICES
+    BaseInformation, MarketBranch, Notification, BRANCH_TYPE_CHOICES, FaqItem, FaqTopic
 from apps.base.api.v1.admin.serializers.branch import ScheduleDaySerializer
 from apps.base.stores import localized_snapshot, open_state
 from apps.service.attributes import request_language
@@ -325,3 +325,23 @@ class OrderPickupStoreSerializer(serializers.Serializer):
 
     def to_representation(self, instance):
         return localized_snapshot(instance, request_language())
+
+
+class FaqQuestionSerializer(serializers.ModelSerializer):
+    answer = serializers.CharField(help_text="Limited HTML: <a href>, <b> / <strong>, <ul> / <ol> / <li>, <p>, <br>.")
+
+    class Meta:
+        model = FaqItem
+        fields = ("id", "question", "answer", "page_keys", "updated_at")
+
+
+class FaqTopicListSerializer(serializers.ModelSerializer):
+    questions = FaqQuestionSerializer(many=True)
+
+    class Meta:
+        model = FaqTopic
+        fields = ("id", "slug", "name", "questions")
+
+
+class FaqQuerySerializer(serializers.Serializer):
+    page = serializers.ChoiceField(choices=FaqItem.PAGE_KEYS, required=False)

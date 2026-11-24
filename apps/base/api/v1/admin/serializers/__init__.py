@@ -2,10 +2,12 @@ from .banner import BannerSerializer, BannerStatsSerializer, BannerTargetSeriali
 from .branch import MarketBranchReorderSerializer, MarketBranchSerializer, ScheduleDaySerializer, ScheduleField
 from .chat import ChatCustomerSerializer, ChatLastMessageSerializer, ChatSerializer, ChatStatsSerializer, \
     MessageChatSerializer, MessageSerializer
+from .faq import FaqItemSerializer, FaqReorderSerializer, FaqTopicRelationSerializer, FaqTopicSerializer
 from .content import ArticlesListSerializer, ArticlesSerializer, NewsListSerializer, NewsSerializer, VideoSerializer
 from .notification import NotificationAudienceSerializer, NotificationSerializer, NotificationStatsSerializer
 
 __all__ = [
+    "FaqItemSerializer", "FaqReorderSerializer", "FaqTopicRelationSerializer", "FaqTopicSerializer",
     "NotificationAudienceSerializer", "NotificationSerializer", "NotificationStatsSerializer",
     "BannerSerializer", "BannerStatsSerializer", "BannerTargetSerializer",
     "MarketBranchReorderSerializer", "MarketBranchSerializer", "ScheduleDaySerializer", "ScheduleField",

@@ -1,6 +1,6 @@
 import django_filters
 from django.db.models import Q
-from apps.base.models import MarketBranch, Banner, Chat, Messages, Notification
+from apps.base.models import MarketBranch, Banner, Chat, Messages, Notification, FaqItem
 
 
 class MarketBranchFilter(django_filters.FilterSet):
@@ -72,3 +72,15 @@ class CreatedRangeFilter(django_filters.FilterSet):
     """News / articles / videos: only the creation date range."""
     from_created = django_filters.DateFilter(field_name="created_at", lookup_expr="date__gte")
     to_created = django_filters.DateFilter(field_name="created_at", lookup_expr="date__lte")
+
+
+class FaqItemFilter(django_filters.FilterSet):
+    # questions shown on this page (`page_keys` contains it); not `page` - that one is the pagination
+    page_key = django_filters.ChoiceFilter(choices=[(key, key) for key in FaqItem.PAGE_KEYS], method="filter_page")
+
+    class Meta:
+        model = FaqItem
+        fields = ("topic", "is_active")
+
+    def filter_page(self, queryset, name, value):
+        return queryset.filter(page_keys__contains=[value])

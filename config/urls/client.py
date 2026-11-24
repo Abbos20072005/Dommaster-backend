@@ -1,9 +1,11 @@
 from django.urls import path, include
+from apps.base.api.v1.client.views import FaqViewSet
 from apps.integration.one_c import OneCIntegrationViewSet
 
 urlpatterns = [
     path("api/v1/auth/", include("apps.authorization.api.v1.client.urls")),
     path("api/v1/base/", include("apps.base.api.v1.client.urls")),
+    path("api/v1/faq/", FaqViewSet.as_view({"get": "faq_list"}), name="faq_list"),
     path("api/v1/", include("apps.service.api.v1.client.urls")),
     path("api/v1/integration/", include("apps.integration.urls")),
     path(

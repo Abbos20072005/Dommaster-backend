@@ -14,9 +14,12 @@ from .serializers import BannerSerializer, MessageSerializer, MessageCreateSeria
     ChatCreateSerializer, PromocodeRequestSerializer, NewsSerializer, NewsDetailSerializer, ArticlesSerializer, \
     ArticlesDetailSerializer, ReviewsSerializer, ReviewsDetailSerializer, VideoSerializer, PromocodeSerializer, \
     DeleteButtonSerializer, BaseInformationSerializer, MarketBranchSerializer, NotificationSerializer, \
-    NotificationListParamsSerializer, NotificationUnreadCountSerializer, StoreSerializer
+    NotificationListParamsSerializer, NotificationUnreadCountSerializer, StoreSerializer, \
+    FaqTopicListSerializer, FaqQuerySerializer
 from apps.base.models import Banner, Chat, AboutUs, Messages, Promocodes, News, Articles, Reviews, Video, DeleteButton, \
-    BaseInformation, MarketBranch, Notification, NotificationRead, PICKUP_BRANCH_TYPES
+    BaseInformation, MarketBranch, Notification, NotificationRead, PICKUP_BRANCH_TYPES, FaqItem
+from apps.base import faq
+from apps.service.attributes import request_language
 from apps.base.paginations.get_notifications import get_notifications_paginator
 from django.db.models import Exists, OuterRef
 from apps.service import seo_redirects
@@ -545,3 +548,28 @@ class BranchViewSet(ViewSet):
         serializer = MarketBranchSerializer(branch, context={"request": request})
         logger.info("Market branch %s fetched", pk)
         return Response(data={"result": serializer.data, "ok": True}, status=status.HTTP_200_OK)
+
+
+class FaqViewSet(ViewSet):
+    @extend_schema(
+        summary="FAQ",
+        description="Active topics with their active questions, position order, texts in the Accept-Language "
+                    "language. `?page=<key>` = only the questions shown on that page (topics without one are "
+                    "left out). `answer` is limited HTML (links, bold, lists, paragraphs). Cached 15 min, an "
+                    "admin change drops the cache.",
+        parameters=[OpenApiParameter(name="page", location=OpenApiParameter.QUERY, type=OpenApiTypes.STR,
+                                     enum=list(FaqItem.PAGE_KEYS), required=False)],
+        responses={200: FaqTopicListSerializer(many=True)},
+        tags=["FAQ"]
+    )
+    def faq_list(self, request):
+        params = FaqQuerySerializer(data=request.query_params)
+        if not params.is_valid():
+            raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=params.errors)
+        page = params.validated_data.get("page")
+        key = faq.cache_key(request_language(), page)
+        data = cache.get(key)
+        if data is None:
+            data = FaqTopicListSerializer(faq.active_topics(page), many=True, context={"request": request}).data
+            cache.set(key, data, faq.CACHE_TTL)
+        return Response(data={"result": data, "ok": True}, status=status.HTTP_200_OK)

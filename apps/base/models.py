@@ -472,3 +472,51 @@ class BaseInformation(BaseModel):
         verbose_name = "Базовая информация"
         verbose_name_plural = "Базовая информация"
 
+
+
+def default_faq_page_keys():
+    return ["faq"]
+
+
+class FaqTopic(BaseModel):
+    name = models.CharField(max_length=150, verbose_name="Название")
+    slug = models.SlugField(max_length=100, unique=True, verbose_name="Slug")
+    position = models.PositiveIntegerField(default=0, verbose_name="Позиция")
+    is_active = models.BooleanField(default=True, verbose_name="Активна")
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        ordering = ("position", "id")
+        verbose_name = "Тема FAQ"
+        verbose_name_plural = "Темы FAQ"
+
+
+class FaqItem(BaseModel):
+    # where a question is shown (one text, several pages); keys are agreed with the site and the app
+    PAGE_KEYS = ("faq", "courier-delivery", "payment-methods", "returns", "pickup", "legal-entities", "pro")
+
+    topic = models.ForeignKey(FaqTopic, on_delete=models.PROTECT, related_name="items", verbose_name="Тема")
+    question = models.CharField(max_length=500, verbose_name="Вопрос")
+    # limited HTML (links, bold, lists), cleaned by apps/base/faq.clean_answer on every save
+    answer = models.TextField(verbose_name="Ответ")
+    page_keys = models.JSONField(default=default_faq_page_keys, blank=True, verbose_name="Страницы")
+    position = models.PositiveIntegerField(default=0, verbose_name="Позиция")
+    is_active = models.BooleanField(default=True, verbose_name="Активен")
+
+    def save(self, *args, **kwargs):
+        from apps.base.faq import clean_answer
+        for field in ("answer_uz", "answer_ru"):
+            value = getattr(self, field, None)
+            if value:
+                setattr(self, field, clean_answer(value))
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.question
+
+    class Meta:
+        ordering = ("topic__position", "topic_id", "position", "id")
+        verbose_name = "Вопрос FAQ"
+        verbose_name_plural = "Вопросы FAQ"
