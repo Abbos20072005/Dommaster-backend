@@ -60,6 +60,8 @@ Javob — `200`:
 | `title` | ichki nom (admin uchun) — bannerda matn sifatida ko'rsatish shart emas, `alt` / accessibility uchun |
 | `desktop_image` | keng rasm (16:5), har doim bor |
 | `mobile_image` | kvadrat rasm (1:1), **`null` bo'lishi mumkin** — unda `desktop_image` ni ishlating |
+
+Rasmlarda matn bor, shuning uchun har tilning o'z rasmlari bor: ikkala rasm **`Accept-Language` tilida** keladi (`uz` / `ru`). O'zbekcha rasm yuklanmagan bo'lsa — shu formatdagi ruscha rasm keladi. Til almashganda bannerlarni qayta so'rang.
 | `placement` | banner qaysi joy uchun |
 | `link_type`, `link`, `page`, `content_type_info` | bosilganda qayerga olib borishi — pastga qarang |
 

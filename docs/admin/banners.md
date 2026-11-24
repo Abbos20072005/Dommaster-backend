@@ -24,6 +24,10 @@ Swagger: `/swagger/admin/` → **banners**.
   "title": "Knauf kuzgi aksiya",
   "title_uz": null,
   "title_ru": "Knauf kuzgi aksiya",
+  "desktop_image_uz": "https://.../media/banner/desktop/knauf_uz.png",
+  "desktop_image_ru": "https://.../media/banner/desktop/knauf.png",
+  "mobile_image_uz": null,
+  "mobile_image_ru": "https://.../media/banner/mobile/knauf.png",
   "desktop_image": "https://.../media/banner/desktop/knauf.png",
   "mobile_image": "https://.../media/banner/mobile/knauf.png",
   "placement": "home_top",
@@ -48,8 +52,11 @@ Swagger: `/swagger/admin/` → **banners**.
 | --- | --- | --- |
 | `code` | `BNR-0412` | faqat o'qiladi, `id` dan yasaladi |
 | `title_ru` * | Ichki nom | majburiy; `title_uz` ixtiyoriy |
-| `desktop_image` * | Rasm 16:5 | fayl |
-| `mobile_image` | Rasm 1:1 | fayl, ixtiyoriy; bo'sh `mobile_image=` — o'chiradi |
+| `desktop_image_ru` * | Rasm 16:5 (RU) | fayl, majburiy (yaratishda; o'chirib bo'lmaydi) |
+| `desktop_image_uz` | Rasm 16:5 (UZ) | fayl, ixtiyoriy; bo'sh `desktop_image_uz=` — o'chiradi. Yo'q bo'lsa o'zbekcha mijozga RU rasm chiqadi |
+| `mobile_image_ru` | Rasm 1:1 (RU) | fayl, ixtiyoriy; bo'sh `mobile_image_ru=` — o'chiradi |
+| `mobile_image_uz` | Rasm 1:1 (UZ) | fayl, ixtiyoriy; bo'sh `mobile_image_uz=` — o'chiradi. Yo'q bo'lsa o'zbekcha mijozga RU mobil rasm chiqadi |
+| `desktop_image`, `mobile_image` | — | **eskirgan**: `desktop_image_ru` / `mobile_image_ru` ning o'zi (o'qilganda RU rasm; yuborilsa RU rasmga yoziladi). Forma yangi maydonlarga o'tgach ishlatmang |
 | `placement` | Joylashuv | `home_top` — Bosh sahifa · yuqori slayder (default; sayt va ilova uchun **bitta** ro'yxat, qayerda ko'rinishini kanallar belgilaydi), `home_bottom` — Bosh sahifa · pastda, `catalog` — Katalog (kategoriya sahifasi) ichida. Pastdagi "Banner turlari" ga qarang |
 | `show_on_site`, `show_on_ios`, `show_on_android` | Kanallar | default `true`; kamida bittasi `true` bo'lishi shart. Banner faqat saytda yoki faqat ilovada chiqishi kerak bo'lsa — shu yerda belgilanadi |
 | `link_type` * | Havola turi | `category`, `product`, `badge` (Teg), `brand`, `page` (Sahifa), `url` (Tashqi URL) |

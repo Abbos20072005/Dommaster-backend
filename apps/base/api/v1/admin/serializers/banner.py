@@ -19,6 +19,10 @@ LINK_TYPE_TARGET_MODELS = {
 }
 LINK_FIELDS = {"link_type", "content_object", "page", "link"}
 CHANNEL_FIELDS = ("show_on_site", "show_on_ios", "show_on_android")
+# images carry text: one desktop + one mobile per language; an empty uz one falls back to ru on the client
+IMAGE_FIELDS = ("desktop_image_uz", "desktop_image_ru", "mobile_image_uz", "mobile_image_ru")
+# deprecated: the plain names write the ru image (the panel's form before the per-language images)
+IMAGE_ALIASES = {"desktop_image": "desktop_image_ru", "mobile_image": "mobile_image_ru"}
 
 
 class BannerTargetSerializer(serializers.Serializer):
@@ -55,13 +59,16 @@ class BannerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Banner
-        fields = ("id", "code", "title", "title_uz", "title_ru", "desktop_image", "mobile_image",
+        fields = ("id", "code", "title", "title_uz", "title_ru", *IMAGE_FIELDS, "desktop_image", "mobile_image",
                   "placement", "show_on_site", "show_on_ios", "show_on_android", "link_type", "target", "page", "link",
                   "starts_at", "ends_at", "position", "is_visible", "status", "created_at", "updated_at")
         read_only_fields = ("title", "created_at", "updated_at")
         extra_kwargs = {
             # ru is the default (fallback) language
             "title_ru": {"required": True, "allow_null": False, "allow_blank": False},
+            # desktop_image_ru is required too - checked in validate(), the deprecated alias may bring it
+            "desktop_image": {"required": False, "help_text": "Deprecated: = desktop_image_ru"},
+            "mobile_image": {"help_text": "Deprecated: = mobile_image_ru"},
             "link_type": {"required": True},
             "starts_at": {"required": True},
         }
@@ -80,6 +87,12 @@ class BannerSerializer(serializers.ModelSerializer):
                 return attrs[name]
             return getattr(self.instance, name) if self.instance else default
 
+        for alias, name in IMAGE_ALIASES.items():
+            if alias in attrs:
+                value = attrs.pop(alias)
+                attrs.setdefault(name, value)
+        if (not self.instance or "desktop_image_ru" in attrs) and not current("desktop_image_ru"):
+            raise serializers.ValidationError({"desktop_image_ru": "The ru desktop image is required."})
         if not any(current(name, True) for name in CHANNEL_FIELDS):
             raise serializers.ValidationError({"show_on_site": "Select at least one channel."})
         ends_at = current("ends_at")
@@ -115,8 +128,7 @@ class BannerSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
     def update(self, instance, validated_data):
-        old_images = [(name, getattr(instance, name)) for name in ("desktop_image", "mobile_image")
-                      if name in validated_data]
+        old_images = [(name, getattr(instance, name)) for name in IMAGE_FIELDS if name in validated_data]
         instance = super().update(instance, validated_data)
         # replaced / cleared images: remove the old files
         for name, old in old_images:

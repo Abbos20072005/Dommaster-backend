@@ -89,6 +89,9 @@ class Banner(BaseModel):
     )
 
     title = models.CharField(max_length=255, verbose_name="Заголовок")
+    # translated (`*_uz` / `*_ru`, see translation.py): the plain attribute = the image of the active language,
+    # an empty uz one falls back to ru of the same format; the old plain columns are read only by
+    # `backfill_banner_images`
     desktop_image = models.ImageField(upload_to="banner/desktop/", verbose_name="Компютерное изображение")
     mobile_image = models.ImageField(upload_to="banner/mobile/", blank=True, null=True,
                                      verbose_name="Телефонное изображение")

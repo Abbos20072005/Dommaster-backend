@@ -6,6 +6,7 @@ from apps.service.api.v1.admin.serializers import CategoryReorderSerializer
 from utils.admin_views import AdminModelViewSet
 from ..filters import BannerFilter
 from ..serializers import BannerSerializer, BannerStatsSerializer
+from ..serializers.banner import IMAGE_FIELDS
 
 
 class BannerViewSet(AdminModelViewSet):
@@ -17,7 +18,8 @@ class BannerViewSet(AdminModelViewSet):
     ordering = ("position", "id")
 
     def perform_destroy(self, instance):
-        for image in (instance.desktop_image, instance.mobile_image):
+        for name in IMAGE_FIELDS:
+            image = getattr(instance, name)
             if image:
                 image.delete(save=False)
         instance.delete()

@@ -15,7 +15,8 @@ class NewsOption(TranslationOptions):
 
 
 class BannerOption(TranslationOptions):
-    fields = ("title",)
+    # images carry text, so each language has its own pair (desktop + mobile); an empty uz one falls back to ru
+    fields = ("title", "desktop_image", "mobile_image")
 
 
 class VideoOption(TranslationOptions):
