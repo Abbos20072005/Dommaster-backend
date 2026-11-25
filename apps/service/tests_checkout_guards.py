@@ -1,6 +1,7 @@
 """Checkout / password-login guards found by the 13.11.2026 pentest. Run: env/Scripts/python.exe manage.py test apps.service"""
 from unittest import mock
 
+from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import make_password
 from rest_framework.test import APIClient
 
@@ -50,6 +51,37 @@ class CheckoutGuardTests(ApiTestCase):
         self.assertFalse(Order.objects.exists())
         # 0 = not chosen yet: the app sends it
         self.assertEqual(self.checkout(payment_type=0).status_code, 201)
+
+    def test_payment_on_delivery_refused(self):
+        # launch audit B-03 (25.11.2026): only the card online is offered
+        for method in ("cash", "card", None):
+            response = self.checkout(payment_type=4, payment_method=method)
+            self.assertEqual((response.status_code, response.data["error_code"]), (400, 5), method)
+        self.assertFalse(Order.objects.exists())
+        self.assertEqual(CartItem.objects.count(), 1)
+
+        order = Order.objects.create(customer=self.customer, payment_type=0)
+        response = self.client.post("/api/v1/order/pay/", {"order_id": order.id, "payment_type": 4,
+                                                          "payment_method": "cash"}, format="json")
+        self.assertEqual(response.status_code, 400)
+        order.refresh_from_db()
+        self.assertEqual((order.payment_type, order.payment_method), (0, None))
+
+    def test_old_cash_order_stays_readable(self):
+        order = Order.objects.create(customer=self.customer, payment_type=4, payment_method="cash",
+                                     order_location=CustomerAddresses.objects.get(customer=self.customer))
+        detail = self.client.get(f"/api/v1/order/{order.id}/")
+        self.assertEqual(detail.status_code, 200)
+        self.assertEqual((detail.data["result"]["payment_type"], detail.data["result"]["payment_method"]), (4, "cash"))
+
+        admin = APIClient()
+        admin.force_authenticate(get_user_model().objects.create_user("admin", password="x", is_staff=True))
+        row = admin.get(f"/api/v1/admin/orders/{order.id}/").data
+        self.assertEqual((row["payment_type"], row["payment_method"]), (4, "cash"))
+        self.assertEqual(admin.get("/api/v1/admin/orders/?payment_type=4").data["count"], 1)
+        response = admin.patch(f"/api/v1/admin/orders/{order.id}/", {"receiver_name": "Ali"}, format="json")
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual((response.data["payment_type"], response.data["payment_method"]), (4, "cash"))
 
     def test_empty_cart_refused(self):
         self.item.is_checked = False

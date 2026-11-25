@@ -29,6 +29,8 @@ PAYMENT_TYPE = (
     (3, "Uzum Bank"),
     (4, "При получении"),
 )
+# no longer offered to customers (launch audit B-03, 25.11.2026): the client checkout refuses it, old orders keep it
+PAYMENT_ON_DELIVERY = 4
 
 CASH_PAYMENT_METHOD = (
     ("cash", "Наличные"),

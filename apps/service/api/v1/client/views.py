@@ -2285,7 +2285,6 @@ class QuestionsViewSet(ViewSet):
 
 
 class OrderViewSet(ViewSet):
-    # TODO: need to implement payment with cash
     @extend_schema(
         summary="Order pay",
         description="Order pay",

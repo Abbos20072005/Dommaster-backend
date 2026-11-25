@@ -75,7 +75,7 @@ Token kerak emas. Matnlar `Accept-Language` tilida (`uz` / `ru`, boshqasi → `r
 ```
 
 - Manzil (`address_id`) **kerak emas**, yetkazish narxi `0`.
-- To'lovning **hamma usuli** qabul qilinadi: `1` Click, `2` Payme, `3` Uzum va `4` (do'konda to'lash, `payment_method` `cash` / `card`). `4` da to'lov havolasi `null` qaytadi, buyurtma `0` Pending da qoladi (operator tasdiqlaguncha; 18.11.2026 gacha darhol Collecting bo'lardi), `payment_status` esa do'konda to'lov qabul qilinmaguncha `0` Pending turadi.
+- To'lov faqat onlayn — yetkazib berishdagi kabi (`0` → Atmos karta, `1`–`3`). **`4` (do'konda to'lash) 25.11.2026 dan rad etiladi** → `400`, `error_code: 5`, `{"payment_type": ["Оплата при получении недоступна, оплатите заказ картой онлайн"]}`. Eski buyurtmalarda `payment_type: 4` qolgan.
 - Nofaol, mavjud bo'lmagan yoki ombor turidagi `branch_id` → `400`, `error_code: 5`, `{"branch_id": ["Store not found or inactive"]}`.
 - Do'kon nomi, manzili, telefoni va koordinatasi buyurtmaga **shu paytdagi holatida** saqlanadi — do'kon keyin tahrirlansa yoki nofaol qilinsa ham buyurtmada eski ma'lumot qoladi.
 

@@ -8,6 +8,7 @@ from apps.service.models import Product, ProductCategory, ProductItemCategory, P
     Order, OrderItem, Brand, Sale, AddsBrands, Favourites, Cart, CartItem, ProductCharacteristics, Questions, \
     RecentlyViewedProducts, Service, CommentReply, CommentImages, QuestionsReply, \
     ProductVariantGroup, ProductVariantItem, ProductItemCategoryFilterSchema, HomeBlock, ORDER_CHANNEL
+from apps.service.models.choices import PAYMENT_ON_DELIVERY
 from apps.service import feed, product_links
 from apps.service.attributes import display_value, product_attribute_values, request_language
 from exceptions.error_exception import CustomApiException
@@ -100,10 +101,18 @@ class ProductAnnotationMixin:
             return cart_item.quantity if cart_item else 0
         return 0
 
+def refuse_payment_on_delivery(value):
+    if value == PAYMENT_ON_DELIVERY:
+        raise serializers.ValidationError("Оплата при получении недоступна, оплатите заказ картой онлайн")
+    return value
+
+
 class OrderCreateSerializer(serializers.Serializer):
     promocode = serializers.CharField(max_length=15, required=False)
-    # PAYMENT_TYPE 1-4; 0 = not chosen yet (the app sends it, the order is paid later with `order/pay/`)
-    payment_type = serializers.IntegerField(required=True, min_value=0, max_value=4)
+    # PAYMENT_TYPE 1-3; 0 = not chosen yet (the app sends it, the order is paid later with `order/pay/`)
+    payment_type = serializers.IntegerField(required=True, min_value=0, max_value=4,
+                                            validators=[refuse_payment_on_delivery],
+                                            help_text="4 (on delivery) is refused")
     payment_method = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     is_web = serializers.BooleanField(required=False)
     channel = serializers.ChoiceField(choices=ORDER_CHANNEL, required=False,
@@ -140,7 +149,8 @@ class OrderCancelSerializer(serializers.Serializer):
     order_id = serializers.IntegerField(required=True)
 
 class OrderPaySerializer(serializers.Serializer):
-    payment_type = serializers.IntegerField(required=True)
+    payment_type = serializers.IntegerField(required=True, validators=[refuse_payment_on_delivery],
+                                            help_text="4 (on delivery) is refused")
     payment_method = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     is_web = serializers.BooleanField(required=False)
     order_id = serializers.IntegerField(required=True)

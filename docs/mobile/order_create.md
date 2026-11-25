@@ -21,7 +21,7 @@ POST order/
    GET  base/stores/                       → do'kon tanlash (faqat delivery_type = 1, branch_id) — stores_pickup.md
 4. POST base/promocode/checker/            → promokod bo'lsa, tekshirish (ixtiyoriy)
 5. POST order/                             → order_id + to'lov havolasi   ✅
-6. To'lov havolasini ochish (Click / Payme / Uzum) yoki payment_type = 4 bo'lsa tugadi
+6. To'lov havolasini ochish (Click / Payme / Uzum) yoki karta bilan Atmos (`payment/hold/create/`)
 ```
 
 ---
@@ -30,8 +30,8 @@ POST order/
 
 | Maydon | Tur | Majburiy | Izoh |
 | --- | --- | --- | --- |
-| `payment_type` | int | **ha** | `1` Click, `2` Payme, `3` Uzum Bank, `4` qabul qilganda to'lash |
-| `payment_method` | string | yo'q | faqat `payment_type = 4` da ishlatiladi: `cash` yoki `card` |
+| `payment_type` | int | **ha** | `0` hali tanlanmagan (Atmos karta — keyin `payment/hold/create/`), `1` Click, `2` Payme, `3` Uzum Bank. **`4` (qabul qilganda to'lash) 25.11.2026 dan rad etiladi** |
+| `payment_method` | string | yo'q | yubormang (faqat eski `payment_type = 4` uchun edi) |
 | `delivery_type` | int | yo'q (default `0`) | `0` yetkazib berish, `1` olib ketish (pickup) |
 | `address_id` | int | yo'q | mijozning manzili. Yuborilmasa default manzil olinadi |
 | `branch_id` | int | `delivery_type = 1` da **ha** | olib ketiladigan do'kon (`GET base/stores/`) — do'kon ham filial, ID'lari bir xil |
@@ -44,10 +44,10 @@ POST order/
 
 Muhim qoidalar:
 
-- **`payment_type`** — faqat `1`–`4` yuboring. Boshqa qiymat validatsiyadan o'tib ketadi, lekin to'lov havolasi `null` bo'ladi.
+- **`payment_type`** — faqat `0`–`3` yuboring. `4` (naqd / karta qabul qilganda) → `400`, `error_code: 5` (launch audit B-03, 25.11.2026: naqd to'lov olib tashlandi — sayt va ilovada faqat karta onlayn). 0–4 dan tashqari qiymat ham `400`.
 - **Manzil tafsilotlari** (kvartira, domofon, podyezd, qavat, kuryerga izoh) request'da yuborilmaydi — tanlangan manzildan buyurtmaga nusxa qilinadi (`docs/mobile/customer_addresses.md`). Buyurtmadan oldin ularni `PATCH auth/customer/addresses/<id>/` bilan saqlang.
 - **`address_id`** yuborilsa, shu manzil mijozning **default** manzili bo'lib qoladi. Yuborilmasa va default manzil ham bo'lmasa → `404`. **Pickup'da manzil kerak emas** — yuborilsa ham e'tiborga olinmaydi.
-- **Pickup (`delivery_type = 1` + `branch_id`)**: yetkazish narxi `0` (yuborilgan `delivery_price` e'tiborga olinmaydi), to'lovning **hamma usuli** ishlaydi — `4` da do'konda to'lanadi. Do'konning nomi, manzili, telefoni va koordinatasi buyurtmaga shu paytdagi holatida saqlanadi.
+- **Pickup (`delivery_type = 1` + `branch_id`)**: yetkazish narxi `0` (yuborilgan `delivery_price` e'tiborga olinmaydi), to'lov ham faqat onlayn (`4` — do'konda to'lash — pickup'da ham rad etiladi). Do'konning nomi, manzili, telefoni va koordinatasi buyurtmaga shu paytdagi holatida saqlanadi.
 - **`delivery_price`** — `"25000"`, `"25 000"`, `"25000.50"`, `"25,5"` yoki son (`25000`) qabul qilinadi. Bo'sh string (`""`) → validatsiya xatosi; narx yo'q bo'lsa maydonni umuman yubormang. Pickup'da yubormang.
 - **`promocode`** — `promocode/checker/` dan o'tgan kodni **kichik harflarda** yuboring. Kod topilmasa xato qaytmaydi — buyurtma promokodsiz, to'liq narxda yaratiladi.
 - **`branch_id`** ni faqat pickup'da yuboring (`delivery_type = 0` da e'tiborga olinmaydi, buyurtmaga yozilmaydi). Faqat do'kon va showroom turidagi filiallar qabul qilinadi — ombor rad etiladi.
@@ -104,13 +104,9 @@ Muvaffaqiyatli → `201 Created`. `result` — to'lov havolasi (string) yoki `nu
 | `1` Click | `https://my.click.uz/services/pay?...` | `status: 0` (Pending), to'lov kutilmoqda |
 | `2` Payme | `https://checkout.paycom.uz/<base64>` | `status: 0` (Pending), to'lov kutilmoqda |
 | `3` Uzum Bank | `https://www.uzumbank.uz/open-service?...` | `status: 0` (Pending), to'lov kutilmoqda |
-| `4` qabul qilganda | `null` | `status: 0` (Pending) — operator tasdiqlaguncha (18.11.2026 gacha darhol `2` Collecting edi) |
+| `0` tanlanmagan | `null` | `status: 0` (Pending) — keyin Atmos karta (`payment/hold/create/`) |
 
-`payment_type = 4` javobi:
-
-```json
-{ "result": null, "order_id": 124, "ok": true }
-```
+> `4` (qabul qilganda to'lash) 25.11.2026 dan rad etiladi. Eski buyurtmalarda `payment_type: 4` qolgan — `GET order/<id>/` uni avvalgidek qaytaradi.
 
 - Havolani brauzer / WebView / to'lov ilovasida oching. To'lov natijasini `GET order/<order_id>/` orqali tekshiring.
 - To'lov qilinmay qolgan (Pending) buyurtma uchun yangi havola yoki boshqa to'lov turi: `POST order/pay/` (`order_id`, `payment_type`, `payment_method`).
@@ -150,7 +146,6 @@ Xato formati:
 | Validatsiya xatosi | 400 | 5 | obyekt (pastga qarang) |
 | `address_id` topilmadi / default manzil yo'q | 404 | 4 | Customer location not found |
 | Promokod muddati o'tgan | 400 | 19 | Promocode expired |
-| Omborda mahsulot yetarli emas (`payment_type = 4`) | 400 | 21 | Product does not enough in warehouse |
 
 Validatsiya (`error_code: 5`) — `detail` maydonlar bo'yicha obyekt:
 
@@ -166,6 +161,7 @@ Validatsiya (`error_code: 5`) — `detail` maydonlar bo'yicha obyekt:
 | Holat | `detail` |
 | --- | --- |
 | `payment_type` yuborilmagan | `{"payment_type": ["Обязательное поле."]}` |
+| `payment_type = 4` (qabul qilganda to'lash) | `{"payment_type": ["Оплата при получении недоступна, оплатите заказ картой онлайн"]}` |
 | `delivery_type = 1`, `branch_id` yo'q | `{"branch_id": ["branch_id is required for pickup delivery"]}` |
 | Do'kon topilmadi, aktiv emas yoki ombor | `{"branch_id": ["Store not found or inactive"]}` |
 | (eski `branch_id`) filial topilmadi yoki aktiv emas | `{"non_field_errors": ["Market branch not found"]}` |
@@ -173,8 +169,6 @@ Validatsiya (`error_code: 5`) — `detail` maydonlar bo'yicha obyekt:
 | `channel` ro'yxatda yo'q qiymat | `{"channel": ["Значения web нет среди допустимых вариантов."]}` |
 
 > Xatoni aniqlashda xabar matniga emas, `error_code` ga tayaning (`detail` matni o'zgarishi mumkin).
-
-> **`error_code: 21` haqida:** bu xato kelganda buyurtma **allaqachon yaratilgan** (`status: 0`) va belgilangan mahsulotlar savatdan o'chgan bo'ladi, lekin javobda `order_id` yo'q. So'rovni qayta yubormang — buyurtmani `GET order/active/` dan toping va kerak bo'lsa `POST order/<id>/cancel/` bilan bekor qiling.
 
 ---
 
