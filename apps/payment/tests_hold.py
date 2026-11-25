@@ -8,10 +8,12 @@ from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 
 from apps.authorization.models import CustomerAddresses
+from apps.payment.atmos_hold import DELIVERY_IKPU, charge_amount, ofd_items
 from apps.payment.models import AtmosTransaction, CustomerCard
 from apps.payment.services_pay.auth_services import AtmosAuthService, AtmosHoldService
 from apps.service.models import Order, OrderOutboxEvent
-from apps.service.tests import ApiTestCase, make_customer, make_item_category, make_order, make_product
+from apps.service.models import OrderItem
+from apps.service.tests import TEST_IKPU, ApiTestCase, make_customer, make_item_category, make_order, make_product
 
 ATMOS_ENV = {"ATMOS_HOLD_DURATION": "60", "ATMOS_STORE_ID": "1"}
 OK = {"result": {"code": "OK"}}
@@ -61,7 +63,9 @@ class HoldFlowTests(ApiTestCase):
             # the panel sends the old payment status back with the form - it must not undo the charge
             response = self.set_status(Order.CONFIRMED, payment_status=1)
         self.assertEqual(response.status_code, 200, response.data)
-        charge.assert_called_once_with(access_token="t", hold_id=77)
+        # the order's sum and its receipt line (2 x 1000 so'm, no delivery)
+        charge.assert_called_once_with(access_token="t", hold_id=77, amount=200000, ofd_items=[
+            {"ofd_code": TEST_IKPU, "name": "P1", "amount": 200000, "details": [{"key": "quantity", "value": "2"}]}])
         self.order.refresh_from_db()
         self.assertEqual((self.order.status, self.order.payment_status), (Order.CONFIRMED, 2))
         self.assertEqual(self.order.ofd_url, CHARGED["ofd_url"])
@@ -80,6 +84,16 @@ class HoldFlowTests(ApiTestCase):
         self.assertIn("Hold expired", str(response.data["status"]))
         self.order.refresh_from_db()
         self.assertEqual((self.order.status, self.order.payment_status), (Order.PENDING, 1))
+
+    def test_refused_receipt_lines_charge_without_them(self):
+        self.hold()
+        with mock.patch.object(AtmosHoldService, "charge_hold", side_effect=[REFUSED, CHARGED]) as charge:
+            response = self.set_status(Order.CONFIRMED)
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual([call.kwargs["ofd_items"] is None for call in charge.call_args_list], [False, True])
+        self.assertEqual(charge.call_args.kwargs["amount"], 200000)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.payment_status, 2)
 
     def test_skipping_confirmed_charges_too(self):
         self.hold()
@@ -185,3 +199,61 @@ class ChargeAnswerTests(HoldFlowTests.__base__):
         self.order.refresh_from_db()
         self.assertEqual((self.order.status, self.order.payment_status, self.order.ofd_url), (Order.COLLECTING, 2, None))
         self.assertEqual(AtmosTransaction.objects.get(order=self.order).trans_id, 9)
+
+
+class OfdItemsTests(ApiTestCase):
+    """Receipt lines of the hold charge: one per item + the delivery, adding up to the charged sum to the tiyin."""
+
+    def setUp(self):
+        self.customer = make_customer("+998900000421")
+        _, self.item_category = make_item_category("C")
+
+    def product(self, code, price, **fields):
+        product = make_product(code, self.item_category, price)
+        for field, value in fields.items():
+            setattr(product, field, value)
+        product.save()
+        return product
+
+    def test_goods_promocode_and_delivery(self):
+        lamp = self.product("Lamp", 1000, package_code="1500594")
+        cable = self.product("Cable", 3000, ikpu_code="10202001001000002")
+        # goods 2 x 1000 + 3000 = 5000, a promocode took 500 -> 4500 + delivery 12 880 = 17 380
+        order, _ = make_order(self.customer, [(lamp, 2), (cable, 1)], total_price=17380, delivery_price=12880)
+        lines = ofd_items(order)
+        self.assertEqual(lines, [
+            {"ofd_code": TEST_IKPU, "name": "Lamp", "amount": 180000,
+             "details": [{"key": "quantity", "value": "2"}, {"key": "package_code", "value": "1500594"}]},
+            {"ofd_code": "10202001001000002", "name": "Cable", "amount": 270000,
+             "details": [{"key": "quantity", "value": "1"}]},
+            {"ofd_code": DELIVERY_IKPU, "name": "Yetkazib berish xizmati", "amount": 1288000,
+             "details": [{"key": "quantity", "value": "1"}]},
+        ])
+        self.assertEqual(sum(line["amount"] for line in lines), charge_amount(order))
+        with mock.patch.dict(os.environ, {"ATMOS_DELIVERY_IKPU": "10112006001000000"}):
+            self.assertEqual(ofd_items(order)[-1]["ofd_code"], "10112006001000000")
+
+    def test_order_price_not_todays_price(self):
+        # prod order 406: 3 lamps at 12 558 when ordered (12 600 now) + delivery 12 880 = 50 554
+        lamp = self.product("Lamp", 12600)
+        order, (item,) = make_order(self.customer, [(lamp, 3)], total_price=50554, delivery_price=12880)
+        OrderItem.objects.filter(pk=item.pk).update(unit_price=12558)
+        self.assertEqual([line["amount"] for line in ofd_items(order)], [3767400, 1288000])
+        self.assertEqual(charge_amount(order), 5055400)
+
+    def test_uneven_split_adds_up(self):
+        products = [self.product(f"P{i}", 1000) for i in range(3)]
+        # 3 x 1000 with a promocode of 2000 -> 1000 over three equal lines
+        order, _ = make_order(self.customer, [(product, 1) for product in products], total_price=1000)
+        self.assertEqual([line["amount"] for line in ofd_items(order)], [33334, 33333, 33333])
+
+    def test_pickup_has_no_delivery_line(self):
+        lamp = self.product("Lamp", 1000)
+        order, _ = make_order(self.customer, [(lamp, 1)], total_price=1000, delivery_price=12880,
+                              delivery_type=Order.PICKUP)
+        self.assertEqual([line["name"] for line in ofd_items(order)], ["Lamp"])
+
+    def test_no_lines_without_a_code(self):
+        bare = self.product("Bare", 1000, ikpu_code="")
+        order, _ = make_order(self.customer, [(bare, 1)], total_price=1000)
+        self.assertIsNone(ofd_items(order))

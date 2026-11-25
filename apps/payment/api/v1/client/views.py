@@ -45,7 +45,7 @@ from apps.payment.utils.logger import logged
 from apps.payment.utils.utils_click import _serialize_request, get_order, create_transaction, get_transaction
 from apps.payment.utils.utils_uzum import check_request, raise_exception_if_invalid
 from apps.payment.services_pay.auth_services import AtmosAuthService, AtmosHoldService, AtmosBindWithCheckoutService
-from apps.payment.atmos_hold import save_charge
+from apps.payment.atmos_hold import ofd_items, save_charge
 import os
 import uuid
 from apps.authorization.models import Customer
@@ -944,10 +944,12 @@ class AtmosChargeHoldView(APIView):
                 )
 
             try:
+                # receipt lines only for the whole sum: a partial amount sent by the app has no lines to match
                 data = AtmosHoldService.charge_hold(
                     access_token=access_token,
                     hold_id=order.hold_id,
                     amount=amount,
+                    ofd_items=None if amount else ofd_items(order),
                 )
             except Exception as e:
                 return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)

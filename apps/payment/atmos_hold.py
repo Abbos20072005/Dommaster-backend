@@ -3,8 +3,14 @@
 `hold/create/` only freezes the money and leaves the order Pending (payment status Hold); the money is charged
 by the server when an operator moves the order on in the admin panel (`charge_order_hold`, first to Confirmed),
 a cancelled order gets the hold released (`cancel_order_hold`). Both lock the order row, so two clicks never
-charge twice, and do nothing when the order has no active hold."""
+charge twice, and do nothing when the order has no active hold.
+
+The charge sends the order's sum (`amount`) and the receipt lines (`ofd_items`): Atmos makes the fiscal receipt
+from them (without them it made one line "<order id>" with its own delivery service code)."""
 import logging
+import os
+from decimal import Decimal
+from functools import partial
 
 from django.db import transaction
 
@@ -12,6 +18,7 @@ from apps.payment.models import AtmosTransaction
 from apps.payment.services_pay.auth_services import AtmosAuthService, AtmosHoldService
 from apps.service.models import Order
 from apps.service.models.choices import PAYMENT_CANCELLED, PAYMENT_HOLD, PAYMENT_PAID
+from apps.service.pro import allocate, delivery_cost, item_unit_price
 
 logger = logging.getLogger(__name__)
 
@@ -99,6 +106,43 @@ def _call(order, action, call):
     return data
 
 
+# IKPU of the delivery line: the one Atmos put on the receipts itself, "Mahsulotlarni yetkazib berish xizmati"
+DELIVERY_IKPU = "10112006002000000"
+DELIVERY_NAME = "Yetkazib berish xizmati"
+
+
+def charge_amount(order):
+    """The sum to charge, in tiyin - the same expression `hold/create` froze; it follows the order when the
+    panel changed its items after the hold (less is charged; more is refused by Atmos)."""
+    return int(order.total_price * 100)
+
+
+def ofd_items(order):
+    """Receipt lines of the charge: one per order item (its IKPU, the product's ru name, the line sum, quantity +
+    package code in `details`), then the delivery as a line of its own (env `ATMOS_DELIVERY_IKPU`, default
+    `DELIVERY_IKPU`). The goods get the order's sum minus the delivery, split over the items by `unit_price` x
+    quantity (the price of the order, not the product's price now; a promocode discount falls on every line in
+    proportion), so the lines add up to `charge_amount` to the tiyin. None when a line can't be made (an item
+    without an IKPU code, a delivery bigger than the sum) - the charge then goes without them."""
+    items = list(order.order_items.select_related("product").order_by("id"))
+    total = charge_amount(order)
+    delivery = int(delivery_cost(order) * 100)
+    if not items or any(not item.ikpu_code for item in items) or delivery > total:
+        return None
+    shares = allocate(Decimal(total - delivery) / 100, [item_unit_price(item) * item.quantity for item in items])
+    rows = []
+    for item, share in zip(items, shares):
+        details = [{"key": "quantity", "value": str(item.quantity)}]
+        if item.product.package_code:
+            details.append({"key": "package_code", "value": item.product.package_code})
+        rows.append({"ofd_code": item.ikpu_code, "name": (item.product.name_ru or item.product.name or "")[:255],
+                     "amount": int(share * 100), "details": details})
+    if delivery:
+        rows.append({"ofd_code": os.getenv("ATMOS_DELIVERY_IKPU") or DELIVERY_IKPU, "name": DELIVERY_NAME,
+                     "amount": delivery, "details": [{"key": "quantity", "value": "1"}]})
+    return rows
+
+
 def _charged_already(order):
     """The `hold/<id>` answer when Atmos says the hold is charged (`store_transaction.confirmed`), else None —
     a charge whose answer was lost (timeout, or our save failed after the money was taken) is not refused
@@ -114,17 +158,35 @@ def _charged_already(order):
     return None
 
 
+def _charge(order, amount, items):
+    try:
+        return _call(order, "charge", partial(AtmosHoldService.charge_hold, amount=amount, ofd_items=items))
+    except HoldError:
+        data = _charged_already(order)
+        if data is None:
+            raise
+        return data
+
+
 def charge_order_hold(order_id):
-    """Charges the whole frozen sum. Returns the order (fresh from the db); raises `HoldError`."""
+    """Charges the order's sum with its receipt lines. Returns the order (fresh from the db); raises `HoldError`.
+    Atmos refusing the lines (`ofd_items` is only in an example of its docs) does not stop the order: the charge
+    is sent once more without them, and that is logged."""
     with transaction.atomic():
         order = Order.objects.select_for_update().get(pk=order_id)
         if has_hold(order):
+            amount, items = charge_amount(order), ofd_items(order)
+            logger.info("Atmos hold charge: order_id=%s amount=%s ofd_items=%s", order.id, amount, items)
+            if items is None:
+                logger.warning("Atmos hold charge without receipt lines: order_id=%s", order.id)
             try:
-                data = _call(order, "charge", AtmosHoldService.charge_hold)
-            except HoldError:
-                data = _charged_already(order)
-                if data is None:
+                data = _charge(order, amount, items)
+            except HoldError as e:
+                if items is None:
                     raise
+                logger.warning("Atmos refused the receipt lines, charging without them: order_id=%s error=%s",
+                               order.id, e)
+                data = _charge(order, amount, None)
             save_charge(order, data)
     return order
 

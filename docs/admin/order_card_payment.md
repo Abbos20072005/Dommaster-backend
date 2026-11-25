@@ -22,6 +22,8 @@ BLD-486. Endpoint va maydonlar o'zgarmadi, `PATCH orders/<id>/` `{"status": ...}
 Xato matnini operatorga ko'rsating. Bunday buyurtmani bekor qilish yoki mijoz bilan bog'lanish kerak.
 
 - Atmos yechishni rad etsa, server hold holatini Atmos'dan so'raydi: pul aslida yechilgan bo'lsa (masalan oldingi urinish javobi yo'qolgan), buyurtma `payment_status=2` bo'lib status o'tadi; bunda `ofd_url` bo'sh qolishi mumkin.
+- **Yechiladigan summa = buyurtmaning hozirgi `total_price`** (avval muzlatilgan summaning hammasi yechilardi). Tasdiqlashdan oldin panelda tovarlar o'zgartirilib summa kamaysa — kamrog'i yechiladi; ko'paysa — Atmos rad etadi (`400`, muzlatilgandan ko'p yechib bo'lmaydi).
+- **Soliq cheki** (`ofd_url`): yechishda server Atmos'ga chek qatorlarini yuboradi — har tovar alohida qator (nomi, soni, summasi, buyurtma qatoridagi IKPU, tovarda bo'lsa qadoq kodi) + yetkazib berish alohida qator (xizmat IKPU'si). Promokod chegirmasi tovar qatorlariga summasi bo'yicha taqsimlanadi, qatorlar yig'indisi = yechilgan summa. Shuning uchun tasdiqlashda har qatorda IKPU bo'lishi shart ([ikpu.md](ikpu.md)). Atmos qatorlarni qabul qilmasa, pul baribir yechiladi (qatorlarsiz), operatorga xato chiqmaydi — bu server logida ko'rinadi.
 - Bir buyurtmani ikki marta bosish pulni ikki marta yechmaydi: yechilgan buyurtmada keyingi statuslar Atmos'ga murojaat qilmaydi.
 - Formani to'liq qaytarib yuborsangiz ham (eski `payment_status: 1` bilan), yechilgan to'lov bekor bo'lmaydi.
 

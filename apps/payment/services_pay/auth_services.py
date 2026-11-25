@@ -559,10 +559,12 @@ class AtmosHoldService:
         return data
 
     @staticmethod
-    def charge_hold(access_token: str, hold_id: int, amount: int = None):
+    def charge_hold(access_token: str, hold_id: int, amount: int = None, ofd_items: list = None):
         json_data = {}
         if amount:
             json_data["amount"] = amount
+        if ofd_items:
+            json_data["ofd_items"] = ofd_items
             
         res = requests.post(
             url=f"https://apigw.atmos.uz/hold/{hold_id}",
