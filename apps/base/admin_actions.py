@@ -1,7 +1,8 @@
 from django.contrib import admin, messages
 from apps.payment.services_pay.auth_services import AtmosAuthService, AtmosHoldService
 from apps.service.models import OrderStatusChange
-from apps.service.models.choices import ORDER_COLLECTING, ORDER_DELIVERING, ORDER_COMPLETED, ORDER_CANCELED
+from apps.service.models.choices import ORDER_PENDING, ORDER_COLLECTING, ORDER_DELIVERING, ORDER_COMPLETED, \
+    ORDER_CANCELED
 from apps.service.order_push import notify_order_status
 
 
@@ -35,8 +36,13 @@ mark_as_answer = toggle_bool_field("is_answer", True, "Mark selected as admin an
 mark_default = toggle_bool_field("is_default", True, "Set selected as default")
 
 
-def _update_order_status(queryset, status):
-    # queryset.update() skips the Order signals, so the status log and the customer push are done by hand
+def _update_order_status(request, queryset, status):
+    # queryset.update() skips the Order signals, so the status log, the customer push and the IKPU check
+    # (a pending order with an item without a code is not confirmed) are done by hand
+    blocked = sorted(set(queryset.filter(status=ORDER_PENDING, order_items__ikpu_code="").values_list("id", flat=True)))
+    if blocked:
+        messages.error(request, f"Orders without an IKPU code on an item are left as they were: {blocked}")
+        queryset = queryset.exclude(id__in=blocked)
     changed = list(queryset.exclude(status=status).values_list("id", "customer_id", "status"))
     updated = queryset.update(status=status)
     OrderStatusChange.objects.bulk_create([
@@ -48,19 +54,19 @@ def _update_order_status(queryset, status):
 
 @admin.action(description="Set order status to Collecting")
 def status_collecting(modeladmin, request, queryset):
-    updated = _update_order_status(queryset, ORDER_COLLECTING)
+    updated = _update_order_status(request, queryset, ORDER_COLLECTING)
     messages.success(request, f"{updated} orders set to Collecting.")
 
 
 @admin.action(description="Set order status to Delivering")
 def status_delivering(modeladmin, request, queryset):
-    updated = _update_order_status(queryset, ORDER_DELIVERING)
+    updated = _update_order_status(request, queryset, ORDER_DELIVERING)
     messages.success(request, f"{updated} orders set to Delivering.")
 
 
 @admin.action(description="Set order status to Completed")
 def status_completed(modeladmin, request, queryset):
-    updated = _update_order_status(queryset, ORDER_COMPLETED)
+    updated = _update_order_status(request, queryset, ORDER_COMPLETED)
     messages.success(request, f"{updated} orders set to Completed.")
 
 

@@ -4,6 +4,7 @@ from django.db import transaction
 from rest_framework import serializers
 from apps.service.models import Product, Brand, ProductModel, ProductBadge, ProductImage, ProductAttribute, \
     ProductAttributeValue, RelatedProduct, AlternativeProduct, CrossSellProduct, ProductModeration
+from apps.service.ikpu import CODE_FIELDS, set_product_codes
 from apps.service.moderation import on_publish_status_change
 from apps.service.product_filters import clear_category_filter_cache
 from utils.admin_serializers import RelationSerializer
@@ -147,7 +148,8 @@ class ProductListSerializer(serializers.ModelSerializer):
         model = Product
         fields = ("id", "name", "images", "product_code", "articul_code", "barcode", "brand", "product_model", "badges",
                   "product_item_category", "price", "discount_price", "discount", "unit", "quantity", "rating", "comments_quantity",
-                  "is_active", "erp_active", "publish_status", "purchasable", "on_order", "created_at", "updated_at")
+                  "is_active", "erp_active", "publish_status", "purchasable", "on_order", "ikpu_code", "package_code",
+                  "created_at", "updated_at")
 
 
 class ProductLastModerationSerializer(serializers.ModelSerializer):
@@ -187,6 +189,7 @@ class ProductSerializer(serializers.ModelSerializer):
                   "brand", "product_model", "badges", "product_item_category", "price", "discount_price", "discount",
                   "unit", "quantity",
                   "is_active", "erp_active", "publish_status", "purchasable", "on_order", "product_code", "articul_code", "barcode", "weight", "length", "width", "height",
+                  "ikpu_code", "package_code",
                   "rating", "comments_quantity", "questions_quantity", "characteristics",
                   "attribute_values", "images", "related_products", "alternative_products", "cross_sell_products",
                   "last_moderation", "created_at", "updated_at")
@@ -278,11 +281,16 @@ class ProductSerializer(serializers.ModelSerializer):
     def _pop_links(validated_data):
         return {model: validated_data.pop(field) for field, model in LINK_FIELDS.items() if field in validated_data}
 
+    @staticmethod
+    def _pop_codes(validated_data):
+        return {field: validated_data.pop(field) for field in CODE_FIELDS if field in validated_data}
+
     @transaction.atomic
     def create(self, validated_data):
         attribute_values = validated_data.pop("attribute_values", [])
         badges = validated_data.pop("badges", [])
         links = self._pop_links(validated_data)
+        codes = self._pop_codes(validated_data)
         # created in the panel: hidden until it is filled in (images are uploaded after the create), not from 1C
         validated_data.setdefault("is_active", False)
         validated_data.setdefault("erp_active", False)
@@ -291,6 +299,7 @@ class ProductSerializer(serializers.ModelSerializer):
         self._set_attribute_values(product, attribute_values)
         self._set_badges(product, badges)
         self._set_links(product, links)
+        set_product_codes(product, codes, self._user())
         return product
 
     @transaction.atomic
@@ -298,6 +307,7 @@ class ProductSerializer(serializers.ModelSerializer):
         attribute_values = validated_data.pop("attribute_values", None)
         badges = validated_data.pop("badges", None)
         links = self._pop_links(validated_data)
+        codes = self._pop_codes(validated_data)
         old_category_id = instance.product_item_category_id
         old_publish_status = instance.publish_status
         product = super().update(instance, validated_data)
@@ -305,6 +315,7 @@ class ProductSerializer(serializers.ModelSerializer):
         # the product left its old category: the filters of that one change too (the new one is cleared on save)
         clear_category_filter_cache(old_category_id)
         self._set_links(product, links)
+        set_product_codes(product, codes, self._user())
         if badges is not None:
             self._set_badges(product, badges)
         if attribute_values is not None:

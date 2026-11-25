@@ -1,3 +1,4 @@
+from django.db import transaction
 from django.db.models import Avg, Count, Q, Sum
 from django.db.models.functions import Coalesce
 from django.utils import timezone
@@ -6,11 +7,11 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.filters import OrderingFilter
 from rest_framework.response import Response
-from apps.service.models import Manager, Order, OrderComment
+from apps.service.models import Manager, Order, OrderComment, ProductCodeChange
 from utils.admin_views import AdminModelViewSet
-from ..filters import OrderFilter, OrderSearchFilter
+from ..filters import OrderFilter, OrderSearchFilter, ProductCodeChangeFilter
 from ..serializers import OrderListSerializer, OrderSerializer, OrderStatsSerializer, ManagerSerializer, \
-    OrderCommentSerializer, PENDING, CONFIRMED, COLLECTING, DELIVERING, COMPLETED, CANCELED, READY_FOR_PICKUP, PAID
+    OrderCommentSerializer, OrderIkpuSerializer, ProductCodeChangeSerializer, PENDING, CONFIRMED, COLLECTING, DELIVERING, COMPLETED, CANCELED, READY_FOR_PICKUP, PAID
 
 
 class ManagerViewSet(AdminModelViewSet):
@@ -53,6 +54,8 @@ class OrderViewSet(AdminModelViewSet):
             return OrderListSerializer
         if self.action == "stats":
             return OrderStatsSerializer
+        if self.action == "ikpu":
+            return OrderIkpuSerializer
         return OrderSerializer
 
     def perform_destroy(self, instance):
@@ -79,3 +82,26 @@ class OrderViewSet(AdminModelViewSet):
             average_check=Coalesce(Avg("total_price", filter=Q(status=COMPLETED)), 0.0),
         )
         return Response(self.get_serializer(data).data)
+
+    @action(detail=True, methods=["patch"])
+    def ikpu(self, request, pk=None):
+        """IKPU codes of items of a pending order (`{"items": [{"id", "ikpu_code"}]}`); the product cards take
+        them too. Returns the order."""
+        order = self.get_object()
+        with transaction.atomic():
+            locked = Order.objects.select_for_update().get(pk=order.pk)
+            serializer = OrderIkpuSerializer(data=request.data, context={"order": locked, "request": request})
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+        return Response(OrderSerializer(self.get_object(), context=self.get_serializer_context()).data)
+
+
+class ProductCodeChangeViewSet(AdminModelViewSet):
+    """Log of the IKPU / package codes (`?product=`, `?order=`): read only."""
+    queryset = ProductCodeChange.objects.select_related("product", "order", "changed_by__staff_profile")
+    serializer_class = ProductCodeChangeSerializer
+    filterset_class = ProductCodeChangeFilter
+    search_fields = ("product__name_ru", "product__name_uz", "old_value", "new_value")
+    ordering_fields = ("id", "created_at")
+    ordering = ("-created_at", "-id")
+    http_method_names = ["get", "head", "options"]

@@ -5,7 +5,9 @@ from rest_framework import serializers
 from apps.authorization.models import Customer, CustomerAddresses
 from apps.base.models import MarketBranch, Promocodes
 from apps.payment.atmos_hold import HoldError, cancel_order_hold, charge_order_hold, has_hold
-from apps.service.models import Manager, Order, OrderComment, OrderItem, Product
+from apps.service.ikpu import is_confirmation, missing_items, set_item_codes
+from apps.service.models import Manager, Order, OrderComment, OrderItem, Product, ProductCodeChange
+from apps.service.models.product import IKPU_VALIDATOR
 from apps.service.pro import money
 from utils.admin_serializers import RelationSerializer
 
@@ -90,10 +92,23 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = OrderItem
-        fields = ("id", "product", "quantity", "unit_price")
-        # price of one unit when ordered (null = older item -> the panel shows product.price)
-        read_only_fields = ("unit_price",)
+        fields = ("id", "product", "quantity", "unit_price", "ikpu_code")
+        # unit_price = price of one unit when ordered (null = older item -> the panel shows product.price);
+        # ikpu_code is set with orders/{id}/ikpu/; a new item takes the product's code ("" = none)
+        read_only_fields = ("unit_price", "ikpu_code")
         extra_kwargs = {"quantity": {"min_value": 1}}
+
+
+class IkpuMissingError(serializers.ValidationError):
+    """400 of a confirmation refused for items without an IKPU code; `missing_ikpu` keeps the ids as numbers."""
+
+    def __init__(self, items):
+        super().__init__()
+        self.detail = {
+            "status": ["Order items without an IKPU code: set them before confirming the order."],
+            "missing_ikpu": [{"item_id": item_id, "product": {"id": product.id, "name": product.name}}
+                             for item_id, product in items],
+        }
 
 
 class OrderListSerializer(serializers.ModelSerializer):
@@ -211,14 +226,30 @@ class OrderSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"status": f"Not enough stock: {', '.join(missing)}"})
 
     @staticmethod
-    def _set_items(order, items):
-        # a product that stays in the order keeps its PRO project link
+    def _item_codes(order, items):
+        """IKPU code of each sent item: the one its product already has in this order, else the product card's."""
+        kept = dict(order.order_items.exclude(ikpu_code="").values_list("product_id", "ikpu_code")) if order else {}
+        return {item["product"].id: kept.get(item["product"].id) or item["product"].ikpu_code for item in items}
+
+    def _check_ikpu(self, order, items):
+        if items is not None:
+            codes = self._item_codes(order, items)
+            missing = [(None, item["product"]) for item in items if not codes[item["product"].id]]
+        else:
+            missing = [(item.id, item.product) for item in missing_items(order)]
+        if missing:
+            raise IkpuMissingError(missing)
+
+    @classmethod
+    def _set_items(cls, order, items):
+        # a product that stays in the order keeps its PRO project link and its IKPU code
         links = {item.product_id: (item.project_id, item.category_root_id)
                  for item in order.order_items.filter(project__isnull=False)}
+        codes = cls._item_codes(order, items)
         order.order_items.all().delete()
         OrderItem.objects.bulk_create(
             OrderItem(order=order, product=item["product"], quantity=item["quantity"],
-                      unit_price=OrderItem.unit_price_of(item["product"]),
+                      unit_price=OrderItem.unit_price_of(item["product"]), ikpu_code=codes[item["product"].id],
                       project_id=links.get(item["product"].id, (None, None))[0],
                       category_root_id=links.get(item["product"].id, (None, None))[1])
             for item in items
@@ -252,6 +283,8 @@ class OrderSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         items = validated_data.pop("order_items")
         status = validated_data.pop("status", PENDING)
+        if is_confirmation(PENDING, status):
+            self._check_ikpu(None, items)
         order = Order.objects.create(**validated_data)
         self._set_items(order, items)
         self._recalculate(order)
@@ -262,6 +295,9 @@ class OrderSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         new_status = validated_data.get("status", instance.status)
+        if is_confirmation(instance.status, new_status):
+            # before the hold is charged
+            self._check_ikpu(instance, validated_data.get("order_items"))
         if new_status != instance.status:
             self._settle_hold(instance, new_status, validated_data)
         return self._update(instance, validated_data)
@@ -299,6 +335,63 @@ class OrderSerializer(serializers.ModelSerializer):
             text = f"Menejer o'zgartirildi: {manager.full_name}" if manager else "Menejer olib tashlandi"
             OrderComment.objects.create(order=instance, text=text, is_system=True)
         return instance
+
+
+class OrderItemIkpuSerializer(serializers.Serializer):
+    id = serializers.IntegerField(help_text="Order item id")
+    ikpu_code = serializers.CharField(validators=[IKPU_VALIDATOR], help_text="17 digits")
+
+
+class OrderIkpuSerializer(serializers.Serializer):
+    """IKPU codes of the items of a pending order (context `order`, locked); the product cards take them too."""
+    items = OrderItemIkpuSerializer(many=True, allow_empty=False)
+
+    def validate_items(self, rows):
+        order = self.context["order"]
+        if order.status != PENDING:
+            raise serializers.ValidationError("IKPU codes can only be changed while the order is pending.")
+        ids = [row["id"] for row in rows]
+        if len(ids) != len(set(ids)):
+            raise serializers.ValidationError("Duplicate items.")
+        items = order.order_items.select_related("product").in_bulk(ids)
+        foreign = sorted(set(ids) - set(items))
+        if foreign:
+            raise serializers.ValidationError(f"Not items of the order: {foreign}")
+        return {items[row["id"]]: row["ikpu_code"] for row in rows}
+
+    def save(self, **kwargs):
+        request = self.context.get("request")
+        set_item_codes(self.context["order"], self.validated_data["items"], request.user if request else None)
+
+
+class CodeChangeProductSerializer(RelationSerializer):
+    class Meta:
+        model = Product
+        fields = ("id", "name", "product_code", "articul_code")
+
+
+class CodeChangeOrderSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Order
+        fields = ("id", "status")
+
+
+class CodeChangeUserSerializer(serializers.ModelSerializer):
+    full_name = serializers.CharField(source="staff_profile.full_name", default="", read_only=True)
+
+    class Meta:
+        model = get_user_model()
+        fields = ("id", "username", "full_name")
+
+
+class ProductCodeChangeSerializer(serializers.ModelSerializer):
+    product = CodeChangeProductSerializer(read_only=True)
+    order = CodeChangeOrderSerializer(read_only=True, allow_null=True, help_text="null = changed on the product card")
+    changed_by = CodeChangeUserSerializer(read_only=True, allow_null=True)
+
+    class Meta:
+        model = ProductCodeChange
+        fields = ("id", "product", "order", "field", "old_value", "new_value", "source", "changed_by", "created_at")
 
 
 class ManagerSerializer(serializers.ModelSerializer):

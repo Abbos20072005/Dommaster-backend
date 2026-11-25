@@ -49,6 +49,7 @@ class ErrorCodes(Enum):
     ASSISTANT_TOO_FREQUENT = 44
     PHONE_NOT_VERIFIED = 45
     CART_EMPTY = 46
+    IKPU_MISSING = 47
 
 
 error_messages = {
@@ -101,6 +102,8 @@ error_messages = {
     45: {"result": "Phone number is not verified, sign in with the SMS code",
          "http_status": status.HTTP_403_FORBIDDEN},
     46: {"result": "No checked products in the cart", "http_status": status.HTTP_400_BAD_REQUEST},
+    47: {"result": "Order items without an IKPU code: the order can't be confirmed",
+         "http_status": status.HTTP_400_BAD_REQUEST},
 }
 
 

@@ -4,7 +4,7 @@ from .catalog import Brand, ProductModel, ProductCategory, ProductSubCategory, P
     ProductAttribute, ProductAttributeOption, ProductItemCategoryAttribute
 from .product import (
     Product, ProductRemaining, ProductImage, ProductCharacteristics, ProductAttributeValue, RelatedProduct,
-    AlternativeProduct, CrossSellProduct, ProductVariantGroup, ProductVariantItem,
+    AlternativeProduct, CrossSellProduct, ProductVariantGroup, ProductVariantItem, ProductCodeChange,
 )
 from .filters import ProductItemCategoryFilterSchema, ProductFilterNumericValue
 from .marketing import AddsBrands, PartnerBrand, Tag, ProductBadge, Sale, SaleProduct, Announcements, Service
@@ -27,7 +27,7 @@ __all__ = [
     "ProductAttribute", "ProductAttributeOption", "ProductItemCategoryAttribute",
     "Product", "ProductRemaining", "ProductImage", "ProductCharacteristics", "ProductAttributeValue",
     "RelatedProduct", "AlternativeProduct", "CrossSellProduct", "ProductVariantGroup",
-    "ProductVariantItem",
+    "ProductVariantItem", "ProductCodeChange",
     "ProductItemCategoryFilterSchema", "ProductFilterNumericValue",
     "AddsBrands", "PartnerBrand", "Tag", "ProductBadge", "Sale", "SaleProduct", "Announcements", "Service",
     "Cart", "CartItem", "Favourites", "RecentlyViewedProducts",

@@ -8,7 +8,7 @@ from .models import Product, ProductCategory, ProductSubCategory, ProductItemCat
     Announcements, ProductItemCategoryFilterSchema, ProductFilterNumericValue, ProductUnit, ProductRemaining, \
     ProductAttribute, ProductAttributeOption, ProductItemCategoryAttribute, ProductAttributeValue, Manager, \
     OrderComment, RelatedProduct, AlternativeProduct, CrossSellProduct, ProductModeration
-from .models import Project, OrderItemProjectChange
+from .models import Project, OrderItemProjectChange, ProductCodeChange
 from .models import AssistantConversation, AssistantMessage
 from .signals import clear_category_filter_cache
 from unfold.admin import ModelAdmin, TabularInline
@@ -271,7 +271,8 @@ class ProductAdmin(ModelAdmin):
     search_fields = ("name", "brand__name", "product_item_category__name")
     list_filter = ("brand", "badges", "product_item_category", "is_active", "erp_active", "publish_status",
                    "purchasable", "on_order", "unit", "created_at")
-    readonly_fields = ("discount_price",)
+    # IKPU / package code: only the admin API changes them (logged in ProductCodeChange)
+    readonly_fields = ("discount_price", "ikpu_code", "package_code")
     autocomplete_fields = ("brand", "badges", "product_item_category")
     inlines = (ProductImageInline, ProductAttributeValueInline, RelatedProductInline, AlternativeProductInline,
                CrossSellProductInline)
@@ -285,6 +286,10 @@ class ProductAdmin(ModelAdmin):
         ("Данные из 1С", {
             "classes": ("collapse",),
             "fields": ("telegram_id", "articul_code", "barcode", "product_code"),
+        }),
+        ("Чек", {
+            "classes": ("collapse",),
+            "fields": ("ikpu_code", "package_code"),
         }),
         ("Доставка", {
             "classes": ("collapse",),
@@ -403,6 +408,7 @@ class OrderItemAdmin(ModelAdmin):
     search_fields = ("order__id", "order__customer__full_name", "product__name")
     list_filter = ("created_at",)
     autocomplete_fields = ("order", "product")
+    readonly_fields = ("ikpu_code",)
     date_hierarchy = "created_at"
 
 
@@ -578,6 +584,14 @@ class ProjectAdmin(ReadOnlyAdmin):
     list_display_links = ("id", "name")
     search_fields = ("name", "customer__full_name", "customer__phone_number")
     list_filter = ("status", "created_at")
+
+
+@admin.register(ProductCodeChange)
+class ProductCodeChangeAdmin(ReadOnlyAdmin):
+    list_display = get_model_fields(ProductCodeChange)
+    list_display_links = ("id", "product")
+    search_fields = ("product__name", "order__id", "old_value", "new_value")
+    list_filter = ("field", "source", "created_at")
 
 
 @admin.register(OrderItemProjectChange)

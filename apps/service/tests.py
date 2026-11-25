@@ -34,17 +34,22 @@ def make_item_category(name):
                                                         name_uz=name)
 
 
-def make_product(code, item_category, price, discount_price=None):
+# a product with an IKPU code, so its orders can leave Pending (apps/service/ikpu.py)
+TEST_IKPU = "06901001001000001"
+
+
+def make_product(code, item_category, price, discount_price=None, ikpu_code=TEST_IKPU):
     return Product.objects.create(name=code, name_ru=code, name_uz=code, description="", product_code=code,
                                   product_item_category=item_category, price=price, discount_price=discount_price,
-                                  quantity=100)
+                                  quantity=100, ikpu_code=ikpu_code)
 
 
 def make_order(customer, lines, **fields):
     """`lines` = [(product, quantity)]; unit_price as checkout keeps it."""
     order = Order.objects.create(customer=customer, **fields)
     items = [OrderItem.objects.create(order=order, product=product, quantity=quantity,
-                                      unit_price=OrderItem.unit_price_of(product)) for product, quantity in lines]
+                                      unit_price=OrderItem.unit_price_of(product), ikpu_code=product.ikpu_code)
+             for product, quantity in lines]
     return order, items
 
 

@@ -2,7 +2,8 @@ import math
 
 from ckeditor.fields import RichTextField
 from django.contrib.postgres.indexes import GinIndex
-from django.core.validators import MinValueValidator, MaxValueValidator
+from django.conf import settings
+from django.core.validators import MinValueValidator, MaxValueValidator, RegexValidator
 from django.db import models
 
 from abstract_model.base_model import BaseModel
@@ -10,6 +11,11 @@ from utils.price import round_price_up
 from apps.base.models import MarketBranch
 from .catalog import Brand, ProductModel, ProductItemCategory, ProductAttribute, SeoFieldsMixin
 from .choices import PUBLISH_STATUS, PUBLISH_STATUS_DRAFT
+
+
+# IKPU (MXIK) = the 17-digit tax class code of tasnif.soliq.uz the fiscal receipt needs for every item
+IKPU_VALIDATOR = RegexValidator(r"^\d{17}\Z", "IKPU code must be exactly 17 digits.")
+PACKAGE_CODE_VALIDATOR = RegexValidator(r"^\d{1,20}\Z", "Package code must be digits only (up to 20).")
 
 
 class Product(SeoFieldsMixin, BaseModel):
@@ -62,6 +68,11 @@ class Product(SeoFieldsMixin, BaseModel):
     articul_code = models.CharField(max_length=100, blank=True, null=True, verbose_name="Артикул")
     barcode = models.CharField(max_length=100, blank=True, null=True, verbose_name="Штрихкод")
     product_code = models.CharField(max_length=100, blank=True, null=True, unique=True, verbose_name="Код из 1С")
+    # "" = no code; changed only through apps/service/ikpu.py (logged in ProductCodeChange)
+    ikpu_code = models.CharField(max_length=17, blank=True, default="", validators=[IKPU_VALIDATOR],
+                                 verbose_name="ИКПУ (MXIK)")
+    package_code = models.CharField(max_length=20, blank=True, default="", validators=[PACKAGE_CODE_VALIDATOR],
+                                    verbose_name="Код упаковки")
     weight = models.DecimalField(max_digits=10, decimal_places=3, blank=True, null=True, verbose_name="Вес, кг")
     length = models.DecimalField(max_digits=10, decimal_places=3, blank=True, null=True, verbose_name="Длина, м")
     width = models.DecimalField(max_digits=10, decimal_places=3, blank=True, null=True, verbose_name="Ширина, м")
@@ -122,6 +133,33 @@ class Product(SeoFieldsMixin, BaseModel):
             models.Index(fields=['brand'], name='idx_product_brand'),
             models.Index(fields=['product_item_category'], name='idx_product_item_cat'),
         ]
+
+
+class ProductCodeChange(BaseModel):
+    """Log of the product's IKPU / package code: one row per change, from the product card or from an order item
+    (then `order` is set; the item's old code -> the new one, which the product card got too)."""
+    SOURCE_PRODUCT, SOURCE_ORDER = "product", "order"
+    SOURCES = ((SOURCE_PRODUCT, "Карточка товара"), (SOURCE_ORDER, "Заказ"))
+    IKPU, PACKAGE = "ikpu_code", "package_code"
+    FIELDS = ((IKPU, "ИКПУ"), (PACKAGE, "Код упаковки"))
+
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="code_changes", verbose_name="Продукт")
+    order = models.ForeignKey("service.Order", on_delete=models.SET_NULL, blank=True, null=True,
+                              related_name="code_changes", verbose_name="Заказ")
+    field = models.CharField(max_length=20, choices=FIELDS, verbose_name="Поле")
+    old_value = models.CharField(max_length=20, blank=True, default="", verbose_name="Старое значение")
+    new_value = models.CharField(max_length=20, blank=True, default="", verbose_name="Новое значение")
+    source = models.CharField(max_length=10, choices=SOURCES, verbose_name="Источник")
+    changed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, blank=True, null=True,
+                                   related_name="+", verbose_name="Кто изменил")
+
+    def __str__(self):
+        return f"{self.product_id} {self.field}: {self.old_value} -> {self.new_value}"
+
+    class Meta:
+        verbose_name = "Изменение ИКПУ / кода упаковки"
+        verbose_name_plural = "Изменения ИКПУ / кодов упаковки"
+        ordering = ("-created_at", "-id")
 
 
 class ProductRemaining(BaseModel):

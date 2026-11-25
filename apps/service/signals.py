@@ -11,6 +11,7 @@ from .models.choices import (
     ORDER_EVENT_CANCELED, ORDER_EVENT_REFUNDED, ORDER_EVENT_PICKUP_SELECTED, ORDER_EVENT_PICKUP_READY,
     ORDER_EVENT_PICKUP_DONE,
 )
+from .ikpu import is_confirmation
 from .outbox import emit_order_event
 from .order_push import notify_order_status
 from .product_filters import clear_category_filter_cache
@@ -42,8 +43,14 @@ def decrease_product_quantity_on_collecting(sender, instance, update_fields=None
     if previous is None:
         return
 
+    status_saved = update_fields is None or "status" in update_fields
+    # every way of confirming (admin API, 1C, django admin) ends here; the admin API checks it first with the items
+    if status_saved and is_confirmation(previous.status, instance.status) \
+            and instance.order_items.filter(ikpu_code="").exists():
+        raise CustomApiException(error_code=ErrorCodes.IKPU_MISSING)
+
     # picked up by push_order_status_to_customer once the order is saved
-    if previous.status != instance.status and (update_fields is None or "status" in update_fields):
+    if previous.status != instance.status and status_saved:
         instance._status_changed_to = instance.status
         _on_pickup_status(instance)
 

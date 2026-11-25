@@ -2493,7 +2493,7 @@ class OrderViewSet(ViewSet):
             # Bulk create OrderItems and delete CartItems in 2 queries instead of N*2
             order_items = [
                 OrderItem(order=order, product=item.product, quantity=item.quantity,
-                          unit_price=OrderItem.unit_price_of(item.product))
+                          unit_price=OrderItem.unit_price_of(item.product), ikpu_code=item.product.ikpu_code)
                 for item in cart_items
             ]
             OrderItem.objects.bulk_create(order_items)

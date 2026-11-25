@@ -12,7 +12,7 @@ from .choices import ORDER_STATUS, PAYMENT_STATUS, DELIVERY_TYPE, PAYMENT_TYPE, 
     ORDER_PENDING, ORDER_CONFIRMED, ORDER_COLLECTING, ORDER_DELIVERING, ORDER_READY_FOR_PICKUP, ORDER_COMPLETED, \
     ORDER_CANCELED
 from .catalog import ProductCategory
-from .product import Product
+from .product import Product, IKPU_VALIDATOR
 
 
 class Manager(BaseModel):
@@ -121,6 +121,10 @@ class OrderItem(BaseModel):
     # price of one unit at the time of the order, after the product discount; null = item older than the field
     unit_price = models.DecimalField(max_digits=18, decimal_places=2, blank=True, null=True,
                                      verbose_name="Цена за единицу")
+    # copy of Product.ikpu_code when the item is created; set / changed in the admin panel while the order is
+    # pending (apps/service/ikpu.py), an order leaves Pending only when every item has one
+    ikpu_code = models.CharField(max_length=17, blank=True, default="", validators=[IKPU_VALIDATOR],
+                                 verbose_name="ИКПУ (MXIK)")
     # PRO project the item is linked to (apps/service/pro.py) + the product's root category at linking time
     project = models.ForeignKey("service.Project", on_delete=models.SET_NULL, blank=True, null=True,
                                 related_name="order_items", verbose_name="Проект")

@@ -5,7 +5,8 @@ from django.utils import timezone
 from rest_framework.filters import SearchFilter
 from apps.service.models import AddsBrands, Brand, PartnerBrand, ProductModel, ProductBadge, ProductCategory, \
     ProductSubCategory, ProductItemCategory, ProductAttribute, Order, OrderItem, Product, Comment, CommentReply, \
-    Questions, QuestionsReply, ORDER_STATUS, Sale, HomeBlock, ProductModeration, FilterPage, Project, ContentImport
+    Questions, QuestionsReply, ORDER_STATUS, Sale, HomeBlock, ProductModeration, FilterPage, Project, ContentImport, \
+    ProductCodeChange
 from apps.service.filter_pages import open_pages
 
 
@@ -77,6 +78,7 @@ class ProductFilter(django_filters.FilterSet):
     has_discount = django_filters.BooleanFilter(field_name="discount_price", lookup_expr="isnull", exclude=True)
     from_created = django_filters.DateFilter(field_name="created_at", lookup_expr="date__gte")
     to_created = django_filters.DateFilter(field_name="created_at", lookup_expr="date__lte")
+    ikpu_missing = django_filters.BooleanFilter(method="filter_ikpu_missing", label="No IKPU code")
 
     class Meta:
         model = Product
@@ -85,6 +87,18 @@ class ProductFilter(django_filters.FilterSet):
 
     def filter_in_stock(self, queryset, name, value):
         return queryset.filter(quantity__gt=0) if value else queryset.filter(quantity__lte=0)
+
+    def filter_ikpu_missing(self, queryset, name, value):
+        return queryset.filter(ikpu_code="") if value else queryset.exclude(ikpu_code="")
+
+
+class ProductCodeChangeFilter(django_filters.FilterSet):
+    from_created = django_filters.DateFilter(field_name="created_at", lookup_expr="date__gte")
+    to_created = django_filters.DateFilter(field_name="created_at", lookup_expr="date__lte")
+
+    class Meta:
+        model = ProductCodeChange
+        fields = ("product", "order", "field", "source", "changed_by")
 
 
 class BrandFilter(django_filters.FilterSet):
