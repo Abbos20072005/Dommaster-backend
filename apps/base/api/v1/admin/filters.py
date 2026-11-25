@@ -80,7 +80,7 @@ class FaqItemFilter(django_filters.FilterSet):
 
     class Meta:
         model = FaqItem
-        fields = ("topic", "is_active")
+        fields = ("category", "is_active")
 
     def filter_page(self, queryset, name, value):
         return queryset.filter(page_keys__contains=[value])

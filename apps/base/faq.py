@@ -4,7 +4,6 @@ from html import escape
 from html.parser import HTMLParser
 from django.conf import settings
 from django.core.cache import cache
-from django.db.models import Prefetch
 
 ALLOWED_TAGS = {"a", "b", "strong", "ul", "ol", "li", "p", "br"}
 VOID_TAGS = {"br"}
@@ -95,15 +94,23 @@ def clear_cache():
                        for page in (None, *FaqItem.PAGE_KEYS)])
 
 
-def active_topics(page=None):
-    """Active topics with their active questions (`topic.questions`), position order; with `page` only the
-    questions shown on that page and only the topics that have one."""
-    from apps.base.models import FaqItem, FaqTopic
+def category_order():
+    """Orders a FaqItem queryset by the fixed order of the categories (the tabs of the page)."""
+    from django.db.models import Case, IntegerField, Value, When
+    from apps.base.models import FaqItem
+    return Case(*[When(category=slug, then=Value(index)) for index, (slug, _, _) in enumerate(FaqItem.CATEGORIES)],
+                output_field=IntegerField())
+
+
+def active_categories(page=None, language="ru"):
+    """The fixed categories that have an active question, in tab order: `{slug, name, questions}`, the
+    questions in position order; with `page` only the questions shown on that page."""
+    from apps.base.models import FaqItem
     items = FaqItem.objects.filter(is_active=True).order_by("position", "id")
     if page:
         items = items.filter(page_keys__contains=[page])
-    topics = FaqTopic.objects.filter(is_active=True).prefetch_related(
-        Prefetch("items", queryset=items, to_attr="questions"))
-    if page:
-        topics = topics.filter(items__in=items).distinct()
-    return list(topics.order_by("position", "id"))
+    by_category = {}
+    for item in items:
+        by_category.setdefault(item.category, []).append(item)
+    return [{"slug": slug, "name": uz if language == "uz" else ru, "questions": by_category[slug]}
+            for slug, uz, ru in FaqItem.CATEGORIES if slug in by_category]

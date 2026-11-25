@@ -478,26 +478,22 @@ def default_faq_page_keys():
     return ["faq"]
 
 
-class FaqTopic(BaseModel):
-    name = models.CharField(max_length=150, verbose_name="Название")
-    slug = models.SlugField(max_length=100, unique=True, verbose_name="Slug")
-    position = models.PositiveIntegerField(default=0, verbose_name="Позиция")
-    is_active = models.BooleanField(default=True, verbose_name="Активна")
-
-    def __str__(self):
-        return self.name
-
-    class Meta:
-        ordering = ("position", "id")
-        verbose_name = "Тема FAQ"
-        verbose_name_plural = "Темы FAQ"
-
-
 class FaqItem(BaseModel):
     # where a question is shown (one text, several pages); keys are agreed with the site and the app
     PAGE_KEYS = ("faq", "courier-delivery", "payment-methods", "returns", "pickup", "legal-entities", "pro")
 
-    topic = models.ForeignKey(FaqTopic, on_delete=models.PROTECT, related_name="items", verbose_name="Тема")
+    # fixed list (tabs of the FAQ page), not editable from the admin panel
+    CATEGORIES = (
+        ("general", "Umumiy", "Общие"),
+        ("technical", "Texnik", "Технические"),
+        ("payment", "To'lov", "Оплата"),
+        ("orders", "Buyurtmalar", "Заказы"),
+        ("delivery", "Yetkazib berish", "Доставка"),
+    )
+    CATEGORY_CHOICES = [(slug, name_ru) for slug, _, name_ru in CATEGORIES]
+
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default="general",
+                                verbose_name="Категория")
     question = models.CharField(max_length=500, verbose_name="Вопрос")
     # limited HTML (links, bold, lists), cleaned by apps/base/faq.clean_answer on every save
     answer = models.TextField(verbose_name="Ответ")
@@ -517,6 +513,6 @@ class FaqItem(BaseModel):
         return self.question
 
     class Meta:
-        ordering = ("topic__position", "topic_id", "position", "id")
+        ordering = ("position", "id")
         verbose_name = "Вопрос FAQ"
         verbose_name_plural = "Вопросы FAQ"

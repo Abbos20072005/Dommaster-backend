@@ -2,7 +2,7 @@
 
 | Endpoint | Nima uchun |
 | --- | --- |
-| `GET /api/v1/faq/` | hamma faol mavzular va ularning faol savollari (`/faq` sahifasi) |
+| `GET /api/v1/faq/` | statik kategoriyalar (Umumiy, Texnik, To'lov, Buyurtmalar, Yetkazib berish) va ularning faol savollari (`/faq` sahifasi) |
 | `GET /api/v1/faq/?page=<key>` | faqat shu sahifaga bog'langan savollar (axborot sahifalaridagi FAQ bloki) |
 
 Ochiq endpoint: token kerak emas, cookie ishlatilmaydi. Swagger: `/swagger/` → **FAQ**.
@@ -30,7 +30,11 @@ Savol-javoblar admin paneldan boshqariladi. Matn bitta, lekin bitta savol bir ne
 {
   "result": [
     {
-      "id": 1,
+      "slug": "payment",
+      "name": "To'lov",
+      "questions": [ ... ]
+    },
+    {
       "slug": "delivery",
       "name": "Yetkazib berish",
       "questions": [
@@ -42,12 +46,6 @@ Savol-javoblar admin paneldan boshqariladi. Matn bitta, lekin bitta savol bir ne
           "updated_at": "2026-11-24T14:10:00.000000"
         }
       ]
-    },
-    {
-      "id": 3,
-      "slug": "returns",
-      "name": "Qaytarish",
-      "questions": [ ... ]
     }
   ],
   "ok": true
@@ -56,10 +54,10 @@ Savol-javoblar admin paneldan boshqariladi. Matn bitta, lekin bitta savol bir ne
 
 | Maydon | Izoh |
 | --- | --- |
-| `result[]` | mavzular, admindagi tartibda; faqat faollari. `?page=` bilan shu sahifada savoli bo'lmagan mavzular chiqmaydi. Hech narsa bo'lmasa `[]` |
-| `id`, `slug` | mavzu; `slug` — doimiy kalit (`delivery`, `payment`, `returns`, `pickup`, `legal-entities`, `pro`, `general` ...), anchor / ikonka tanlash uchun ishlatsa bo'ladi |
-| `name` | mavzu nomi, so'rov tilida |
-| `questions[]` | mavzuning faol savollari, admindagi tartibda |
+| `result[]` | **statik kategoriyalar** (sahifadagi tablar), har doim shu tartibda: `general` (Umumiy), `technical` (Texnik), `payment` (To'lov), `orders` (Buyurtmalar), `delivery` (Yetkazib berish). Faqat faol savoli bor kategoriyalar keladi (`?page=` bilan — shu sahifada savoli bor kategoriyalar). Hech narsa bo'lmasa `[]`. Kategoriyalar admin tomonidan o'zgarmaydi, `id` yo'q |
+| `slug` | kategoriyaning doimiy kaliti (yuqoridagi 5 ta qiymat); anchor / ikonka tanlash uchun ishlatsa bo'ladi |
+| `name` | kategoriya nomi, so'rov tilida |
+| `questions[]` | kategoriyaning faol savollari, admindagi tartibda |
 | `questions[].question` | savol — **oddiy matn**. Matn sifatida chiqaring (escape qiling), HTML sifatida render qilmang |
 | `questions[].answer` | javob — **cheklangan HTML**: `<a href>`, `<b>`, `<strong>`, `<ul>`, `<ol>`, `<li>`, `<p>`, `<br>`. Server boshqa teglar va atributlarni olib tashlagan. `href`: `https://`, `http://`, `mailto:`, `tel:` yoki sayt ichidagi yo'l (`/returns`) |
 | `questions[].page_keys` | savol qaysi sahifalarda chiqadi |
@@ -81,7 +79,7 @@ Server javobni 15 daqiqa keshlaydi. Admindagi o'zgarishda kesh darhol tozalanadi
 
 ## Frontda qilinadigan ishlar
 
-1. `/faq` sahifasi: `GET /api/v1/faq/` → mavzu sarlavhasi + accordion (savol / javob).
+1. `/faq` sahifasi: `GET /api/v1/faq/` → kategoriya tablari (`name`) + tanlangan kategoriyaning accordion (savol / javob) ro'yxati.
 2. Axborot sahifalari: `GET /api/v1/faq/?page=<key>` → sahifa oxirida FAQ bloki. Bo'sh `result` bo'lsa, blokni ko'rsatmang.
 3. `answer` ni HTML sifatida render qiling (sayt: `dangerouslySetInnerHTML` / ilova: HTML-matn vidjeti). `question` va `name` ni oddiy matn sifatida chiqaring.
 4. Sayt ichidagi havolalarni (`/returns`) sayt routeri bilan oching. Ilovada ularni mos ekranga yoki `https://buildex.uz` + yo'l bo'yicha oching.

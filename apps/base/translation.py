@@ -1,4 +1,4 @@
-from .models import News, Banner, Video, Promocodes, AboutUs, MarketBranch, Notification, FaqTopic, FaqItem
+from .models import News, Banner, Video, Promocodes, AboutUs, MarketBranch, Notification, FaqItem
 from modeltranslation.translator import translator, TranslationOptions
 
 
@@ -40,13 +40,8 @@ translator.register(News, NewsOption)
 translator.register(MarketBranch, MarketBranchOption)
 
 
-class FaqTopicOption(TranslationOptions):
-    fields = ("name",)
-
-
 class FaqItemOption(TranslationOptions):
     fields = ("question", "answer")
 
 
-translator.register(FaqTopic, FaqTopicOption)
 translator.register(FaqItem, FaqItemOption)

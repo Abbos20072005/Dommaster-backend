@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from apps.base.models import Banner, Chat, LoyaltyCard, AboutUs, Messages, Promocodes, News, Articles, Reviews, Video, DeleteButton, \
-    BaseInformation, MarketBranch, Notification, BRANCH_TYPE_CHOICES, FaqItem, FaqTopic
+    BaseInformation, MarketBranch, Notification, BRANCH_TYPE_CHOICES, FaqItem
 from apps.base.api.v1.admin.serializers.branch import ScheduleDaySerializer
 from apps.base.stores import localized_snapshot, open_state
 from apps.service.attributes import request_language
@@ -335,12 +335,10 @@ class FaqQuestionSerializer(serializers.ModelSerializer):
         fields = ("id", "question", "answer", "page_keys", "updated_at")
 
 
-class FaqTopicListSerializer(serializers.ModelSerializer):
+class FaqCategorySerializer(serializers.Serializer):
+    slug = serializers.CharField(help_text="general / technical / payment / orders / delivery")
+    name = serializers.CharField(help_text="Category name in the request language.")
     questions = FaqQuestionSerializer(many=True)
-
-    class Meta:
-        model = FaqTopic
-        fields = ("id", "slug", "name", "questions")
 
 
 class FaqQuerySerializer(serializers.Serializer):

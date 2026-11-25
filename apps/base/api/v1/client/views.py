@@ -15,7 +15,7 @@ from .serializers import BannerSerializer, MessageSerializer, MessageCreateSeria
     ArticlesDetailSerializer, ReviewsSerializer, ReviewsDetailSerializer, VideoSerializer, PromocodeSerializer, \
     DeleteButtonSerializer, BaseInformationSerializer, MarketBranchSerializer, NotificationSerializer, \
     NotificationListParamsSerializer, NotificationUnreadCountSerializer, StoreSerializer, \
-    FaqTopicListSerializer, FaqQuerySerializer
+    FaqCategorySerializer, FaqQuerySerializer
 from apps.base.models import Banner, Chat, AboutUs, Messages, Promocodes, News, Articles, Reviews, Video, DeleteButton, \
     BaseInformation, MarketBranch, Notification, NotificationRead, PICKUP_BRANCH_TYPES, FaqItem
 from apps.base import faq
@@ -553,13 +553,14 @@ class BranchViewSet(ViewSet):
 class FaqViewSet(ViewSet):
     @extend_schema(
         summary="FAQ",
-        description="Active topics with their active questions, position order, texts in the Accept-Language "
-                    "language. `?page=<key>` = only the questions shown on that page (topics without one are "
-                    "left out). `answer` is limited HTML (links, bold, lists, paragraphs). Cached 15 min, an "
+        description="The fixed categories (general, technical, payment, orders, delivery - the tabs of the "
+                    "page) that have an active question, in that order, each with its active questions in position "
+                    "order, texts in the Accept-Language language. `?page=<key>` = only the questions shown on "
+                    "that page (categories without one are left out). `answer` is limited HTML (links, bold, lists, paragraphs). Cached 15 min, an "
                     "admin change drops the cache.",
         parameters=[OpenApiParameter(name="page", location=OpenApiParameter.QUERY, type=OpenApiTypes.STR,
                                      enum=list(FaqItem.PAGE_KEYS), required=False)],
-        responses={200: FaqTopicListSerializer(many=True)},
+        responses={200: FaqCategorySerializer(many=True)},
         tags=["FAQ"]
     )
     def faq_list(self, request):
@@ -570,6 +571,7 @@ class FaqViewSet(ViewSet):
         key = faq.cache_key(request_language(), page)
         data = cache.get(key)
         if data is None:
-            data = FaqTopicListSerializer(faq.active_topics(page), many=True, context={"request": request}).data
+            data = FaqCategorySerializer(faq.active_categories(page, request_language()), many=True,
+                                       context={"request": request}).data
             cache.set(key, data, faq.CACHE_TTL)
         return Response(data={"result": data, "ok": True}, status=status.HTTP_200_OK)
