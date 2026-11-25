@@ -744,11 +744,12 @@ class ProductViewSet(ViewSet):
         )
 
     @extend_schema(
-        summary="Products list (random order)",
+        summary="Products list",
         description=(
-            "Active products in random order. The order is fixed by `seed`: "
-            "the first request goes without it, the response returns the generated `seed`, "
-            "send it back with the next pages so products don't repeat."
+            "Active products, paginated. Stable order by default (`-created_at, -id`), so the same "
+            "request repeated, or the next page, never repeats or skips a product. "
+            "`?random=true` on the first request switches to a random order fixed by `seed`: the "
+            "response then returns the generated `seed`, send it back with the next pages."
         ),
         parameters=[
             OpenApiParameter(
@@ -764,9 +765,16 @@ class ProductViewSet(ViewSet):
                 type=OpenApiTypes.INT,
             ),
             OpenApiParameter(
+                name="random",
+                location=OpenApiParameter.QUERY,
+                description="true = random order (generates a seed); default = stable order",
+                type=OpenApiTypes.BOOL,
+            ),
+            OpenApiParameter(
                 name="seed",
                 location=OpenApiParameter.QUERY,
-                description="Seed of the random order (from the first page response)",
+                description="Seed of the random order (from the first page response); sending it "
+                            "implies random order",
                 type=OpenApiTypes.INT,
             ),
         ],
@@ -783,10 +791,15 @@ class ProductViewSet(ViewSet):
             )
 
         seed = param_serializer.validated_data.get("seed")
-        if seed is None:
+        randomized = seed is not None or param_serializer.validated_data.get("random")
+        if randomized and seed is None:
             seed = secrets.randbelow(2 ** 31)
 
-        products = get_optimized_product_qs(feed.random_products(seed), request)
+        if randomized:
+            products = feed.random_products(seed)
+        else:
+            products = Product.objects.filter(is_active=True).order_by("-created_at", "-id")
+        products = get_optimized_product_qs(products, request)
 
         result = get_products_paginator(
             response_data=products,

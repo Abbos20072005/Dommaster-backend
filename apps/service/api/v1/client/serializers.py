@@ -362,6 +362,7 @@ class ProductListParamSerializer(PaginationSerializer):
         min_value=0,
         max_value=2147483647
     )
+    random = serializers.BooleanField(required=False, default=False)
 
 
 class RecommendedParamSerializer(ProductListParamSerializer):
