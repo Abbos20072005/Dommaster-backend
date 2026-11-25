@@ -90,7 +90,9 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = OrderItem
-        fields = ("id", "product", "quantity")
+        fields = ("id", "product", "quantity", "unit_price")
+        # price of one unit when ordered (null = older item -> the panel shows product.price)
+        read_only_fields = ("unit_price",)
         extra_kwargs = {"quantity": {"min_value": 1}}
 
 
