@@ -4,7 +4,7 @@ from celery import shared_task
 from django.core.management import call_command
 
 from utils.background import exclusive
-from . import badges, content_import, filter_pages, funnel, merchant_feed, order_push, outbox, pickup
+from . import badges, catalog_export, content_import, filter_pages, funnel, merchant_feed, order_push, outbox, pickup
 
 
 @shared_task
@@ -49,6 +49,12 @@ def clean_feed_log():
 @exclusive(60 * 60)
 def build_merchant_feeds():
     return merchant_feed.build_feeds()
+
+
+@shared_task
+@exclusive(30 * 60)
+def build_catalog_export():
+    return catalog_export.build_export()
 
 
 @shared_task

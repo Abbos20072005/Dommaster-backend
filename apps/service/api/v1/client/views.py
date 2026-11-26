@@ -31,13 +31,15 @@ from django.utils.cache import get_conditional_response
 from django.utils.http import http_date
 from django.db import transaction
 from apps.base.models import Promocodes
-from datetime import date
+from datetime import date, datetime
+from django.conf import settings
+from django.http import Http404
 from apps.base.models import Banner
 from apps.base.api.v1.client.serializers import BannerSerializer
 from apps.base.telegram import send_comment_to_telegram, send_question_to_telegram
 from utils.pyment_link import generate_link
 from apps.payment.services_pay.auth_services import AtmosAuthService, AtmosHoldService
-from apps.service import feed, filter_pages, funnel, home, merchant_feed, product_links, seo_redirects
+from apps.service import catalog_export, feed, filter_pages, funnel, home, merchant_feed, product_links, seo_redirects
 from apps.service.models import (
     ProductEvent,
     FilterPage,
@@ -2808,3 +2810,35 @@ class MerchantFeedViewSet(ViewSet):
     )
     def yandex_feed(self, request):
         return self._feed(request, merchant_feed.YANDEX_FILE, "application/xml; charset=utf-8")
+
+    @extend_schema(
+        summary="Active catalog for the PM Expert CRM (.xlsx)",
+        description="Columns ID / Наименование (ru) / Цена, UZS (what the cart charges) / Ед. изм. of the active "
+                    "products with a price; the build time is on the sheet «Обновлено». Rebuilt once a day. "
+                    "`?token=` = the secret of the env `CATALOG_EXPORT_TOKEN` (a query parameter, so the request "
+                    "log never shows it); a wrong / missing token or an empty setting → 404.",
+        parameters=[OpenApiParameter(name="token", location=OpenApiParameter.QUERY, type=OpenApiTypes.STR,
+                                     required=True)],
+        responses={200: OpenApiResponse(description="XLSX file"), 404: OpenApiResponse(description="Wrong token")},
+        tags=["Merchant feed"],
+    )
+    def catalog_export(self, request):
+        token = request.query_params.get("token", "")
+        expected = settings.CATALOG_EXPORT_TOKEN
+        if not expected or not secrets.compare_digest(token.encode(), expected.encode()):
+            raise Http404
+        path = catalog_export.export_path()
+        if not os.path.exists(path):
+            catalog_export.build_export()
+        modified = int(os.path.getmtime(path))
+        not_modified = get_conditional_response(request, last_modified=modified)
+        if not_modified is not None:
+            return not_modified
+        built = datetime.fromtimestamp(modified).strftime("%Y-%m-%d")
+        response = FileResponse(
+            open(path, "rb"), as_attachment=True, filename=f"buildex_catalog_{built}.xlsx",
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        response["Last-Modified"] = http_date(modified)
+        response["Cache-Control"] = "private, no-store"
+        return response

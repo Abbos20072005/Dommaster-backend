@@ -376,6 +376,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "apps.service.tasks.build_merchant_feeds",
         "schedule": crontab(hour="*/6", minute=50),  # 4 times a day, after the hourly jobs
     },
+    "build-catalog-export": {
+        "task": "apps.service.tasks.build_catalog_export",
+        "schedule": crontab(hour=5, minute=10),  # once a day, before the working day
+    },
     "expire-pickup-orders": {
         "task": "apps.service.tasks.expire_pickup_orders",
         "schedule": crontab(minute="*/10"),
@@ -398,6 +402,10 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+# files served only through a view (nginx serves MEDIA_ROOT to anybody): the catalog export of the CRM
+PRIVATE_ROOT = BASE_DIR / 'private'
+# the secret part of the catalog export link (feeds/catalog.xlsx?token=<token>, catalog_export.py); empty = no link
+CATALOG_EXPORT_TOKEN = os.getenv("CATALOG_EXPORT_TOKEN", "")
 
 # CKEditor upload path
 CKEDITOR_UPLOAD_PATH = "uploads/"
