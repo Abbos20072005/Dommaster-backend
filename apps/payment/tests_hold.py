@@ -85,6 +85,22 @@ class HoldFlowTests(ApiTestCase):
         self.order.refresh_from_db()
         self.assertEqual((self.order.status, self.order.payment_status), (Order.PENDING, 1))
 
+    def test_codes_changed_while_held_go_to_the_receipt(self):
+        # the hold carries no lines: the IKPU set on the item and a renamed product are read when it is charged
+        self.hold()
+        item = self.order.order_items.get()
+        response = self.admin.patch(f"/api/v1/admin/orders/{self.order.id}/ikpu/",
+                                    {"items": [{"id": item.id, "ikpu_code": "10202001001000002"}]}, format="json")
+        self.assertEqual(response.status_code, 200, response.data)
+        self.product.name_ru = "P1 yangi"
+        self.product.save()
+        with mock.patch.object(AtmosHoldService, "charge_hold", return_value=CHARGED) as charge:
+            self.assertEqual(self.set_status(Order.CONFIRMED).status_code, 200)
+        self.assertEqual(charge.call_args.kwargs["ofd_items"], [
+            {"ofd_code": "10202001001000002", "name": "P1 yangi", "amount": 200000,
+             "details": [{"key": "quantity", "value": "2000"}]}])
+        self.assertEqual(charge.call_args.kwargs["amount"], 200000)
+
     def test_refused_receipt_lines_charge_without_them(self):
         self.hold()
         with mock.patch.object(AtmosHoldService, "charge_hold", side_effect=[REFUSED, CHARGED]) as charge:
