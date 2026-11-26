@@ -27,7 +27,10 @@ BIG_CHANGE = 0.5  # a new price more than 50% away from the old one is listed fo
 # list, "Автоматический выключатель модульный CHINT NEXT NXB-63 1P тип C 10A 230/400 В 6 кА" on the site), so the
 # product is found by the model codes / sizes of the row: every code-like token of the row must be in the name.
 LOOKALIKE = str.maketrans("авсекмнорстух", "abcekmhopctyx")  # Cyrillic letters that look Latin: С 10А = C 10A
-UNIT_AFTER_NUMBER = re.compile(r"(\d)\s+(ka|a|w|bt|kbt|kw|b|v|va|kva|mm|cm|m|ma|ah|k)(?![0-9a-zа-я])")
+UNIT_AFTER_NUMBER = re.compile(r"(\d)\s+(ka|a|w|bt|kbt|kw|kba|ba|b|v|va|kva|mm|cm|m|ma|ah|k|hz)(?![0-9a-zа-я])")
+# the list's abbreviations as the site writes them out
+ABBREVIATIONS = ((r"(?<![а-я])с/з(?![а-я])", " с заземлением "), (r"(?<![а-я])б/з(?![а-я])", " без заземления "),
+                 (r"одноклавиш", "1-клавиш"), (r"двухклавиш", "2-клавиш"), (r"трехклавиш", "3-клавиш"))
 # a word (4+ Cyrillic letters) is transliterated: "Динрейка" = "DIN-рейка"; short pieces (кА, В, мм, х-ка) keep the
 # look-alike Latin letters above
 TRANSLIT = {"а": "a", "б": "b", "в": "v", "г": "g", "д": "d", "е": "e", "ж": "zh", "з": "z", "и": "i", "й": "y",
@@ -46,16 +49,22 @@ def tokens(text):
     """Comparable tokens of a name: '6 кА' = '6kA' = '6ka', 'NXB-63' = 'nxb63', '2,5 мм²' = '2.5mm', '25х25' = '25x25'."""
     text = clean(text).lower().replace("ё", "е").replace("²", "").replace("³", "")
     text = re.sub(r"\(\s*\d+\s*\)", " ", text)  # pack sizes: "Nura(18)"
+    for pattern, full in ABBREVIATIONS:
+        text = re.sub(pattern, full, text)
     text = re.sub(r"(\d),(\d)", r"\1.\2", text)
     text = re.sub(r"[а-яўқғҳ]{4,}", lambda word: "".join(TRANSLIT.get(char, char) for char in word.group()), text)
     text = text.translate(LOOKALIKE)
     text = re.sub(r"(\d)\s*[x×*]\s*(\d)", r"\1x\2", text)
+    text = re.sub(r"(\d)\s*-\s*(\d)", r"\1-\2", text)  # "ГМЛ 185 -21" = "185-21"
     text = re.sub(r"(?<=[0-9a-zа-я])-(?=[0-9a-zа-я])", "", text)
     text = UNIT_AFTER_NUMBER.sub(r"\1\2", text)
+    # Cyrillic units read as their look-alikes: 220 В = 220V, 9 кВА = 9KVA, 12 Вт = 12W
+    text = re.sub(r"(\d)(b|bt|kbt|ba|kba)(?![0-9a-zа-я])",
+                  lambda m: m.group(1) + {"b": "v", "bt": "w", "kbt": "kw", "ba": "va", "kba": "kva"}[m.group(2)], text)
     # breaker curve + current, one token the product must carry: "C10" = "тип C 10A" = "х-ка C 10A" = "c10"
     text = re.sub(r"(?<![0-9a-zа-я.])([bcd])\s?(\d+)a?(?![0-9a-zа-я])", r"\1\2", text)
     text = re.sub(r"(?<![0-9a-zа-я.])(\d+(?:\.\d+)?)a(?![0-9a-zа-я])", r"\1", text)  # amps: 10A = 10
-    return re.findall(r"[0-9a-zа-я]+(?:\.[0-9a-zа-я]+)*", text)
+    return re.findall(r"[0-9a-zа-я]+(?:(?<=\d)\.(?=\d)[0-9a-zа-я]+)*", text)  # "выкл.NB1" = 2 tokens, "2.5" = 1
 
 
 def stem(token):
@@ -91,8 +100,9 @@ def shape(token):
 
 
 def is_strong(token):
-    """A model code on its own ('nxb63', 'boss95500va', 'rnb1.255'): letters and digits, 4+ characters."""
-    return len(token) >= 4 and re.search(r"[a-zа-я]", token) and re.search(r"\d", token) and shape(token) != "curve"
+    """A model code on its own ('nxb63', 'boss95500va', 'rnb1.255', 'mut61'): letters, then digits, 4+ characters -
+    not a value with a unit ('220v', '50hz', '3x16')."""
+    return len(token) >= 4 and bool(re.match(r"[a-zа-я]+\d", token)) and shape(token) != "curve"
 
 
 def has_word(stems, word):
@@ -292,8 +302,8 @@ class Command(BaseCommand):
             if codes and not (any(is_strong(token) for token in same) or len(same) >= 2 or len(same) == len(codes)):
                 continue
             found = {word for word in row_words if has_word(stems, word)}
-            if row_words and not found:
-                continue  # same sizes, another kind of goods
+            if row_words and not found and not any(is_strong(token) for token in same):
+                continue  # same sizes, another kind of goods (a model code in common is enough: "Блок зажим TC-1004")
             if not codes and numbers and not all(has_token(own, token) for token in numbers):
                 continue  # only bare numbers ("АТ 10-8-4,5" = "1084.5"): all of them must be there
             if not codes and not numbers and (len(row_words) < 2 or found != row_words):
