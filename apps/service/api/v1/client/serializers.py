@@ -7,7 +7,7 @@ from apps.authorization.models import CustomerAddresses
 from apps.service.models import Product, ProductCategory, ProductItemCategory, ProductSubCategory, ProductImage, Comment, \
     Order, OrderItem, Brand, Sale, AddsBrands, Favourites, Cart, CartItem, ProductCharacteristics, Questions, \
     RecentlyViewedProducts, Service, CommentReply, CommentImages, QuestionsReply, \
-    ProductVariantGroup, ProductVariantItem, ProductItemCategoryFilterSchema, HomeBlock, ORDER_CHANNEL
+    ProductVariantGroup, ProductVariantItem, ProductItemCategoryFilterSchema, HomeBlock, FilterPage, ORDER_CHANNEL
 from apps.service.models.choices import PAYMENT_ON_DELIVERY
 from apps.service import feed, product_links
 from apps.service.attributes import display_value, product_attribute_values, request_language
@@ -1258,19 +1258,15 @@ class HomeLayoutBlockSerializer(TranslatedSerializerMixin, serializers.Serialize
         return block.content.get("products_count")
 
 
+LEVEL_FIELD = serializers.ChoiceField(
+    choices=FilterPage.LEVELS,
+    help_text="Catalog level of the page: item_category = brand / filters inside an item category, "
+              "category / sub_category = brand x category")
+
+
 class FilterPageCategoryLinkSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     slug = serializers.CharField()
-
-
-class FilterPageListItemSerializer(serializers.Serializer):
-    """`filter-pages/`: an open filter landing page (sitemap, links on the item category page)."""
-    slug = serializers.CharField()
-    title = serializers.CharField(help_text="H1, in the request language")
-    item_category = FilterPageCategoryLinkSerializer()
-    brand = serializers.IntegerField(allow_null=True, help_text="Brand id or null")
-    products_count = serializers.IntegerField()
-    updated_at = serializers.DateTimeField(help_text="lastmod of the sitemap")
 
 
 class FilterPageNamedSerializer(serializers.Serializer):
@@ -1286,10 +1282,24 @@ class FilterPageBreadcrumbSerializer(FilterPageItemCategorySerializer):
     level = serializers.ChoiceField(choices=("product_category", "product_sub_category", "product_item_category"))
 
 
+class FilterPageListItemSerializer(serializers.Serializer):
+    """`filter-pages/`: an open filter landing page (sitemap, links on the category pages)."""
+    slug = serializers.CharField()
+    title = serializers.CharField(help_text="H1, in the request language")
+    level = LEVEL_FIELD
+    item_category = FilterPageCategoryLinkSerializer(allow_null=True, help_text="null on a category / sub category page")
+    breadcrumbs = FilterPageBreadcrumbSerializer(many=True, help_text="category -> ... -> the page's level")
+    brand = serializers.IntegerField(allow_null=True, help_text="Brand id or null")
+    products_count = serializers.IntegerField()
+    updated_at = serializers.DateTimeField(help_text="lastmod of the sitemap")
+
+
 class FilterPageProductFilterSerializer(serializers.Serializer):
-    item_category = serializers.IntegerField()
+    category = serializers.IntegerField(required=False, help_text="Only on a category page")
+    sub_category = serializers.IntegerField(required=False, help_text="Only on a sub category page")
+    item_category = serializers.IntegerField(required=False, help_text="Only on an item category page")
     brand = serializers.IntegerField(required=False, help_text="Only when the page has a brand")
-    filters = serializers.JSONField(help_text="Same shape as `product/filter/` `filters`")
+    filters = serializers.JSONField(help_text="Same shape as `product/filter/` `filters`; {} above an item category")
 
 
 class FilterPageDetailSerializer(serializers.Serializer):
@@ -1300,18 +1310,30 @@ class FilterPageDetailSerializer(serializers.Serializer):
     meta_title = serializers.CharField(help_text="Empty in the admin panel -> the H1")
     meta_description = serializers.CharField(help_text="Empty in the admin panel -> start of `text`")
     text = serializers.CharField(help_text="300-500 characters of plain text, may be empty")
-    item_category = FilterPageItemCategorySerializer()
+    level = LEVEL_FIELD
+    item_category = FilterPageItemCategorySerializer(allow_null=True,
+                                                     help_text="null on a category / sub category page")
     brand = FilterPageNamedSerializer(allow_null=True)
-    breadcrumbs = FilterPageBreadcrumbSerializer(many=True, help_text="category -> sub category -> item category")
+    breadcrumbs = FilterPageBreadcrumbSerializer(many=True, help_text="category -> ... -> the page's level")
     product_filter = FilterPageProductFilterSerializer(help_text="Body of `POST product/filter/` (+ page, sort_by)")
     products_count = serializers.IntegerField()
     updated_at = serializers.DateTimeField()
 
 
 class FilterPageResolveSerializer(serializers.Serializer):
-    item_category = serializers.IntegerField()
+    category = serializers.IntegerField(required=False, allow_null=True)
+    sub_category = serializers.IntegerField(required=False, allow_null=True)
+    item_category = serializers.IntegerField(required=False, allow_null=True)
     brand = serializers.IntegerField(required=False, allow_null=True)
     filters = serializers.JSONField(required=False, default=dict)
+
+    def validate(self, attrs):
+        # the most specific level sent is the listing's level (a listing may carry its parents too)
+        level = next((level for level in ("item_category", "sub_category", "category") if attrs.get(level)), None)
+        if level is None:
+            raise serializers.ValidationError({"item_category": "One of category, sub_category, item_category."})
+        attrs["level"], attrs["node_id"] = level, attrs[level]
+        return attrs
 
 
 class FilterPageResolveResultSerializer(serializers.Serializer):

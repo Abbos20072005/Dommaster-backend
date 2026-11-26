@@ -277,14 +277,19 @@ class FilterPageFilter(django_filters.FilterSet):
     # open = shown to clients and in the sitemap (filter_pages.open_pages)
     is_open = django_filters.BooleanFilter(method="filter_is_open")
     has_brand = django_filters.BooleanFilter(field_name="brand", lookup_expr="isnull", exclude=True)
+    level = django_filters.ChoiceFilter(choices=[(level, level) for level in FilterPage.LEVELS],
+                                        method="filter_level")
 
     class Meta:
         model = FilterPage
-        fields = ("is_active", "item_category", "brand")
+        fields = ("is_active", "category", "sub_category", "item_category", "brand")
 
     def filter_is_open(self, queryset, name, value):
         ids = open_pages().values("id")
         return queryset.filter(id__in=ids) if value else queryset.exclude(id__in=ids)
+
+    def filter_level(self, queryset, name, value):
+        return queryset.filter(**{f"{value}__isnull": False})
 
 
 class ProjectFilter(django_filters.FilterSet):

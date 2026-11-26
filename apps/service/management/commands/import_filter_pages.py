@@ -1,8 +1,10 @@
 """Filter landing pages (FilterPage) from the agreed keyword list: one row = one page.
 
 Columns (first row, any order; .xlsx first sheet or .csv UTF-8):
-  keyword_ru (required), keyword_uz, search_volume, item_category (id or slug), brand (id or name),
-  filters ("Name ru = value | value; Number name ru = 2.5..4", a number: "4" exact, "2..", "..4"),
+  keyword_ru (required), keyword_uz, search_volume, item_category / sub_category / category (id or slug; the most
+  specific filled one is the page's level — "Knauf" + a sub category = a brand x category page), brand (id or name),
+  filters (item category pages only: "Name ru = value | value; Number name ru = 2.5..4", a number: "4" exact,
+  "2..", "..4"),
   slug, title_ru, title_uz, meta_title_ru, meta_title_uz, meta_description_ru, meta_description_uz, text_ru, text_uz.
 A row whose combination already has a page updates it (only non-empty cells); a new page without `text_ru` is
 created inactive. Rows below --min-volume searches a month are skipped.
@@ -13,9 +15,17 @@ from pathlib import Path
 import openpyxl
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
+from django.db.models import Q
 
 from apps.service import filter_pages
-from apps.service.models import Brand, FilterPage, ProductAttribute, ProductItemCategory, ProductItemCategoryAttribute
+
+from apps.service.models import (
+    Brand, FilterPage, ProductAttribute, ProductCategory, ProductItemCategory, ProductItemCategoryAttribute,
+    ProductSubCategory,
+)
+
+LEVEL_MODELS = {"item_category": ProductItemCategory, "sub_category": ProductSubCategory,
+                "category": ProductCategory}
 
 TEXT_FIELDS = ("keyword_uz", "title_ru", "title_uz", "meta_title_ru", "meta_title_uz", "meta_description_ru",
                "meta_description_uz", "text_ru", "text_uz")
@@ -112,18 +122,23 @@ class Command(BaseCommand):
         if volume < min_volume:
             raise filter_pages.FilterPageError(f"{keyword}: {volume} searches a month.")
 
-        item_category = self.item_category(row.get("item_category", ""))
+        level, node = self.node(row)
         brand = self.brand(row.get("brand", ""))
-        filters = filter_pages.clean_filters(item_category.id, parse_filters(item_category, row.get("filters", "")))
-        if not brand and not filters:
-            raise filter_pages.FilterPageError(f"{keyword}: neither a brand nor filters.")
+        filters_text = row.get("filters", "")
+        if filters_text and level != filter_pages.ITEM_CATEGORY:
+            raise filter_pages.FilterPageError(f"{keyword}: filters are only for an item category page.")
+        filters = parse_filters(node, filters_text) if filters_text else {}
+        try:
+            filters = filter_pages.clean_page(level, node.id, brand.id if brand else None, filters)
+        except filter_pages.FilterPageError as error:
+            raise filter_pages.FilterPageError(f"{keyword}: {error}")
 
         page = FilterPage.objects.filter(
-            combination_hash=filter_pages.combination_hash(item_category.id, brand.id if brand else None, filters),
+            combination_hash=filter_pages.combination_hash(level, node.id, brand.id if brand else None, filters),
         ).first()
         is_new = page is None
         if is_new:
-            page = FilterPage(item_category=item_category, brand=brand, filters=filters,
+            page = FilterPage(**{level: node}, brand=brand, filters=filters,
                               title_ru=keyword[:1].upper() + keyword[1:], is_active=bool(row.get("text_ru")))
         slug = row.get("slug", "")
         if slug and FilterPage.objects.filter(slug=slug).exclude(pk=page.pk).exists():
@@ -138,12 +153,18 @@ class Command(BaseCommand):
         return page, is_new
 
     @staticmethod
-    def item_category(value):
-        lookup = {"id": int(value)} if value.isdigit() else {"slug": value}
-        item_category = ProductItemCategory.objects.filter(**lookup).first() if value else None
-        if item_category is None:
-            raise filter_pages.FilterPageError(f"item_category {value!r} not found.")
-        return item_category
+    def node(row):
+        """(level, category object) of the most specific filled level column."""
+        for level, model in LEVEL_MODELS.items():
+            value = row.get(level, "")
+            if not value:
+                continue
+            lookup = Q(id=int(value)) if value.isdigit() else Q(slug_ru=value) | Q(slug_uz=value)
+            node = model.objects.filter(lookup).first()
+            if node is None:
+                raise filter_pages.FilterPageError(f"{level} {value!r} not found.")
+            return level, node
+        raise filter_pages.FilterPageError("none of item_category / sub_category / category is filled.")
 
     @staticmethod
     def brand(value):

@@ -40,6 +40,7 @@ from apps.payment.services_pay.auth_services import AtmosAuthService, AtmosHoldS
 from apps.service import feed, filter_pages, funnel, home, merchant_feed, product_links, seo_redirects
 from apps.service.models import (
     ProductEvent,
+    FilterPage,
     HomeBlock,
     HomePage,
     ProductCategory,
@@ -2649,22 +2650,28 @@ class FilterPageViewSet(ViewSet):
     @extend_schema(
         summary="Filter landing pages",
         description=(
-            "Open SEO pages of filter combinations (brand + item category, a size, a pack...) for the sitemap and "
-            "for links on the item category page. Not paginated, most searched first."
+            "Open SEO pages of filter combinations (brand + item category, a size, a pack, brand + category / "
+            "sub category...) for the sitemap and for links on the category pages. Not paginated, most searched "
+            "first. `category` / `sub_category` / `item_category` = only the pages of exactly that level and id."
         ),
-        parameters=[OpenApiParameter(name="item_category", location=OpenApiParameter.QUERY, type=OpenApiTypes.INT,
-                                     description="Only the pages of this item category")],
+        parameters=[
+            OpenApiParameter(name=level, location=OpenApiParameter.QUERY, type=OpenApiTypes.INT,
+                             description=f"Only the pages of this {level.replace('_', ' ')}")
+            for level in FilterPage.LEVELS
+        ],
         responses={200: FilterPageListItemSerializer(many=True)},
         tags=["Filter page"],
     )
     def filter_page_list(self, request):
-        pages = filter_pages.open_pages().select_related("item_category")
-        item_category = request.query_params.get("item_category")
-        if item_category:
-            if not item_category.isdigit():
+        pages = filter_pages.open_pages().select_related(*filter_pages.RELATED)
+        for level in FilterPage.LEVELS:
+            value = request.query_params.get(level)
+            if not value:
+                continue
+            if not value.isdigit():
                 raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED,
-                                         message={"item_category": "A valid integer is required."})
-            pages = pages.filter(item_category_id=item_category)
+                                         message={level: "A valid integer is required."})
+            pages = pages.filter(**{f"{level}_id": value})
         language = request_language(request)
         result = [filter_pages.page_list_data(page, language) for page in pages]
         return Response(data={"result": result, "ok": True}, status=status.HTTP_200_OK)
@@ -2680,8 +2687,7 @@ class FilterPageViewSet(ViewSet):
         tags=["Filter page"],
     )
     def filter_page_detail(self, request, slug):
-        page = filter_pages.open_pages().select_related(
-            "item_category__product_sub_category__product_category", "brand").filter(slug=slug).first()
+        page = filter_pages.open_pages().select_related(*filter_pages.RELATED).filter(slug=slug).first()
         if not page:
             raise CustomApiException(error_code=ErrorCodes.NOT_FOUND)
         result = filter_pages.page_detail_data(page, request_language(request))
@@ -2690,9 +2696,10 @@ class FilterPageViewSet(ViewSet):
     @extend_schema(
         summary="Filter landing page of a filter combination",
         description=(
-            "The open page of exactly this item category + brand + `filters` (same shape as `product/filter/`), "
-            "or `slug: null`. A filtered listing with a page links to it (canonical); one without a page stays "
-            "closed to search engines (noindex)."
+            "The open page of exactly this catalog level + brand + `filters` (same shape as `product/filter/`), "
+            "or `slug: null`. The level = the most specific of `item_category` / `sub_category` / `category` sent. "
+            "A filtered listing with a page links to it (canonical); one without a page stays closed to search "
+            "engines (noindex)."
         ),
         request=FilterPageResolveSerializer(),
         responses={200: FilterPageResolveResultSerializer()},
@@ -2704,7 +2711,7 @@ class FilterPageViewSet(ViewSet):
             raise CustomApiException(error_code=ErrorCodes.VALIDATION_FAILED, message=serializer.errors)
         data = serializer.validated_data
         filters = data["filters"] if isinstance(data["filters"], dict) else {}
-        page = filter_pages.find_page(data["item_category"], data.get("brand"), filters)
+        page = filter_pages.find_page(data["level"], data["node_id"], data.get("brand"), filters)
         return Response(data={"result": {"slug": page.slug if page else None}, "ok": True},
                         status=status.HTTP_200_OK)
 

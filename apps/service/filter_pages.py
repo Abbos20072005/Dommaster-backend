@@ -1,6 +1,7 @@
-"""SEO landing pages of filter combinations (FilterPage): item category + optional brand + attribute filters.
+"""SEO landing pages of filter combinations (FilterPage): one catalog level + optional brand + attribute filters.
 
-`filters` has the shape of `product/filter` `filters` ({"<attribute id>": [ru values] or {"min", "max"},
+The level is a category, a sub category or an item category (`FilterPage.level`); attribute filters exist only on
+an item category page, a page above it is "brand x category" and needs the brand. `filters` has the shape of `product/filter` `filters` ({"<attribute id>": [ru values] or {"min", "max"},
 "price": {"min", "max"}}), so the client loads a page's products with `POST product/filter/` and the body
 `product_filter_body(page)`. A page is open (client detail, sitemap list) while `open_pages()` has it.
 """
@@ -15,8 +16,25 @@ from .models import FilterPage, Product, ProductAttribute, ProductItemCategoryAt
 from .product_filters import PRICE_KEY, apply_attribute_filters
 
 
+ITEM_CATEGORY = "item_category"
+# product lookup of each level, the same as `product/filter` `category` / `sub_category` / `item_category`
+PRODUCT_LOOKUPS = {
+    "category": "product_item_category__product_sub_category__product_category_id",
+    "sub_category": "product_item_category__product_sub_category_id",
+    ITEM_CATEGORY: "product_item_category_id",
+}
+BREADCRUMB_LEVELS = {"category": "product_category", "sub_category": "product_sub_category",
+                     ITEM_CATEGORY: "product_item_category"}
+# the parent level of each level and the field that leads to it
+PARENTS = {ITEM_CATEGORY: ("sub_category", "product_sub_category"), "sub_category": ("category", "product_category")}
+RELATED = ("category", "sub_category__product_category", "item_category__product_sub_category__product_category",
+           "brand")
+
+
 class FilterPageError(ValueError):
-    pass
+    def __init__(self, message, field="filters"):
+        super().__init__(message)
+        self.field = field
 
 
 def _number(value):
@@ -51,9 +69,27 @@ def normalize_filters(filters):
     return normalized
 
 
-def combination_hash(item_category_id, brand_id, filters):
-    key = json.dumps([item_category_id, brand_id, normalize_filters(filters)], sort_keys=True, ensure_ascii=False)
-    return hashlib.md5(key.encode()).hexdigest()
+def combination_hash(level, node_id, brand_id, filters):
+    # an item category page keeps the key it had before the other levels came
+    key = [node_id, brand_id, normalize_filters(filters)]
+    if level != ITEM_CATEGORY:
+        key.insert(0, level)
+    return hashlib.md5(json.dumps(key, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+
+
+def clean_page(level, node_id, brand_id, filters):
+    """Normalized `filters` of a page of this level; raises FilterPageError (`field` = the field to blame)."""
+    if level != ITEM_CATEGORY:
+        if filters:
+            raise FilterPageError("Attribute filters exist only on an item category page.")
+        if not brand_id:
+            raise FilterPageError("A category / sub category page needs a brand, otherwise it is the category page.",
+                                  field="brand")
+        return {}
+    filters = clean_filters(node_id, filters)
+    if not brand_id and not filters:
+        raise FilterPageError("A brand or at least one filter is required, otherwise it is the item category page.")
+    return filters
 
 
 def clean_filters(item_category_id, filters):
@@ -100,7 +136,8 @@ def clean_filters(item_category_id, filters):
 
 
 def page_products(page):
-    products = Product.objects.filter(is_active=True, product_item_category_id=page.item_category_id)
+    level = page.level
+    products = Product.objects.filter(is_active=True, **{PRODUCT_LOOKUPS[level]: getattr(page, f"{level}_id")})
     if page.brand_id:
         products = products.filter(brand_id=page.brand_id)
     return apply_attribute_filters(products, page.filters)
@@ -121,20 +158,34 @@ def open_pages():
     """Pages clients and search engines get: active, enough products, category and brand shown."""
     return FilterPage.objects.filter(
         Q(brand__isnull=True) | Q(brand__is_visible=True),
-        is_active=True, products_count__gte=FilterPage.MIN_PRODUCTS, item_category__is_active=True,
+        Q(category__is_active=True) | Q(sub_category__is_active=True) | Q(item_category__is_active=True),
+        is_active=True, products_count__gte=FilterPage.MIN_PRODUCTS,
     )
 
 
-def find_page(item_category_id, brand_id, filters):
+def find_page(level, node_id, brand_id, filters):
     """Open page of exactly this filter combination, or None."""
-    return open_pages().filter(combination_hash=combination_hash(item_category_id, brand_id, filters)).first()
+    return open_pages().filter(combination_hash=combination_hash(level, node_id, brand_id, filters)).first()
 
 
 def product_filter_body(page):
-    body = {"item_category": page.item_category_id, "filters": page.filters}
+    level = page.level
+    body = {level: getattr(page, f"{level}_id"), "filters": page.filters}
     if page.brand_id:
         body["brand"] = page.brand_id
     return body
+
+
+def breadcrumbs(page, language):
+    """Category -> ... -> the page's level; reads the parents of page.node (RELATED)."""
+    level, node, chain = page.level, page.node, []
+    while True:
+        chain.append({"id": node.id, "name": translated(node, "name", language), "slug": node.slug,
+                      "level": BREADCRUMB_LEVELS[level]})
+        if level not in PARENTS:
+            return chain[::-1]
+        level, field = PARENTS[level]
+        node = getattr(node, field)
 
 
 META_DESCRIPTION_LENGTH = 160
@@ -148,11 +199,13 @@ def _short(text, length=META_DESCRIPTION_LENGTH):
 
 
 def page_list_data(page, language):
-    """Sitemap / category page link; reads page.item_category."""
+    """Sitemap / category page link; reads RELATED."""
     return {
         "slug": page.slug,
         "title": translated(page, "title", language),
-        "item_category": {"id": page.item_category_id, "slug": page.item_category.slug},
+        "level": page.level,
+        "item_category": {"id": page.item_category_id, "slug": page.item_category.slug} if page.item_category else None,
+        "breadcrumbs": breadcrumbs(page, language),
         "brand": page.brand_id,
         "products_count": page.products_count,
         "updated_at": page.updated_at,
@@ -161,14 +214,9 @@ def page_list_data(page, language):
 
 def page_detail_data(page, language):
     """Client page: texts in `language` (empty uz -> ru), breadcrumbs, body for `product/filter/`;
-    reads page.item_category up to the category and page.brand."""
+    reads RELATED."""
     title, text = translated(page, "title", language), translated(page, "text", language) or ""
     item_category = page.item_category
-    levels = (
-        ("product_category", item_category.product_sub_category.product_category),
-        ("product_sub_category", item_category.product_sub_category),
-        ("product_item_category", item_category),
-    )
     return {
         "id": page.id,
         "slug": page.slug,
@@ -176,11 +224,11 @@ def page_detail_data(page, language):
         "meta_title": translated(page, "meta_title", language) or title,
         "meta_description": translated(page, "meta_description", language) or _short(text),
         "text": text,
+        "level": page.level,
         "item_category": {"id": item_category.id, "name": translated(item_category, "name", language),
-                          "slug": item_category.slug},
+                          "slug": item_category.slug} if item_category else None,
         "brand": {"id": page.brand.id, "name": translated(page.brand, "name", language)} if page.brand else None,
-        "breadcrumbs": [{"id": obj.id, "name": translated(obj, "name", language), "slug": obj.slug, "level": level}
-                        for level, obj in levels],
+        "breadcrumbs": breadcrumbs(page, language),
         "product_filter": product_filter_body(page),
         "products_count": page.products_count,
         "updated_at": page.updated_at,

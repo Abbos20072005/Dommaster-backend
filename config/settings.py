@@ -463,6 +463,7 @@ SPECTACULAR_SETTINGS = {
         "HomeBlockTypeEnum": "apps.service.models.HomeBlock.TYPE_CHOICES",
         "ProductModerationStatusEnum": "apps.service.models.ProductModeration.STATUS_CHOICES",
         "ModerationCheckEnum": "apps.service.moderation.CHECKS",
+        "FilterPageLevelEnum": "apps.service.models.FilterPage.LEVELS",
     },
 }
 

@@ -1,3 +1,4 @@
+from apps.service import filter_pages
 from apps.service.models import FilterPage
 from utils.admin_views import AdminModelViewSet
 from ..filters import FilterPageFilter
@@ -12,4 +13,4 @@ class FilterPageViewSet(AdminModelViewSet):
     ordering = ("-search_volume", "id")
 
     def get_queryset(self):
-        return FilterPage.objects.select_related("item_category__product_sub_category__product_category", "brand")
+        return FilterPage.objects.select_related(*filter_pages.RELATED)

@@ -4,24 +4,30 @@ from django.db import models
 
 from abstract_model.base_model import BaseModel
 from utils.slug import unique_slug
-from .catalog import Brand, ProductItemCategory
+from .catalog import Brand, ProductCategory, ProductItemCategory, ProductSubCategory
 
 
 class FilterPage(BaseModel):
-    # Landing page of one filter combination ("Bosch" + "perforator", "kabel VVG 3x2.5"), from the agreed keyword
-    # list: an item category + optional brand + attribute filters in the shape of `product/filter` `filters`.
-    # Open to clients (and the sitemap) only while active with at least MIN_PRODUCTS products
+    # Landing page of one filter combination ("Bosch" + "perforator", "kabel VVG 3x2.5", "Knauf" + dry mixes), from
+    # the agreed keyword list: one catalog level (exactly one of category / sub category / item category) + optional
+    # brand + attribute filters in the shape of `product/filter` `filters` (item category pages only; a page above it
+    # needs a brand). Open to clients (and the sitemap) only while active with at least MIN_PRODUCTS products
     # (apps/service/filter_pages.py); filter combinations without a page stay closed to search engines.
     MIN_PRODUCTS = 3
     MIN_SEARCH_VOLUME = 10
+    LEVELS = ("category", "sub_category", "item_category")
 
     slug = models.SlugField(max_length=255, unique=True, blank=True, verbose_name="Slug")
-    item_category = models.ForeignKey(ProductItemCategory, on_delete=models.CASCADE, related_name="filter_pages",
-                                      verbose_name="Предметная категория")
+    category = models.ForeignKey(ProductCategory, on_delete=models.CASCADE, null=True, blank=True,
+                                 related_name="filter_pages", verbose_name="Категория")
+    sub_category = models.ForeignKey(ProductSubCategory, on_delete=models.CASCADE, null=True, blank=True,
+                                     related_name="filter_pages", verbose_name="Подкатегория")
+    item_category = models.ForeignKey(ProductItemCategory, on_delete=models.CASCADE, null=True, blank=True,
+                                      related_name="filter_pages", verbose_name="Предметная категория")
     brand = models.ForeignKey(Brand, on_delete=models.CASCADE, null=True, blank=True, related_name="filter_pages",
                               verbose_name="Бренд")
     filters = models.JSONField(default=dict, blank=True, verbose_name="Фильтры")
-    # md5 of the normalized item category + brand + filters: one page per combination
+    # md5 of the normalized catalog level + brand + filters: one page per combination
     combination_hash = models.CharField(max_length=32, unique=True, editable=False)
 
     keyword = models.CharField(max_length=255, blank=True, verbose_name="Ключевой запрос")
@@ -40,14 +46,24 @@ class FilterPage(BaseModel):
         return self.title
 
     @property
+    def level(self):
+        """The catalog level the page is about: "category", "sub_category" or "item_category"."""
+        return next((level for level in self.LEVELS if getattr(self, f"{level}_id")), None)
+
+    @property
+    def node(self):
+        return getattr(self, self.level) if self.level else None
+
+    @property
     def is_open(self):
         # same rule as filter_pages.open_pages()
-        return (self.is_active and self.products_count >= self.MIN_PRODUCTS and self.item_category.is_active
+        return (self.is_active and self.products_count >= self.MIN_PRODUCTS and self.node.is_active
                 and (self.brand is None or self.brand.is_visible))
 
     def save(self, *args, **kwargs):
         from apps.service.filter_pages import combination_hash
-        self.combination_hash = combination_hash(self.item_category_id, self.brand_id, self.filters)
+        level = self.level
+        self.combination_hash = combination_hash(level, getattr(self, f"{level}_id"), self.brand_id, self.filters)
         if not self.slug:
             self.slug = unique_slug(type(self), self.keyword_ru or self.title_ru or self.title, exclude_pk=self.pk,
                                     fallback="page")
@@ -57,6 +73,16 @@ class FilterPage(BaseModel):
         verbose_name = "Страница фильтра"
         verbose_name_plural = "Страницы фильтров"
         ordering = ("-search_volume", "id")
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(category__isnull=False, sub_category__isnull=True, item_category__isnull=True)
+                    | models.Q(category__isnull=True, sub_category__isnull=False, item_category__isnull=True)
+                    | models.Q(category__isnull=True, sub_category__isnull=True, item_category__isnull=False)
+                ),
+                name="filter_page_one_catalog_level",
+            ),
+        ]
 
 
 class SlugHistory(BaseModel):
