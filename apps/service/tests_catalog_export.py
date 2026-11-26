@@ -67,3 +67,11 @@ class CatalogExportTests(TestCase):
         again = self.client.get(f"/api/v1/feeds/catalog.xlsx?token={TOKEN}",
                                 HTTP_IF_MODIFIED_SINCE=first["Last-Modified"])
         self.assertEqual(again.status_code, 304)
+
+    def test_client_products_carry_the_file_name_in_any_language(self):
+        response = self.client.get("/api/v1/products/", HTTP_ACCEPT_LANGUAGE="uz")
+        product = next(p for p in response.json()["result"]["content"] if p["id"] == self.cement.id)
+        self.assertEqual(product["name"], "Sement M400")
+        self.assertEqual(product["name_ru"], "Цемент М400 50 кг")
+        detail = self.client.get(f"/api/v1/products/{self.cement.id}/", HTTP_ACCEPT_LANGUAGE="uz").json()["result"]
+        self.assertEqual((detail["name"], detail["name_ru"]), ("Sement M400", "Цемент М400 50 кг"))

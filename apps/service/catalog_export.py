@@ -39,8 +39,14 @@ def catalog_products():
     ).order_by("id")
 
 
+def ru_name(product):
+    """The name in the file; the client product serializers return the same as `name_ru`, the site sends it
+    as `item_name` of the `purchase` event, so the CRM can match the two."""
+    return (product.name_ru or product.name or "").strip()
+
+
 def product_row(product):
-    name = (product.name_ru or product.name or "").strip()
+    name = ru_name(product)
     price = final_price(product)
     if not name or not price or price <= 0:
         return None

@@ -9,7 +9,7 @@ from apps.service.models import Product, ProductCategory, ProductItemCategory, P
     RecentlyViewedProducts, Service, CommentReply, CommentImages, QuestionsReply, \
     ProductVariantGroup, ProductVariantItem, ProductItemCategoryFilterSchema, HomeBlock, FilterPage, ORDER_CHANNEL
 from apps.service.models.choices import PAYMENT_ON_DELIVERY
-from apps.service import feed, product_links
+from apps.service import catalog_export, feed, product_links
 from apps.service.attributes import display_value, product_attribute_values, request_language
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
@@ -573,6 +573,8 @@ class ProductDetailSerializer(ProductAnnotationMixin, ProductAttributesMixin, Tr
                               serializers.Serializer):
     id = serializers.IntegerField()
     name = serializers.CharField()
+    name_ru = serializers.SerializerMethodField(help_text="Russian name whatever the request language: "
+                                                          "item_name of the analytics events")
     slug = serializers.CharField()
     meta_title = serializers.CharField()
     meta_description = serializers.CharField()
@@ -601,6 +603,9 @@ class ProductDetailSerializer(ProductAnnotationMixin, ProductAttributesMixin, Tr
     height = serializers.DecimalField(max_digits=10, decimal_places=3)
     updated_at = serializers.DateTimeField(read_only=True)
 
+    def get_name_ru(self, obj) -> str:
+        return catalog_export.ru_name(obj)
+
     def get_breadcrumbs(self, obj):
         return obj.get_breadcrumbs(self.get_language())
 
@@ -627,6 +632,8 @@ class ProductSerializer(ProductAnnotationMixin, ProductAttributesMixin, Translat
     characteristics = serializers.SerializerMethodField()
     brand = BrandSerializer(read_only=True)
     updated_at = serializers.DateTimeField(read_only=True)
+    name_ru = serializers.SerializerMethodField(help_text="Russian name whatever the request language: "
+                                                          "item_name of the analytics events")
 
     class Meta:
         model = Product
@@ -635,6 +642,7 @@ class ProductSerializer(ProductAnnotationMixin, ProductAttributesMixin, Translat
             "product_item_category",
             "brand",
             "name",
+            "name_ru",
             "slug",
             "meta_title",
             "meta_description",
@@ -660,6 +668,9 @@ class ProductSerializer(ProductAnnotationMixin, ProductAttributesMixin, Translat
             "height",
             "updated_at",
         )
+
+    def get_name_ru(self, obj) -> str:
+        return catalog_export.ru_name(obj)
 
     def get_breadcrumbs(self, obj):
         return obj.get_breadcrumbs(self.get_language())
