@@ -109,6 +109,12 @@ def _call(order, action, call):
 # IKPU of the delivery line: the one Atmos put on the receipts itself, "Mahsulotlarni yetkazib berish xizmati"
 DELIVERY_IKPU = "10112006002000000"
 DELIVERY_NAME = "Yetkazib berish xizmati"
+# the receipt reads `quantity` in thousandths (order 407: "1" came out as 0.001 pieces)
+QUANTITY_SCALE = 1000
+
+
+def ofd_quantity(quantity):
+    return {"key": "quantity", "value": str(quantity * QUANTITY_SCALE)}
 
 
 def charge_amount(order):
@@ -118,8 +124,8 @@ def charge_amount(order):
 
 
 def ofd_items(order):
-    """Receipt lines of the charge: one per order item (its IKPU, the product's ru name, the line sum, quantity +
-    package code in `details`), then the delivery as a line of its own (env `ATMOS_DELIVERY_IKPU`, default
+    """Receipt lines of the charge: one per order item (its IKPU, the product's ru name, the line sum, quantity in
+    thousandths + package code in `details`), then the delivery as a line of its own (env `ATMOS_DELIVERY_IKPU`, default
     `DELIVERY_IKPU`). The goods get the order's sum minus the delivery, split over the items by `unit_price` x
     quantity (the price of the order, not the product's price now; a promocode discount falls on every line in
     proportion), so the lines add up to `charge_amount` to the tiyin. None when a line can't be made (an item
@@ -132,14 +138,14 @@ def ofd_items(order):
     shares = allocate(Decimal(total - delivery) / 100, [item_unit_price(item) * item.quantity for item in items])
     rows = []
     for item, share in zip(items, shares):
-        details = [{"key": "quantity", "value": str(item.quantity)}]
+        details = [ofd_quantity(item.quantity)]
         if item.product.package_code:
             details.append({"key": "package_code", "value": item.product.package_code})
         rows.append({"ofd_code": item.ikpu_code, "name": (item.product.name_ru or item.product.name or "")[:255],
                      "amount": int(share * 100), "details": details})
     if delivery:
         rows.append({"ofd_code": os.getenv("ATMOS_DELIVERY_IKPU") or DELIVERY_IKPU, "name": DELIVERY_NAME,
-                     "amount": delivery, "details": [{"key": "quantity", "value": "1"}]})
+                     "amount": delivery, "details": [ofd_quantity(1)]})
     return rows
 
 

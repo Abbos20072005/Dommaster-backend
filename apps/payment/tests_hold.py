@@ -65,7 +65,7 @@ class HoldFlowTests(ApiTestCase):
         self.assertEqual(response.status_code, 200, response.data)
         # the order's sum and its receipt line (2 x 1000 so'm, no delivery)
         charge.assert_called_once_with(access_token="t", hold_id=77, amount=200000, ofd_items=[
-            {"ofd_code": TEST_IKPU, "name": "P1", "amount": 200000, "details": [{"key": "quantity", "value": "2"}]}])
+            {"ofd_code": TEST_IKPU, "name": "P1", "amount": 200000, "details": [{"key": "quantity", "value": "2000"}]}])
         self.order.refresh_from_db()
         self.assertEqual((self.order.status, self.order.payment_status), (Order.CONFIRMED, 2))
         self.assertEqual(self.order.ofd_url, CHARGED["ofd_url"])
@@ -223,11 +223,11 @@ class OfdItemsTests(ApiTestCase):
         lines = ofd_items(order)
         self.assertEqual(lines, [
             {"ofd_code": TEST_IKPU, "name": "Lamp", "amount": 180000,
-             "details": [{"key": "quantity", "value": "2"}, {"key": "package_code", "value": "1500594"}]},
+             "details": [{"key": "quantity", "value": "2000"}, {"key": "package_code", "value": "1500594"}]},
             {"ofd_code": "10202001001000002", "name": "Cable", "amount": 270000,
-             "details": [{"key": "quantity", "value": "1"}]},
+             "details": [{"key": "quantity", "value": "1000"}]},
             {"ofd_code": DELIVERY_IKPU, "name": "Yetkazib berish xizmati", "amount": 1288000,
-             "details": [{"key": "quantity", "value": "1"}]},
+             "details": [{"key": "quantity", "value": "1000"}]},
         ])
         self.assertEqual(sum(line["amount"] for line in lines), charge_amount(order))
         with mock.patch.dict(os.environ, {"ATMOS_DELIVERY_IKPU": "10112006001000000"}):
