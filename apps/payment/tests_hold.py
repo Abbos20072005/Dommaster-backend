@@ -11,7 +11,7 @@ from apps.authorization.models import CustomerAddresses
 from apps.payment.atmos_hold import DELIVERY_IKPU, charge_amount, ofd_items
 from apps.payment.models import AtmosTransaction, CustomerCard
 from apps.payment.services_pay.auth_services import AtmosAuthService, AtmosHoldService
-from apps.service.models import Order, OrderOutboxEvent
+from apps.service.models import Order, OrderOutboxEvent, Project
 from apps.service.models import OrderItem
 from apps.service.tests import TEST_IKPU, ApiTestCase, make_customer, make_item_category, make_order, make_product
 
@@ -155,6 +155,64 @@ class HoldFlowTests(ApiTestCase):
         self.assertEqual(response.status_code, 200)
         self.order.refresh_from_db()
         self.assertEqual((self.order.status, self.order.payment_status), (Order.PENDING, 2))
+
+    # BLD-547: the payment block of the admin order
+    def detail(self):
+        response = self.admin.get(f"/api/v1/admin/orders/{self.order.id}/")
+        self.assertEqual(response.status_code, 200)
+        return response.data
+
+    def test_card_payment_status_is_not_set_by_hand(self):
+        response = self.admin.patch(f"/api/v1/admin/orders/{self.order.id}/", {"payment_status": 2}, format="json")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("payment_status", response.data)
+        self.hold()
+        for value in (2, 3, 0):
+            response = self.admin.patch(f"/api/v1/admin/orders/{self.order.id}/", {"payment_status": value},
+                                        format="json")
+            self.assertEqual(response.status_code, 400)
+        # the form sent back with the same value passes, ofd_url is read only
+        response = self.admin.patch(f"/api/v1/admin/orders/{self.order.id}/",
+                                    {"payment_status": 1, "ofd_url": "https://x.uz/fake"}, format="json")
+        self.assertEqual(response.status_code, 200, response.data)
+        self.order.refresh_from_db()
+        self.assertEqual((self.order.payment_status, self.order.ofd_url), (1, None))
+
+    def test_atmos_answers_go_to_the_log(self):
+        data = self.detail()
+        self.assertEqual((data["payment_kind"], data["atmos_transaction"]), ("atmos", None))
+        self.hold()
+        with mock.patch.object(AtmosHoldService, "charge_hold", return_value=CHARGED):
+            self.assertEqual(self.set_status(Order.CONFIRMED).status_code, 200)
+        data = self.detail()
+        self.assertEqual(data["atmos_transaction"]["trans_id"], 5)
+        self.assertEqual(data["atmos_transaction"]["success_trans_id"], 6)
+        log = [(c["text"], c["author"], c["is_system"]) for c in data["comments"]]
+        self.assertEqual(log, [("To'lov holati: Muzlatilgan → To'langan (Atmos)", None, True),
+                               ("To'lov holati: Kutilmoqda → Muzlatilgan (Atmos)", None, True)])
+
+    def test_on_delivery_order_is_marked_by_hand(self):
+        self.order.payment_type = 4
+        self.order.payment_method = "cash"
+        self.order.save()
+        self.assertEqual(self.detail()["payment_kind"], "on_delivery")
+        response = self.admin.patch(f"/api/v1/admin/orders/{self.order.id}/", {"payment_status": 2}, format="json")
+        self.assertEqual(response.status_code, 200, response.data)
+        comment = self.order.comments.get()
+        self.assertEqual((comment.text, comment.author.username), ("To'lov holati: Kutilmoqda → To'langan", "admin"))
+        # switching a card order to on-delivery in the same request does not open the status
+        other, _ = make_order(self.customer, [(self.product, 1)], total_price=1000)
+        response = self.admin.patch(f"/api/v1/admin/orders/{other.id}/", {"payment_type": 4, "payment_status": 2},
+                                    format="json")
+        self.assertEqual(response.status_code, 400)
+
+    def test_project_of_the_order(self):
+        self.assertIsNone(self.detail()["project"])
+        project = Project.objects.create(customer=self.customer, name="Uy")
+        self.order.order_items.update(project=project)
+        data = self.detail()
+        self.assertEqual(data["project"], {"id": project.id, "name": "Uy", "status": "active"})
+        self.assertEqual(data["items"][0]["project"]["id"], project.id)
 
 
 class ProviderPaymentTests(ApiTestCase):

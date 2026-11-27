@@ -46,7 +46,8 @@ class OrderViewSet(AdminModelViewSet):
             qs = qs.annotate(items_count=Count("order_items"))
         elif self.action != "stats":
             qs = qs.select_related("order_location", "pickup_branch", "promocode") \
-                .prefetch_related("order_items__product", "comments__author")
+                .prefetch_related("order_items__product", "order_items__project", "comments__author",
+                                  "atmos_transactions")
         return qs
 
     def get_serializer_class(self):

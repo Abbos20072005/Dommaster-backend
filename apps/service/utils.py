@@ -115,7 +115,7 @@ PAYMENT_ON_DELIVERY = 4
 
 
 def payment_type_ru(order):
-    if order.payment_type == PAYMENT_ON_DELIVERY:
+    if order.payment_kind == order.PAYMENT_KIND_ON_DELIVERY:
         return PAYMENT_ON_RECEIPT_RU
     return PAYMENT_ATMOS_RU
 

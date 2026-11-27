@@ -26,6 +26,7 @@ Xato matnini operatorga ko'rsating. Bunday buyurtmani bekor qilish yoki mijoz bi
 - **Soliq cheki** (`ofd_url`): yechishda server Atmos'ga chek qatorlarini yuboradi — har tovar alohida qator (nomi, soni, summasi, buyurtma qatoridagi IKPU, tovarda bo'lsa qadoq kodi) + yetkazib berish alohida qator (xizmat IKPU'si). Promokod chegirmasi tovar qatorlariga summasi bo'yicha taqsimlanadi, qatorlar yig'indisi = yechilgan summa. Shuning uchun tasdiqlashda har qatorda IKPU bo'lishi shart ([ikpu.md](ikpu.md)). Atmos qatorlarni qabul qilmasa, pul baribir yechiladi (qatorlarsiz), operatorga xato chiqmaydi — bu server logida ko'rinadi.
 - Bir buyurtmani ikki marta bosish pulni ikki marta yechmaydi: yechilgan buyurtmada keyingi statuslar Atmos'ga murojaat qilmaydi.
 - Formani to'liq qaytarib yuborsangiz ham (eski `payment_status: 1` bilan), yechilgan to'lov bekor bo'lmaydi.
+- **BLD-547 (27.11)**: karta buyurtmasining `payment_status` i va `ofd_url` qo'lda o'zgarmaydi (boshqa `payment_status` → `400 {"payment_status": ["Set by Atmos only."]}`), detalda `payment_kind`, `atmos_transaction` (Atmos tranzaksiya ID), `project` bor, to'lov holatining har o'zgarishi `comments` da tizim izohi — batafsil [order_payment_block_changes.md](order_payment_block_changes.md).
 
 ## Eslatmalar
 

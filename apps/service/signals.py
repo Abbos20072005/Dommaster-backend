@@ -1,8 +1,8 @@
 from django.db.models.signals import post_save, post_delete, pre_delete, pre_save
 from django.dispatch import receiver
 from apps.base.models import News
-from .models import AlternativeProduct, Comment, CartItem, Questions, Order, OrderStatusChange, Product, ProductAttribute, \
-    ProductAttributeOption, ProductAttributeValue, ProductItemCategoryAttribute
+from .models import AlternativeProduct, Comment, CartItem, Questions, Order, OrderComment, OrderStatusChange, Product, \
+    ProductAttribute, ProductAttributeOption, ProductAttributeValue, ProductItemCategoryAttribute
 from exceptions.error_exception import CustomApiException
 from exceptions.error_messages import ErrorCodes
 from django.utils import timezone
@@ -21,6 +21,9 @@ from .seo_redirects import record_deletion
 # given back on -> Canceled): Pending / Confirmed have not taken it, Canceled has given it back
 STOCK_TAKEN_STATUSES = (Order.COLLECTING, Order.DELIVERING, Order.READY_FOR_PICKUP, Order.COMPLETED)
 
+# PAYMENT_STATUS in the payment log lines (system comments of the order, admin panel)
+PAYMENT_STATUS_UZ = {0: "Kutilmoqda", 1: "Muzlatilgan", 2: "To'langan", 3: "Qaytarilgan"}
+
 
 # Order.save() is atomic, so stock changes and outbox events here commit together with the order
 @receiver(pre_save, sender=Order)
@@ -28,6 +31,7 @@ def decrease_product_quantity_on_collecting(sender, instance, update_fields=None
     instance._status_changed_to = None
     instance._status_log = None
     instance._pickup_selected = False
+    instance._payment_log = None
     previous = sender.objects.filter(pk=instance.pk).first() if instance.pk else None
     if previous is None:
         instance._status_log = (None, instance.status)
@@ -42,6 +46,10 @@ def decrease_product_quantity_on_collecting(sender, instance, update_fields=None
 
     if previous is None:
         return
+
+    payment_saved = update_fields is None or "payment_status" in update_fields
+    if previous.payment_status != instance.payment_status and payment_saved:
+        instance._payment_log = (previous.payment_status, instance.payment_status)
 
     status_saved = update_fields is None or "status" in update_fields
     # every way of confirming (admin API, 1C, django admin) ends here; the admin API checks it first with the items
@@ -121,6 +129,20 @@ def log_order_status(sender, instance, **kwargs):
         return
     instance._status_log = None
     OrderStatusChange.objects.create(order=instance, from_status=change[0], to_status=change[1])
+
+
+@receiver(post_save, sender=Order)
+def log_payment_status(sender, instance, **kwargs):
+    """Every payment status change (Atmos hold / charge / release, the old payment callbacks, a manual change of
+    an on-delivery order in the panel) = a system comment of the order; `_payment_changed_by` = the admin."""
+    change = getattr(instance, "_payment_log", None)
+    if change is None:
+        return
+    instance._payment_log = None
+    old, new = (PAYMENT_STATUS_UZ.get(value, value) for value in change)
+    source = " (Atmos)" if instance.hold_id else ""
+    OrderComment.objects.create(order=instance, author=getattr(instance, "_payment_changed_by", None),
+                                text=f"To'lov holati: {old} → {new}{source}", is_system=True)
 
 
 @receiver(post_save, sender=Order)

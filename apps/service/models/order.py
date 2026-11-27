@@ -10,7 +10,7 @@ from apps.base.models import Promocodes, MarketBranch
 from django.conf import settings
 from .choices import ORDER_STATUS, PAYMENT_STATUS, DELIVERY_TYPE, PAYMENT_TYPE, CASH_PAYMENT_METHOD, ORDER_CHANNEL, \
     ORDER_PENDING, ORDER_CONFIRMED, ORDER_COLLECTING, ORDER_DELIVERING, ORDER_READY_FOR_PICKUP, ORDER_COMPLETED, \
-    ORDER_CANCELED
+    ORDER_CANCELED, PAYMENT_ON_DELIVERY
 from .catalog import ProductCategory
 from .product import Product, IKPU_VALIDATOR
 
@@ -82,6 +82,16 @@ class Order(BaseModel):
 
     def __str__(self):
         return str(self.id)
+
+    # how the order is paid (BLD-547): an Atmos card hold, else payment on delivery (old orders), else the card
+    # payment the customer chose and has not made yet - card online is the only way the client offers
+    PAYMENT_KIND_ATMOS, PAYMENT_KIND_ON_DELIVERY = "atmos", "on_delivery"
+
+    @property
+    def payment_kind(self):
+        if not self.hold_id and self.payment_type == PAYMENT_ON_DELIVERY:
+            return self.PAYMENT_KIND_ON_DELIVERY
+        return self.PAYMENT_KIND_ATMOS
 
     @property
     def pickup_expired(self):

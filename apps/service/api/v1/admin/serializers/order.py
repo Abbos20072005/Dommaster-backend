@@ -1,12 +1,14 @@
 from datetime import date
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from apps.authorization.models import Customer, CustomerAddresses
 from apps.base.models import MarketBranch, Promocodes
+from apps.payment.models import AtmosTransaction
 from apps.payment.atmos_hold import HoldError, cancel_order_hold, charge_order_hold, has_hold
 from apps.service.ikpu import is_confirmation, missing_items, set_item_codes
-from apps.service.models import Manager, Order, OrderComment, OrderItem, Product, ProductCodeChange
+from apps.service.models import Manager, Order, OrderComment, OrderItem, Product, ProductCodeChange, Project
 from apps.service.models.product import IKPU_VALIDATOR
 from apps.service.pro import money
 from utils.admin_serializers import RelationSerializer
@@ -17,7 +19,7 @@ COMPLETED, CANCELED, READY_FOR_PICKUP = Order.COMPLETED, Order.CANCELED, Order.R
 DELIVERY, PICKUP = Order.DELIVERY, Order.PICKUP
 # PAYMENT_TYPE / PAYMENT_STATUS
 PAYMENT_ON_DELIVERY = 4
-PAID = 2
+PAYMENT_PENDING, PAID = 0, 2
 
 # changing any of these recalculates the order prices
 PRICE_FIELDS = {"order_items", "promocode", "delivery_type", "delivery_price"}
@@ -87,12 +89,25 @@ class OrderCommentShortSerializer(serializers.ModelSerializer):
         fields = ("id", "author", "text", "is_system", "created_at")
 
 
+class OrderProjectSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Project
+        fields = ("id", "name", "status")
+
+
+class OrderAtmosTransactionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AtmosTransaction
+        fields = ("trans_id", "success_trans_id", "amount", "confirmed", "ofd_url", "created_at")
+
+
 class OrderItemSerializer(serializers.ModelSerializer):
     product = OrderProductSerializer()
+    project = OrderProjectSerializer(read_only=True, allow_null=True, help_text="PRO project of the item")
 
     class Meta:
         model = OrderItem
-        fields = ("id", "product", "quantity", "unit_price", "ikpu_code")
+        fields = ("id", "product", "quantity", "unit_price", "ikpu_code", "project")
         # unit_price = price of one unit when ordered (null = older item -> the panel shows product.price);
         # ikpu_code is set with orders/{id}/ikpu/; a new item takes the product's code ("" = none)
         read_only_fields = ("unit_price", "ikpu_code")
@@ -118,11 +133,13 @@ class OrderListSerializer(serializers.ModelSerializer):
     pickup_store = OrderStoreSnapshotSerializer(source="pickup_store_snapshot", read_only=True, allow_null=True,
                                                 help_text="Pickup store as it was when chosen; null = delivery")
     pickup_expired = serializers.BooleanField(read_only=True, help_text="Ready for pickup and the deadline passed")
+    payment_kind = serializers.ChoiceField(choices=(Order.PAYMENT_KIND_ATMOS, Order.PAYMENT_KIND_ON_DELIVERY),
+                                           read_only=True, help_text="atmos = card online, on_delivery = old orders")
 
     class Meta:
         model = Order
         fields = ("id", "customer", "manager", "status", "channel", "payment_status", "payment_type", "payment_method",
-                  "delivery_type", "pickup_store", "pickup_deadline", "pickup_expired",
+                  "payment_kind", "delivery_type", "pickup_store", "pickup_deadline", "pickup_expired",
                   "total_price", "products_total_price", "saved_price", "delivery_price",
                   "receiver_name", "receiver_phone", "items_count", "created_at", "updated_at")
 
@@ -139,19 +156,36 @@ class OrderSerializer(serializers.ModelSerializer):
     promocode = OrderPromocodeSerializer(required=False, allow_null=True)
     items = OrderItemSerializer(source="order_items", many=True, required=False)
     comments = OrderCommentShortSerializer(many=True, read_only=True)
+    payment_kind = serializers.ChoiceField(choices=(Order.PAYMENT_KIND_ATMOS, Order.PAYMENT_KIND_ON_DELIVERY),
+                                           read_only=True, help_text="atmos = card online, on_delivery = old orders")
+    atmos_transaction = serializers.SerializerMethodField()
+    project = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
         fields = ("id", "customer", "manager", "status", "channel", "payment_status", "payment_type", "payment_method",
+                  "payment_kind", "atmos_transaction", "project",
                   "delivery_type", "order_location", *CustomerAddresses.DETAIL_FIELDS,
                   "pickup_branch", "pickup_store", "ready_for_pickup_at", "pickup_deadline", "pickup_expired",
                   "pickup_expired_at", "promocode", "items", "comments",
                   "total_price", "products_total_price", "saved_price", "delivery_price",
                   "receiver_name", "receiver_phone", "hold_id", "ofd_url", "yandex_claim_id", "yandex_claim_status",
                   "created_at", "updated_at")
-        read_only_fields = ("total_price", "products_total_price", "saved_price", "hold_id",
+        read_only_fields = ("total_price", "products_total_price", "saved_price", "hold_id", "ofd_url",
                             "yandex_claim_id", "yandex_claim_status", "ready_for_pickup_at", "pickup_deadline",
                             "pickup_expired_at", "created_at", "updated_at")
+
+    @extend_schema_field(OrderAtmosTransactionSerializer(allow_null=True))
+    def get_atmos_transaction(self, order):
+        """The charge of the Atmos hold (the newest one); null = not charged."""
+        rows = order.atmos_transactions.all()
+        return OrderAtmosTransactionSerializer(rows[0]).data if rows else None
+
+    @extend_schema_field(OrderProjectSerializer(allow_null=True))
+    def get_project(self, order):
+        """PRO project the order's items are linked to (the first linked item's, `items[].project` = per item)."""
+        project = next((item.project for item in order.order_items.all() if item.project_id), None)
+        return OrderProjectSerializer(project).data if project else None
 
     def _get(self, attrs, name, default=None):
         if name in attrs:
@@ -196,6 +230,14 @@ class OrderSerializer(serializers.ModelSerializer):
 
         if self._get(attrs, "payment_method") and self._get(attrs, "payment_type") != PAYMENT_ON_DELIVERY:
             raise serializers.ValidationError({"payment_method": "Only for payment on delivery."})
+        # the payment status of a card order is Atmos's answer (hold / charge / release) - only an old
+        # on-delivery order is marked by hand; the panel sends the whole form back, so the same value passes
+        old_payment_status = getattr(self.instance, "payment_status", PAYMENT_PENDING)
+        if "payment_status" in attrs and attrs["payment_status"] != old_payment_status:
+            on_delivery = (self.instance.payment_kind == Order.PAYMENT_KIND_ON_DELIVERY if self.instance
+                           else attrs.get("payment_type") == PAYMENT_ON_DELIVERY)
+            if not on_delivery:
+                raise serializers.ValidationError({"payment_status": "Set by Atmos only."})
 
         promocode = attrs.get("promocode")
         if promocode and promocode.expires_at < date.today():
@@ -327,6 +369,8 @@ class OrderSerializer(serializers.ModelSerializer):
             self._set_items(instance, items)
         for field, value in validated_data.items():
             setattr(instance, field, value)
+        request = self.context.get("request")
+        instance._payment_changed_by = request.user if request and "payment_status" in validated_data else None
         if recalculate:
             self._recalculate(instance)
         instance.save()
