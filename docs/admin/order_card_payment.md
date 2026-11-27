@@ -31,7 +31,7 @@ Xato matnini operatorga ko'rsating. Bunday buyurtmani bekor qilish yoki mijoz bi
 ## Eslatmalar
 
 - **Muzlatish muddati cheklangan** (server sozlamasi `ATMOS_HOLD_DURATION`). Shu muddat ichida tasdiqlanmagan buyurtmaning puli Atmos tomonida o'zi qaytadi, keyin tasdiqlash `400` beradi.
-- **Pul yechilgandan keyin bekor qilish** (`1` va undan keyingi statuslarda) pulni avtomatik qaytarmaydi. Atmos refund hali qilinmagan, pulni qo'lda qaytarish kerak.
+- **Pul yechilgandan keyin bekor qilish** (`1` va undan keyingi statuslarda) pulni avtomatik qaytarmaydi. Qaytarish (to'liq yoki qisman) panelning o'zidan alohida qilinadi: `orders/<id>/refunds/` — [order_refund.md](order_refund.md).
 - 1C statusni o'zgartirsa (`2` Collecting va h.k.), pul yechilmaydi. Hold'dagi buyurtmani panelda tasdiqlang.
 
 ## Boshqa to'lov turlari (18.11.2026 dan)

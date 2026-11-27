@@ -50,8 +50,9 @@ def _int(value, default=None):
         return default
 
 
-def save_charge(order, data):
-    """Stores a successful `charge_hold` answer: payment Paid + `ofd_url` (the receipt), then the transaction row.
+def save_charge(order, data, lines=None):
+    """Stores a successful `charge_hold` answer: payment Paid + `ofd_url` (the receipt), then the transaction row
+    with the receipt lines Atmos took (`lines`, None = charged without them).
     The money is already taken, so the order is marked paid even when the row can't be written (only logged,
     with the answer). The order status is not touched."""
     ofd_url = data.get("ofd_url") or None
@@ -85,6 +86,7 @@ def save_charge(order, data):
                 status_code=_text(get("status_code"), 10),
                 status_message=_text(get("status_message"), 255),
                 pc_type=_text(get("pc_type"), 50),
+                receipt_lines=lines,
             )
     except Exception:
         logger.exception("Atmos transaction row not saved (the order is paid): order_id=%s", order.id)
@@ -123,30 +125,46 @@ def charge_amount(order):
     return int(order.total_price * 100)
 
 
-def ofd_items(order):
-    """Receipt lines of the charge: one per order item (its IKPU, the product's ru name, the line sum, quantity in
-    thousandths + package code in `details`), then the delivery as a line of its own (env `ATMOS_DELIVERY_IKPU`, default
+def receipt_lines(order):
+    """Receipt lines of the charge: one per order item (its IKPU, the product's ru name, the line sum, quantity,
+    the package code), then the delivery as a line of its own (`item_id` None; env `ATMOS_DELIVERY_IKPU`, default
     `DELIVERY_IKPU`). The goods get the order's sum minus the delivery, split over the items by `unit_price` x
     quantity (the price of the order, not the product's price now; a promocode discount falls on every line in
     proportion), so the lines add up to `charge_amount` to the tiyin. None when a line can't be made (an item
-    without an IKPU code, a delivery bigger than the sum) - the charge then goes without them."""
+    without an IKPU code, a delivery bigger than the sum) - the charge then goes without them. The charge stores
+    them in `AtmosTransaction.receipt_lines`, a refund takes its lines from there (`atmos_refund`)."""
     items = list(order.order_items.select_related("product").order_by("id"))
     total = charge_amount(order)
     delivery = int(delivery_cost(order) * 100)
     if not items or any(not item.ikpu_code for item in items) or delivery > total:
         return None
     shares = allocate(Decimal(total - delivery) / 100, [item_unit_price(item) * item.quantity for item in items])
-    rows = []
-    for item, share in zip(items, shares):
-        details = [ofd_quantity(item.quantity)]
-        if item.product.package_code:
-            details.append({"key": "package_code", "value": item.product.package_code})
-        rows.append({"ofd_code": item.ikpu_code, "name": (item.product.name_ru or item.product.name or "")[:255],
-                     "amount": int(share * 100), "details": details})
+    lines = [{"item_id": item.id, "ofd_code": item.ikpu_code,
+              "name": (item.product.name_ru or item.product.name or "")[:255], "amount": int(share * 100),
+              "quantity": item.quantity, "package_code": item.product.package_code or ""}
+             for item, share in zip(items, shares)]
     if delivery:
-        rows.append({"ofd_code": os.getenv("ATMOS_DELIVERY_IKPU") or DELIVERY_IKPU, "name": DELIVERY_NAME,
-                     "amount": delivery, "details": [ofd_quantity(1)]})
+        lines.append({"item_id": None, "ofd_code": os.getenv("ATMOS_DELIVERY_IKPU") or DELIVERY_IKPU,
+                      "name": DELIVERY_NAME, "amount": delivery, "quantity": 1, "package_code": ""})
+    return lines
+
+
+def to_ofd(lines):
+    """Receipt lines in the shape Atmos takes (`ofd_items`): quantity in thousandths + package code in `details`."""
+    rows = []
+    for line in lines:
+        details = [ofd_quantity(line["quantity"])]
+        if line.get("package_code"):
+            details.append({"key": "package_code", "value": line["package_code"]})
+        rows.append({"ofd_code": line["ofd_code"], "name": line["name"], "amount": line["amount"],
+                     "details": details})
     return rows
+
+
+def ofd_items(order):
+    """`ofd_items` of the charge (`receipt_lines` in the Atmos shape); None when there are no lines."""
+    lines = receipt_lines(order)
+    return None if lines is None else to_ofd(lines)
 
 
 def _charged_already(order):
@@ -181,7 +199,8 @@ def charge_order_hold(order_id):
     with transaction.atomic():
         order = Order.objects.select_for_update().get(pk=order_id)
         if has_hold(order):
-            amount, items = charge_amount(order), ofd_items(order)
+            amount, lines = charge_amount(order), receipt_lines(order)
+            items = None if lines is None else to_ofd(lines)
             logger.info("Atmos hold charge: order_id=%s amount=%s ofd_items=%s", order.id, amount, items)
             if items is None:
                 logger.warning("Atmos hold charge without receipt lines: order_id=%s", order.id)
@@ -192,8 +211,8 @@ def charge_order_hold(order_id):
                     raise
                 logger.warning("Atmos refused the receipt lines, charging without them: order_id=%s error=%s",
                                order.id, e)
-                data = _charge(order, amount, None)
-            save_charge(order, data)
+                data, lines = _charge(order, amount, None), None
+            save_charge(order, data, lines)
     return order
 
 

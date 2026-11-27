@@ -6,11 +6,13 @@ from .views import BrandViewSet, PartnerBrandViewSet, ProductBadgeViewSet, Produ
     OrderCommentViewSet, ProductModelViewSet, AddsBrandsViewSet, TodayAPIView, SaleViewSet, SalesAnalyticsAPIView, OrderStagesAPIView, NewCustomersAPIView, \
     OrderStatusesAPIView, ProductStatusesAPIView, TopSalesAPIView, TopCustomersAPIView, \
     HomeBlockViewSet, HomePageAPIView, HomePagePublishAPIView, ProductModerationViewSet, \
-    FilterPageViewSet, ProjectViewSet, ContentImportViewSet, ProductFunnelViewSet, ProductCodeChangeViewSet
+    FilterPageViewSet, ProjectViewSet, ContentImportViewSet, ProductFunnelViewSet, ProductCodeChangeViewSet, \
+    OrderRefundViewSet
 
 # SimpleRouter: mounted at the admin root, DefaultRouter's API-root view would take `api/v1/admin/`
 router = SimpleRouter()
 router.register("orders", OrderViewSet, basename="admin_order")
+router.register(r"orders/(?P<order_id>\d+)/refunds", OrderRefundViewSet, basename="admin_order_refund")
 router.register("order-comments", OrderCommentViewSet, basename="admin_order_comment")
 router.register("managers", ManagerViewSet, basename="admin_manager")
 router.register("ikpu-changes", ProductCodeChangeViewSet, basename="admin_ikpu_change")

@@ -45,7 +45,7 @@ from apps.payment.utils.logger import logged
 from apps.payment.utils.utils_click import _serialize_request, get_order, create_transaction, get_transaction
 from apps.payment.utils.utils_uzum import check_request, raise_exception_if_invalid
 from apps.payment.services_pay.auth_services import AtmosAuthService, AtmosHoldService, AtmosBindWithCheckoutService
-from apps.payment.atmos_hold import ofd_items, save_charge
+from apps.payment.atmos_hold import receipt_lines, save_charge, to_ofd
 import os
 import uuid
 from apps.authorization.models import Customer
@@ -943,13 +943,14 @@ class AtmosChargeHoldView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
+            # receipt lines only for the whole sum: a partial amount sent by the app has no lines to match
+            lines = None if amount else receipt_lines(order)
             try:
-                # receipt lines only for the whole sum: a partial amount sent by the app has no lines to match
                 data = AtmosHoldService.charge_hold(
                     access_token=access_token,
                     hold_id=order.hold_id,
                     amount=amount,
-                    ofd_items=None if amount else ofd_items(order),
+                    ofd_items=None if lines is None else to_ofd(lines),
                 )
             except Exception as e:
                 return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
@@ -958,7 +959,7 @@ class AtmosChargeHoldView(APIView):
                 return Response(data, status=status.HTTP_400_BAD_REQUEST)
 
             # the order status is the operator's (BLD-486): it used to jump to Delivering here
-            save_charge(order, data)
+            save_charge(order, data, lines)
 
         return Response({
             "message": "Payment successful",

@@ -124,6 +124,9 @@ class AtmosTransaction(models.Model):
     status_code = models.CharField(max_length=10, blank=True, default="", verbose_name="Код статуса")
     status_message = models.CharField(max_length=255, blank=True, default="", verbose_name="Сообщение статуса")
     pc_type = models.CharField(max_length=50, blank=True, default="", verbose_name="Тип платежной системы")
+    # the receipt lines Atmos took with the charge (`atmos_hold.receipt_lines`; null = charged without them):
+    # a refund takes its lines and their sums from here
+    receipt_lines = models.JSONField(null=True, blank=True, verbose_name="Строки чека")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -134,3 +137,36 @@ class AtmosTransaction(models.Model):
 
     def __str__(self):
         return f"Atmos #{self.trans_id} — Order #{self.order_id}"
+
+
+class AtmosRefund(models.Model):
+    """A refund of a charged Atmos payment (whole or a part) = an Atmos partial reversal (`create-reverse-partial`
+    + `confirm-reverse-partial` with the refunded receipt lines); logic `apps/payment/atmos_refund.py`."""
+    PENDING, CONFIRMED, FAILED = "pending", "confirmed", "failed"
+    STATUS_CHOICES = ((PENDING, "Отправлен"), (CONFIRMED, "Возвращён"), (FAILED, "Ошибка"))
+
+    order = models.ForeignKey("service.Order", on_delete=models.CASCADE, related_name="atmos_refunds",
+                              verbose_name="Заказ")
+    transaction = models.ForeignKey(AtmosTransaction, on_delete=models.PROTECT, related_name="refunds",
+                                    verbose_name="Транзакция Atmos")
+    amount = models.BigIntegerField(verbose_name="Сумма, тийин")
+    # refunded receipt lines: [{item_id (null = delivery), ofd_code, name, amount, quantity, package_code}]
+    lines = models.JSONField(default=list, verbose_name="Строки")
+    reason = models.CharField(max_length=255, blank=True, default="", verbose_name="Причина")
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=PENDING, verbose_name="Статус")
+    partial_reverse_id = models.BigIntegerField(null=True, blank=True, verbose_name="ID частичной отмены Atmos")
+    reverted_amount = models.BigIntegerField(null=True, blank=True, verbose_name="Возвращено всего (Atmos)")
+    left_amount = models.BigIntegerField(null=True, blank=True, verbose_name="Осталось (Atmos)")
+    error = models.TextField(blank=True, default="", verbose_name="Ошибка")
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+                                   related_name="+", verbose_name="Кто вернул")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Возврат Atmos"
+        verbose_name_plural = "Возвраты Atmos"
+        ordering = ["-created_at", "-id"]
+
+    def __str__(self):
+        return f"Refund #{self.id} — Order #{self.order_id}"
